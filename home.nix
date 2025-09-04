@@ -13,6 +13,10 @@
       EDITOR = "emacs";
     };
     shell.enableZshIntegration = true;
+    packages = [
+      pkgs.emacs
+      pkgs.pinentry-tty
+    ];
   };
 
   programs = {

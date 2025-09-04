@@ -2,13 +2,33 @@
 # your system. Help is available in the configuration.nix(5) man page, on
 # https://search.nixos.org/options and in the NixOS manual (`nixos-help`).
 
-{ config, lib, pkgs, ... }:
+{ config, inputs, lib, pkgs, ... }:
+
+# TODO: qBittorrent + ProtonVPN
+# TODO: unpackerr
+# TODO: autobrr
+# TODO: cross-seed
+# TODO: ZFS email alerts
+# TODO: Jellyseer
+# TODO: fail2ban
+# TODO: Tautulli
+# TODO: github
+# TODO: Bump flake github action: https://github.com/reckenrode/nixos-configs/blob/main/.github/workflows/main.yml
+# TODO: Immich
 
 {
-  imports =
-    [ # Include the results of the hardware scan.
-      ./hardware-configuration.nix
-    ];
+  imports = [
+    inputs.nix-minecraft.nixosModules.minecraft-servers
+    ./hardware-configuration.nix # Include the results of the hardware scan.
+    ./cachix.nix
+  ];
+
+  age.secrets = {
+    cross-seed-settings-file.file = secrets/cross-seed-settings-file.age;
+    cross-seed-headers-file.file = secrets/cross-seed-headers-file.age;
+    homepage-dashboard-environment-file.file = secrets/homepage-dashboard-environment-file.age;
+    "Harmony_P2P-US-CA-898.conf".file = secrets/Harmony_P2P-US-CA-898.conf.age;
+  };
 
   system.autoUpgrade = {
     enable = true;
@@ -16,16 +36,20 @@
     flake = "/etc/nixos";
   };
 
-  nix.gc = {
-    automatic = true;
-    options = "--delete-older-than 7d";
+  nix = {
+    gc = {
+      automatic = true;
+      options = "--delete-older-than 7d";
+    };
+    settings.experimental-features = ["nix-command" "flakes"];
   };
-
-  hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.beta;
 
   # Use the systemd-boot EFI boot loader.
   boot = {
-    kernelModules = [ "coretemp" ];
+    kernelModules = [
+      "coretemp"
+      # "wireguard"
+    ];
     loader = {
       systemd-boot.enable = true;
       efi.canTouchEfiVariables = true;
@@ -38,28 +62,86 @@
   };
 
   fileSystems = {
-    "/silverlight" = {
-      device = "silverlight:/home/oscar";
+    "/hoid" = {
+      device = "hoid:/silverlight-mercantile";
       fsType = "rclone";
       options = [
         "nodev"
         "nofail"
         "allow_other"
         "args2env"
-        "config=/etc/rclone-silverlight.conf"
+        "config=/etc/rclone-hoid.conf"
         "x-systemd.automount"
       ];
     };
   };
 
+#  systemd.services."systemd-networkd".environment.SYSTEMD_LOG_LEVEL = "debug";
+#  systemd.network = {
+#    enable = true;
+#    networks = {
+#      "10-enp13s0" = {
+#        matchConfig.Name = "enp13s0";
+#        address = [ "10.10.10.16/32" ];
+#        routes = [ { Gateway = "10.10.10.1"; } ];
+#        linkConfig.RequiredForOnline = "routable";
+#      };
+#      "20-wg0" = {
+#        matchConfig.Name = "wg0";
+#        address = [ "10.2.0.2/32" ];
+#        dns = [ "10.2.0.1" ];
+#      };
+#    };
+#    netdevs = {
+#      "20-wg0" = {
+#        netdevConfig = {
+#          Kind = "wireguard";
+#          Name = "wg0";
+#          #MTUBytes = "1300";
+#        };
+#        # See also man systemd.netdev (also contains info on the permissions of the key files)
+#        wireguardConfig = {
+#          # Don't use a file from the Nix store as these are world readable. Must be readable by the systemd-network user
+#          PrivateKeyFile = config.age.secrets.proton-vpn-private-key.path;
+#          ListenPort = 51820;
+#        };
+#        wireguardPeers = [
+#          # configuration since nixos-unstable/nixos-24.11
+#          {
+#            PublicKey = "2xvxhMK0AalXOMq6Dh0QMVJ0Cl3WQTmWT5tdeb8SpR0=";
+#            AllowedIPs = "0.0.0.0/0,::/0";
+#            Endpoint = "79.127.185.166:51820";
+#          }
+#        ];
+#      };
+#    };
+#  };
+
   networking = {
     hostId = "7dab76c0";
     hostName = "harmony";
+#    useNetworkd = true;
     networkmanager.enable = true;
     firewall = {
-      #allowedTCPPorts = [ 6868 ];
-      # allowedUDPPorts = [ ... ];
+      allowedTCPPorts = [ 80 443 25565 ];
+      allowedUDPPorts = [ 51820 ];
     };
+    # wg-quick = {
+    #   interfaces.wg0 = {
+    #     address = [ "10.2.0.2/32" ];
+    #     listenPort = 51820;
+    #     privateKeyFile = config.age.secrets.proton-vpn-private-key.path;
+    #     #table = "42";
+    #     peers = [
+    #       {
+    #         publicKey = "2xvxhMK0AalXOMq6Dh0QMVJ0Cl3WQTmWT5tdeb8SpR0=";
+    #         allowedIPs = [ "0.0.0.0/0" "::/0" ];
+    #         endpoint = "79.127.185.166:51820";
+    #         persistentKeepalive = 25;
+    #       }
+    #     ];
+    #   };
+    # };
   };
 
   # Set your time zone.
@@ -84,7 +166,12 @@
       oscar = {
         description = "Oscar Marshall";
         isNormalUser = true;
-        extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
+        extraGroups = [
+          "minecraft"
+          "radarr"
+          "sonarr"
+          "wheel" # Enable ‘sudo’ for the user.
+        ];
         openssh.authorizedKeys.keys = [
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOn+wO9sZ8GoCRrg1BOkBK7/dPUojEdEaWoq2lHFYp9K omarshal"
         ];
@@ -95,12 +182,15 @@
     };
   };
 
-  nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
-    "nvidia-x11"
-    "nvidia-settings"
-    "nvidia-persistenced"
-    "plexmediaserver"
-  ];
+  nixpkgs = {
+    config = {
+      allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
+        "minecraft-server"
+        "plexmediaserver"
+      ];
+    };
+    overlays = [ inputs.nix-minecraft.overlay ];
+  };
 
 
   environment = {
@@ -113,14 +203,16 @@
       pkgs.rclone
       pkgs.wget
     ];
-    etc."rclone-silverlight.conf".text = ''
-      [silverlight]
-      type = sftp
-      host = triton.usbx.me
-      user = oscar
-      key_file = /root/.ssh/id_ed25519
-      shell_type = unix
-    '';
+    etc = {
+      "rclone-hoid.conf".text = ''
+        [hoid]
+        type = sftp
+        host = hoid.silverlight-nex.us
+        user = oscar
+        key_file = /etc/ssh/ssh_host_ed25519_key
+        shell_type = unix
+      '';
+    };
   };
 
   # Some programs need SUID wrappers, can be configured further or are
@@ -136,32 +228,56 @@
     zsh.enable = true;
   };
 
-  virtualisation.oci-containers.containers = {
-    profilarr = {
-      image = "santiagosayshey/profilarr:latest"; # or :beta
-      ports = [ "6868:6868" ];
-      volumes = [ "/metalminds/profilarr:/config" ];
-      environment = { TZ = config.time.timeZone; };
+  virtualisation = {
+    oci-containers.containers = {
+      profilarr = {
+        image = "santiagosayshey/profilarr:latest"; # or :beta
+        ports = [ "127.0.0.1:6868:6868" ];
+        volumes = [ "/metalminds/profilarr:/config" ];
+        environment = { TZ = config.time.timeZone; };
+      };
     };
   };
 
   # List services that you want to enable:
   services = {
     apcupsd.enable = true;
-    flaresolverr = {
+    cross-seed = {
       enable = true;
-      openFirewall = true;
+      user = config.services.qbittorrent.user;
+      group = config.services.qbittorrent.group;
+      useGenConfigDefaults = true;
+      settingsFile = config.age.secrets.cross-seed-settings-file.path;
+      settings = {
+        port = 2468;
+        linkDirs = [ "/metalminds/torrents/link-dir" ];
+        matchMode = "partial";
+      };
     };
+    flaresolverr.enable = true;
+    glances.enable = true;
     homepage-dashboard = {
       enable = true;
-      openFirewall = true;
-      allowedHosts = "localhost:8082,127.0.0.1:8082,10.10.10.16:8082";
+      environmentFile = config.age.secrets.homepage-dashboard-environment-file.path;
+      allowedHosts = "localhost:8082,127.0.0.1:8082,harmony.silverlight-nex.us";
+      widgets = [
+        {
+          glances = {
+            url = "http://localhost:61208";
+            version = 4;
+            cputemp = true;
+            uptime = true;
+            disk = [ "/" "/metalminds" ];
+            expanded = true;
+          };
+        }
+      ];
       services = [
         {
           "Media" = [
             {
               "Plex" = {
-                href = "http://10.10.10.16:32400";
+                href = "https://plex.harmony.silverlight-nex.us";
                 description = "Media server";
               };
             }
@@ -171,40 +287,196 @@
           "Arr Stack" = [
             {
               "Radarr" = {
-                href = "http://10.10.10.16:7878";
+                href = "https://radarr.harmony.silverlight-nex.us";
                 description = "Movie organizer/manager";
+                widget = {
+                  type = "radarr";
+                  url = "https://radarr.harmony.silverlight-nex.us";
+                  key = "{{HOMEPAGE_VAR_RADARR_API_KEY}}";
+                  enableQueue = true;
+                };
+              };
+            }
+            {
+              "Sonarr" = {
+                href = "https://sonarr.harmony.silverlight-nex.us";
+                description = "Show organizer/manager";
+                widget = {
+                  type = "sonarr";
+                  url = "https://sonarr.harmony.silverlight-nex.us";
+                  key = "{{HOMEPAGE_VAR_SONARR_API_KEY}}";
+                  enableQueue = true;
+                };
               };
             }
             {
               "Prowlarr" = {
-                href = "http://10.10.10.16:9696";
+                href = "https://prowlarr.harmony.silverlight-nex.us";
                 description = "Indexer manager/proxy";
+                widget = {
+                  type = "prowlarr";
+                  url = "https://prowlarr.harmony.silverlight-nex.us";
+                  key = "{{HOMEPAGE_VAR_PROWLARR_API_KEY}}";
+                };
               };
             }
             {
               "Profilarr" = {
-                href = "http://10.10.10.16:6868";
-              };
-            }
-          ];
-        }
-        {
-          "Ultra.cc" = [
-            {
-              "Control Panel" = {
-                href = "cp.ultra.cc";
-                description = "Ultr.cc Control Panel";
-              };
-            }
-            {
-              "qBittorrent" = {
-                href = "https://oscar.triton.usbx.me/qbittorrent";
-                description = "Torrent client";
+                href = "https://profilarr.harmony.silverlight-nex.us";
+                description = "Radarr/Sonarr custom format manager";
               };
             }
           ];
         }
       ];
+      bookmarks = [
+        {
+          "Servers" = [
+            {
+              "Harmony" = [
+                {
+                  abbr = "HA";
+                  href = "https://harmony.silverlight-nex.us";
+                }
+              ];
+            }
+            {
+              "Hoid" = [
+                {
+                  abbr = "HO";
+                  href = "https://hoid.silverlight-nex.us";
+                }
+              ];
+            }
+          ];
+        }
+      ];
+    };
+    minecraft-servers = {
+      enable = true;
+      openFirewall = true;
+      eula = true;
+      dataDir = "/metalminds/minecraft-worlds";
+      servers = {
+        chicken-house = {
+          enable = true;
+          package = pkgs.fabricServers.fabric-1_21_8;
+          serverProperties = {
+            server-port = 25566;
+            white-list = true;
+          };
+          symlinks = {
+            mods = pkgs.linkFarmFromDrvs "mods" (
+              builtins.attrValues {
+                ArchitecturyAPI = pkgs.fetchurl {
+                  url = "https://cdn.modrinth.com/data/lhGA9TYQ/versions/XcJm5LH4/architectury-17.0.8-fabric.jar";
+                  sha256 = "sha256-tdBR+O/+j5R2+TdeEeSN+vuCF5FDW4/jaIaZADl/BdU=";
+                };
+                AutoWhitelist = pkgs.fetchurl {
+                  url = "https://cdn.modrinth.com/data/BMaqFQAd/versions/PIJ4HDyR/autowhitelist-1.2.4%2B1.21.6.jar";
+                  sha256 = "sha256-cYTNxZEGfyUVAkSeFk8Ci3FbcpJOmgeSXqE++NB9BYM=";
+                };
+                # Carpet = pkgs.fetchurl {
+                #   url = "https://cdn.modrinth.com/data/TQTTVgYE/versions/xksYKkvF/fabric-carpet-1.20.2-1.4.121%2Bv231011.jar";
+                #   sha256 = "sha256-qGprKkfOVzmNVH/nzOCRC569Q3w7GdxyD6PAoQtji+w=";
+                # };
+                ClothConfig = pkgs.fetchurl {
+                  url = "https://cdn.modrinth.com/data/9s6osm5g/versions/cz0b1j8R/cloth-config-19.0.147-fabric.jar";
+                  sha256 = "sha256-2KbcqdDa0f5EYio8agNIZBk045Q8jUJaJvESvObev6I=";
+                };
+                FabricAPI = pkgs.fetchurl {
+                  url = "https://cdn.modrinth.com/data/P7dR8mSH/versions/jjBL6OsN/fabric-api-0.132.0%2B1.21.8.jar";
+                  sha256 = "sha256-t2MBX17VRswnCzHspYKty6JkzWKJ5FFF2fU0jGD9olk=";
+                };
+                FabricLanguageKotlin = pkgs.fetchurl {
+                  url = "https://cdn.modrinth.com/data/Ha28R6CL/versions/mccDBWqV/fabric-language-kotlin-1.13.4%2Bkotlin.2.2.0.jar";
+                  sha256 = "sha256-KjxW/B3W6SKpvuNaTAukvA2Wd2Py6VL/SbdOw8ZB9Qs=";
+                };
+                FerriteCore = pkgs.fetchurl {
+                  url = "https://cdn.modrinth.com/data/uXXizFIs/versions/CtMpt7Jr/ferritecore-8.0.0-fabric.jar";
+                  sha256 = "sha256-K5C/AMKlgIw8U5cSpVaRGR+HFtW/pu76ujXpxMWijuo=";
+                };
+                Jade = pkgs.fetchurl {
+                  url = "https://cdn.modrinth.com/data/nvQzSEkH/versions/o3aatc5Q/Jade-1.21.8-Fabric-19.3.2.jar";
+                  sha256 = "sha256-RWjPJiGJqedV9kYagfaypBNCcYF8edVOJB776Y02J9A=";
+                };
+                Lithium = pkgs.fetchurl {
+                  url = "https://cdn.modrinth.com/data/gvQqBUqZ/versions/pDfTqezk/lithium-fabric-0.18.0%2Bmc1.21.8.jar";
+                  sha256 = "sha256-kBPy+N/t6v20OBddTHZvW0E95WLc0RlaUAIwxVFxeH4=";
+                };
+                # QuiltedFabricAPI = pkgs.fetchurl {
+                #   url = "https://cdn.modrinth.com/data/qvIfYCYJ/versions/zHVlrS0A/quilted-fabric-api-8.0.0-alpha.6%2B0.91.6-1.20.2.jar";
+                #   sha256 = "sha256-CyzkSOWOY2BfQel5eADJtDHqkG9ecIm61WmJJuhNJ3k=";
+                # };
+                RoughlyEnoughItems = pkgs.fetchurl {
+                  url = "https://cdn.modrinth.com/data/nfn13YXA/versions/hoEFy7aF/RoughlyEnoughItems-20.0.811-fabric.jar";
+                  sha256 = "sha256-e2t1DkKcRCCF+gdFsDwnOyQiTxzngF2DnrUqmfKwJTo=";
+                };
+                # RoughlyEnoughProfessions = pkgs.fetchurl {
+                #   url = "https://cdn.modrinth.com/data/V8XJ8f5f/versions/wIGukWgb/RoughlyEnoughProfessions-fabric-1.20.2-2.1.1.jar";
+                #   sha256 = "sha256-f0vxGj/0iLUSWOAeLt9iDAErc9eXtEclocWUUfVhOoU=";
+                # };
+              }
+            );
+          };
+        };
+      };
+    };
+    nginx = {
+      enable = true;
+
+      recommendedBrotliSettings = true;
+      recommendedGzipSettings = true;
+      recommendedOptimisation = true;
+      recommendedProxySettings = true;
+      recommendedTlsSettings = true;
+
+      # Only allow PFS-enabled ciphers with AES256
+      sslCiphers = "AES256+EECDH:AES256+EDH:!aNULL";
+
+      appendHttpConfig = ''
+        # Add HSTS header with preloading to HTTPS requests.
+        # Adding this header to HTTP requests is discouraged
+        map $scheme $hsts_header {
+            https   "max-age=31536000; includeSubdomains; preload";
+        }
+        add_header Strict-Transport-Security $hsts_header;
+
+        # Enable CSP for your services.
+        #add_header Content-Security-Policy "script-src 'self'; object-src 'none'; base-uri 'none';" always;
+
+        # Minimize information leaked to other domains
+        add_header 'Referrer-Policy' 'origin-when-cross-origin';
+
+        # Disable embedding as a frame
+        add_header X-Frame-Options DENY;
+
+        # Prevent injection of code in other mime types (XSS Attacks)
+        add_header X-Content-Type-Options nosniff;
+
+        # This might create errors
+        proxy_cookie_path / "/; secure; HttpOnly; SameSite=strict";
+      '';
+
+      virtualHosts = let
+        base = locations: {
+          inherit locations;
+
+          forceSSL = true;
+          enableACME = true;
+        };
+        proxy = port: base {
+          "/".proxyPass = "http://127.0.0.1:${toString port}/";
+        };
+      in {
+        "harmony.silverlight-nex.us" = proxy 8082;
+        "plex.harmony.silverlight-nex.us" = proxy 32400;
+        "profilarr.harmony.silverlight-nex.us" = proxy 6868;
+        "prowlarr.harmony.silverlight-nex.us" = proxy config.services.prowlarr.settings.server.port;
+        "qbittorrent.harmony.silverlight-nex.us" = proxy config.services.qbittorrent.webuiPort;
+        "radarr.harmony.silverlight-nex.us" = proxy config.services.radarr.settings.server.port;
+        "sonarr.harmony.silverlight-nex.us" = proxy config.services.sonarr.settings.server.port;
+      };
     };
     openssh = {
       enable = true; # Enable the OpenSSH daemon.
@@ -214,15 +486,36 @@
       enable = true;
       openFirewall = true;
     };
-    prowlarr = {
+    prowlarr.enable = true;
+    qbittorrent = {
       enable = true;
-      openFirewall = true;
+      package = pkgs.qbittorrent-nox;
+      serverConfig = {
+        AutoRun = {
+          enabled = true;
+          program = ''
+            ${pkgs.curl}/bin/curl -XPOST http://localhost:${toString config.services.cross-seed.settings.port}/api/webhook \
+              -H \"@${config.age.secrets.cross-seed-headers-file.path}\" \
+              -d \"infoHash=%I\" \
+              -d \"includeSingleEpisodes=true\"
+          '';
+        };
+        BitTorrent.Session = {
+          DefaultSavePath = "/metalminds/torrents/downloads";
+          Interface = "wg0";
+          InterfaceName = "wg0";
+          QueueingSystemEnabled = false;
+          Tags = "cross-seed";
+        };
+        Preferences.WebUI = {
+          Password_PBKDF2 = "@ByteArray(3+DJBBGQhl1i7uYQ4PAZAA==:FTHL6psR2VpGAUnpsh/SlTa5mPjZZ6ab6YwkzqH0JxUL94iDPCKHFpkZQoAqnlv/0rri76zKo6on73kwI3s7dA==)";
+          ReverseProxySupportEnabled = true;
+          TrustedReverseProxiesList = "qbittorrent.harmony.silverlight-nex.us";
+          Username = "oscar";
+        };
+      };
     };
-    radarr = {
-      enable = true;
-      openFirewall = true;
-      group = "users";
-    };
+    radarr.enable = true;
     samba = {
       enable = true;
       settings = let
@@ -232,7 +525,17 @@
           "write list" = "@users";
           "browsable" = "yes";
         };
-        shareList = ["backups" "documents" "movies" "music" "pictures" "shows" "torrents" "yarg-charts"];
+        shareList = [
+          "backups"
+          "documents"
+          "minecraft-worlds"
+          "movies"
+          "music"
+          "pictures"
+          "shows"
+          "torrents"
+          "yarg-charts"
+        ];
         generatedShares = builtins.listToAttrs (map
           (share: { name = share; value = commonShareAttrs // { path = "/metalminds/${share}"; }; })
           shareList
@@ -242,6 +545,11 @@
           global = {
             "map to guest" = "Bad User";
           };
+          processing = {
+            path = "/metalminds/processing";
+            "write list" = "@users";
+            "browsable" = "yes";
+          };
         } // generatedShares;
       openFirewall = true;
     };
@@ -249,12 +557,64 @@
       enable = true;
       openFirewall = true;
     };
+    sonarr.enable = true;
     zfs = {
       autoScrub.enable = true;
       autoSnapshot.enable = true;
       trim.enable = true;
     };
   };
+
+  security.acme = {
+    acceptTerms = true;
+    defaults.email = "letsencrypt@alias.oscarmarshall.com";
+  };
+
+  systemd.services = {
+    "netns@" = {
+      description = "%I network namespace";
+      before = [ "network.target" ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = "${pkgs.iproute2}/bin/ip netns add %I";
+        ExecStop = "${pkgs.iproute2}/bin/ip netns del %I";
+      };
+    };
+    qbittorrent = {
+      bindsTo = [ "netns@wg.service" ];
+    #   requires = [ "network-online.target" ];
+      after = [ "wg.service" ];
+    #   serviceConfig.NetworkNamespacePath = "/var/run/netns/wg";
+    };
+    wg = {
+      description = "wg network interface";
+      bindsTo = [ "netns@wg.service" ];
+      requires = [ "network-online.target" ];
+      after = [ "netns@wg.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = pkgs.writers.writeBash "wg-up" ''
+          set -e
+          ${pkgs.iproute2}/bin/ip link add wg0 type wireguard
+          ${pkgs.iproute2}/bin/ip link set wg0 netns wg
+          ${pkgs.iproute2}/bin/ip -n wg address add 10.2.0.2/32 dev wg0
+          ${pkgs.iproute2}/bin/ip netns exec wg \
+            ${pkgs.wireguard-tools}/bin/wg setconf wg0 ${config.age.secrets."Harmony_P2P-US-CA-898.conf".path}
+          ${pkgs.iproute2}/bin/ip -n wg link set wg0 up
+          ${pkgs.iproute2}/bin/ip -n wg route add default dev wg0
+          ${pkgs.iproute2}/bin/ip -n wg -6 route add default dev wg0
+        '';
+        ExecStop = pkgs.writers.writeBash "wg-down" ''
+          ${pkgs.iproute2}/bin/ip -n wg route del default dev wg0
+          ${pkgs.iproute2}/bin/ip -n wg -6 route del default dev wg0
+          ${pkgs.iproute2}/bin/ip -n wg link del wg0
+        '';
+      };
+    };
+  };
+
 
   # Copy the NixOS configuration file and link it from the resulting system
   # (/run/current-system/configuration.nix). This is useful in case you
