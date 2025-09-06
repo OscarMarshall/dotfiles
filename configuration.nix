@@ -24,10 +24,17 @@
   ];
 
   age.secrets = {
+    autobrr-secret.file = secrets/autobrr-secret.age;
     cross-seed-settings-file.file = secrets/cross-seed-settings-file.age;
-    cross-seed-headers-file.file = secrets/cross-seed-headers-file.age;
-    homepage-dashboard-environment-file.file = secrets/homepage-dashboard-environment-file.age;
+    cross-seed-headers-file = {
+      file = secrets/cross-seed-headers-file.age;
+      owner = "qbittorrent";
+      group = "qbittorrent";
+    };
+    "homepage-dashboard.env".file = secrets/homepage-dashboard.env.age;
     "Harmony_P2P-US-CA-898.conf".file = secrets/Harmony_P2P-US-CA-898.conf.age;
+    "minecraft-servers.env".file = secrets/minecraft-servers.env.age;
+    "unpackerr.env".file = secrets/unpackerr.env.age;
   };
 
   system.autoUpgrade = {
@@ -176,7 +183,7 @@
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOn+wO9sZ8GoCRrg1BOkBK7/dPUojEdEaWoq2lHFYp9K omarshal"
         ];
         packages = [
-          #pkgs.tree
+          pkgs.rcon-cli
         ];
       };
     };
@@ -236,12 +243,31 @@
         volumes = [ "/metalminds/profilarr:/config" ];
         environment = { TZ = config.time.timeZone; };
       };
+      unpackerr = {
+        image = "golift/unpackerr";
+        volumes = [ "/metalminds/torrents/downloads:/downloads" ];
+        environment = {
+          TZ = config.time.timeZone;
+          UN_SONARR_0_URL = "192.168.15.1:${toString config.services.sonarr.settings.server.port}";
+          UN_RADARR_0_URL = "192.168.15.1:${toString config.services.radarr.settings.server.port}";
+        };
+        environmentFiles = [ config.age.secrets."unpackerr.env".path ];
+      };
     };
   };
 
   # List services that you want to enable:
   services = {
     apcupsd.enable = true;
+    autobrr = {
+      enable = true;
+      secretFile = config.age.secrets.autobrr-secret.path;
+      settings = {
+        checkForUpdates = true;
+        host = "192.168.15.1";
+        port = 7474;
+      };
+    };
     cross-seed = {
       enable = true;
       user = config.services.qbittorrent.user;
@@ -258,12 +284,12 @@
     glances.enable = true;
     homepage-dashboard = {
       enable = true;
-      environmentFile = config.age.secrets.homepage-dashboard-environment-file.path;
+      environmentFile = config.age.secrets."homepage-dashboard.env".path;
       allowedHosts = "localhost:8082,127.0.0.1:8082,harmony.silverlight-nex.us";
       widgets = [
         {
           glances = {
-            url = "http://localhost:61208";
+            url = "http://127.0.0.1:61208";
             version = 4;
             cputemp = true;
             uptime = true;
@@ -357,6 +383,7 @@
       openFirewall = true;
       eula = true;
       dataDir = "/metalminds/minecraft-worlds";
+      environmentFile = config.age.secrets."minecraft-servers.env".path;
       servers = {
         chicken-house = {
           enable = true;
@@ -364,6 +391,8 @@
           serverProperties = {
             server-port = 25566;
             white-list = true;
+            enable-rcon = true;
+            "rcon.password" = "@RCON_PASSWORD@";
           };
           symlinks = {
             mods = pkgs.linkFarmFromDrvs "mods" (
@@ -468,14 +497,18 @@
         proxy = port: base {
           "/".proxyPass = "http://127.0.0.1:${toString port}/";
         };
+        proxyProton0 = port: base {
+          "/".proxyPass = "http://192.168.15.1:${toString port}/";
+        };
       in {
         "harmony.silverlight-nex.us" = proxy 8082;
+        "autobrr.harmony.silverlight-nex.us" = proxyProton0 config.services.autobrr.settings.port;
         "plex.harmony.silverlight-nex.us" = proxy 32400;
         "profilarr.harmony.silverlight-nex.us" = proxy 6868;
-        "prowlarr.harmony.silverlight-nex.us" = proxy config.services.prowlarr.settings.server.port;
-        "qbittorrent.harmony.silverlight-nex.us" = proxy config.services.qbittorrent.webuiPort;
-        "radarr.harmony.silverlight-nex.us" = proxy config.services.radarr.settings.server.port;
-        "sonarr.harmony.silverlight-nex.us" = proxy config.services.sonarr.settings.server.port;
+        "prowlarr.harmony.silverlight-nex.us" = proxyProton0 config.services.prowlarr.settings.server.port;
+        "qbittorrent.harmony.silverlight-nex.us" = proxyProton0 config.services.qbittorrent.webuiPort;
+        "radarr.harmony.silverlight-nex.us" = proxyProton0 config.services.radarr.settings.server.port;
+        "sonarr.harmony.silverlight-nex.us" = proxyProton0 config.services.sonarr.settings.server.port;
       };
     };
     openssh = {
@@ -494,7 +527,7 @@
         AutoRun = {
           enabled = true;
           program = ''
-            ${pkgs.curl}/bin/curl -XPOST http://localhost:${toString config.services.cross-seed.settings.port}/api/webhook \
+            ${pkgs.curl}/bin/curl -XPOST http://127.0.0.1:${toString config.services.cross-seed.settings.port}/api/webhook \
               -H \"@${config.age.secrets.cross-seed-headers-file.path}\" \
               -d \"infoHash=%I\" \
               -d \"includeSingleEpisodes=true\"
@@ -502,9 +535,11 @@
         };
         BitTorrent.Session = {
           DefaultSavePath = "/metalminds/torrents/downloads";
-          Interface = "wg0";
-          InterfaceName = "wg0";
-          QueueingSystemEnabled = false;
+          # Interface = "wg0";
+          # InterfaceName = "wg0";
+          IgnoreSlowTorrentsForQueueing = true;
+          MaxActiveTorrents = 999999999;
+          MaxActiveUploads = 999999999;
           Tags = "cross-seed";
         };
         Preferences.WebUI = {
@@ -571,48 +606,52 @@
   };
 
   systemd.services = {
-    "netns@" = {
-      description = "%I network namespace";
-      before = [ "network.target" ];
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        ExecStart = "${pkgs.iproute2}/bin/ip netns add %I";
-        ExecStop = "${pkgs.iproute2}/bin/ip netns del %I";
-      };
+    autobrr.vpnConfinement = {
+      enable = true;
+      vpnNamespace = "proton0";
     };
-    qbittorrent = {
-      bindsTo = [ "netns@wg.service" ];
-    #   requires = [ "network-online.target" ];
-      after = [ "wg.service" ];
-    #   serviceConfig.NetworkNamespacePath = "/var/run/netns/wg";
+    cross-seed.vpnConfinement = {
+      enable = true;
+      vpnNamespace = "proton0";
     };
-    wg = {
-      description = "wg network interface";
-      bindsTo = [ "netns@wg.service" ];
-      requires = [ "network-online.target" ];
-      after = [ "netns@wg.service" ];
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        ExecStart = pkgs.writers.writeBash "wg-up" ''
-          set -e
-          ${pkgs.iproute2}/bin/ip link add wg0 type wireguard
-          ${pkgs.iproute2}/bin/ip link set wg0 netns wg
-          ${pkgs.iproute2}/bin/ip -n wg address add 10.2.0.2/32 dev wg0
-          ${pkgs.iproute2}/bin/ip netns exec wg \
-            ${pkgs.wireguard-tools}/bin/wg setconf wg0 ${config.age.secrets."Harmony_P2P-US-CA-898.conf".path}
-          ${pkgs.iproute2}/bin/ip -n wg link set wg0 up
-          ${pkgs.iproute2}/bin/ip -n wg route add default dev wg0
-          ${pkgs.iproute2}/bin/ip -n wg -6 route add default dev wg0
-        '';
-        ExecStop = pkgs.writers.writeBash "wg-down" ''
-          ${pkgs.iproute2}/bin/ip -n wg route del default dev wg0
-          ${pkgs.iproute2}/bin/ip -n wg -6 route del default dev wg0
-          ${pkgs.iproute2}/bin/ip -n wg link del wg0
-        '';
-      };
+    flaresolverr.vpnConfinement = {
+      enable = true;
+      vpnNamespace = "proton0";
     };
+    prowlarr.vpnConfinement = {
+      enable = true;
+      vpnNamespace = "proton0";
+    };
+    qbittorrent.vpnConfinement = {
+      enable = true;
+      vpnNamespace = "proton0";
+    };
+    radarr.vpnConfinement = {
+      enable = true;
+      vpnNamespace = "proton0";
+    };
+    sonarr.vpnConfinement = {
+      enable = true;
+      vpnNamespace = "proton0";
+    };
+  };
+
+  vpnNamespaces.proton0 = {
+    enable = true;
+    wireguardConfigFile = config.age.secrets."Harmony_P2P-US-CA-898.conf".path;
+    accessibleFrom = [ "10.10.10.0/24" ];
+    portMappings = [
+      # Autobrr
+      { from = config.services.autobrr.settings.port; to = config.services.autobrr.settings.port; }
+      # Prowlarr
+      { from = config.services.prowlarr.settings.server.port; to = config.services.prowlarr.settings.server.port; }
+      # qBittorrent
+      { from = config.services.qbittorrent.webuiPort; to = config.services.qbittorrent.webuiPort; }
+      # Radarr
+      { from = config.services.radarr.settings.server.port; to = config.services.radarr.settings.server.port; }
+      # Sonarr
+      { from = config.services.sonarr.settings.server.port; to = config.services.sonarr.settings.server.port; }
+    ];
   };
 
 

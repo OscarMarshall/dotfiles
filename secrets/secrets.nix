@@ -6,9 +6,11 @@ let
   hoid = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ206AeH6b6ErxpHTs0Qux+nKvZUxU3cLt/j3YIkM50C";
   systems = [ harmony hoid ];
 in {
-  "cross-seed-settings-file.age".publicKeys = oscar ++ systems;
-  "cross-seed-headers-file.age".publicKeys = oscar ++ systems;
-  "homepage-dashboard-environment-file.age".publicKeys = oscar ++ systems;
-  "proton-vpn-private-key.age".publicKeys = oscar ++ systems;
+  "autobrr-secret.age".publicKeys = oscar ++ [ harmony ];
+  "cross-seed-settings-file.age".publicKeys = oscar ++ [ harmony ];
+  "cross-seed-headers-file.age".publicKeys = oscar ++ [ harmony ];
+  "homepage-dashboard.env.age".publicKeys = oscar ++ [ harmony ];
   "Harmony_P2P-US-CA-898.conf.age".publicKeys = oscar ++ [ harmony ];
+  "minecraft-servers.env.age".publicKeys = oscar ++ [ harmony ];
+  "unpackerr.env.age".publicKeys = oscar ++ [ harmony ];
 }
