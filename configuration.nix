@@ -1,25 +1,15 @@
-# Edit this configuration file to define what should be installed on
-# your system. Help is available in the configuration.nix(5) man page, on
-# https://search.nixos.org/options and in the NixOS manual (`nixos-help`).
-
-{ config, inputs, lib, pkgs, ... }:
-
-# TODO: qBittorrent + ProtonVPN
-# TODO: unpackerr
-# TODO: autobrr
-# TODO: cross-seed
-# TODO: ZFS email alerts
-# TODO: Jellyseer
-# TODO: fail2ban
-# TODO: Tautulli
-# TODO: github
-# TODO: Bump flake github action: https://github.com/reckenrode/nixos-configs/blob/main/.github/workflows/main.yml
-# TODO: Immich
+{
+  config,
+  inputs,
+  lib,
+  pkgs,
+  ...
+}:
 
 {
   imports = [
     inputs.nix-minecraft.nixosModules.minecraft-servers
-    ./hardware-configuration.nix # Include the results of the hardware scan.
+    ./hardware-configuration.nix
     ./cachix.nix
   ];
 
@@ -48,15 +38,14 @@
       automatic = true;
       options = "--delete-older-than 7d";
     };
-    settings.experimental-features = ["nix-command" "flakes"];
+    settings.experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
   };
 
-  # Use the systemd-boot EFI boot loader.
   boot = {
-    kernelModules = [
-      "coretemp"
-      # "wireguard"
-    ];
+    kernelModules = [ "coretemp" ];
     loader = {
       systemd-boot.enable = true;
       efi.canTouchEfiVariables = true;
@@ -83,90 +72,28 @@
     };
   };
 
-#  systemd.services."systemd-networkd".environment.SYSTEMD_LOG_LEVEL = "debug";
-#  systemd.network = {
-#    enable = true;
-#    networks = {
-#      "10-enp13s0" = {
-#        matchConfig.Name = "enp13s0";
-#        address = [ "10.10.10.16/32" ];
-#        routes = [ { Gateway = "10.10.10.1"; } ];
-#        linkConfig.RequiredForOnline = "routable";
-#      };
-#      "20-wg0" = {
-#        matchConfig.Name = "wg0";
-#        address = [ "10.2.0.2/32" ];
-#        dns = [ "10.2.0.1" ];
-#      };
-#    };
-#    netdevs = {
-#      "20-wg0" = {
-#        netdevConfig = {
-#          Kind = "wireguard";
-#          Name = "wg0";
-#          #MTUBytes = "1300";
-#        };
-#        # See also man systemd.netdev (also contains info on the permissions of the key files)
-#        wireguardConfig = {
-#          # Don't use a file from the Nix store as these are world readable. Must be readable by the systemd-network user
-#          PrivateKeyFile = config.age.secrets.proton-vpn-private-key.path;
-#          ListenPort = 51820;
-#        };
-#        wireguardPeers = [
-#          # configuration since nixos-unstable/nixos-24.11
-#          {
-#            PublicKey = "2xvxhMK0AalXOMq6Dh0QMVJ0Cl3WQTmWT5tdeb8SpR0=";
-#            AllowedIPs = "0.0.0.0/0,::/0";
-#            Endpoint = "79.127.185.166:51820";
-#          }
-#        ];
-#      };
-#    };
-#  };
-
   networking = {
     hostId = "7dab76c0";
     hostName = "harmony";
-#    useNetworkd = true;
     networkmanager.enable = true;
     firewall = {
-      allowedTCPPorts = [ 80 443 25565 ];
+      allowedTCPPorts = [
+        80
+        443
+        25565
+      ];
       allowedUDPPorts = [ 51820 ];
     };
-    # wg-quick = {
-    #   interfaces.wg0 = {
-    #     address = [ "10.2.0.2/32" ];
-    #     listenPort = 51820;
-    #     privateKeyFile = config.age.secrets.proton-vpn-private-key.path;
-    #     #table = "42";
-    #     peers = [
-    #       {
-    #         publicKey = "2xvxhMK0AalXOMq6Dh0QMVJ0Cl3WQTmWT5tdeb8SpR0=";
-    #         allowedIPs = [ "0.0.0.0/0" "::/0" ];
-    #         endpoint = "79.127.185.166:51820";
-    #         persistentKeepalive = 25;
-    #       }
-    #     ];
-    #   };
-    # };
   };
 
-  # Set your time zone.
   time.timeZone = "America/Los_Angeles";
 
-  # Configure network proxy if necessary
-  # networking.proxy.default = "http://user:password@proxy:port/";
-  # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
-
-  # Select internationalisation properties.
   i18n.defaultLocale = "en_US.UTF-8";
   console = {
     font = "Lat2-Terminus16";
     keyMap = "us";
-    # useXkbConfig = true; # use xkb.options in tty.
   };
 
-  # Define a user account. Don't forget to set a password with ‘passwd’.
   users = {
     defaultUserShell = pkgs.zsh;
     users = {
@@ -175,9 +102,10 @@
         isNormalUser = true;
         extraGroups = [
           "minecraft"
+          "qbittorrent"
           "radarr"
           "sonarr"
-          "wheel" # Enable ‘sudo’ for the user.
+          "wheel"
         ];
         openssh.authorizedKeys.keys = [
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOn+wO9sZ8GoCRrg1BOkBK7/dPUojEdEaWoq2lHFYp9K omarshal"
@@ -191,18 +119,17 @@
 
   nixpkgs = {
     config = {
-      allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
-        "minecraft-server"
-        "plexmediaserver"
-      ];
+      allowUnfreePredicate =
+        pkg:
+        builtins.elem (lib.getName pkg) [
+          "minecraft-server"
+          "plexmediaserver"
+        ];
     };
     overlays = [ inputs.nix-minecraft.overlay ];
   };
 
-
   environment = {
-    # List packages installed in system profile.
-    # You can use https://search.nixos.org/ to find more packages (and options).
     systemPackages = [
       pkgs.ddrescue
       pkgs.git
@@ -222,14 +149,6 @@
     };
   };
 
-  # Some programs need SUID wrappers, can be configured further or are
-  # started in user sessions.
-  # programs.mtr.enable = true;
-  # programs.gnupg.agent = {
-  #   enable = true;
-  #   enableSSHSupport = true;
-  # };
-
   programs = {
     tmux.enable = true;
     zsh.enable = true;
@@ -238,10 +157,12 @@
   virtualisation = {
     oci-containers.containers = {
       profilarr = {
-        image = "santiagosayshey/profilarr:latest"; # or :beta
+        image = "santiagosayshey/profilarr:latest";
         ports = [ "127.0.0.1:6868:6868" ];
         volumes = [ "/metalminds/profilarr:/config" ];
-        environment = { TZ = config.time.timeZone; };
+        environment = {
+          TZ = config.time.timeZone;
+        };
       };
       unpackerr = {
         image = "golift/unpackerr";
@@ -256,7 +177,6 @@
     };
   };
 
-  # List services that you want to enable:
   services = {
     apcupsd.enable = true;
     autobrr = {
@@ -293,7 +213,10 @@
             version = 4;
             cputemp = true;
             uptime = true;
-            disk = [ "/" "/metalminds" ];
+            disk = [
+              "/"
+              "/metalminds"
+            ];
             expanded = true;
           };
         }
@@ -433,18 +356,10 @@
                   url = "https://cdn.modrinth.com/data/gvQqBUqZ/versions/pDfTqezk/lithium-fabric-0.18.0%2Bmc1.21.8.jar";
                   sha256 = "sha256-kBPy+N/t6v20OBddTHZvW0E95WLc0RlaUAIwxVFxeH4=";
                 };
-                # QuiltedFabricAPI = pkgs.fetchurl {
-                #   url = "https://cdn.modrinth.com/data/qvIfYCYJ/versions/zHVlrS0A/quilted-fabric-api-8.0.0-alpha.6%2B0.91.6-1.20.2.jar";
-                #   sha256 = "sha256-CyzkSOWOY2BfQel5eADJtDHqkG9ecIm61WmJJuhNJ3k=";
-                # };
                 RoughlyEnoughItems = pkgs.fetchurl {
                   url = "https://cdn.modrinth.com/data/nfn13YXA/versions/hoEFy7aF/RoughlyEnoughItems-20.0.811-fabric.jar";
                   sha256 = "sha256-e2t1DkKcRCCF+gdFsDwnOyQiTxzngF2DnrUqmfKwJTo=";
                 };
-                # RoughlyEnoughProfessions = pkgs.fetchurl {
-                #   url = "https://cdn.modrinth.com/data/V8XJ8f5f/versions/wIGukWgb/RoughlyEnoughProfessions-fabric-1.20.2-2.1.1.jar";
-                #   sha256 = "sha256-f0vxGj/0iLUSWOAeLt9iDAErc9eXtEclocWUUfVhOoU=";
-                # };
               }
             );
           };
@@ -487,32 +402,38 @@
         proxy_cookie_path / "/; secure; HttpOnly; SameSite=strict";
       '';
 
-      virtualHosts = let
-        base = locations: {
-          inherit locations;
+      virtualHosts =
+        let
+          base = locations: {
+            inherit locations;
 
-          forceSSL = true;
-          enableACME = true;
+            forceSSL = true;
+            enableACME = true;
+          };
+          proxy =
+            port:
+            base {
+              "/".proxyPass = "http://127.0.0.1:${toString port}/";
+            };
+          proxyProton0 =
+            port:
+            base {
+              "/".proxyPass = "http://192.168.15.1:${toString port}/";
+            };
+        in
+        {
+          "harmony.silverlight-nex.us" = proxy 8082;
+          "autobrr.harmony.silverlight-nex.us" = proxyProton0 config.services.autobrr.settings.port;
+          "plex.harmony.silverlight-nex.us" = proxy 32400;
+          "profilarr.harmony.silverlight-nex.us" = proxy 6868;
+          "prowlarr.harmony.silverlight-nex.us" = proxyProton0 config.services.prowlarr.settings.server.port;
+          "qbittorrent.harmony.silverlight-nex.us" = proxyProton0 config.services.qbittorrent.webuiPort;
+          "radarr.harmony.silverlight-nex.us" = proxyProton0 config.services.radarr.settings.server.port;
+          "sonarr.harmony.silverlight-nex.us" = proxyProton0 config.services.sonarr.settings.server.port;
         };
-        proxy = port: base {
-          "/".proxyPass = "http://127.0.0.1:${toString port}/";
-        };
-        proxyProton0 = port: base {
-          "/".proxyPass = "http://192.168.15.1:${toString port}/";
-        };
-      in {
-        "harmony.silverlight-nex.us" = proxy 8082;
-        "autobrr.harmony.silverlight-nex.us" = proxyProton0 config.services.autobrr.settings.port;
-        "plex.harmony.silverlight-nex.us" = proxy 32400;
-        "profilarr.harmony.silverlight-nex.us" = proxy 6868;
-        "prowlarr.harmony.silverlight-nex.us" = proxyProton0 config.services.prowlarr.settings.server.port;
-        "qbittorrent.harmony.silverlight-nex.us" = proxyProton0 config.services.qbittorrent.webuiPort;
-        "radarr.harmony.silverlight-nex.us" = proxyProton0 config.services.radarr.settings.server.port;
-        "sonarr.harmony.silverlight-nex.us" = proxyProton0 config.services.sonarr.settings.server.port;
-      };
     };
     openssh = {
-      enable = true; # Enable the OpenSSH daemon.
+      enable = true;
       openFirewall = true;
     };
     plex = {
@@ -535,8 +456,6 @@
         };
         BitTorrent.Session = {
           DefaultSavePath = "/metalminds/torrents/downloads";
-          # Interface = "wg0";
-          # InterfaceName = "wg0";
           IgnoreSlowTorrentsForQueueing = true;
           MaxActiveTorrents = 999999999;
           MaxActiveUploads = 999999999;
@@ -553,29 +472,34 @@
     radarr.enable = true;
     samba = {
       enable = true;
-      settings = let
-        commonShareAttrs = {
-          "guest ok" = "yes";
-          "read only" = "yes";
-          "write list" = "@users";
-          "browsable" = "yes";
-        };
-        shareList = [
-          "backups"
-          "documents"
-          "minecraft-worlds"
-          "movies"
-          "music"
-          "pictures"
-          "shows"
-          "torrents"
-          "yarg-charts"
-        ];
-        generatedShares = builtins.listToAttrs (map
-          (share: { name = share; value = commonShareAttrs // { path = "/metalminds/${share}"; }; })
-          shareList
-        );
-      in
+      settings =
+        let
+          commonShareAttrs = {
+            "guest ok" = "yes";
+            "read only" = "yes";
+            "write list" = "@users";
+            "browsable" = "yes";
+          };
+          shareList = [
+            "backups"
+            "documents"
+            "minecraft-worlds"
+            "movies"
+            "music"
+            "pictures"
+            "shows"
+            "torrents"
+            "yarg-charts"
+          ];
+          generatedShares = builtins.listToAttrs (
+            map (share: {
+              name = share;
+              value = commonShareAttrs // {
+                path = "/metalminds/${share}";
+              };
+            }) shareList
+          );
+        in
         {
           global = {
             "map to guest" = "Bad User";
@@ -585,7 +509,8 @@
             "write list" = "@users";
             "browsable" = "yes";
           };
-        } // generatedShares;
+        }
+        // generatedShares;
       openFirewall = true;
     };
     samba-wsdd = {
@@ -642,23 +567,32 @@
     accessibleFrom = [ "10.10.10.0/24" ];
     portMappings = [
       # Autobrr
-      { from = config.services.autobrr.settings.port; to = config.services.autobrr.settings.port; }
+      {
+        from = config.services.autobrr.settings.port;
+        to = config.services.autobrr.settings.port;
+      }
       # Prowlarr
-      { from = config.services.prowlarr.settings.server.port; to = config.services.prowlarr.settings.server.port; }
+      {
+        from = config.services.prowlarr.settings.server.port;
+        to = config.services.prowlarr.settings.server.port;
+      }
       # qBittorrent
-      { from = config.services.qbittorrent.webuiPort; to = config.services.qbittorrent.webuiPort; }
+      {
+        from = config.services.qbittorrent.webuiPort;
+        to = config.services.qbittorrent.webuiPort;
+      }
       # Radarr
-      { from = config.services.radarr.settings.server.port; to = config.services.radarr.settings.server.port; }
+      {
+        from = config.services.radarr.settings.server.port;
+        to = config.services.radarr.settings.server.port;
+      }
       # Sonarr
-      { from = config.services.sonarr.settings.server.port; to = config.services.sonarr.settings.server.port; }
+      {
+        from = config.services.sonarr.settings.server.port;
+        to = config.services.sonarr.settings.server.port;
+      }
     ];
   };
-
-
-  # Copy the NixOS configuration file and link it from the resulting system
-  # (/run/current-system/configuration.nix). This is useful in case you
-  # accidentally delete configuration.nix.
-  # system.copySystemConfiguration = true;
 
   # This option defines the first version of NixOS you have installed on this particular machine,
   # and is used to maintain compatibility with application data (e.g. databases) created on older NixOS versions.
@@ -676,8 +610,7 @@
   # Do NOT change this value unless you have manually inspected all the changes it would make to your configuration,
   # and migrated your data accordingly.
   #
-  # For more information, see `man configuration.nix` or https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
+  # For more information, see `man configuration.nix` or
+  # https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
   system.stateVersion = "25.05"; # Did you read the comment?
-
 }
-
