@@ -49,18 +49,13 @@ Address = 10.2.0.2/32 # Set WIREGUARD_ADDRESSES in configuration.nix
 The gluetun container is configured with:
 - VPN Service Provider: ProtonVPN
 - VPN Type: WireGuard
-- Port forwarding: Enabled (ProtonVPN port forwarding)
+- Port forwarding: Enabled with native qBittorrent integration
+- Automatic port configuration via VPN_PORT_FORWARDING_UP_COMMAND
 - Port 8080 exposed for qBittorrent WebUI
 - Network capabilities: NET_ADMIN (required for VPN)
 - TUN device access (required for VPN)
 
-### gluetun-qbittorrent-port-manager Container
-
-This container automatically manages port forwarding in qBittorrent:
-- Monitors gluetun for forwarded port changes
-- Automatically updates qBittorrent's listening port
-- Runs in gluetun's network namespace
-- Uses read-only access to gluetun's forwarded_port file
+When gluetun receives a forwarded port from ProtonVPN, it automatically updates qBittorrent's listening port via the qBittorrent API. This is done using gluetun's native port forwarding commands.
 
 ### qBittorrent Container
 
@@ -68,7 +63,8 @@ The qBittorrent container:
 - Uses the LinuxServer.io image
 - Runs within gluetun's network namespace (all traffic goes through VPN)
 - WebUI accessible on port 8080
-- Listening port automatically managed by port-manager
+- Listening port automatically managed by gluetun's port forwarding commands
+- **Important**: WebUI "Bypass authentication for clients on localhost" must be enabled for port forwarding to work
 - Volumes:
   - `/metalminds/qbittorrent/config`: qBittorrent configuration
   - `/metalminds/torrents/downloads`: Download directory
@@ -91,6 +87,7 @@ On first login to qBittorrent WebUI (https://qbittorrent.harmony.silverlight-nex
 - Default torrent tags: `cross-seed`
 
 #### WebUI Settings
+- **IMPORTANT**: Enable "Bypass authentication for clients on localhost" (required for gluetun port forwarding)
 - Enable "Use alternative Web UI" if needed
 - Enable "Enable Host header validation"
 - Set "Server domains" to: `qbittorrent.harmony.silverlight-nex.us`

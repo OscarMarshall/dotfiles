@@ -17,17 +17,16 @@ This PR migrates qBittorrent from a NixOS service using VPN-Confinement to a Doc
    - `qbittorrent` system user and group (no longer needed with default cross-seed user)
 
 2. **Added:**
-   - `gluetun` Docker container - Handles VPN connectivity with ProtonVPN and port forwarding
-   - `gluetun-qbittorrent-port-manager` Docker container - Automatically manages qBittorrent port forwarding
+   - `gluetun` Docker container - Handles VPN connectivity with ProtonVPN and native port forwarding integration
    - `qbittorrent` Docker container - Runs qBittorrent in gluetun's network namespace with link-dir volume
-   - User `oscar` added to `docker` group
 
 3. **Updated:**
    - `cross-seed` configuration now uses default user/group and qBittorrent URL
-   - `unpackerr` configuration includes qBittorrent URL and points to services at 127.0.0.1
+   - `unpackerr` configuration points to services at 127.0.0.1
    - `autobrr` now binds to 127.0.0.1 instead of 192.168.15.1
    - nginx proxy for all services (except qBittorrent) now use `proxy` instead of `proxyProton0`
    - qBittorrent nginx proxy still uses `proxyProton0` to connect to Docker container at 192.168.15.1:8080
+   - gluetun uses native port forwarding commands to automatically update qBittorrent's listening port
 
 ### Flake Changes (`flake.nix`)
 
@@ -47,7 +46,7 @@ This PR migrates qBittorrent from a NixOS service using VPN-Confinement to a Doc
 
 - OCI containers with default backend
 - Gluetun container will start and connect to ProtonVPN with port forwarding enabled (once secret is created)
-- Port manager container will automatically update qBittorrent's listening port
+- Gluetun will automatically update qBittorrent's listening port when forwarded port changes
 - qBittorrent container will start and run through VPN
 - All services (autobrr, prowlarr, radarr, sonarr) run directly on the host without VPN
 - Nginx proxy will route traffic correctly for all services
@@ -136,7 +135,7 @@ The original qBittorrent service will be restored with VPN-Confinement.
 ## Benefits of This Change
 
 1. **Simpler VPN Management:** gluetun is a dedicated VPN container with better ProtonVPN support
-2. **Automatic Port Forwarding:** Port manager automatically configures qBittorrent with forwarded port from ProtonVPN
+2. **Native Port Forwarding:** gluetun's built-in port forwarding commands automatically configure qBittorrent
 3. **Better Container Support:** qBittorrent in Docker is more flexible and easier to update
 4. **Isolation:** Docker containers provide better process isolation
 5. **Easier Debugging:** Docker logs are simpler to access and troubleshoot
@@ -147,9 +146,9 @@ The original qBittorrent service will be restored with VPN-Confinement.
 ```
 Internet
    ↓
-Proton VPN (via gluetun) with port forwarding
+Proton VPN (via gluetun) with native port forwarding
    ↓
-Port Manager → monitors forwarded port → updates qBittorrent
+gluetun commands → automatically update qBittorrent port via API
    ↓
 qBittorrent container (shares gluetun's network)
    ↓ (port 8080 exposed via gluetun)

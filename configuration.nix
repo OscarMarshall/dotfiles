@@ -82,7 +82,6 @@
         description = "Oscar Marshall";
         isNormalUser = true;
         extraGroups = [
-          "docker"
           "minecraft"
           "radarr"
           "sonarr"
@@ -140,6 +139,8 @@
           VPN_SERVICE_PROVIDER = "protonvpn";
           VPN_TYPE = "wireguard";
           VPN_PORT_FORWARDING = "on";
+          VPN_PORT_FORWARDING_UP_COMMAND = "/bin/sh -c 'wget -O- --retry-connrefused --post-data \"json={\\\"listen_port\\\":{{PORT}},\\\"current_network_interface\\\":\\\"{{VPN_INTERFACE}}\\\",\\\"random_port\\\":false,\\\"upnp\\\":false}\" http://127.0.0.1:8080/api/v2/app/setPreferences 2>&1'";
+          VPN_PORT_FORWARDING_DOWN_COMMAND = "/bin/sh -c 'wget -O- --retry-connrefused --post-data \"json={\\\"listen_port\\\":0,\\\"current_network_interface\\\":\\\"lo\\\"}\" http://127.0.0.1:8080/api/v2/app/setPreferences 2>&1'";
           WIREGUARD_ADDRESSES = "10.2.0.2/32";
           SERVER_COUNTRIES = "US";
           TZ = config.time.timeZone;
@@ -148,21 +149,6 @@
         extraOptions = [
           "--cap-add=NET_ADMIN"
           "--device=/dev/net/tun:/dev/net/tun"
-        ];
-      };
-      gluetun-qbittorrent-port-manager = {
-        image = "ghcr.io/mjmeli/gluetun-qbittorrent-port-manager:latest";
-        volumes = [
-          "/metalminds/gluetun:/gluetun:ro"
-        ];
-        environment = {
-          QBITTORRENT_SERVER = "localhost";
-          QBITTORRENT_PORT = "8080";
-          GTW_FORWARDED_PORT_FILE = "/gluetun/forwarded_port";
-        };
-        dependsOn = [ "gluetun" "qbittorrent" ];
-        extraOptions = [
-          "--network=container:gluetun"
         ];
       };
       qbittorrent = {
