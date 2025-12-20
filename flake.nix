@@ -17,9 +17,8 @@
       url = "github:OscarMarshall/nix-minecraft";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    vpn-confinement.url = "github:Maroka-chan/VPN-Confinement";
   };
-  outputs = inputs@{ agenix, home-manager, nixpkgs, self, vpn-confinement, ... }: {
+  outputs = inputs@{ agenix, home-manager, nixpkgs, self, ... }: {
     nixosConfigurations.harmony = nixpkgs.lib.nixosSystem {
       specialArgs = { inherit inputs; };
       modules = [
@@ -35,7 +34,6 @@
           # Optionally, use home-manager.extraSpecialArgs to pass
           # arguments to home.nix
         }
-        vpn-confinement.nixosModules.default
       ];
     };
   };
