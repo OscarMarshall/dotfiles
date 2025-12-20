@@ -57,21 +57,6 @@
     };
   };
 
-  fileSystems = {
-    "/hoid" = {
-      device = "hoid:/silverlight-mercantile";
-      fsType = "rclone";
-      options = [
-        "nodev"
-        "nofail"
-        "allow_other"
-        "args2env"
-        "config=/etc/rclone-hoid.conf"
-        "x-systemd.automount"
-      ];
-    };
-  };
-
   networking = {
     hostId = "7dab76c0";
     hostName = "harmony";
@@ -123,6 +108,7 @@
         pkg:
         builtins.elem (lib.getName pkg) [
           "minecraft-server"
+          "neoforge"
           "plexmediaserver"
         ];
     };
@@ -137,16 +123,6 @@
       pkgs.rclone
       pkgs.wget
     ];
-    etc = {
-      "rclone-hoid.conf".text = ''
-        [hoid]
-        type = sftp
-        host = hoid.silverlight-nex.us
-        user = oscar
-        key_file = /etc/ssh/ssh_host_ed25519_key
-        shell_type = unix
-      '';
-    };
   };
 
   programs = {
@@ -169,8 +145,8 @@
         volumes = [ "/metalminds/torrents/downloads:/downloads" ];
         environment = {
           TZ = config.time.timeZone;
-          UN_SONARR_0_URL = "192.168.15.1:${toString config.services.sonarr.settings.server.port}";
-          UN_RADARR_0_URL = "192.168.15.1:${toString config.services.radarr.settings.server.port}";
+          UN_SONARR_0_URL = "http://192.168.15.1:${toString config.services.sonarr.settings.server.port}";
+          UN_RADARR_0_URL = "http://192.168.15.1:${toString config.services.radarr.settings.server.port}";
         };
         environmentFiles = [ config.age.secrets."unpackerr.env".path ];
       };
@@ -289,14 +265,6 @@
                 }
               ];
             }
-            {
-              "Hoid" = [
-                {
-                  abbr = "HO";
-                  href = "https://hoid.silverlight-nex.us";
-                }
-              ];
-            }
           ];
         }
       ];
@@ -315,6 +283,7 @@
             server-port = 25566;
             white-list = true;
             enable-rcon = true;
+            "rcon.port" = 25576;
             "rcon.password" = "@RCON_PASSWORD@";
           };
           symlinks = {
@@ -362,6 +331,17 @@
                 };
               }
             );
+          };
+        };
+        create-think-bigger = {
+          enable = true;
+          package = pkgs.neoforgeServers.neoforge-21_1;
+          serverProperties = {
+            server-port = 25567;
+            white-list = true;
+            enable-rcon = true;
+            "rcon.port" = 25577;
+            "rcon.password" = "@RCON_PASSWORD@";
           };
         };
       };

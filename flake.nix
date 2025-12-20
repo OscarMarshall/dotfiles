@@ -14,7 +14,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nix-minecraft = {
-      url = "github:Infinidoge/nix-minecraft";
+      url = "github:OscarMarshall/nix-minecraft";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     vpn-confinement.url = "github:Maroka-chan/VPN-Confinement";
