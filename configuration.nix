@@ -17,7 +17,7 @@
     autobrr-secret.file = secrets/autobrr-secret.age;
     cross-seed-settings-file.file = secrets/cross-seed-settings-file.age;
     cross-seed-headers-file.file = secrets/cross-seed-headers-file.age;
-    "gluetun.env".file = secrets/gluetun.env.age;
+    "gluetun-wireguard-private-key".file = secrets/gluetun-wireguard-private-key.age;
     "homepage-dashboard.env".file = secrets/homepage-dashboard.env.age;
     "minecraft-servers.env".file = secrets/minecraft-servers.env.age;
     "unpackerr.env".file = secrets/unpackerr.env.age;
@@ -77,7 +77,6 @@
 
   users = {
     defaultUserShell = pkgs.zsh;
-    groups.qbittorrent = {};
     users = {
       oscar = {
         description = "Oscar Marshall";
@@ -85,7 +84,6 @@
         extraGroups = [
           "docker"
           "minecraft"
-          "qbittorrent"
           "radarr"
           "sonarr"
           "wheel"
@@ -96,11 +94,6 @@
         packages = [
           pkgs.rcon-cli
         ];
-      };
-      qbittorrent = {
-        description = "qBittorrent user for cross-seed";
-        isSystemUser = true;
-        group = "qbittorrent";
       };
     };
   };
@@ -147,13 +140,15 @@
           VPN_SERVICE_PROVIDER = "protonvpn";
           VPN_TYPE = "wireguard";
           VPN_PORT_FORWARDING = "on";
+          WIREGUARD_ADDRESSES = "10.2.0.2/32";
+          SERVER_COUNTRIES = "US";
           TZ = config.time.timeZone;
         };
+        environmentFiles = [ config.age.secrets."gluetun-wireguard-private-key".path ];
         extraOptions = [
           "--cap-add=NET_ADMIN"
           "--device=/dev/net/tun:/dev/net/tun"
         ];
-        environmentFiles = [ config.age.secrets."gluetun.env".path ];
       };
       gluetun-qbittorrent-port-manager = {
         image = "ghcr.io/mjmeli/gluetun-qbittorrent-port-manager:latest";
@@ -175,6 +170,7 @@
         volumes = [
           "/metalminds/qbittorrent/config:/config"
           "/metalminds/torrents/downloads:/downloads"
+          "/metalminds/torrents/link-dir:/link-dir"
         ];
         environment = {
           PUID = "1000";
@@ -222,8 +218,6 @@
     };
     cross-seed = {
       enable = true;
-      user = "qbittorrent";
-      group = "qbittorrent";
       useGenConfigDefaults = true;
       settingsFile = config.age.secrets.cross-seed-settings-file.path;
       settings = {

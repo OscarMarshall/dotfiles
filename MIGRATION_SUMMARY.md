@@ -12,18 +12,18 @@ This PR migrates qBittorrent from a NixOS service using VPN-Confinement to a Doc
    - `services.qbittorrent` service configuration
    - `systemd.services.*.vpnConfinement` configuration for all services
    - `vpnNamespaces.proton0` entire configuration
-   - `Harmony_P2P-US-CA-898.conf` secret reference (replaced by gluetun.env)
+   - `Harmony_P2P-US-CA-898.conf` secret reference (replaced by gluetun secrets)
    - Cross-seed headers file ownership (was owned by qbittorrent user)
+   - `qbittorrent` system user and group (no longer needed with default cross-seed user)
 
 2. **Added:**
    - `gluetun` Docker container - Handles VPN connectivity with ProtonVPN and port forwarding
    - `gluetun-qbittorrent-port-manager` Docker container - Automatically manages qBittorrent port forwarding
-   - `qbittorrent` Docker container - Runs qBittorrent in gluetun's network namespace
-   - System user and group `qbittorrent` for cross-seed compatibility
+   - `qbittorrent` Docker container - Runs qBittorrent in gluetun's network namespace with link-dir volume
    - User `oscar` added to `docker` group
 
 3. **Updated:**
-   - `cross-seed` configuration now explicitly sets user/group and qBittorrent URL
+   - `cross-seed` configuration now uses default user/group and qBittorrent URL
    - `unpackerr` configuration includes qBittorrent URL and points to services at 127.0.0.1
    - `autobrr` now binds to 127.0.0.1 instead of 192.168.15.1
    - nginx proxy for all services (except qBittorrent) now use `proxy` instead of `proxyProton0`
@@ -35,8 +35,9 @@ This PR migrates qBittorrent from a NixOS service using VPN-Confinement to a Doc
 
 ### Secrets Configuration (`secrets/secrets.nix`)
 
-- Added `gluetun.env.age` entry for VPN credentials
+- Added `gluetun-wireguard-private-key.age` entry for WireGuard private key (only sensitive data encrypted)
 - Removed `Harmony_P2P-US-CA-898.conf.age` entry (no longer needed)
+- Non-sensitive values (WIREGUARD_ADDRESSES, SERVER_COUNTRIES) set directly in configuration.nix
 
 ### Documentation
 
@@ -55,26 +56,30 @@ This PR migrates qBittorrent from a NixOS service using VPN-Confinement to a Doc
 
 ## What Requires Manual Steps
 
-### 1. Create the gluetun.env.age Secret (REQUIRED)
+### 1. Create the gluetun-wireguard-private-key.age Secret (REQUIRED)
 
-Before deploying, you MUST create the `secrets/gluetun.env.age` file:
+Before deploying, you MUST create the `secrets/gluetun-wireguard-private-key.age` file:
 
 ```bash
-# Extract values from your existing WireGuard config
-# Then create and encrypt the secret:
-agenix -e secrets/gluetun.env.age
+# Create a file with just the private key:
+cat > /tmp/gluetun-wireguard-private-key << 'EOF'
+WIREGUARD_PRIVATE_KEY=your_private_key_from_wireguard_config
+EOF
+
+# Then encrypt it using agenix:
+agenix -e secrets/gluetun-wireguard-private-key.age
+# Paste the content from /tmp/gluetun-wireguard-private-key and save
 ```
 
-The file should contain:
-```
-WIREGUARD_PRIVATE_KEY=your_private_key
-WIREGUARD_ADDRESSES=your_wireguard_address
-SERVER_COUNTRIES=US
-```
+### 2. Update Configuration Values (if needed)
+
+Check and update these values in `configuration.nix` if they differ from your setup:
+- `WIREGUARD_ADDRESSES`: Currently set to `10.2.0.2/32`
+- `SERVER_COUNTRIES`: Currently set to `US`
 
 See `GLUETUN_SETUP.md` for detailed instructions on extracting these values.
 
-### 2. Configure qBittorrent via WebUI (After First Deployment)
+### 3. Configure qBittorrent via WebUI (After First Deployment)
 
 After the containers start, you'll need to configure qBittorrent settings that were previously managed by NixOS:
 
@@ -85,7 +90,7 @@ After the containers start, you'll need to configure qBittorrent settings that w
 
 See `GLUETUN_SETUP.md` for the exact settings to configure.
 
-### 3. Update API Keys in Connected Services
+### 4. Update API Keys in Connected Services
 
 Update qBittorrent connection settings in:
 - Autobrr

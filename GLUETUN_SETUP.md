@@ -4,34 +4,42 @@ This configuration uses gluetun to provide VPN connectivity for qBittorrent runn
 
 ## Required Secret Configuration
 
-You need to create the `secrets/gluetun.env.age` file with the following environment variables for ProtonVPN WireGuard:
+You need to create the `secrets/gluetun-wireguard-private-key.age` file with your WireGuard private key:
 
 ```bash
-# Create a plain text file first with the following content:
-cat > /tmp/gluetun.env << 'EOF'
+# Create a plain text file first with just the private key:
+cat > /tmp/gluetun-wireguard-private-key << 'EOF'
 WIREGUARD_PRIVATE_KEY=your_private_key_here
-WIREGUARD_ADDRESSES=your_wireguard_address_here
-SERVER_COUNTRIES=US
 EOF
 
 # Then encrypt it using agenix:
-agenix -e secrets/gluetun.env.age
-# Paste the content from /tmp/gluetun.env and save
+agenix -e secrets/gluetun-wireguard-private-key.age
+# Paste the content from /tmp/gluetun-wireguard-private-key and save
 ```
+
+## Configuration Values
+
+The following values are configured in `configuration.nix`:
+
+1. **WIREGUARD_PRIVATE_KEY** (secret): Stored in `gluetun-wireguard-private-key.age`
+2. **WIREGUARD_ADDRESSES**: Set directly in configuration (default: `10.2.0.2/32`)
+3. **SERVER_COUNTRIES**: Set directly in configuration (default: `US`)
+
+You may need to adjust `WIREGUARD_ADDRESSES` and `SERVER_COUNTRIES` in `configuration.nix` to match your ProtonVPN setup.
 
 ## Extracting WireGuard Configuration from Existing Config
 
 If you have an existing WireGuard configuration file (like `Harmony_P2P-US-CA-898.conf`), you can extract the required values:
 
-1. **WIREGUARD_PRIVATE_KEY**: This is the value from the `PrivateKey` field in the `[Interface]` section
-2. **WIREGUARD_ADDRESSES**: This is the value from the `Address` field in the `[Interface]` section (e.g., `10.2.0.2/32`)
-3. **SERVER_COUNTRIES**: The country code for your ProtonVPN server (e.g., `US` for United States, `CA` for Canada)
+1. **WIREGUARD_PRIVATE_KEY**: This is the value from the `PrivateKey` field in the `[Interface]` section - encrypt this in the secret file
+2. **WIREGUARD_ADDRESSES**: This is the value from the `Address` field in the `[Interface]` section (e.g., `10.2.0.2/32`) - set this in configuration.nix
+3. **SERVER_COUNTRIES**: The country code for your ProtonVPN server (e.g., `US` for United States, `CA` for Canada) - set this in configuration.nix
 
 Example extraction from a WireGuard config:
 ```ini
 [Interface]
-PrivateKey = ABC123... # Use this for WIREGUARD_PRIVATE_KEY
-Address = 10.2.0.2/32 # Use this for WIREGUARD_ADDRESSES
+PrivateKey = ABC123... # Encrypt this in gluetun-wireguard-private-key.age
+Address = 10.2.0.2/32 # Set WIREGUARD_ADDRESSES in configuration.nix
 ```
 
 ## Container Setup
