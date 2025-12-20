@@ -77,12 +77,18 @@
 
   users = {
     defaultUserShell = pkgs.zsh;
+    groups = {
+      qbittorrent.gid = 568;
+      cross-seed.gid = 569;
+    };
     users = {
       oscar = {
         description = "Oscar Marshall";
         isNormalUser = true;
         extraGroups = [
           "minecraft"
+          "qbittorrent"
+          "cross-seed"
           "radarr"
           "sonarr"
           "wheel"
@@ -93,6 +99,20 @@
         packages = [
           pkgs.rcon-cli
         ];
+      };
+      qbittorrent = {
+        description = "qBittorrent service user";
+        isSystemUser = true;
+        uid = 568;
+        group = "qbittorrent";
+        extraGroups = [ "cross-seed" ];
+      };
+      cross-seed = {
+        description = "cross-seed service user";
+        isSystemUser = true;
+        uid = 569;
+        group = "cross-seed";
+        extraGroups = [ "qbittorrent" ];
       };
     };
   };
@@ -159,8 +179,8 @@
           "/metalminds/torrents/link-dir:/link-dir"
         ];
         environment = {
-          PUID = "1000";
-          PGID = "1000";
+          PUID = "568";
+          PGID = "568";
           TZ = config.time.timeZone;
           WEBUI_PORT = "8080";
         };
@@ -203,6 +223,8 @@
     };
     cross-seed = {
       enable = true;
+      user = "cross-seed";
+      group = "cross-seed";
       useGenConfigDefaults = true;
       settingsFile = config.age.secrets.cross-seed-settings-file.path;
       settings = {
