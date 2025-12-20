@@ -146,6 +146,7 @@
         environment = {
           VPN_SERVICE_PROVIDER = "protonvpn";
           VPN_TYPE = "wireguard";
+          VPN_PORT_FORWARDING = "on";
           TZ = config.time.timeZone;
         };
         extraOptions = [
@@ -153,6 +154,21 @@
           "--device=/dev/net/tun:/dev/net/tun"
         ];
         environmentFiles = [ config.age.secrets."gluetun.env".path ];
+      };
+      gluetun-qbittorrent-port-manager = {
+        image = "ghcr.io/mjmeli/gluetun-qbittorrent-port-manager:latest";
+        volumes = [
+          "/metalminds/gluetun:/gluetun:ro"
+        ];
+        environment = {
+          QBITTORRENT_SERVER = "localhost";
+          QBITTORRENT_PORT = "8080";
+          GTW_FORWARDED_PORT_FILE = "/gluetun/forwarded_port";
+        };
+        dependsOn = [ "gluetun" "qbittorrent" ];
+        extraOptions = [
+          "--network=container:gluetun"
+        ];
       };
       qbittorrent = {
         image = "lscr.io/linuxserver/qbittorrent:latest";

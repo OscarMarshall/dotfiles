@@ -1,6 +1,6 @@
 # Gluetun Setup for qBittorrent
 
-This configuration uses gluetun to provide VPN connectivity for qBittorrent running in a Docker container.
+This configuration uses gluetun to provide VPN connectivity for qBittorrent running in a Docker container, with automatic port forwarding management.
 
 ## Required Secret Configuration
 
@@ -34,21 +34,33 @@ PrivateKey = ABC123... # Use this for WIREGUARD_PRIVATE_KEY
 Address = 10.2.0.2/32 # Use this for WIREGUARD_ADDRESSES
 ```
 
-## Additional gluetun Configuration
+## Container Setup
+
+### gluetun Container
 
 The gluetun container is configured with:
 - VPN Service Provider: ProtonVPN
 - VPN Type: WireGuard
-- Port forwarding: 8080 (for qBittorrent WebUI)
+- Port forwarding: Enabled (ProtonVPN port forwarding)
+- Port 8080 exposed for qBittorrent WebUI
 - Network capabilities: NET_ADMIN (required for VPN)
 - TUN device access (required for VPN)
 
-## qBittorrent Container
+### gluetun-qbittorrent-port-manager Container
+
+This container automatically manages port forwarding in qBittorrent:
+- Monitors gluetun for forwarded port changes
+- Automatically updates qBittorrent's listening port
+- Runs in gluetun's network namespace
+- Uses read-only access to gluetun's forwarded_port file
+
+### qBittorrent Container
 
 The qBittorrent container:
 - Uses the LinuxServer.io image
 - Runs within gluetun's network namespace (all traffic goes through VPN)
 - WebUI accessible on port 8080
+- Listening port automatically managed by port-manager
 - Volumes:
   - `/metalminds/qbittorrent/config`: qBittorrent configuration
   - `/metalminds/torrents/downloads`: Download directory

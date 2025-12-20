@@ -16,7 +16,8 @@ This PR migrates qBittorrent from a NixOS service using VPN-Confinement to a Doc
    - Cross-seed headers file ownership (was owned by qbittorrent user)
 
 2. **Added:**
-   - `gluetun` Docker container - Handles VPN connectivity with ProtonVPN
+   - `gluetun` Docker container - Handles VPN connectivity with ProtonVPN and port forwarding
+   - `gluetun-qbittorrent-port-manager` Docker container - Automatically manages qBittorrent port forwarding
    - `qbittorrent` Docker container - Runs qBittorrent in gluetun's network namespace
    - System user and group `qbittorrent` for cross-seed compatibility
    - User `oscar` added to `docker` group
@@ -44,7 +45,8 @@ This PR migrates qBittorrent from a NixOS service using VPN-Confinement to a Doc
 ## What Works Out of the Box
 
 - OCI containers with default backend
-- Gluetun container will start and connect to ProtonVPN (once secret is created)
+- Gluetun container will start and connect to ProtonVPN with port forwarding enabled (once secret is created)
+- Port manager container will automatically update qBittorrent's listening port
 - qBittorrent container will start and run through VPN
 - All services (autobrr, prowlarr, radarr, sonarr) run directly on the host without VPN
 - Nginx proxy will route traffic correctly for all services
@@ -129,17 +131,20 @@ The original qBittorrent service will be restored with VPN-Confinement.
 ## Benefits of This Change
 
 1. **Simpler VPN Management:** gluetun is a dedicated VPN container with better ProtonVPN support
-2. **Better Container Support:** qBittorrent in Docker is more flexible and easier to update
-3. **Isolation:** Docker containers provide better process isolation
-4. **Easier Debugging:** Docker logs are simpler to access and troubleshoot
-5. **Portable Configuration:** Docker compose could be used in the future if needed
+2. **Automatic Port Forwarding:** Port manager automatically configures qBittorrent with forwarded port from ProtonVPN
+3. **Better Container Support:** qBittorrent in Docker is more flexible and easier to update
+4. **Isolation:** Docker containers provide better process isolation
+5. **Easier Debugging:** Docker logs are simpler to access and troubleshoot
+6. **Portable Configuration:** Docker compose could be used in the future if needed
 
 ## Network Architecture
 
 ```
 Internet
    ↓
-Proton VPN (via gluetun)
+Proton VPN (via gluetun) with port forwarding
+   ↓
+Port Manager → monitors forwarded port → updates qBittorrent
    ↓
 qBittorrent container (shares gluetun's network)
    ↓ (port 8080 exposed via gluetun)
