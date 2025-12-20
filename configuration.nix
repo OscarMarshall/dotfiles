@@ -17,7 +17,7 @@
     autobrr-secret.file = secrets/autobrr-secret.age;
     cross-seed-settings-file.file = secrets/cross-seed-settings-file.age;
     cross-seed-headers-file.file = secrets/cross-seed-headers-file.age;
-    "gluetun-wireguard-private-key".file = secrets/gluetun-wireguard-private-key.age;
+    gluetun-wireguard-private-key.file = secrets/gluetun-wireguard-private-key.age;
     "homepage-dashboard.env".file = secrets/homepage-dashboard.env.age;
     "minecraft-servers.env".file = secrets/minecraft-servers.env.age;
     "unpackerr.env".file = secrets/unpackerr.env.age;
@@ -144,7 +144,7 @@
           SERVER_COUNTRIES = "US";
           TZ = config.time.timeZone;
         };
-        environmentFiles = [ config.age.secrets."gluetun-wireguard-private-key".path ];
+        environmentFiles = [ config.age.secrets.gluetun-wireguard-private-key.path ];
         extraOptions = [
           "--cap-add=NET_ADMIN"
           "--device=/dev/net/tun:/dev/net/tun"
@@ -198,7 +198,6 @@
           TZ = config.time.timeZone;
           UN_SONARR_0_URL = "http://127.0.0.1:${toString config.services.sonarr.settings.server.port}";
           UN_RADARR_0_URL = "http://127.0.0.1:${toString config.services.radarr.settings.server.port}";
-          UN_QBIT_0_URL = "http://192.168.15.1:8080";
         };
         environmentFiles = [ config.age.secrets."unpackerr.env".path ];
       };
