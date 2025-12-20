@@ -23,7 +23,7 @@
     };
     vpn-confinement.url = "github:Maroka-chan/VPN-Confinement";
   };
-  outputs = inputs@{ agenix, git-hooks, home-manager, nixpkgs, self, vpn-confinement, ... }: 
+  outputs = inputs@{ agenix, git-hooks, home-manager, nixpkgs, self, vpn-confinement, ... }:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
