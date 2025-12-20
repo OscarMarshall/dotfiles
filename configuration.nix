@@ -79,16 +79,15 @@
     defaultUserShell = pkgs.zsh;
     groups = {
       qbittorrent.gid = 568;
-      cross-seed.gid = 569;
     };
     users = {
       oscar = {
         description = "Oscar Marshall";
         isNormalUser = true;
         extraGroups = [
+          "cross-seed"
           "minecraft"
           "qbittorrent"
-          "cross-seed"
           "radarr"
           "sonarr"
           "wheel"
@@ -110,7 +109,6 @@
       cross-seed = {
         description = "cross-seed service user";
         isSystemUser = true;
-        uid = 569;
         group = "cross-seed";
         extraGroups = [ "qbittorrent" ];
       };
