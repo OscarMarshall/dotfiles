@@ -9,6 +9,7 @@ in {
   "autobrr-secret.age".publicKeys = oscar ++ [ harmony ];
   "cross-seed-settings-file.age".publicKeys = oscar ++ [ harmony ];
   "cross-seed-headers-file.age".publicKeys = oscar ++ [ harmony ];
+  "gluetun.env.age".publicKeys = oscar ++ [ harmony ];
   "homepage-dashboard.env.age".publicKeys = oscar ++ [ harmony ];
   "Harmony_P2P-US-CA-898.conf.age".publicKeys = oscar ++ [ harmony ];
   "minecraft-servers.env.age".publicKeys = oscar ++ [ harmony ];

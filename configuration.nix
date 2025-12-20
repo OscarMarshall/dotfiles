@@ -16,11 +16,8 @@
   age.secrets = {
     autobrr-secret.file = secrets/autobrr-secret.age;
     cross-seed-settings-file.file = secrets/cross-seed-settings-file.age;
-    cross-seed-headers-file = {
-      file = secrets/cross-seed-headers-file.age;
-      owner = "qbittorrent";
-      group = "qbittorrent";
-    };
+    cross-seed-headers-file.file = secrets/cross-seed-headers-file.age;
+    "gluetun.env".file = secrets/gluetun.env.age;
     "homepage-dashboard.env".file = secrets/homepage-dashboard.env.age;
     "Harmony_P2P-US-CA-898.conf".file = secrets/Harmony_P2P-US-CA-898.conf.age;
     "minecraft-servers.env".file = secrets/minecraft-servers.env.age;
@@ -81,11 +78,13 @@
 
   users = {
     defaultUserShell = pkgs.zsh;
+    groups.qbittorrent = {};
     users = {
       oscar = {
         description = "Oscar Marshall";
         isNormalUser = true;
         extraGroups = [
+          "docker"
           "minecraft"
           "qbittorrent"
           "radarr"
@@ -98,6 +97,11 @@
         packages = [
           pkgs.rcon-cli
         ];
+      };
+      qbittorrent = {
+        description = "qBittorrent user for cross-seed";
+        isSystemUser = true;
+        group = "qbittorrent";
       };
     };
   };
@@ -131,7 +135,46 @@
   };
 
   virtualisation = {
-    oci-containers.containers = {
+    docker.enable = true;
+    oci-containers = {
+      backend = "docker";
+      containers = {
+      gluetun = {
+        image = "qmcgaw/gluetun:latest";
+        ports = [
+          "192.168.15.1:8080:8080" # qBittorrent WebUI
+        ];
+        volumes = [
+          "/metalminds/gluetun:/gluetun"
+        ];
+        environment = {
+          VPN_SERVICE_PROVIDER = "protonvpn";
+          VPN_TYPE = "wireguard";
+          TZ = config.time.timeZone;
+        };
+        extraOptions = [
+          "--cap-add=NET_ADMIN"
+          "--device=/dev/net/tun:/dev/net/tun"
+        ];
+        environmentFiles = [ config.age.secrets."gluetun.env".path ];
+      };
+      qbittorrent = {
+        image = "lscr.io/linuxserver/qbittorrent:latest";
+        volumes = [
+          "/metalminds/qbittorrent/config:/config"
+          "/metalminds/torrents/downloads:/downloads"
+        ];
+        environment = {
+          PUID = "1000";
+          PGID = "1000";
+          TZ = config.time.timeZone;
+          WEBUI_PORT = "8080";
+        };
+        dependsOn = [ "gluetun" ];
+        extraOptions = [
+          "--network=container:gluetun"
+        ];
+      };
       profilarr = {
         image = "santiagosayshey/profilarr:latest";
         ports = [ "127.0.0.1:6868:6868" ];
@@ -147,9 +190,11 @@
           TZ = config.time.timeZone;
           UN_SONARR_0_URL = "http://192.168.15.1:${toString config.services.sonarr.settings.server.port}";
           UN_RADARR_0_URL = "http://192.168.15.1:${toString config.services.radarr.settings.server.port}";
+          UN_QBIT_0_URL = "http://192.168.15.1:8080";
         };
         environmentFiles = [ config.age.secrets."unpackerr.env".path ];
       };
+    };
     };
   };
 
@@ -166,14 +211,15 @@
     };
     cross-seed = {
       enable = true;
-      user = config.services.qbittorrent.user;
-      group = config.services.qbittorrent.group;
+      user = "qbittorrent";
+      group = "qbittorrent";
       useGenConfigDefaults = true;
       settingsFile = config.age.secrets.cross-seed-settings-file.path;
       settings = {
         port = 2468;
         linkDirs = [ "/metalminds/torrents/link-dir" ];
         matchMode = "partial";
+        qbittorrentUrl = "http://192.168.15.1:8080";
       };
     };
     flaresolverr.enable = true;
@@ -407,7 +453,7 @@
           "plex.harmony.silverlight-nex.us" = proxy 32400;
           "profilarr.harmony.silverlight-nex.us" = proxy 6868;
           "prowlarr.harmony.silverlight-nex.us" = proxyProton0 config.services.prowlarr.settings.server.port;
-          "qbittorrent.harmony.silverlight-nex.us" = proxyProton0 config.services.qbittorrent.webuiPort;
+          "qbittorrent.harmony.silverlight-nex.us" = proxyProton0 8080;
           "radarr.harmony.silverlight-nex.us" = proxyProton0 config.services.radarr.settings.server.port;
           "sonarr.harmony.silverlight-nex.us" = proxyProton0 config.services.sonarr.settings.server.port;
         };
@@ -421,34 +467,6 @@
       openFirewall = true;
     };
     prowlarr.enable = true;
-    qbittorrent = {
-      enable = true;
-      package = pkgs.qbittorrent-nox;
-      serverConfig = {
-        AutoRun = {
-          enabled = true;
-          program = ''
-            ${pkgs.curl}/bin/curl -XPOST http://127.0.0.1:${toString config.services.cross-seed.settings.port}/api/webhook \
-              -H \"@${config.age.secrets.cross-seed-headers-file.path}\" \
-              -d \"infoHash=%I\" \
-              -d \"includeSingleEpisodes=true\"
-          '';
-        };
-        BitTorrent.Session = {
-          DefaultSavePath = "/metalminds/torrents/downloads";
-          IgnoreSlowTorrentsForQueueing = true;
-          MaxActiveTorrents = 999999999;
-          MaxActiveUploads = 999999999;
-          Tags = "cross-seed";
-        };
-        Preferences.WebUI = {
-          Password_PBKDF2 = "@ByteArray(3+DJBBGQhl1i7uYQ4PAZAA==:FTHL6psR2VpGAUnpsh/SlTa5mPjZZ6ab6YwkzqH0JxUL94iDPCKHFpkZQoAqnlv/0rri76zKo6on73kwI3s7dA==)";
-          ReverseProxySupportEnabled = true;
-          TrustedReverseProxiesList = "qbittorrent.harmony.silverlight-nex.us";
-          Username = "oscar";
-        };
-      };
-    };
     radarr.enable = true;
     samba = {
       enable = true;
@@ -527,10 +545,6 @@
       enable = true;
       vpnNamespace = "proton0";
     };
-    qbittorrent.vpnConfinement = {
-      enable = true;
-      vpnNamespace = "proton0";
-    };
     radarr.vpnConfinement = {
       enable = true;
       vpnNamespace = "proton0";
@@ -555,11 +569,6 @@
       {
         from = config.services.prowlarr.settings.server.port;
         to = config.services.prowlarr.settings.server.port;
-      }
-      # qBittorrent
-      {
-        from = config.services.qbittorrent.webuiPort;
-        to = config.services.qbittorrent.webuiPort;
       }
       # Radarr
       {
