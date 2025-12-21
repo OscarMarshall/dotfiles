@@ -229,7 +229,6 @@
         port = 2468;
         linkDirs = [ "/metalminds/torrents/link-dir" ];
         matchMode = "partial";
-        qbittorrentUrl = "http://192.168.15.1:8080";
       };
     };
     flaresolverr.enable = true;
@@ -451,7 +450,7 @@
             base {
               "/".proxyPass = "http://127.0.0.1:${toString port}/";
             };
-          proxyProton0 =
+          proxyGluetun =
             port:
             base {
               "/".proxyPass = "http://192.168.15.1:${toString port}/";
@@ -463,7 +462,7 @@
           "plex.harmony.silverlight-nex.us" = proxy 32400;
           "profilarr.harmony.silverlight-nex.us" = proxy 6868;
           "prowlarr.harmony.silverlight-nex.us" = proxy config.services.prowlarr.settings.server.port;
-          "qbittorrent.harmony.silverlight-nex.us" = proxyProton0 8080;
+          "qbittorrent.harmony.silverlight-nex.us" = proxyGluetun 8080;
           "radarr.harmony.silverlight-nex.us" = proxy config.services.radarr.settings.server.port;
           "sonarr.harmony.silverlight-nex.us" = proxy config.services.sonarr.settings.server.port;
         };
