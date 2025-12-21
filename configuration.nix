@@ -172,7 +172,7 @@
       qbittorrent = {
         image = "lscr.io/linuxserver/qbittorrent:latest";
         volumes = [
-          "/metalminds/qbittorrent/config:/config"
+          "/var/lib/qBittorrent:/config"
           "/metalminds/torrents/downloads:/downloads"
           "/metalminds/torrents/link-dir:/link-dir"
         ];
