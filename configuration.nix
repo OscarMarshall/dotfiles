@@ -77,15 +77,11 @@
 
   users = {
     defaultUserShell = pkgs.zsh;
-    groups = {
-      qbittorrent.gid = 568;
-    };
     users = {
       oscar = {
         description = "Oscar Marshall";
         isNormalUser = true;
         extraGroups = [
-          "cross-seed"
           "minecraft"
           "qbittorrent"
           "radarr"
@@ -100,19 +96,15 @@
         ];
       };
       qbittorrent = {
+        uid = 985;
         description = "qBittorrent service user";
         isSystemUser = true;
-        uid = 568;
         group = "qbittorrent";
-        extraGroups = [ "cross-seed" ];
       };
-      cross-seed = {
-        description = "cross-seed service user";
-        isSystemUser = true;
-        group = "cross-seed";
-        extraGroups = [ "qbittorrent" ];
-      };
+      radarr.extraGroups = [ "qbittorrent" ];
+      sonarr.extraGroups = [ "qbittorrent" ];
     };
+    groups.qbittorrent.gid = 985;
   };
 
   nixpkgs = {
@@ -148,10 +140,11 @@
       gluetun = {
         image = "qmcgaw/gluetun:latest";
         ports = [
-          "192.168.15.1:8080:8080" # qBittorrent WebUI
+          "8080:8080" # qBittorrent WebUI
+          "2468:2468" # cross-seed
         ];
         volumes = [
-          "/metalminds/gluetun:/gluetun"
+          "/var/lib/gluetun:/gluetun"
         ];
         environment = {
           VPN_SERVICE_PROVIDER = "protonvpn";
@@ -159,8 +152,8 @@
           VPN_PORT_FORWARDING = "on";
           VPN_PORT_FORWARDING_UP_COMMAND = "/bin/sh -c 'wget -O- --retry-connrefused --post-data \"json={\\\"listen_port\\\":{{PORT}},\\\"current_network_interface\\\":\\\"{{VPN_INTERFACE}}\\\",\\\"random_port\\\":false,\\\"upnp\\\":false}\" http://127.0.0.1:8080/api/v2/app/setPreferences 2>&1'";
           VPN_PORT_FORWARDING_DOWN_COMMAND = "/bin/sh -c 'wget -O- --retry-connrefused --post-data \"json={\\\"listen_port\\\":0,\\\"current_network_interface\\\":\\\"lo\\\"}\" http://127.0.0.1:8080/api/v2/app/setPreferences 2>&1'";
-          WIREGUARD_ADDRESSES = "10.2.0.2/32";
-          SERVER_COUNTRIES = "US";
+          SERVER_COUNTRIES = "United States";
+          PORT_FORWARD_ONLY = "on";
           TZ = config.time.timeZone;
         };
         environmentFiles = [ config.age.secrets.gluetun-wireguard-private-key.path ];
@@ -173,12 +166,11 @@
         image = "lscr.io/linuxserver/qbittorrent:latest";
         volumes = [
           "/var/lib/qBittorrent:/config"
-          "/metalminds/torrents/downloads:/downloads"
-          "/metalminds/torrents/link-dir:/link-dir"
+          "/metalminds/torrents:/metalminds/torrents"
         ];
         environment = {
-          PUID = "568";
-          PGID = "568";
+          PUID = toString config.users.users.qbittorrent.uid;
+          PGID = toString config.users.groups.qbittorrent.gid;
           TZ = config.time.timeZone;
           WEBUI_PORT = "8080";
         };
@@ -221,8 +213,8 @@
     };
     cross-seed = {
       enable = true;
-      user = "cross-seed";
-      group = "cross-seed";
+      user = "qbittorrent";
+      group = "qbittorrent";
       useGenConfigDefaults = true;
       settingsFile = config.age.secrets.cross-seed-settings-file.path;
       settings = {
@@ -390,7 +382,7 @@
         };
         create-think-bigger = {
           enable = true;
-          package = pkgs.neoforgeServers.neoforge-21_1;
+          package = pkgs.neoforgeServers.neoforge-1_21_1;
           serverProperties = {
             server-port = 25567;
             white-list = true;
@@ -450,11 +442,11 @@
             base {
               "/".proxyPass = "http://127.0.0.1:${toString port}/";
             };
-          proxyGluetun =
-            port:
-            base {
-              "/".proxyPass = "http://192.168.15.1:${toString port}/";
-            };
+          # proxyGluetun =
+          #   port:
+          #   base {
+          #     "/".proxyPass = "http://192.168.15.1:${toString port}/";
+          #   };
         in
         {
           "harmony.silverlight-nex.us" = proxy 8082;
@@ -462,7 +454,7 @@
           "plex.harmony.silverlight-nex.us" = proxy 32400;
           "profilarr.harmony.silverlight-nex.us" = proxy 6868;
           "prowlarr.harmony.silverlight-nex.us" = proxy config.services.prowlarr.settings.server.port;
-          "qbittorrent.harmony.silverlight-nex.us" = proxyGluetun 8080;
+          "qbittorrent.harmony.silverlight-nex.us" = proxy 8080;
           "radarr.harmony.silverlight-nex.us" = proxy config.services.radarr.settings.server.port;
           "sonarr.harmony.silverlight-nex.us" = proxy config.services.sonarr.settings.server.port;
         };
