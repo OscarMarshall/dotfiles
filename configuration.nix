@@ -442,11 +442,6 @@
             base {
               "/".proxyPass = "http://127.0.0.1:${toString port}/";
             };
-          # proxyGluetun =
-          #   port:
-          #   base {
-          #     "/".proxyPass = "http://192.168.15.1:${toString port}/";
-          #   };
         in
         {
           "harmony.silverlight-nex.us" = proxy 8082;
