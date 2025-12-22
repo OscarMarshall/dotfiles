@@ -15,15 +15,11 @@
 
   age.secrets = {
     autobrr-secret.file = secrets/autobrr-secret.age;
-    cross-seed-settings-file.file = secrets/cross-seed-settings-file.age;
-    cross-seed-headers-file = {
-      file = secrets/cross-seed-headers-file.age;
-      owner = "qbittorrent";
-      group = "qbittorrent";
-    };
+    "cross-seed.json".file = secrets/cross-seed.json.age;
+    "gluetun.env".file = secrets/gluetun.env.age;
     "homepage-dashboard.env".file = secrets/homepage-dashboard.env.age;
-    "Harmony_P2P-US-CA-898.conf".file = secrets/Harmony_P2P-US-CA-898.conf.age;
     "minecraft-servers.env".file = secrets/minecraft-servers.env.age;
+    "qbittorrent.env".file = secrets/qbittorrent.env.age;
     "unpackerr.env".file = secrets/unpackerr.env.age;
   };
 
@@ -99,7 +95,16 @@
           pkgs.rcon-cli
         ];
       };
+      qbittorrent = {
+        uid = 985;
+        description = "qBittorrent service user";
+        isSystemUser = true;
+        group = "qbittorrent";
+      };
+      radarr.extraGroups = [ "qbittorrent" ];
+      sonarr.extraGroups = [ "qbittorrent" ];
     };
+    groups.qbittorrent.gid = 985;
   };
 
   nixpkgs = {
@@ -132,6 +137,52 @@
 
   virtualisation = {
     oci-containers.containers = {
+      gluetun = {
+        image = "qmcgaw/gluetun:latest";
+        ports = [
+          "8080:8080" # qBittorrent WebUI
+        ];
+        volumes = [
+          "/var/lib/gluetun:/gluetun"
+        ];
+        environment = {
+          VPN_SERVICE_PROVIDER = "protonvpn";
+          VPN_TYPE = "wireguard";
+          VPN_PORT_FORWARDING = "on";
+          VPN_PORT_FORWARDING_UP_COMMAND = ''
+            /bin/sh -c 'wget -O- --retry-connrefused --post-data "json={\"listen_port\":{{PORT}},\"current_network_interface\":\"{{VPN_INTERFACE}}\",\"random_port\":false,\"upnp\":false}" http://127.0.0.1:8080/api/v2/app/setPreferences 2>&1'
+          '';
+          VPN_PORT_FORWARDING_DOWN_COMMAND = ''
+            /bin/sh -c 'wget -O- --retry-connrefused --post-data "json={\"listen_port\":0,\"current_network_interface\":\"lo\"}" http://127.0.0.1:8080/api/v2/app/setPreferences 2>&1'
+          '';
+          SERVER_COUNTRIES = "United States";
+          PORT_FORWARD_ONLY = "on";
+          TZ = config.time.timeZone;
+        };
+        environmentFiles = [ config.age.secrets."gluetun.env".path ];
+        extraOptions = [
+          "--cap-add=NET_ADMIN"
+          "--device=/dev/net/tun:/dev/net/tun"
+        ];
+      };
+      qbittorrent = {
+        image = "lscr.io/linuxserver/qbittorrent:latest";
+        volumes = [
+          "/var/lib/qBittorrent:/config"
+          "/metalminds/torrents:/metalminds/torrents"
+        ];
+        environment = {
+          PUID = toString config.users.users.qbittorrent.uid;
+          PGID = toString config.users.groups.qbittorrent.gid;
+          TZ = config.time.timeZone;
+          WEBUI_PORT = "8080";
+        };
+        environmentFiles = [ config.age.secrets."qbittorrent.env".path ];
+        dependsOn = [ "gluetun" ];
+        extraOptions = [
+          "--network=container:gluetun"
+        ];
+      };
       profilarr = {
         image = "santiagosayshey/profilarr:latest";
         ports = [ "127.0.0.1:6868:6868" ];
@@ -145,8 +196,8 @@
         volumes = [ "/metalminds/torrents/downloads:/downloads" ];
         environment = {
           TZ = config.time.timeZone;
-          UN_SONARR_0_URL = "http://192.168.15.1:${toString config.services.sonarr.settings.server.port}";
-          UN_RADARR_0_URL = "http://192.168.15.1:${toString config.services.radarr.settings.server.port}";
+          UN_SONARR_0_URL = "https://sonarr.harmony.silverlight-nex.us";
+          UN_RADARR_0_URL = "https://radarr.harmony.silverlight-nex.us";
         };
         environmentFiles = [ config.age.secrets."unpackerr.env".path ];
       };
@@ -160,16 +211,16 @@
       secretFile = config.age.secrets.autobrr-secret.path;
       settings = {
         checkForUpdates = true;
-        host = "192.168.15.1";
+        host = "127.0.0.1";
         port = 7474;
       };
     };
     cross-seed = {
       enable = true;
-      user = config.services.qbittorrent.user;
-      group = config.services.qbittorrent.group;
+      user = "qbittorrent";
+      group = "qbittorrent";
       useGenConfigDefaults = true;
-      settingsFile = config.age.secrets.cross-seed-settings-file.path;
+      settingsFile = config.age.secrets."cross-seed.json".path;
       settings = {
         port = 2468;
         linkDirs = [ "/metalminds/torrents/link-dir" ];
@@ -335,7 +386,7 @@
         };
         create-think-bigger = {
           enable = true;
-          package = pkgs.neoforgeServers.neoforge-21_1;
+          package = pkgs.neoforgeServers.neoforge-1_21_1;
           serverProperties = {
             server-port = 25567;
             white-list = true;
@@ -395,21 +446,16 @@
             base {
               "/".proxyPass = "http://127.0.0.1:${toString port}/";
             };
-          proxyProton0 =
-            port:
-            base {
-              "/".proxyPass = "http://192.168.15.1:${toString port}/";
-            };
         in
         {
           "harmony.silverlight-nex.us" = proxy 8082;
-          "autobrr.harmony.silverlight-nex.us" = proxyProton0 config.services.autobrr.settings.port;
+          "autobrr.harmony.silverlight-nex.us" = proxy config.services.autobrr.settings.port;
           "plex.harmony.silverlight-nex.us" = proxy 32400;
           "profilarr.harmony.silverlight-nex.us" = proxy 6868;
-          "prowlarr.harmony.silverlight-nex.us" = proxyProton0 config.services.prowlarr.settings.server.port;
-          "qbittorrent.harmony.silverlight-nex.us" = proxyProton0 config.services.qbittorrent.webuiPort;
-          "radarr.harmony.silverlight-nex.us" = proxyProton0 config.services.radarr.settings.server.port;
-          "sonarr.harmony.silverlight-nex.us" = proxyProton0 config.services.sonarr.settings.server.port;
+          "prowlarr.harmony.silverlight-nex.us" = proxy config.services.prowlarr.settings.server.port;
+          "qbittorrent.harmony.silverlight-nex.us" = proxy 8080;
+          "radarr.harmony.silverlight-nex.us" = proxy config.services.radarr.settings.server.port;
+          "sonarr.harmony.silverlight-nex.us" = proxy config.services.sonarr.settings.server.port;
         };
     };
     openssh = {
@@ -421,34 +467,6 @@
       openFirewall = true;
     };
     prowlarr.enable = true;
-    qbittorrent = {
-      enable = true;
-      package = pkgs.qbittorrent-nox;
-      serverConfig = {
-        AutoRun = {
-          enabled = true;
-          program = ''
-            ${pkgs.curl}/bin/curl -XPOST http://127.0.0.1:${toString config.services.cross-seed.settings.port}/api/webhook \
-              -H \"@${config.age.secrets.cross-seed-headers-file.path}\" \
-              -d \"infoHash=%I\" \
-              -d \"includeSingleEpisodes=true\"
-          '';
-        };
-        BitTorrent.Session = {
-          DefaultSavePath = "/metalminds/torrents/downloads";
-          IgnoreSlowTorrentsForQueueing = true;
-          MaxActiveTorrents = 999999999;
-          MaxActiveUploads = 999999999;
-          Tags = "cross-seed";
-        };
-        Preferences.WebUI = {
-          Password_PBKDF2 = "@ByteArray(3+DJBBGQhl1i7uYQ4PAZAA==:FTHL6psR2VpGAUnpsh/SlTa5mPjZZ6ab6YwkzqH0JxUL94iDPCKHFpkZQoAqnlv/0rri76zKo6on73kwI3s7dA==)";
-          ReverseProxySupportEnabled = true;
-          TrustedReverseProxiesList = "qbittorrent.harmony.silverlight-nex.us";
-          Username = "oscar";
-        };
-      };
-    };
     radarr.enable = true;
     samba = {
       enable = true;
@@ -508,70 +526,6 @@
   security.acme = {
     acceptTerms = true;
     defaults.email = "letsencrypt@alias.oscarmarshall.com";
-  };
-
-  systemd.services = {
-    autobrr.vpnConfinement = {
-      enable = true;
-      vpnNamespace = "proton0";
-    };
-    cross-seed.vpnConfinement = {
-      enable = true;
-      vpnNamespace = "proton0";
-    };
-    flaresolverr.vpnConfinement = {
-      enable = true;
-      vpnNamespace = "proton0";
-    };
-    prowlarr.vpnConfinement = {
-      enable = true;
-      vpnNamespace = "proton0";
-    };
-    qbittorrent.vpnConfinement = {
-      enable = true;
-      vpnNamespace = "proton0";
-    };
-    radarr.vpnConfinement = {
-      enable = true;
-      vpnNamespace = "proton0";
-    };
-    sonarr.vpnConfinement = {
-      enable = true;
-      vpnNamespace = "proton0";
-    };
-  };
-
-  vpnNamespaces.proton0 = {
-    enable = true;
-    wireguardConfigFile = config.age.secrets."Harmony_P2P-US-CA-898.conf".path;
-    accessibleFrom = [ "10.10.10.0/24" ];
-    portMappings = [
-      # Autobrr
-      {
-        from = config.services.autobrr.settings.port;
-        to = config.services.autobrr.settings.port;
-      }
-      # Prowlarr
-      {
-        from = config.services.prowlarr.settings.server.port;
-        to = config.services.prowlarr.settings.server.port;
-      }
-      # qBittorrent
-      {
-        from = config.services.qbittorrent.webuiPort;
-        to = config.services.qbittorrent.webuiPort;
-      }
-      # Radarr
-      {
-        from = config.services.radarr.settings.server.port;
-        to = config.services.radarr.settings.server.port;
-      }
-      # Sonarr
-      {
-        from = config.services.sonarr.settings.server.port;
-        to = config.services.sonarr.settings.server.port;
-      }
-    ];
   };
 
   # This option defines the first version of NixOS you have installed on this particular machine,
