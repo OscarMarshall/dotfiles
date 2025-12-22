@@ -14,11 +14,11 @@ This is a personal NixOS configuration repository for a home server named "harmo
 
 ## Key Technologies
 
-- **NixOS**: Declarative Linux distribution
-- **Nix Flakes**: Modern Nix package and configuration management
-- **Home Manager**: User environment management
-- **agenix**: Secret management with age encryption
-- **Docker/OCI containers**: Several services run in containers (gluetun, qBittorrent, etc.)
+- **NixOS**: Declarative Linux distribution that allows reproducible system configurations
+- **Nix Flakes**: Modern Nix package and configuration management with lockfile-based dependency pinning
+- **Home Manager**: Manages user-specific configuration (dotfiles, packages, shell, etc.) declaratively
+- **agenix**: Secret management using age encryption to securely store sensitive data in the repository
+- **Docker/OCI containers**: Several services run in containers for isolation and ease of management (gluetun, qBittorrent, etc.)
 
 ## Important Services
 
