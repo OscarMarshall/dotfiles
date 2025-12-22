@@ -15,11 +15,11 @@
 
   age.secrets = {
     autobrr-secret.file = secrets/autobrr-secret.age;
-    cross-seed-settings-file.file = secrets/cross-seed-settings-file.age;
-    cross-seed-headers-file.file = secrets/cross-seed-headers-file.age;
-    gluetun-wireguard-private-key.file = secrets/gluetun-wireguard-private-key.age;
+    "cross-seed.json".file = secrets/cross-seed.json.age;
+    "gluetun.env".file = secrets/gluetun.env.age;
     "homepage-dashboard.env".file = secrets/homepage-dashboard.env.age;
     "minecraft-servers.env".file = secrets/minecraft-servers.env.age;
+    "qbittorrent.env".file = secrets/qbittorrent.env.age;
     "unpackerr.env".file = secrets/unpackerr.env.age;
   };
 
@@ -141,7 +141,6 @@
         image = "qmcgaw/gluetun:latest";
         ports = [
           "8080:8080" # qBittorrent WebUI
-          "2468:2468" # cross-seed
         ];
         volumes = [
           "/var/lib/gluetun:/gluetun"
@@ -160,7 +159,7 @@
           PORT_FORWARD_ONLY = "on";
           TZ = config.time.timeZone;
         };
-        environmentFiles = [ config.age.secrets.gluetun-wireguard-private-key.path ];
+        environmentFiles = [ config.age.secrets."gluetun.env".path ];
         extraOptions = [
           "--cap-add=NET_ADMIN"
           "--device=/dev/net/tun:/dev/net/tun"
@@ -178,6 +177,7 @@
           TZ = config.time.timeZone;
           WEBUI_PORT = "8080";
         };
+        environmentFiles = [ config.age.secrets."qbittorrent.env".path ];
         dependsOn = [ "gluetun" ];
         extraOptions = [
           "--network=container:gluetun"
@@ -196,8 +196,8 @@
         volumes = [ "/metalminds/torrents/downloads:/downloads" ];
         environment = {
           TZ = config.time.timeZone;
-          UN_SONARR_0_URL = "http://127.0.0.1:${toString config.services.sonarr.settings.server.port}";
-          UN_RADARR_0_URL = "http://127.0.0.1:${toString config.services.radarr.settings.server.port}";
+          UN_SONARR_0_URL = "https://sonarr.harmony.silverlight-nex.us";
+          UN_RADARR_0_URL = "https://radarr.harmony.silverlight-nex.us";
         };
         environmentFiles = [ config.age.secrets."unpackerr.env".path ];
       };
@@ -220,7 +220,7 @@
       user = "qbittorrent";
       group = "qbittorrent";
       useGenConfigDefaults = true;
-      settingsFile = config.age.secrets.cross-seed-settings-file.path;
+      settingsFile = config.age.secrets."cross-seed.json".path;
       settings = {
         port = 2468;
         linkDirs = [ "/metalminds/torrents/link-dir" ];
