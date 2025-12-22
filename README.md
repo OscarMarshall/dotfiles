@@ -32,6 +32,10 @@ To run all configured checks (including pre-commit hooks):
 nix flake check
 ```
 
+### CI Enforcement
+
+A GitHub Action automatically runs on all pull requests and pushes to main/master branches to ensure code is properly formatted. This provides a safety net in case local pre-commit hooks are bypassed.
+
 ## Usage
 
 Build and switch to the configuration:
