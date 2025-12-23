@@ -26,9 +26,14 @@
     fzf.enable = true;
     git = {
       enable = true;
-      userName = "Oscar Marshall";
-      userEmail = "oscar.lim.marshall@gmail.com";
-      extraConfig.init.defaultBranch = "main";
+      settings = {
+        init.defaultBranch = "main";
+        pull.rebase = true;
+        user = {
+          name = "Oscar Marshall";
+          email = "oscar.lim.marshall@gmail.com";
+        };
+      };
     };
     home-manager.enable = true; # Let Home Manager install and manage itself.
     starship.enable = true;
