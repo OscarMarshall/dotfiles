@@ -21,7 +21,13 @@ This will set up the pre-commit hooks. After this, whenever you commit changes t
 To manually format all Nix files in the repository:
 
 ```bash
-nix fmt
+nix fmt .
+```
+
+Or to format specific files:
+
+```bash
+nix fmt path/to/file.nix
 ```
 
 ### Running checks
