@@ -4,9 +4,7 @@
   lib,
   pkgs,
   ...
-}:
-
-{
+}: {
   imports = [
     inputs.nix-minecraft.nixosModules.minecraft-servers
     ./hardware-configuration.nix
@@ -41,14 +39,14 @@
   };
 
   boot = {
-    kernelModules = [ "coretemp" ];
+    kernelModules = ["coretemp"];
     loader = {
       systemd-boot.enable = true;
       efi.canTouchEfiVariables = true;
     };
-    supportedFilesystems = [ "zfs" ];
+    supportedFilesystems = ["zfs"];
     zfs = {
-      extraPools = [ "metalminds" ];
+      extraPools = ["metalminds"];
       forceImportRoot = false;
     };
   };
@@ -63,7 +61,7 @@
         443
         25565
       ];
-      allowedUDPPorts = [ 51820 ];
+      allowedUDPPorts = [51820];
     };
   };
 
@@ -101,23 +99,22 @@
         isSystemUser = true;
         group = "qbittorrent";
       };
-      radarr.extraGroups = [ "qbittorrent" ];
-      sonarr.extraGroups = [ "qbittorrent" ];
+      radarr.extraGroups = ["qbittorrent"];
+      sonarr.extraGroups = ["qbittorrent"];
     };
     groups.qbittorrent.gid = 985;
   };
 
   nixpkgs = {
     config = {
-      allowUnfreePredicate =
-        pkg:
+      allowUnfreePredicate = pkg:
         builtins.elem (lib.getName pkg) [
           "minecraft-server"
           "neoforge"
           "plexmediaserver"
         ];
     };
-    overlays = [ inputs.nix-minecraft.overlay ];
+    overlays = [inputs.nix-minecraft.overlay];
   };
 
   environment = {
@@ -159,7 +156,7 @@
           PORT_FORWARD_ONLY = "on";
           TZ = config.time.timeZone;
         };
-        environmentFiles = [ config.age.secrets."gluetun.env".path ];
+        environmentFiles = [config.age.secrets."gluetun.env".path];
         extraOptions = [
           "--cap-add=NET_ADMIN"
           "--device=/dev/net/tun:/dev/net/tun"
@@ -177,29 +174,29 @@
           TZ = config.time.timeZone;
           WEBUI_PORT = "8080";
         };
-        environmentFiles = [ config.age.secrets."qbittorrent.env".path ];
-        dependsOn = [ "gluetun" ];
+        environmentFiles = [config.age.secrets."qbittorrent.env".path];
+        dependsOn = ["gluetun"];
         extraOptions = [
           "--network=container:gluetun"
         ];
       };
       profilarr = {
         image = "santiagosayshey/profilarr:latest";
-        ports = [ "127.0.0.1:6868:6868" ];
-        volumes = [ "/metalminds/profilarr:/config" ];
+        ports = ["127.0.0.1:6868:6868"];
+        volumes = ["/metalminds/profilarr:/config"];
         environment = {
           TZ = config.time.timeZone;
         };
       };
       unpackerr = {
         image = "golift/unpackerr";
-        volumes = [ "/metalminds/torrents/downloads:/downloads" ];
+        volumes = ["/metalminds/torrents/downloads:/downloads"];
         environment = {
           TZ = config.time.timeZone;
           UN_SONARR_0_URL = "https://sonarr.harmony.silverlight-nex.us";
           UN_RADARR_0_URL = "https://radarr.harmony.silverlight-nex.us";
         };
-        environmentFiles = [ config.age.secrets."unpackerr.env".path ];
+        environmentFiles = [config.age.secrets."unpackerr.env".path];
       };
     };
   };
@@ -223,7 +220,7 @@
       settingsFile = config.age.secrets."cross-seed.json".path;
       settings = {
         port = 2468;
-        linkDirs = [ "/metalminds/torrents/link-dir" ];
+        linkDirs = ["/metalminds/torrents/link-dir"];
         matchMode = "partial";
       };
     };
@@ -433,30 +430,27 @@
         proxy_cookie_path / "/; secure; HttpOnly; SameSite=strict";
       '';
 
-      virtualHosts =
-        let
-          base = locations: {
-            inherit locations;
+      virtualHosts = let
+        base = locations: {
+          inherit locations;
 
-            forceSSL = true;
-            enableACME = true;
-          };
-          proxy =
-            port:
-            base {
-              "/".proxyPass = "http://127.0.0.1:${toString port}/";
-            };
-        in
-        {
-          "harmony.silverlight-nex.us" = proxy 8082;
-          "autobrr.harmony.silverlight-nex.us" = proxy config.services.autobrr.settings.port;
-          "plex.harmony.silverlight-nex.us" = proxy 32400;
-          "profilarr.harmony.silverlight-nex.us" = proxy 6868;
-          "prowlarr.harmony.silverlight-nex.us" = proxy config.services.prowlarr.settings.server.port;
-          "qbittorrent.harmony.silverlight-nex.us" = proxy 8080;
-          "radarr.harmony.silverlight-nex.us" = proxy config.services.radarr.settings.server.port;
-          "sonarr.harmony.silverlight-nex.us" = proxy config.services.sonarr.settings.server.port;
+          forceSSL = true;
+          enableACME = true;
         };
+        proxy = port:
+          base {
+            "/".proxyPass = "http://127.0.0.1:${toString port}/";
+          };
+      in {
+        "harmony.silverlight-nex.us" = proxy 8082;
+        "autobrr.harmony.silverlight-nex.us" = proxy config.services.autobrr.settings.port;
+        "plex.harmony.silverlight-nex.us" = proxy 32400;
+        "profilarr.harmony.silverlight-nex.us" = proxy 6868;
+        "prowlarr.harmony.silverlight-nex.us" = proxy config.services.prowlarr.settings.server.port;
+        "qbittorrent.harmony.silverlight-nex.us" = proxy 8080;
+        "radarr.harmony.silverlight-nex.us" = proxy config.services.radarr.settings.server.port;
+        "sonarr.harmony.silverlight-nex.us" = proxy config.services.sonarr.settings.server.port;
+      };
     };
     openssh = {
       enable = true;
@@ -470,34 +464,36 @@
     radarr.enable = true;
     samba = {
       enable = true;
-      settings =
-        let
-          commonShareAttrs = {
-            "guest ok" = "yes";
-            "read only" = "yes";
-            "write list" = "@users";
-            "browsable" = "yes";
-          };
-          shareList = [
-            "backups"
-            "documents"
-            "minecraft-worlds"
-            "movies"
-            "music"
-            "pictures"
-            "shows"
-            "torrents"
-            "yarg-charts"
-          ];
-          generatedShares = builtins.listToAttrs (
-            map (share: {
-              name = share;
-              value = commonShareAttrs // {
+      settings = let
+        commonShareAttrs = {
+          "guest ok" = "yes";
+          "read only" = "yes";
+          "write list" = "@users";
+          "browsable" = "yes";
+        };
+        shareList = [
+          "backups"
+          "documents"
+          "minecraft-worlds"
+          "movies"
+          "music"
+          "pictures"
+          "shows"
+          "torrents"
+          "yarg-charts"
+        ];
+        generatedShares = builtins.listToAttrs (
+          map (share: {
+            name = share;
+            value =
+              commonShareAttrs
+              // {
                 path = "/metalminds/${share}";
               };
-            }) shareList
-          );
-        in
+          })
+          shareList
+        );
+      in
         {
           global = {
             "map to guest" = "Bad User";

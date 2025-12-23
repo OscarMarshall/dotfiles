@@ -1,6 +1,8 @@
-{ config, pkgs, ... }:
-
 {
+  config,
+  pkgs,
+  ...
+}: {
   home = {
     # Home Manager needs a bit of information about you and the
     # paths it should manage.
@@ -52,8 +54,8 @@
       };
       historySubstringSearch = {
         enable = true;
-        searchDownKey = [ "^[[B" "^[OB" ];
-        searchUpKey = [ "^[[A" "^[OA" ];
+        searchDownKey = ["^[[B" "^[OB"];
+        searchUpKey = ["^[[A" "^[OA"];
       };
       envExtra = ''
         source ~/.iterm2_shell_integration.zsh
