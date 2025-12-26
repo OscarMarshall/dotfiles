@@ -4,7 +4,7 @@ This repository contains the NixOS configuration for the Harmony server.
 
 ## Repository Structure
 
-The configuration is organized into modular components for better maintainability:
+The configuration is organized into modular components for better maintainability. See [docs/MODULE-ORGANIZATION.md](docs/MODULE-ORGANIZATION.md) for detailed documentation on the module structure.
 
 - **`flake.nix`**: Main flake configuration defining inputs and outputs
 - **`configuration.nix`**: Top-level configuration that imports all modules
