@@ -1,18 +1,17 @@
 {config, ...}: {
   users = {
-    users.qbittorrent = {
-      uid = 985;
-      description = "qBittorrent service user";
-      isSystemUser = true;
-      group = "qbittorrent";
+    users = {
+      qbittorrent = {
+        uid = 985;
+        description = "qBittorrent service user";
+        isSystemUser = true;
+        group = "qbittorrent";
+      };
+      # Add radarr and sonarr users to qbittorrent group for file access
+      radarr.extraGroups = ["qbittorrent"];
+      sonarr.extraGroups = ["qbittorrent"];
     };
     groups.qbittorrent.gid = 985;
-  };
-
-  # Add radarr and sonarr users to qbittorrent group for file access
-  users.users = {
-    radarr.extraGroups = ["qbittorrent"];
-    sonarr.extraGroups = ["qbittorrent"];
   };
 
   virtualisation.oci-containers.containers.qbittorrent = {
