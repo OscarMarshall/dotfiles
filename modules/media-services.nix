@@ -58,10 +58,4 @@
       locations."/".proxyPass = "http://127.0.0.1:${toString config.services.sonarr.settings.server.port}/";
     };
   };
-
-  # Add radarr and sonarr users to qbittorrent group for file access
-  users.users = {
-    radarr.extraGroups = ["qbittorrent"];
-    sonarr.extraGroups = ["qbittorrent"];
-  };
 }

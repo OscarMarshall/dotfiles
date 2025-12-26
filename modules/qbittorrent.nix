@@ -9,6 +9,12 @@
     groups.qbittorrent.gid = 985;
   };
 
+  # Add radarr and sonarr users to qbittorrent group for file access
+  users.users = {
+    radarr.extraGroups = ["qbittorrent"];
+    sonarr.extraGroups = ["qbittorrent"];
+  };
+
   virtualisation.oci-containers.containers.qbittorrent = {
     image = "lscr.io/linuxserver/qbittorrent:latest";
     volumes = [
