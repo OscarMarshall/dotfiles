@@ -1,4 +1,4 @@
-{config, ...}: {
+{config, pkgs, ...}: {
   system.autoUpgrade = {
     enable = true;
     allowReboot = true;
@@ -22,6 +22,21 @@
   console = {
     font = "Lat2-Terminus16";
     keyMap = "us";
+  };
+
+  programs = {
+    tmux.enable = true;
+    zsh.enable = true;
+  };
+
+  environment = {
+    systemPackages = [
+      pkgs.ddrescue
+      pkgs.git
+      pkgs.lm_sensors
+      pkgs.rclone
+      pkgs.wget
+    ];
   };
 
   # This option defines the first version of NixOS you have installed on this particular machine,

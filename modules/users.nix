@@ -21,19 +21,5 @@
       };
     };
   };
-
-  programs = {
-    tmux.enable = true;
-    zsh.enable = true;
-  };
-
-  environment = {
-    systemPackages = [
-      pkgs.ddrescue
-      pkgs.git
-      pkgs.lm_sensors
-      pkgs.rclone
-      pkgs.wget
-    ];
-  };
 }
+

@@ -3,19 +3,24 @@
     inputs.nix-minecraft.nixosModules.minecraft-servers
     ./hardware-configuration.nix
     ./cachix.nix
+    ./modules/autobrr.nix
     ./modules/boot.nix
+    ./modules/cross-seed.nix
     ./modules/gluetun.nix
     ./modules/homepage.nix
-    ./modules/media-services.nix
     ./modules/minecraft.nix
     ./modules/networking.nix
     ./modules/nginx.nix
     ./modules/nixpkgs.nix
+    ./modules/plex.nix
     ./modules/profilarr.nix
+    ./modules/prowlarr.nix
     ./modules/qbittorrent.nix
+    ./modules/radarr.nix
     ./modules/samba.nix
     ./modules/secrets.nix
     ./modules/services.nix
+    ./modules/sonarr.nix
     ./modules/system.nix
     ./modules/unpackerr.nix
     ./modules/users.nix
