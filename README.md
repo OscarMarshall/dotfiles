@@ -2,6 +2,29 @@
 
 This repository contains the NixOS configuration for the Harmony server.
 
+## Repository Structure
+
+The configuration is organized into modular components for better maintainability:
+
+- **`flake.nix`**: Main flake configuration defining inputs and outputs
+- **`configuration.nix`**: Top-level configuration that imports all modules
+- **`hardware-configuration.nix`**: Hardware-specific configuration (auto-generated)
+- **`home.nix`**: Home Manager configuration for user "oscar"
+- **`cachix.nix`**: Binary cache configuration
+- **`modules/`**: Modular configuration organized by functionality:
+  - `boot.nix`: Boot loader and ZFS configuration
+  - `containers.nix`: OCI container definitions (gluetun, qBittorrent, profilarr, unpackerr)
+  - `media-services.nix`: Media server services (Plex, *arr stack, homepage-dashboard)
+  - `minecraft.nix`: Minecraft server configurations
+  - `networking.nix`: Network settings and firewall rules
+  - `nginx.nix`: Reverse proxy and SSL configuration
+  - `nixpkgs.nix`: Nixpkgs overlays and package settings
+  - `samba.nix`: File sharing configuration
+  - `secrets.nix`: Agenix secret definitions
+  - `services.nix`: Miscellaneous system services
+  - `system.nix`: Core system settings (timezone, locale, auto-upgrade, state version)
+  - `users.nix`: User accounts and system packages
+
 ## Development
 
 This configuration includes:
