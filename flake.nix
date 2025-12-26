@@ -56,6 +56,7 @@
       src = ./.;
       hooks = {
         alejandra.enable = true;
+        deadnix.enable = true;
       };
     };
 

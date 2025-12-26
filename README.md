@@ -4,17 +4,23 @@ This repository contains the NixOS configuration for the Harmony server.
 
 ## Development
 
-This configuration includes [Alejandra](https://github.com/kamadorueda/alejandra), an opinionated Nix code formatter, integrated with [git-hooks.nix](https://github.com/cachix/git-hooks.nix) for automatic code formatting.
+This configuration includes:
+- [Alejandra](https://github.com/kamadorueda/alejandra): An opinionated Nix code formatter
+- [deadnix](https://github.com/astro/deadnix): A tool to scan for unused Nix code
+
+Both are integrated with [git-hooks.nix](https://github.com/cachix/git-hooks.nix) for automatic checks on commit.
 
 ### Setting up pre-commit hooks
 
-To enable automatic formatting on commit:
+To enable automatic formatting and dead code checks on commit:
 
 ```bash
 nix develop
 ```
 
-This will set up the pre-commit hooks. After this, whenever you commit changes to `.nix` files, Alejandra will automatically format them.
+This will set up the pre-commit hooks. After this, whenever you commit changes to `.nix` files:
+- Alejandra will automatically format them
+- deadnix will check for unused code and fail the commit if any is found
 
 ### Manual formatting
 
@@ -38,9 +44,25 @@ To run all configured checks (including pre-commit hooks):
 nix flake check
 ```
 
+To manually check for dead code:
+
+```bash
+nix run nixpkgs#deadnix -- .
+```
+
+To automatically remove dead code:
+
+```bash
+nix run nixpkgs#deadnix -- --edit .
+```
+
 ### CI Enforcement
 
-A GitHub Action automatically runs on all pull requests and pushes to main/master branches to ensure code is properly formatted. This provides a safety net in case local pre-commit hooks are bypassed.
+GitHub Actions automatically run on all pull requests and pushes to main/master branches to ensure:
+- Code is properly formatted (via Alejandra)
+- No dead code exists (via deadnix)
+
+This provides a safety net in case local pre-commit hooks are bypassed.
 
 ## Usage
 
