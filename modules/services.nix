@@ -6,10 +6,5 @@
       enable = true;
       openFirewall = true;
     };
-    zfs = {
-      autoScrub.enable = true;
-      autoSnapshot.enable = true;
-      trim.enable = true;
-    };
   };
 }

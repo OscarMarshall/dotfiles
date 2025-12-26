@@ -19,16 +19,7 @@
           pkgs.rcon-cli
         ];
       };
-      qbittorrent = {
-        uid = 985;
-        description = "qBittorrent service user";
-        isSystemUser = true;
-        group = "qbittorrent";
-      };
-      radarr.extraGroups = ["qbittorrent"];
-      sonarr.extraGroups = ["qbittorrent"];
     };
-    groups.qbittorrent.gid = 985;
   };
 
   programs = {
