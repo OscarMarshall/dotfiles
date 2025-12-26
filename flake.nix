@@ -9,6 +9,10 @@
       url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    git-hooks = {
+      url = "github:cachix/git-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -18,13 +22,23 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
-  outputs = inputs@{ agenix, home-manager, nixpkgs, self, ... }: {
+  outputs = inputs @ {
+    agenix,
+    git-hooks,
+    home-manager,
+    nixpkgs,
+    self,
+    ...
+  }: let
+    system = "x86_64-linux";
+    pkgs = import nixpkgs {inherit system;};
+  in {
     nixosConfigurations.harmony = nixpkgs.lib.nixosSystem {
-      specialArgs = { inherit inputs; };
+      specialArgs = {inherit inputs;};
       modules = [
         ./configuration.nix
         agenix.nixosModules.default
-        { environment.systemPackages = [ agenix.packages.x86_64-linux.default ]; }
+        {environment.systemPackages = [agenix.packages.x86_64-linux.default];}
         home-manager.nixosModules.home-manager
         {
           home-manager.useGlobalPkgs = true;
@@ -36,6 +50,22 @@
         }
       ];
     };
+
+    # Pre-commit hooks configuration
+    checks.${system}.pre-commit-check = git-hooks.lib.${system}.run {
+      src = ./.;
+      hooks = {
+        alejandra.enable = true;
+      };
+    };
+
+    # Development shell with pre-commit hooks
+    devShells.${system}.default = pkgs.mkShell {
+      inherit (self.checks.${system}.pre-commit-check) shellHook;
+      buildInputs = self.checks.${system}.pre-commit-check.enabledPackages;
+    };
+
+    # Formatter for `nix fmt`
+    formatter.${system} = pkgs.alejandra;
   };
 }
-

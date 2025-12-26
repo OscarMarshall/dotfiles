@@ -1,6 +1,8 @@
-{ config, pkgs, ... }:
-
 {
+  config,
+  pkgs,
+  ...
+}: {
   home = {
     # Home Manager needs a bit of information about you and the
     # paths it should manage.
@@ -24,9 +26,14 @@
     fzf.enable = true;
     git = {
       enable = true;
-      userName = "Oscar Marshall";
-      userEmail = "oscar.lim.marshall@gmail.com";
-      extraConfig.init.defaultBranch = "main";
+      settings = {
+        init.defaultBranch = "main";
+        pull.rebase = true;
+        user = {
+          name = "Oscar Marshall";
+          email = "oscar.lim.marshall@gmail.com";
+        };
+      };
     };
     home-manager.enable = true; # Let Home Manager install and manage itself.
     starship.enable = true;
@@ -52,8 +59,8 @@
       };
       historySubstringSearch = {
         enable = true;
-        searchDownKey = [ "^[[B" "^[OB" ];
-        searchUpKey = [ "^[[A" "^[OA" ];
+        searchDownKey = ["^[[B" "^[OB"];
+        searchUpKey = ["^[[A" "^[OA"];
       };
       envExtra = ''
         source ~/.iterm2_shell_integration.zsh
