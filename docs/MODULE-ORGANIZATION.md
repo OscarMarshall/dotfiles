@@ -106,8 +106,8 @@ TV show automation:
 
 #### `prowlarr.nix`
 Indexer manager:
-- Service configuration
-- Flaresolverr (bundled for Cloudflare bypass)
+- Service configuration for Prowlarr
+- Flaresolverr service (co-located in same module for Cloudflare bypass)
 - Nginx reverse proxy configuration
 
 #### `autobrr.nix`
@@ -192,7 +192,12 @@ Modules can reference configuration from other modules through the `config` para
 ## Module Template
 
 ```nix
-{config, ...}: {
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}: {
   # Service configuration
   services.myservice = {
     enable = true;
@@ -203,7 +208,7 @@ Modules can reference configuration from other modules through the `config` para
   services.nginx.virtualHosts."myservice.harmony.silverlight-nex.us" = {
     forceSSL = true;
     enableACME = true;
-    locations."/".proxyPass = "http://127.0.0.1:PORT/";
+    locations."/".proxyPass = "http://127.0.0.1:8080/"; # Replace with actual port
   };
 
   # Users/groups (if needed)
