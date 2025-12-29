@@ -5,7 +5,7 @@ This is a personal NixOS configuration repository for a home server named "harmo
 ## Repository Structure
 
 - **`flake.nix`**: Main flake configuration defining inputs (nixpkgs, agenix, home-manager, nix-minecraft) and the NixOS system configuration
-- **`configuration.nix`**: Top-level configuration that imports all modules (22 lines, imports only)
+- **`configuration.nix`**: Top-level configuration that imports all modules (29 lines, imports only)
 - **`hardware-configuration.nix`**: Hardware-specific configuration (auto-generated)
 - **`home.nix`**: Home Manager configuration for user "oscar" (shell, editor, git, etc.)
 - **`cachix.nix`**: Binary cache configuration
