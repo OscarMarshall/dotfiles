@@ -4,7 +4,7 @@ This document describes the organization of the NixOS configuration modules.
 
 ## Overview
 
-The configuration has been organized into focused, single-purpose modules in the `modules/` directory. Each module handles a specific domain of the system configuration.
+The configuration has been organized into focused, single-purpose modules in the `modules/` directory. Each module handles a specific service or system component, with related configuration co-located together.
 
 ## Module Descriptions
 
@@ -15,14 +15,20 @@ Contains core system settings including:
 - Auto-upgrade configuration
 - Nix garbage collection
 - Timezone and locale settings
-- ACME/Let's Encrypt configuration
+- System programs (tmux, zsh)
+- System packages
 - System state version
 
 #### `boot.nix`
 Boot-related configuration:
 - Systemd-boot configuration
-- ZFS support and pool mounting
+- EFI variables
 - Kernel modules
+
+#### `zfs.nix`
+ZFS filesystem configuration:
+- ZFS support and pool mounting
+- ZFS services (autoScrub, autoSnapshot, trim)
 
 #### `networking.nix`
 Network configuration:
@@ -33,11 +39,11 @@ Network configuration:
 ### User and Package Management
 
 #### `users.nix`
-User accounts and basic system packages:
-- User definitions (oscar, qbittorrent, radarr, sonarr)
+User account definitions:
+- User definitions (oscar)
 - SSH keys
 - Default shell configuration
-- Essential system packages
+- User-specific packages
 
 #### `nixpkgs.nix`
 Nixpkgs configuration:
@@ -51,25 +57,76 @@ Miscellaneous system services:
 - apcupsd (UPS monitoring)
 - glances (system monitoring)
 - openssh
-- ZFS automation (scrub, snapshot, trim)
 
-#### `containers.nix`
-OCI/Docker container definitions:
-- gluetun (VPN with port forwarding)
-- qBittorrent (torrent client)
-- profilarr (profile manager for *arr apps)
-- unpackerr (automatic archive extraction)
+### Container Modules
 
-#### `media-services.nix`
-Media server and automation services:
-- Plex Media Server
-- Radarr (movie automation)
-- Sonarr (TV show automation)
-- Prowlarr (indexer manager)
-- autobrr (torrent automation)
-- cross-seed (cross-seeding automation)
-- flaresolverr (Cloudflare bypass)
-- homepage-dashboard (unified dashboard)
+Each container service has its own dedicated module for easier management:
+
+#### `gluetun.nix`
+VPN container with port forwarding:
+- Proton VPN configuration
+- Port forwarding for qBittorrent
+
+#### `qbittorrent.nix`
+qBittorrent torrent client:
+- Container configuration
+- Service user and group
+- Nginx reverse proxy configuration
+- Group memberships for radarr/sonarr access
+
+#### `profilarr.nix`
+Profilarr profile manager:
+- Container configuration
+- Nginx reverse proxy configuration
+
+#### `unpackerr.nix`
+Automatic archive extraction:
+- Container configuration
+- Integration with radarr/sonarr
+
+### Media Services
+
+Each media service has its own module with co-located nginx configuration:
+
+#### `plex.nix`
+Plex Media Server:
+- Service configuration
+- Firewall rules
+- Nginx reverse proxy configuration
+
+#### `radarr.nix`
+Movie automation:
+- Service configuration
+- Nginx reverse proxy configuration
+
+#### `sonarr.nix`
+TV show automation:
+- Service configuration
+- Nginx reverse proxy configuration
+
+#### `prowlarr.nix`
+Indexer manager:
+- Service configuration
+- Flaresolverr (bundled for Cloudflare bypass)
+- Nginx reverse proxy configuration
+
+#### `autobrr.nix`
+Torrent automation:
+- Service configuration
+- Secret file reference
+- Nginx reverse proxy configuration
+
+#### `cross-seed.nix`
+Cross-seeding automation:
+- Service configuration
+- Integration with qBittorrent user/group
+
+### Additional Services
+
+#### `homepage.nix`
+Homepage dashboard:
+- Service configuration with widgets and bookmarks
+- Nginx reverse proxy configuration
 
 #### `minecraft.nix`
 Minecraft server configurations:
@@ -79,11 +136,13 @@ Minecraft server configurations:
 - Server properties and RCON configuration
 
 #### `nginx.nix`
-Reverse proxy and web server:
-- SSL/TLS configuration
+Base nginx configuration:
+- SSL/TLS settings
 - Security headers
-- Virtual host definitions
-- Reverse proxy rules for all services
+- ACME/Let's Encrypt configuration
+- Recommended settings
+
+Note: Virtual host definitions are co-located in their respective service modules.
 
 #### `samba.nix`
 File sharing configuration:
@@ -95,26 +154,23 @@ File sharing configuration:
 Agenix secret definitions:
 - API keys
 - VPN credentials
-- Service authentication
+- Service authentication tokens
 
 ## Adding New Configuration
 
 ### Adding a New Service
 
-1. Determine which module best fits the service:
-   - Media-related? → `media-services.nix`
-   - Container? → `containers.nix`
-   - System service? → `services.nix`
-   - Needs its own module? → Create a new file in `modules/`
-
-2. If creating a new module:
-   - Create `modules/new-module.nix`
+1. Create a new module file in `modules/`:
+   - Create `modules/new-service.nix`
    - Add appropriate function signature (e.g., `{config, pkgs, ...}:`)
-   - Add the module to `configuration.nix` imports
+   - Define the service configuration
+   - Add nginx reverse proxy configuration if the service has a web interface
+   - Add any required users or groups
+   - Reference secrets from `config.age.secrets.<name>.path` if needed
 
-3. Add nginx reverse proxy entry in `nginx.nix` if the service has a web interface
+2. Add the module to `configuration.nix` imports (in alphabetical order)
 
-4. Add secrets to `secrets.nix` if needed
+3. Add secrets to `secrets.nix` if needed
 
 ### Module Dependencies
 
@@ -126,29 +182,36 @@ Modules can reference configuration from other modules through the `config` para
 
 ### Best Practices
 
-1. **Single Responsibility**: Each module should handle one domain
-2. **Minimal Coupling**: Avoid tight coupling between modules
-3. **Clear Naming**: Use descriptive names for modules and options
-4. **Documentation**: Add comments for complex configurations
-5. **Consistency**: Follow the existing patterns in other modules
+1. **Single Responsibility**: Each module should handle one service or component
+2. **Co-location**: Keep related configuration together (service, nginx config, users)
+3. **Minimal Coupling**: Avoid tight coupling between modules
+4. **Clear Naming**: Use descriptive names for modules matching service names
+5. **Documentation**: Add comments for complex configurations
+6. **Consistency**: Follow the existing patterns in other modules
 
 ## Module Template
 
 ```nix
-{
-  config,
-  pkgs,
-  lib,
-  ...
-}: {
-  # Service or configuration block
+{config, ...}: {
+  # Service configuration
   services.myservice = {
     enable = true;
     # ... configuration options
   };
 
-  # Additional related configuration
-  # ...
+  # Nginx reverse proxy (if service has web interface)
+  services.nginx.virtualHosts."myservice.harmony.silverlight-nex.us" = {
+    forceSSL = true;
+    enableACME = true;
+    locations."/".proxyPass = "http://127.0.0.1:PORT/";
+  };
+
+  # Users/groups (if needed)
+  users.users.myservice = {
+    isSystemUser = true;
+    group = "myservice";
+  };
+  users.groups.myservice = {};
 }
 ```
 
@@ -173,7 +236,7 @@ If you get "file not found" errors, check that:
 If options conflict between modules:
 - Check for duplicate option definitions
 - Use `lib.mkForce` or `lib.mkOverride` to resolve conflicts
-- Consider moving conflicting options to a single module
+- Consider if the configuration truly belongs in a single module
 
 ### Secret Path Errors
 Secret file paths in `modules/secrets.nix` must be relative to the modules directory:
