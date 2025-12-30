@@ -1,0 +1,10 @@
+# Ignore secrets directory
+secrets/
+
+# Ignore auto-generated files
+.pre-commit-config.yaml
+hardware-configuration.nix
+flake.lock
+
+# Ignore git directory
+.git/

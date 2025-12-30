@@ -1,0 +1,27 @@
+# Prettier configuration
+# https://prettier.io/docs/en/configuration.html
+
+# Use recommended defaults
+overrides:
+  # Format YAML files
+  - files: "*.yaml"
+    options:
+      parser: yaml
+  - files: "*.yml"
+    options:
+      parser: yaml
+
+# Use 2 spaces for indentation
+tabWidth: 2
+# Use spaces instead of tabs
+useTabs: false
+# Always use trailing commas where valid in ES5
+trailingComma: "es5"
+# Use single quotes
+singleQuote: false
+# Print semicolons at the ends of statements
+semi: true
+# Print width
+printWidth: 80
+# Prose wrap
+proseWrap: "preserve"

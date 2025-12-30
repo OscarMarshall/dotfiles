@@ -11,7 +11,9 @@ The configuration has been organized into focused, single-purpose modules in the
 ### Core System Modules
 
 #### `system.nix`
+
 Contains core system settings including:
+
 - Auto-upgrade configuration
 - Nix garbage collection
 - Timezone and locale settings
@@ -20,18 +22,24 @@ Contains core system settings including:
 - System state version
 
 #### `boot.nix`
+
 Boot-related configuration:
+
 - Systemd-boot configuration
 - EFI variables
 - Kernel modules
 
 #### `zfs.nix`
+
 ZFS filesystem configuration:
+
 - ZFS support and pool mounting
 - ZFS services (autoScrub, autoSnapshot, trim)
 
 #### `networking.nix`
+
 Network configuration:
+
 - Hostname and host ID
 - NetworkManager
 - Firewall rules
@@ -39,21 +47,27 @@ Network configuration:
 ### User and Package Management
 
 #### `users.nix`
+
 User account definitions:
+
 - User definitions (oscar)
 - SSH keys
 - Default shell configuration
 - User-specific packages
 
 #### `nixpkgs.nix`
+
 Nixpkgs configuration:
+
 - Unfree package permissions
 - Overlays (nix-minecraft)
 
 ### Service Modules
 
 #### `services.nix`
+
 Miscellaneous system services:
+
 - apcupsd (UPS monitoring)
 - glances (system monitoring)
 - openssh
@@ -63,24 +77,32 @@ Miscellaneous system services:
 Each container service has its own dedicated module for easier management:
 
 #### `gluetun.nix`
+
 VPN container with port forwarding:
+
 - Proton VPN configuration
 - Port forwarding for qBittorrent
 
 #### `qbittorrent.nix`
+
 qBittorrent torrent client:
+
 - Container configuration
 - Service user and group
 - Nginx reverse proxy configuration
 - Group memberships for radarr/sonarr access
 
 #### `profilarr.nix`
+
 Profilarr profile manager:
+
 - Container configuration
 - Nginx reverse proxy configuration
 
 #### `unpackerr.nix`
+
 Automatic archive extraction:
+
 - Container configuration
 - Integration with radarr/sonarr
 
@@ -89,54 +111,72 @@ Automatic archive extraction:
 Each media service has its own module with co-located nginx configuration:
 
 #### `plex.nix`
+
 Plex Media Server:
+
 - Service configuration
 - Firewall rules
 - Nginx reverse proxy configuration
 
 #### `radarr.nix`
+
 Movie automation:
+
 - Service configuration
 - Nginx reverse proxy configuration
 
 #### `sonarr.nix`
+
 TV show automation:
+
 - Service configuration
 - Nginx reverse proxy configuration
 
 #### `prowlarr.nix`
+
 Indexer manager:
+
 - Service configuration for Prowlarr
 - Flaresolverr service (co-located in same module for Cloudflare bypass)
 - Nginx reverse proxy configuration
 
 #### `autobrr.nix`
+
 Torrent automation:
+
 - Service configuration
 - Secret file reference
 - Nginx reverse proxy configuration
 
 #### `cross-seed.nix`
+
 Cross-seeding automation:
+
 - Service configuration
 - Integration with qBittorrent user/group
 
 ### Additional Services
 
 #### `homepage.nix`
+
 Homepage dashboard:
+
 - Service configuration with widgets and bookmarks
 - Nginx reverse proxy configuration
 
 #### `minecraft.nix`
+
 Minecraft server configurations:
+
 - Multiple server instances
 - Fabric and NeoForge servers
 - Mod management
 - Server properties and RCON configuration
 
 #### `nginx.nix`
+
 Base nginx configuration:
+
 - SSL/TLS settings
 - Security headers
 - ACME/Let's Encrypt configuration
@@ -145,13 +185,17 @@ Base nginx configuration:
 Note: Virtual host definitions are co-located in their respective service modules.
 
 #### `samba.nix`
+
 File sharing configuration:
+
 - Share definitions for media directories
 - Access permissions
 - Windows discovery (samba-wsdd)
 
 #### `secrets.nix`
+
 Agenix secret definitions:
+
 - API keys
 - VPN credentials
 - Service authentication tokens
@@ -175,6 +219,7 @@ Agenix secret definitions:
 ### Module Dependencies
 
 Modules can reference configuration from other modules through the `config` parameter:
+
 - `config.age.secrets.<name>.path` - Access secret paths
 - `config.services.<service>.settings` - Access service configuration
 - `config.users.users.<user>.uid` - Access user IDs
@@ -232,18 +277,24 @@ Before deploying changes:
 ## Troubleshooting
 
 ### Import Errors
+
 If you get "file not found" errors, check that:
+
 - The module file exists in `modules/`
 - The import path in `configuration.nix` is correct
 - The module has proper function signature
 
 ### Configuration Conflicts
+
 If options conflict between modules:
+
 - Check for duplicate option definitions
 - Use `lib.mkForce` or `lib.mkOverride` to resolve conflicts
 - Consider if the configuration truly belongs in a single module
 
 ### Secret Path Errors
+
 Secret file paths in `modules/secrets.nix` must be relative to the modules directory:
+
 - Use `../secrets/filename.age` format
 - Ensure secret files exist in the `secrets/` directory

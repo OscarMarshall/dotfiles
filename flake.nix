@@ -57,6 +57,8 @@
       hooks = {
         alejandra.enable = true;
         deadnix.enable = true;
+        prettier.enable = true;
+        yamllint.enable = true;
       };
     };
 

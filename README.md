@@ -38,6 +38,7 @@ The configuration is organized into modular components for better maintainabilit
 ## Development
 
 This configuration includes:
+
 - [Alejandra](https://github.com/kamadorueda/alejandra): An opinionated Nix code formatter
 - [deadnix](https://github.com/astro/deadnix): A tool to scan for unused Nix code
 
@@ -52,6 +53,7 @@ nix develop
 ```
 
 This will set up the pre-commit hooks. After this, whenever you commit changes to `.nix` files:
+
 - Alejandra will automatically format them
 - deadnix will check for unused code and fail the commit if any is found
 
@@ -92,6 +94,7 @@ nix run nixpkgs#deadnix -- --edit .
 ### CI Enforcement
 
 GitHub Actions automatically run on all pull requests and pushes to main/master branches to ensure:
+
 - Code is properly formatted (via Alejandra)
 - No dead code exists (via deadnix)
 
@@ -102,6 +105,7 @@ This provides a safety net in case local pre-commit hooks are bypassed.
 This repository uses [Renovate Bot](https://docs.renovatebot.com/) to automatically check for updates to Docker image versions used in OCI containers.
 
 Renovate runs daily at midnight UTC and will automatically create pull requests when updates are available. The configuration is in `renovate.json` and includes:
+
 - Custom regex matching to detect Docker images in `.nix` files
 
 Docker images are pinned to specific versions for reproducibility and stability.
