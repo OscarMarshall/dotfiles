@@ -41,8 +41,10 @@ This configuration includes:
 
 - [Alejandra](https://github.com/kamadorueda/alejandra): An opinionated Nix code formatter
 - [deadnix](https://github.com/astro/deadnix): A tool to scan for unused Nix code
+- [Prettier](https://prettier.io/): Code formatter for YAML, JSON, Markdown, and more
+- [yamllint](https://yamllint.readthedocs.io/): A linter for YAML files
 
-Both are integrated with [git-hooks.nix](https://github.com/cachix/git-hooks.nix) for automatic checks on commit.
+All tools are integrated with [git-hooks.nix](https://github.com/cachix/git-hooks.nix) for automatic checks on commit.
 
 ### Setting up pre-commit hooks
 
@@ -52,10 +54,12 @@ To enable automatic formatting and dead code checks on commit:
 nix develop
 ```
 
-This will set up the pre-commit hooks. After this, whenever you commit changes to `.nix` files:
+This will set up the pre-commit hooks. After this, whenever you commit changes:
 
-- Alejandra will automatically format them
-- deadnix will check for unused code and fail the commit if any is found
+- Alejandra will automatically format `.nix` files
+- deadnix will check for unused code in `.nix` files and fail the commit if any is found
+- Prettier will automatically format YAML, JSON, and Markdown files
+- yamllint will check YAML files for syntax and style issues
 
 ### Manual formatting
 
@@ -85,6 +89,18 @@ To manually check for dead code:
 nix run nixpkgs#deadnix -- .
 ```
 
+To manually check formatting with Prettier:
+
+```bash
+nix run nixpkgs#nodePackages.prettier -- --check .
+```
+
+To manually check YAML files with yamllint:
+
+```bash
+nix run nixpkgs#yamllint -- .
+```
+
 To automatically remove dead code:
 
 ```bash
@@ -95,8 +111,10 @@ nix run nixpkgs#deadnix -- --edit .
 
 GitHub Actions automatically run on all pull requests and pushes to main/master branches to ensure:
 
-- Code is properly formatted (via Alejandra)
-- No dead code exists (via deadnix)
+- Nix code is properly formatted (via Alejandra)
+- No dead code exists in Nix files (via deadnix)
+- YAML, JSON, and Markdown files are properly formatted (via Prettier)
+- YAML files pass linting checks (via yamllint)
 
 This provides a safety net in case local pre-commit hooks are bypassed.
 
