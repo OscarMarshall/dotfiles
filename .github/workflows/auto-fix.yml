@@ -36,6 +36,15 @@ jobs:
       - name: Run formatter
         run: nix fmt .
 
+      - name: Check for uncommitted changes on fork PRs
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          if ! git diff --quiet || ! git diff --cached --quiet; then
+            echo "Error: Formatting or linting changes detected on fork PR"
+            echo "Please run 'nix fmt .' and 'nix run nixpkgs#statix -- fix .' locally and commit the changes"
+            exit 1
+          fi
+
       - name: Commit and push changes
         if: |
           github.event_name == 'push' ||
