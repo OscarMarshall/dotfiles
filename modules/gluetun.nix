@@ -1,6 +1,6 @@
 {config, ...}: {
   virtualisation.oci-containers.containers.gluetun = {
-    image = "qmcgaw/gluetun:latest";
+    image = "qmcgaw/gluetun:v3.41.0";
     ports = [
       "8080:8080" # qBittorrent WebUI
     ];

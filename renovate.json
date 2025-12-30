@@ -1,0 +1,22 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": ["^modules/.+\\.nix$"],
+      "matchStrings": [
+        "image\\s*=\\s*\"(?<depName>[^:]+):(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Auto-merge Docker image updates",
+      "matchDatasources": ["docker"],
+      "automerge": false,
+      "rangeStrategy": "pin"
+    }
+  ]
+}
