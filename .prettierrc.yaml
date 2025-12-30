@@ -17,7 +17,7 @@ tabWidth: 2
 useTabs: false
 # Always use trailing commas where valid in ES5
 trailingComma: "es5"
-# Use single quotes
+# Use double quotes (default)
 singleQuote: false
 # Print semicolons at the ends of statements
 semi: true
