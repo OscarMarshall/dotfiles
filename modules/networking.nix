@@ -1,4 +1,4 @@
-{...}: {
+_: {
   networking = {
     hostId = "7dab76c0";
     hostName = "harmony";

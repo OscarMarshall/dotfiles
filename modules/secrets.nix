@@ -1,4 +1,4 @@
-{...}: {
+_: {
   age.secrets = {
     autobrr-secret.file = ../secrets/autobrr-secret.age;
     "cross-seed.json".file = ../secrets/cross-seed.json.age;

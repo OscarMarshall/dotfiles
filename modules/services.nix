@@ -1,4 +1,4 @@
-{...}: {
+_: {
   services = {
     apcupsd.enable = true;
     glances.enable = true;
