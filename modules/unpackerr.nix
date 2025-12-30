@@ -1,6 +1,6 @@
 {config, ...}: {
   virtualisation.oci-containers.containers.unpackerr = {
-    image = "golift/unpackerr";
+    image = "golift/unpackerr:0.14.5";
     volumes = ["/metalminds/torrents/downloads:/downloads"];
     environment = {
       TZ = config.time.timeZone;
