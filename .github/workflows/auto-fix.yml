@@ -31,12 +31,12 @@ jobs:
       - name: Check flake
         run: nix flake check
 
-      - name: Run formatter
-        run: nix fmt
-
       - name: Run statix fix
         run: |
           nix run nixpkgs#statix -- fix .
+
+      - name: Run formatter
+        run: nix fmt .
 
       - name: Commit and push changes
         if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
