@@ -2,6 +2,39 @@
 
 This repository contains the NixOS configuration for the Harmony server.
 
+## Repository Structure
+
+The configuration is organized into modular components for better maintainability. See [docs/MODULE-ORGANIZATION.md](docs/MODULE-ORGANIZATION.md) for detailed documentation on the module structure.
+
+- **`flake.nix`**: Main flake configuration defining inputs and outputs
+- **`configuration.nix`**: Top-level configuration that imports all modules
+- **`hardware-configuration.nix`**: Hardware-specific configuration (auto-generated)
+- **`home.nix`**: Home Manager configuration for user "oscar"
+- **`cachix.nix`**: Binary cache configuration
+- **`modules/`**: Modular configuration organized by functionality:
+  - `autobrr.nix`: Autobrr service and nginx config
+  - `boot.nix`: Boot loader configuration
+  - `cross-seed.nix`: Cross-seed service
+  - `gluetun.nix`: VPN container
+  - `homepage.nix`: Homepage dashboard and nginx config
+  - `minecraft.nix`: Minecraft server configurations
+  - `networking.nix`: Network settings and firewall rules
+  - `nginx.nix`: Base nginx settings and ACME configuration
+  - `nixpkgs.nix`: Nixpkgs overlays and package settings
+  - `plex.nix`: Plex service and nginx config
+  - `profilarr.nix`: Profilarr container and nginx config
+  - `prowlarr.nix`: Prowlarr and Flaresolverr services with nginx config
+  - `qbittorrent.nix`: qBittorrent container, user/group, and nginx config
+  - `radarr.nix`: Radarr service and nginx config
+  - `samba.nix`: File sharing configuration
+  - `secrets.nix`: Agenix secret definitions
+  - `services.nix`: Miscellaneous system services
+  - `sonarr.nix`: Sonarr service and nginx config
+  - `system.nix`: Core system settings, programs, and system packages
+  - `unpackerr.nix`: Unpackerr container
+  - `users.nix`: User account definitions
+  - `zfs.nix`: ZFS filesystem and services configuration
+
 ## Development
 
 This configuration includes:
