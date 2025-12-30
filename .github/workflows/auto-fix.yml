@@ -1,0 +1,52 @@
+name: Auto-fix Code Issues
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  auto-fix:
+    runs-on: ubuntu-latest
+    # Skip if commit message contains [skip ci] or is from bot
+    if: |
+      !contains(github.event.head_commit.message, '[skip ci]') &&
+      !contains(github.event.head_commit.message, 'Auto-fix:') &&
+      github.actor != 'github-actions[bot]'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v21
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v13
+
+      - name: Check flake
+        run: nix flake check
+
+      - name: Run formatter
+        run: nix fmt
+
+      - name: Run statix fix
+        run: |
+          nix run nixpkgs#statix -- fix .
+
+      - name: Commit and push changes
+        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if ! git diff --staged --quiet; then
+            git commit -m "Auto-fix: Apply formatting and linting fixes [skip ci]"
+            git push
+          else
+            echo "No changes to commit"
+          fi
