@@ -11,9 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     # Skip if commit message contains [skip ci] or is from bot
     if: |
-      !contains(github.event.head_commit.message, '[skip ci]') &&
-      !contains(github.event.head_commit.message, 'Auto-fix:') &&
-      github.actor != 'github-actions[bot]'
+      (
+        (github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')) ||
+        (github.event_name == 'pull_request' && !contains(github.event.pull_request.head.commit.message, '[skip ci]'))
+      ) && github.actor != 'github-actions[bot]'
     permissions:
       contents: write
     steps:
