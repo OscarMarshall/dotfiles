@@ -9,10 +9,10 @@ on:
 jobs:
   auto-fix:
     runs-on: ubuntu-latest
-    # Skip if commit message contains [skip ci]
+    # Skip if commit message contains Auto-fix:
     if: |
-      (github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')) ||
-      (github.event_name == 'pull_request' && !contains(github.event.pull_request.head.commit.message, '[skip ci]'))
+      (github.event_name == 'push' && !contains(github.event.head_commit.message, 'Auto-fix:')) ||
+      (github.event_name == 'pull_request' && !contains(github.event.pull_request.head.commit.message, 'Auto-fix:'))
     permissions:
       contents: write
     steps:
@@ -52,7 +52,7 @@ jobs:
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add -A
           if ! git diff --staged --quiet; then
-            git commit -m "Auto-fix: Apply formatting and linting fixes [skip ci]"
+            git commit -m "Auto-fix: Apply formatting and linting fixes"
             git push
           else
             echo "No changes to commit"
