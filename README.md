@@ -97,6 +97,19 @@ GitHub Actions automatically run on all pull requests and pushes to main/master 
 
 This provides a safety net in case local pre-commit hooks are bypassed.
 
+### Automated Dependency Updates
+
+This repository uses [Renovate Bot](https://docs.renovatebot.com/) to automatically check for updates to:
+- Docker image versions used in OCI containers
+- Nix flake inputs (flake.lock)
+
+Renovate runs daily at 2 AM UTC and will automatically create pull requests when updates are available. The configuration is in `renovate.json` and includes:
+- Custom regex matching to detect Docker images in `.nix` files
+- Native Nix flake support for `flake.lock` updates
+- Weekly lock file maintenance
+
+Docker images are pinned to specific versions for reproducibility and stability.
+
 ## Usage
 
 Build and switch to the configuration:
