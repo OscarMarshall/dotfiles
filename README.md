@@ -97,6 +97,15 @@ GitHub Actions automatically run on all pull requests and pushes to main/master 
 
 This provides a safety net in case local pre-commit hooks are bypassed.
 
+### Automated Dependency Updates
+
+This repository uses [Renovate Bot](https://docs.renovatebot.com/) to automatically check for updates to Docker image versions used in OCI containers.
+
+Renovate runs daily at midnight UTC and will automatically create pull requests when updates are available. The configuration is in `renovate.json` and includes:
+- Custom regex matching to detect Docker images in `.nix` files
+
+Docker images are pinned to specific versions for reproducibility and stability.
+
 ## Usage
 
 Build and switch to the configuration:

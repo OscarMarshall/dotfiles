@@ -1,6 +1,6 @@
 {config, ...}: {
   virtualisation.oci-containers.containers.profilarr = {
-    image = "santiagosayshey/profilarr:latest";
+    image = "santiagosayshey/profilarr:v1.1.3";
     ports = ["127.0.0.1:6868:6868"];
     volumes = ["/metalminds/profilarr:/config"];
     environment.TZ = config.time.timeZone;
