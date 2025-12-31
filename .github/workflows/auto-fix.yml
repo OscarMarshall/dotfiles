@@ -31,10 +31,10 @@ jobs:
 
       - name: Run statix fix
         run: |
-          nix run nixpkgs#statix -- fix .
+          nix run nixpkgs#statix -- fix
 
       - name: Run formatter
-        run: nix fmt .
+        run: nix fmt
 
       - name: Commit and push changes
         run: |
