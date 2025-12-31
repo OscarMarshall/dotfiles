@@ -1,12 +1,17 @@
-{pkgs, ...}: {
-  system.autoUpgrade = {
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: {
+  system.autoUpgrade = lib.mkIf (config.networking.hostName == "harmony") {
     enable = true;
     allowReboot = true;
     flake = "/etc/nixos";
   };
 
   nix = {
-    gc = {
+    gc = lib.mkIf (config.networking.hostName == "harmony") {
       automatic = true;
       options = "--delete-older-than 7d";
     };
@@ -19,24 +24,45 @@
   time.timeZone = "America/Los_Angeles";
 
   i18n.defaultLocale = "en_US.UTF-8";
-  console = {
+  i18n.extraLocaleSettings = lib.mkIf (config.networking.hostName == "melaan") {
+    LC_ADDRESS = "en_US.UTF-8";
+    LC_IDENTIFICATION = "en_US.UTF-8";
+    LC_MEASUREMENT = "en_US.UTF-8";
+    LC_MONETARY = "en_US.UTF-8";
+    LC_NAME = "en_US.UTF-8";
+    LC_NUMERIC = "en_US.UTF-8";
+    LC_PAPER = "en_US.UTF-8";
+    LC_TELEPHONE = "en_US.UTF-8";
+    LC_TIME = "en_US.UTF-8";
+  };
+
+  console = lib.mkIf (config.networking.hostName == "harmony") {
     font = "Lat2-Terminus16";
     keyMap = "us";
   };
 
   programs = {
-    tmux.enable = true;
+    tmux.enable = lib.mkIf (config.networking.hostName == "harmony") true;
     zsh.enable = true;
+    steam.enable = lib.mkIf (config.networking.hostName == "melaan") true;
   };
 
+  # Allow unfree packages
+  nixpkgs.config.allowUnfree = true;
+
   environment = {
-    systemPackages = [
-      pkgs.ddrescue
-      pkgs.git
-      pkgs.lm_sensors
-      pkgs.rclone
-      pkgs.wget
-    ];
+    systemPackages =
+      (lib.optionals (config.networking.hostName == "harmony") [
+        pkgs.ddrescue
+        pkgs.git
+        pkgs.lm_sensors
+        pkgs.rclone
+        pkgs.wget
+      ])
+      ++ (lib.optionals (config.networking.hostName == "melaan") [
+        pkgs.emacs
+        pkgs.gnomeExtensions.appindicator
+      ]);
   };
 
   # This option defines the first version of NixOS you have installed on this particular machine,

@@ -44,7 +44,10 @@
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
-              users.oscar = ./harmony/home.nix;
+              users = {
+                oscar = ./home-manager/oscar.nix;
+                adelline = ./home-manager/adelline.nix;
+              };
             };
 
             # Optionally, use home-manager.extraSpecialArgs to pass
@@ -63,7 +66,10 @@
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
-              users.adelline = ./melaan/home.nix;
+              users = {
+                oscar = ./home-manager/oscar.nix;
+                adelline = ./home-manager/adelline.nix;
+              };
             };
           }
         ];

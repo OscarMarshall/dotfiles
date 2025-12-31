@@ -1,9 +1,8 @@
-_: {
+{config, lib, ...}: {
   networking = {
-    hostId = "7dab76c0";
-    hostName = "harmony";
+    hostId = lib.mkIf (config.networking.hostName == "harmony") "7dab76c0";
     networkmanager.enable = true;
-    firewall = {
+    firewall = lib.mkIf (config.networking.hostName == "harmony") {
       allowedTCPPorts = [
         80
         443

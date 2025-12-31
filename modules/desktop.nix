@@ -1,4 +1,9 @@
-{pkgs, ...}: {
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: lib.mkIf (config.networking.hostName == "melaan") {
   # GNOME Desktop Environment
   services.flatpak.enable = true;
   services.displayManager.gdm.enable = true;

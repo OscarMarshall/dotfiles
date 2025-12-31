@@ -6,6 +6,7 @@
     ../modules/autobrr.nix
     ../modules/boot.nix
     ../modules/cross-seed.nix
+    ../modules/desktop.nix
     ../modules/gluetun.nix
     ../modules/homepage.nix
     ../modules/minecraft.nix
@@ -26,4 +27,7 @@
     ../modules/users.nix
     ../modules/zfs.nix
   ];
+
+  # Set hostname for this system
+  networking.hostName = "harmony";
 }
