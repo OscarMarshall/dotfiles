@@ -47,6 +47,7 @@ This is a personal NixOS configuration repository for a home server named "harmo
 ## Important Services
 
 The server runs multiple services including:
+
 - **Media Stack**: Plex, Radarr, Sonarr, Prowlarr, qBittorrent (via VPN)
 - **VPN**: gluetun container providing VPN with port forwarding
 - **Minecraft**: Multiple servers via nix-minecraft

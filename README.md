@@ -37,30 +37,34 @@ The configuration is organized into modular components for better maintainabilit
 
 ## Development
 
-This configuration includes:
-- [Alejandra](https://github.com/kamadorueda/alejandra): An opinionated Nix code formatter
-- [deadnix](https://github.com/astro/deadnix): A tool to scan for unused Nix code
+This configuration includes development tools integrated with [git-hooks.nix](https://github.com/cachix/git-hooks.nix) for automatic checks on commit:
 
-Both are integrated with [git-hooks.nix](https://github.com/cachix/git-hooks.nix) for automatic checks on commit.
+- [Alejandra](https://github.com/kamadorueda/alejandra): An opinionated Nix code formatter
+- [flake-checker](https://github.com/DeterminateSystems/flake-checker): A tool to check flake health
+- [statix](https://github.com/nerdypepper/statix): A linter for Nix code
+- [Prettier](https://prettier.io/): A code formatter for JSON, Markdown, and YAML files
 
 ### Setting up pre-commit hooks
 
-To enable automatic formatting and dead code checks on commit:
+To enable automatic checks and formatting on commit:
 
 ```bash
 nix develop
 ```
 
-This will set up the pre-commit hooks. After this, whenever you commit changes to `.nix` files:
-- Alejandra will automatically format them
-- deadnix will check for unused code and fail the commit if any is found
+This will set up the pre-commit hooks. After this, whenever you commit changes:
+
+- Alejandra will automatically format Nix files
+- flake-checker will verify flake health
+- statix will lint Nix code for common issues
+- Prettier will format JSON, Markdown, and YAML files
 
 ### Manual formatting
 
 To manually format all Nix files in the repository:
 
 ```bash
-nix fmt .
+nix fmt
 ```
 
 Or to format specific files:
@@ -77,23 +81,19 @@ To run all configured checks (including pre-commit hooks):
 nix flake check
 ```
 
-To manually check for dead code:
+To automatically fix statix issues:
 
 ```bash
-nix run nixpkgs#deadnix -- .
-```
-
-To automatically remove dead code:
-
-```bash
-nix run nixpkgs#deadnix -- --edit .
+nix run nixpkgs#statix -- fix
 ```
 
 ### CI Enforcement
 
 GitHub Actions automatically run on all pull requests and pushes to main/master branches to ensure:
-- Code is properly formatted (via Alejandra)
-- No dead code exists (via deadnix)
+
+- Code is properly formatted (via Alejandra and Prettier)
+- Nix code follows best practices (via statix)
+- Flake configuration is healthy (via flake-checker)
 
 This provides a safety net in case local pre-commit hooks are bypassed.
 
@@ -102,6 +102,7 @@ This provides a safety net in case local pre-commit hooks are bypassed.
 This repository uses [Renovate Bot](https://docs.renovatebot.com/) to automatically check for updates to Docker image versions used in OCI containers.
 
 Renovate runs daily at midnight UTC and will automatically create pull requests when updates are available. The configuration is in `renovate.json` and includes:
+
 - Custom regex matching to detect Docker images in `.nix` files
 
 Docker images are pinned to specific versions for reproducibility and stability.

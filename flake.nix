@@ -1,10 +1,5 @@
 {
   inputs = {
-    # This is pointing to an unstable release.
-    # If you prefer a stable release instead, you can this to the latest number shown here: https://nixos.org/download
-    # i.e. nixos-24.11
-    # Use `nix flake update` to update the flake to the latest revision of the chosen release channel.
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     agenix = {
       url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -21,6 +16,8 @@
       url = "github:OscarMarshall/nix-minecraft";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    systems.url = "github:nix-systems/default";
   };
   outputs = inputs @ {
     agenix,
@@ -28,10 +25,10 @@
     home-manager,
     nixpkgs,
     self,
+    systems,
     ...
   }: let
-    system = "x86_64-linux";
-    pkgs = import nixpkgs {inherit system;};
+    forEachSystem = nixpkgs.lib.genAttrs (import systems);
   in {
     nixosConfigurations.harmony = nixpkgs.lib.nixosSystem {
       specialArgs = {inherit inputs;};
@@ -53,22 +50,48 @@
       ];
     };
 
-    # Pre-commit hooks configuration
-    checks.${system}.pre-commit-check = git-hooks.lib.${system}.run {
-      src = ./.;
-      hooks = {
-        alejandra.enable = true;
-        statix.enable = true;
+    # Run the hooks with `nix fmt`.
+    formatter = forEachSystem (
+      system: let
+        pkgs = nixpkgs.legacyPackages.${system};
+        inherit (self.checks.${system}.pre-commit-check) config;
+        inherit (config) package configFile;
+        script = ''
+          ${pkgs.lib.getExe package} run --all-files --config ${configFile}
+        '';
+      in
+        pkgs.writeShellScriptBin "pre-commit-run" script
+    );
+
+    # Run the hooks in a sandbox with `nix flake check`.
+    # Read-only filesystem and no internet access.
+    checks = forEachSystem (system: {
+      pre-commit-check = inputs.git-hooks.lib.${system}.run {
+        src = ./.;
+        hooks = {
+          alejandra.enable = true;
+          flake-checker.enable = true;
+          statix.enable = true;
+          prettier = {
+            enable = true;
+            settings.write = true;
+          };
+        };
       };
-    };
+    });
 
-    # Development shell with pre-commit hooks
-    devShells.${system}.default = pkgs.mkShell {
-      inherit (self.checks.${system}.pre-commit-check) shellHook;
-      buildInputs = self.checks.${system}.pre-commit-check.enabledPackages;
-    };
-
-    # Formatter for `nix fmt`
-    formatter.${system} = pkgs.alejandra;
+    # Enter a development shell with `nix develop`.
+    # The hooks will be installed automatically.
+    # Or run pre-commit manually with `nix develop -c pre-commit run --all-files`
+    devShells = forEachSystem (system: {
+      default = let
+        pkgs = nixpkgs.legacyPackages.${system};
+        inherit (self.checks.${system}.pre-commit-check) shellHook enabledPackages;
+      in
+        pkgs.mkShell {
+          inherit shellHook;
+          buildInputs = enabledPackages;
+        };
+    });
   };
 }

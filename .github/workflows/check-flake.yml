@@ -19,8 +19,5 @@ jobs:
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@v13
 
-      - name: Check Nix flake inputs
-        uses: DeterminateSystems/flake-checker-action@v12
-
       - name: Check flake
         run: nix flake check
