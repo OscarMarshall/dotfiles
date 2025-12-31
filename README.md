@@ -89,8 +89,9 @@ nix run nixpkgs#statix -- fix
 
 GitHub Actions automatically run on all pull requests and pushes to main/master branches to ensure:
 
-- Code is properly formatted (via Alejandra)
-- No statix issues exists
+- Code is properly formatted (via Alejandra and Prettier)
+- Nix code follows best practices (via statix)
+- Flake configuration is healthy (via flake-checker)
 
 This provides a safety net in case local pre-commit hooks are bypassed.
 
