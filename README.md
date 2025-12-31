@@ -62,7 +62,7 @@ This will set up the pre-commit hooks. After this, whenever you commit changes t
 To manually format all Nix files in the repository:
 
 ```bash
-nix fmt .
+nix fmt
 ```
 
 Or to format specific files:
@@ -79,16 +79,10 @@ To run all configured checks (including pre-commit hooks):
 nix flake check
 ```
 
-To manually check for dead code:
+To automatically fix statix issues:
 
 ```bash
-nix run nixpkgs#deadnix -- .
-```
-
-To automatically remove dead code:
-
-```bash
-nix run nixpkgs#deadnix -- --edit .
+nix run nixpkgs#statix -- fix
 ```
 
 ### CI Enforcement
@@ -96,7 +90,7 @@ nix run nixpkgs#deadnix -- --edit .
 GitHub Actions automatically run on all pull requests and pushes to main/master branches to ensure:
 
 - Code is properly formatted (via Alejandra)
-- No dead code exists (via deadnix)
+- No statix issues exists
 
 This provides a safety net in case local pre-commit hooks are bypassed.
 
