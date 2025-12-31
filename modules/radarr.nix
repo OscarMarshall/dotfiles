@@ -1,4 +1,7 @@
 {config, ...}: {
+  # Add oscar to radarr group for managing movies
+  users.users.oscar.extraGroups = ["radarr"];
+
   services.radarr.enable = true;
 
   services.nginx.virtualHosts."radarr.harmony.silverlight-nex.us" = {

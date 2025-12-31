@@ -7,6 +7,8 @@
         isSystemUser = true;
         group = "qbittorrent";
       };
+      # Add oscar to qbittorrent group for managing torrents
+      oscar.extraGroups = ["qbittorrent"];
       # Add radarr and sonarr users to qbittorrent group for file access
       radarr.extraGroups = ["qbittorrent"];
       sonarr.extraGroups = ["qbittorrent"];

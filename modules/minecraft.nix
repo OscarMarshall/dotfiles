@@ -3,6 +3,9 @@
   pkgs,
   ...
 }: {
+  # Add oscar to minecraft group for managing servers
+  users.users.oscar.extraGroups = ["minecraft"];
+
   services.minecraft-servers = {
     enable = true;
     openFirewall = true;
