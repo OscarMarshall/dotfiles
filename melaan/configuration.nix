@@ -6,6 +6,7 @@
   imports = [
     ./hardware-configuration.nix
     ../cachix.nix
+    ../modules/users.nix
   ];
 
   # Nix settings
@@ -68,13 +69,10 @@
     pulse.enable = true;
   };
 
-  # User accounts
+  # Additional user configuration
   users.users = {
     adelline = {
-      isNormalUser = true;
-      description = "Adelline";
-      extraGroups = ["networkmanager" "wheel"];
-      hashedPassword = "$y$j9T$PIOU1O0/eDXQdlTWkzuf5.$AhnTDMJLgzM04nt6pzz/ae.3U.3LUWhte6PiBw.Mzb2";
+      extraGroups = ["networkmanager"];
       packages = with pkgs; [
         google-chrome
         ghostty
@@ -83,15 +81,15 @@
       ];
     };
     oscar = {
-      isNormalUser = true;
-      description = "Oscar Marshall";
-      extraGroups = ["networkmanager" "wheel"];
-      hashedPassword = "$y$j9T$rqKfWUlPbBLAGwIXUhAW61$LaP13MwCfvgtNlxZ/77.Pcu.tLapKf8CmepJ.GudcT4";
+      extraGroups = ["networkmanager"];
     };
   };
 
   # Programs
-  programs.steam.enable = true;
+  programs = {
+    steam.enable = true;
+    zsh.enable = true;
+  };
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
