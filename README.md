@@ -37,25 +37,27 @@ The configuration is organized into modular components for better maintainabilit
 
 ## Development
 
-This configuration includes:
+This configuration includes development tools integrated with [git-hooks.nix](https://github.com/cachix/git-hooks.nix) for automatic checks on commit:
 
 - [Alejandra](https://github.com/kamadorueda/alejandra): An opinionated Nix code formatter
-- [deadnix](https://github.com/astro/deadnix): A tool to scan for unused Nix code
-
-Both are integrated with [git-hooks.nix](https://github.com/cachix/git-hooks.nix) for automatic checks on commit.
+- [flake-checker](https://github.com/DeterminateSystems/flake-checker): A tool to check flake health
+- [statix](https://github.com/nerdypepper/statix): A linter for Nix code
+- [Prettier](https://prettier.io/): A code formatter for JSON, Markdown, and YAML files
 
 ### Setting up pre-commit hooks
 
-To enable automatic formatting and dead code checks on commit:
+To enable automatic checks and formatting on commit:
 
 ```bash
 nix develop
 ```
 
-This will set up the pre-commit hooks. After this, whenever you commit changes to `.nix` files:
+This will set up the pre-commit hooks. After this, whenever you commit changes:
 
-- Alejandra will automatically format them
-- deadnix will check for unused code and fail the commit if any is found
+- Alejandra will automatically format Nix files
+- flake-checker will verify flake health
+- statix will lint Nix code for common issues
+- Prettier will format JSON, Markdown, and YAML files
 
 ### Manual formatting
 
