@@ -41,9 +41,11 @@
         {environment.systemPackages = [agenix.packages.x86_64-linux.default];}
         home-manager.nixosModules.home-manager
         {
-          home-manager.useGlobalPkgs = true;
-          home-manager.useUserPackages = true;
-          home-manager.users.oscar = ./home.nix;
+          home-manager = {
+            useGlobalPkgs = true;
+            useUserPackages = true;
+            users.oscar = ./home.nix;
+          };
 
           # Optionally, use home-manager.extraSpecialArgs to pass
           # arguments to home.nix
@@ -56,7 +58,7 @@
       src = ./.;
       hooks = {
         alejandra.enable = true;
-        deadnix.enable = true;
+        statix.enable = true;
       };
     };
 
