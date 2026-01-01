@@ -20,11 +20,13 @@ This is a personal NixOS configuration repository for multiple systems. It manag
   - `oscar.nix`: Oscar's home-manager configuration
   - `adelline.nix`: Adelline's home-manager configuration
 - **`cachix.nix`**: Binary cache configuration
-- **`modules/`**: Modular configuration organized by service/component (29 modules):
+- **`modules/`**: Modular configuration organized by service/component (31 modules):
+  - `apcupsd.nix`: APC UPS daemon service
   - `autobrr.nix`: Autobrr service and nginx config
   - `boot.nix`: Boot loader configuration (latest kernel for all systems)
   - `cross-seed.nix`: Cross-seed service
   - `flatpak.nix`: Flatpak service (melaan only)
+  - `glances.nix`: Glances system monitoring service
   - `gluetun.nix`: VPN container
   - `gnome.nix`: GNOME desktop environment (melaan only)
   - `homepage.nix`: Homepage dashboard and nginx config
@@ -32,6 +34,7 @@ This is a personal NixOS configuration repository for multiple systems. It manag
   - `networking.nix`: Network settings, hostId, NetworkManager
   - `nginx.nix`: Base nginx settings, ACME configuration, and firewall rules
   - `nixpkgs.nix`: Nixpkgs overlays and package settings
+  - `openssh.nix`: OpenSSH server configuration
   - `pipewire.nix`: Audio with pipewire (melaan only)
   - `plex.nix`: Plex service and nginx config
   - `printing.nix`: CUPS printing (melaan only)
@@ -41,7 +44,6 @@ This is a personal NixOS configuration repository for multiple systems. It manag
   - `radarr.nix`: Radarr service and nginx config
   - `samba.nix`: File sharing configuration
   - `secrets.nix`: Agenix secret definitions
-  - `services.nix`: Miscellaneous system services (apcupsd, glances, openssh)
   - `sonarr.nix`: Sonarr service and nginx config
   - `ssh.nix`: SSH and tmux configuration (harmony only)
   - `steam.nix`: Steam gaming platform (melaan only)
@@ -133,10 +135,10 @@ Note: These commands typically require root/sudo access and are run on the targe
 
 ## Module Organization
 
-The configuration is organized into 28 focused modules:
+The configuration is organized into 31 focused modules:
 
 - **Core System**: boot.nix, networking.nix, system.nix, users.nix, zfs.nix (shared across systems)
-- **Infrastructure**: nginx.nix, nixpkgs.nix, secrets.nix, services.nix, ssh.nix (harmony only)
+- **Infrastructure**: apcupsd.nix, glances.nix, nginx.nix, nixpkgs.nix, openssh.nix, secrets.nix, ssh.nix (harmony only)
 - **Desktop Environment** (melaan only): flatpak.nix, gnome.nix, pipewire.nix, printing.nix, steam.nix
 - **Containers**: gluetun.nix, qbittorrent.nix, profilarr.nix, unpackerr.nix
 - **Media Services**: autobrr.nix, cross-seed.nix, plex.nix, prowlarr.nix, radarr.nix, sonarr.nix
