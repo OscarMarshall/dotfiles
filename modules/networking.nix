@@ -1,11 +1,10 @@
 {config, lib, ...}: {
   networking = {
     hostId = lib.mkIf (config.networking.hostName == "harmony") "7dab76c0";
-    networkmanager.enable = lib.mkIf (config.networking.hostName == "melaan") true;
+    networkmanager.enable = true;
   };
 
-  # Add users to networkmanager group on melaan
-  users.users = lib.mkIf (config.networking.hostName == "melaan") {
+  users.users = {
     adelline.extraGroups = ["networkmanager"];
     oscar.extraGroups = ["networkmanager"];
   };
