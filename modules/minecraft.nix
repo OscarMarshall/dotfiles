@@ -6,6 +6,9 @@
   # Add oscar to minecraft group for managing servers
   users.users.oscar.extraGroups = ["minecraft"];
 
+  # Open firewall for Minecraft
+  networking.firewall.allowedTCPPorts = [25565];
+
   services.minecraft-servers = {
     enable = true;
     openFirewall = true;

@@ -1,7 +1,3 @@
-{
-  config,
-  lib,
-  ...
-}: lib.mkIf (config.networking.hostName == "melaan") {
+_: {
   services.flatpak.enable = true;
 }

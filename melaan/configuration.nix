@@ -5,11 +5,10 @@ _: {
     ../modules/boot.nix
     ../modules/flatpak.nix
     ../modules/gnome.nix
-    ../modules/networkmanager.nix
     ../modules/networking.nix
+    ../modules/nixpkgs.nix
     ../modules/pipewire.nix
     ../modules/printing.nix
-    ../modules/ssh.nix
     ../modules/steam.nix
     ../modules/system.nix
     ../modules/users.nix

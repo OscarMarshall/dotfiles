@@ -1,8 +1,4 @@
-{
-  config,
-  lib,
-  ...
-}: lib.mkIf (config.networking.hostName == "melaan") {
+_: {
   # Sound with pipewire
   services.pulseaudio.enable = false;
   security.rtkit.enable = true;

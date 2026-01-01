@@ -40,4 +40,8 @@ _: {
     acceptTerms = true;
     defaults.email = "letsencrypt@alias.oscarmarshall.com";
   };
+
+  # Open firewall ports for HTTP and HTTPS
+  networking.firewall.allowedTCPPorts = [80 443];
+  networking.firewall.allowedUDPPorts = [51820];
 }

@@ -6,18 +6,13 @@
     ../modules/autobrr.nix
     ../modules/boot.nix
     ../modules/cross-seed.nix
-    ../modules/flatpak.nix
     ../modules/gluetun.nix
-    ../modules/gnome.nix
     ../modules/homepage.nix
     ../modules/minecraft.nix
-    ../modules/networkmanager.nix
     ../modules/networking.nix
     ../modules/nginx.nix
     ../modules/nixpkgs.nix
-    ../modules/pipewire.nix
     ../modules/plex.nix
-    ../modules/printing.nix
     ../modules/profilarr.nix
     ../modules/prowlarr.nix
     ../modules/qbittorrent.nix
@@ -27,7 +22,6 @@
     ../modules/services.nix
     ../modules/sonarr.nix
     ../modules/ssh.nix
-    ../modules/steam.nix
     ../modules/system.nix
     ../modules/unpackerr.nix
     ../modules/users.nix

@@ -1,16 +1,11 @@
-{
-  config,
-  lib,
-  pkgs,
-  ...
-}: {
+{pkgs, ...}: {
   boot = {
-    kernelModules = lib.mkIf (config.networking.hostName == "harmony") ["coretemp"];
+    kernelModules = ["coretemp"];
     loader = {
       systemd-boot.enable = true;
       efi.canTouchEfiVariables = true;
     };
-    # Use latest kernel for melaan (Framework laptop)
-    kernelPackages = lib.mkIf (config.networking.hostName == "melaan") pkgs.linuxPackages_latest;
+    # Use latest kernel for all systems
+    kernelPackages = pkgs.linuxPackages_latest;
   };
 }

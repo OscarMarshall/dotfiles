@@ -1,18 +1,9 @@
 {
   inputs,
-  lib,
   ...
 }: {
   nixpkgs = {
-    config = {
-      allowUnfree = true;
-      allowUnfreePredicate = pkg:
-        builtins.elem (lib.getName pkg) [
-          "minecraft-server"
-          "neoforge"
-          "plexmediaserver"
-        ];
-    };
+    config.allowUnfree = true;
     overlays = [inputs.nix-minecraft.overlay];
   };
 }
