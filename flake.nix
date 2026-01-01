@@ -36,7 +36,7 @@
       harmony = nixpkgs.lib.nixosSystem {
         specialArgs = {inherit inputs;};
         modules = [
-          ./harmony/configuration.nix
+          ./systems/harmony/configuration.nix
           agenix.nixosModules.default
           {environment.systemPackages = [agenix.packages.x86_64-linux.default];}
           home-manager.nixosModules.home-manager
@@ -59,7 +59,7 @@
       melaan = nixpkgs.lib.nixosSystem {
         specialArgs = {inherit inputs;};
         modules = [
-          ./melaan/configuration.nix
+          ./systems/melaan/configuration.nix
           nixos-hardware.nixosModules.framework-12-13th-gen-intel
           home-manager.nixosModules.home-manager
           {

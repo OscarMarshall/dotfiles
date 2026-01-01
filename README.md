@@ -12,14 +12,16 @@ This repository contains the NixOS configurations for multiple systems.
 The configuration is organized into modular components for better maintainability. See [docs/MODULE-ORGANIZATION.md](docs/MODULE-ORGANIZATION.md) for detailed documentation on the module structure.
 
 - **`flake.nix`**: Main flake configuration defining inputs and outputs
-- **`harmony/`**: Configuration files for the harmony server
-  - `configuration.nix`: Top-level configuration that imports all modules
-  - `hardware-configuration.nix`: Hardware-specific configuration (auto-generated)
-  - `home.nix`: Home Manager configuration for user "oscar"
-- **`melaan/`**: Configuration files for the melaan laptop
-  - `configuration.nix`: GNOME desktop and user configuration
-  - `hardware-configuration.nix`: Framework-specific hardware configuration
-  - `home.nix`: Home Manager configuration for user "adelline"
+- **`systems/`**: System-specific configuration directories
+  - **`harmony/`**: Configuration files for the harmony server
+    - `configuration.nix`: Top-level configuration that imports all modules
+    - `hardware-configuration.nix`: Hardware-specific configuration (auto-generated)
+  - **`melaan/`**: Configuration files for the melaan laptop
+    - `configuration.nix`: GNOME desktop and user configuration
+    - `hardware-configuration.nix`: Framework-specific hardware configuration
+- **`home-manager/`**: Home Manager configurations
+  - `oscar.nix`: Oscar's home-manager configuration
+  - `adelline.nix`: Adelline's home-manager configuration
 - **`cachix.nix`**: Binary cache configuration
 - **`modules/`**: Modular configuration organized by functionality (used by harmony):
   - `autobrr.nix`: Autobrr service and nginx config

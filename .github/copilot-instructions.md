@@ -10,12 +10,13 @@ This is a personal NixOS configuration repository for multiple systems. It manag
 ## Repository Structure
 
 - **`flake.nix`**: Main flake configuration defining inputs (nixpkgs, agenix, home-manager, nix-minecraft, nixos-hardware) and multiple NixOS system configurations
-- **`harmony/`**: Configuration files for the harmony server
-  - `configuration.nix`: Top-level configuration that imports all modules
-  - `hardware-configuration.nix`: Hardware-specific configuration (auto-generated)
-- **`melaan/`**: Configuration files for the melaan laptop
-  - `configuration.nix`: Top-level configuration that imports relevant modules
-  - `hardware-configuration.nix`: Framework-specific hardware configuration
+- **`systems/`**: System-specific configuration directories
+  - **`harmony/`**: Configuration files for the harmony server
+    - `configuration.nix`: Top-level configuration that imports all modules
+    - `hardware-configuration.nix`: Hardware-specific configuration (auto-generated)
+  - **`melaan/`**: Configuration files for the melaan laptop
+    - `configuration.nix`: Top-level configuration that imports relevant modules
+    - `hardware-configuration.nix`: Framework-specific hardware configuration
 - **`home-manager/`**: Home Manager configurations
   - `oscar.nix`: Oscar's home-manager configuration
   - `adelline.nix`: Adelline's home-manager configuration
