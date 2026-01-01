@@ -41,14 +41,15 @@
   };
 
   environment = {
-    systemPackages = with pkgs; [
-      ddrescue
-      emacs
-      git
-      lm_sensors
-      rclone
-      wget
-    ];
+    systemPackages =
+      with pkgs; [
+        emacs
+        git
+        wget
+      ]
+      ++ (lib.optionals (config.networking.hostName == "harmony") with pkgs; [
+        pkgs.lm_sensors
+      ]);
   };
 
   # This option defines the first version of NixOS you have installed on this particular machine,
