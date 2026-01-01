@@ -1,7 +1,12 @@
-{pkgs, ...}: {
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: {
   system.autoUpgrade = {
     enable = true;
-    allowReboot = true;
+    allowReboot = lib.mkIf (config.networking.hostName == "harmony") true;
     flake = "github:OscarMarshall/nix";
   };
 

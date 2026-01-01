@@ -19,7 +19,7 @@ The configuration is organized into modular components for better maintainabilit
   - **`melaan/`**: Configuration files for the melaan laptop
     - `configuration.nix`: GNOME desktop and user configuration
     - `hardware-configuration.nix`: Framework-specific hardware configuration
-- **`home-manager/`**: Home Manager configurations
+- **`homes/`**: Home Manager configurations
   - `oscar.nix`: Oscar's home-manager configuration
   - `adelline.nix`: Adelline's home-manager configuration
 - **`cachix.nix`**: Binary cache configuration

@@ -17,7 +17,7 @@ This is a personal NixOS configuration repository for multiple systems. It manag
   - **`melaan/`**: Configuration files for the melaan laptop
     - `configuration.nix`: Top-level configuration that imports relevant modules
     - `hardware-configuration.nix`: Framework-specific hardware configuration
-- **`home-manager/`**: Home Manager configurations
+- **`homes/`**: Home Manager configurations
   - `oscar.nix`: Oscar's home-manager configuration
   - `adelline.nix`: Adelline's home-manager configuration
 - **`cachix.nix`**: Binary cache configuration
@@ -36,7 +36,6 @@ This is a personal NixOS configuration repository for multiple systems. It manag
   - `networking.nix`: Network settings, hostId, NetworkManager
   - `nginx.nix`: Base nginx settings, ACME configuration, and firewall rules
   - `nixpkgs.nix`: Nixpkgs overlays and package settings
-  - `openssh.nix`: OpenSSH server configuration
   - `pipewire.nix`: Audio with pipewire (melaan only)
   - `plex.nix`: Plex service and nginx config
   - `printing.nix`: CUPS printing (melaan only)
@@ -47,7 +46,7 @@ This is a personal NixOS configuration repository for multiple systems. It manag
   - `samba.nix`: File sharing configuration
   - `secrets.nix`: Agenix secret definitions
   - `sonarr.nix`: Sonarr service and nginx config
-  - `ssh.nix`: SSH and tmux configuration (harmony only)
+  - `ssh.nix`: SSH (OpenSSH) and tmux configuration (harmony only)
   - `steam.nix`: Steam gaming platform (melaan only)
   - `system.nix`: Core system settings, programs, and common packages (applied to all systems)
   - `unpackerr.nix`: Unpackerr container
@@ -140,7 +139,7 @@ Note: These commands typically require root/sudo access and are run on the targe
 The configuration is organized into 31 focused modules:
 
 - **Core System**: boot.nix, networking.nix, system.nix, users.nix, zfs.nix (shared across systems)
-- **Infrastructure**: apcupsd.nix, glances.nix, nginx.nix, nixpkgs.nix, openssh.nix, secrets.nix, ssh.nix (harmony only)
+- **Infrastructure**: apcupsd.nix, glances.nix, nginx.nix, nixpkgs.nix, secrets.nix, ssh.nix (harmony only)
 - **Desktop Environment** (melaan only): flatpak.nix, gnome.nix, pipewire.nix, printing.nix, steam.nix
 - **Containers**: gluetun.nix, qbittorrent.nix, profilarr.nix, unpackerr.nix
 - **Media Services**: autobrr.nix, cross-seed.nix, plex.nix, prowlarr.nix, radarr.nix, sonarr.nix

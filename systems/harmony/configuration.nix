@@ -15,7 +15,6 @@
     ../../modules/networking.nix
     ../../modules/nginx.nix
     ../../modules/nixpkgs.nix
-    ../../modules/openssh.nix
     ../../modules/plex.nix
     ../../modules/profilarr.nix
     ../../modules/prowlarr.nix

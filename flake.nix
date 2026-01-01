@@ -45,8 +45,8 @@
               useGlobalPkgs = true;
               useUserPackages = true;
               users = {
-                oscar = ./home-manager/oscar.nix;
-                adelline = ./home-manager/adelline.nix;
+                oscar = ./homes/oscar.nix;
+                adelline = ./homes/adelline.nix;
               };
             };
 
@@ -67,8 +67,8 @@
               useGlobalPkgs = true;
               useUserPackages = true;
               users = {
-                oscar = ./home-manager/oscar.nix;
-                adelline = ./home-manager/adelline.nix;
+                oscar = ./homes/oscar.nix;
+                adelline = ./homes/adelline.nix;
               };
             };
           }
