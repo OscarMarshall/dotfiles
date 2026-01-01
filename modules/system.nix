@@ -1,17 +1,12 @@
-{
-  config,
-  lib,
-  pkgs,
-  ...
-}: {
-  system.autoUpgrade = lib.mkIf (config.networking.hostName == "harmony") {
+{pkgs, ...}: {
+  system.autoUpgrade = {
     enable = true;
     allowReboot = true;
-    flake = "/etc/nixos";
+    flake = "github:OscarMarshall/nix";
   };
 
   nix = {
-    gc = lib.mkIf (config.networking.hostName == "harmony") {
+    gc = {
       automatic = true;
       options = "--delete-older-than 7d";
     };
@@ -24,7 +19,7 @@
   time.timeZone = "America/Los_Angeles";
 
   i18n.defaultLocale = "en_US.UTF-8";
-  i18n.extraLocaleSettings = lib.mkIf (config.networking.hostName == "melaan") {
+  i18n.extraLocaleSettings = {
     LC_ADDRESS = "en_US.UTF-8";
     LC_IDENTIFICATION = "en_US.UTF-8";
     LC_MEASUREMENT = "en_US.UTF-8";
@@ -36,33 +31,24 @@
     LC_TIME = "en_US.UTF-8";
   };
 
-  console = lib.mkIf (config.networking.hostName == "harmony") {
+  console = {
     font = "Lat2-Terminus16";
     keyMap = "us";
   };
 
   programs = {
-    tmux.enable = lib.mkIf (config.networking.hostName == "harmony") true;
     zsh.enable = true;
-    steam.enable = lib.mkIf (config.networking.hostName == "melaan") true;
   };
 
-  # Allow unfree packages
-  nixpkgs.config.allowUnfree = true;
-
   environment = {
-    systemPackages =
-      (lib.optionals (config.networking.hostName == "harmony") [
-        pkgs.ddrescue
-        pkgs.git
-        pkgs.lm_sensors
-        pkgs.rclone
-        pkgs.wget
-      ])
-      ++ (lib.optionals (config.networking.hostName == "melaan") [
-        pkgs.emacs
-        pkgs.gnomeExtensions.appindicator
-      ]);
+    systemPackages = with pkgs; [
+      ddrescue
+      emacs
+      git
+      lm_sensors
+      rclone
+      wget
+    ];
   };
 
   # This option defines the first version of NixOS you have installed on this particular machine,
