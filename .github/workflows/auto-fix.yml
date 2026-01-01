@@ -34,7 +34,7 @@ jobs:
           nix run nixpkgs#statix -- fix
 
       - name: Run formatter
-        run: nix fmt
+        run: nix fmt || true
 
       - name: Commit and push changes
         run: |
