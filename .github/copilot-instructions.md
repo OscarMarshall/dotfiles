@@ -21,7 +21,7 @@ This is a personal NixOS configuration repository for multiple systems. It manag
   - `oscar.nix`: Oscar's home-manager configuration
   - `adelline.nix`: Adelline's home-manager configuration
 - **`cachix.nix`**: Binary cache configuration
-- **`modules/`**: Modular configuration organized by service/component (31 modules):
+- **`modules/`**: Modular configuration organized by service/component (32 modules):
   - `apcupsd.nix`: APC UPS daemon service
   - `autobrr.nix`: Autobrr service and nginx config
   - `boot.nix`: Boot loader configuration (latest kernel for all systems)
@@ -31,6 +31,7 @@ This is a personal NixOS configuration repository for multiple systems. It manag
   - `gluetun.nix`: VPN container
   - `gnome.nix`: GNOME desktop environment (melaan only)
   - `homepage.nix`: Homepage dashboard and nginx config
+  - `lm_sensors.nix`: Hardware monitoring with lm_sensors and coretemp kernel module (harmony only)
   - `minecraft.nix`: Minecraft server configurations and firewall
   - `networking.nix`: Network settings, hostId, NetworkManager
   - `nginx.nix`: Base nginx settings, ACME configuration, and firewall rules
@@ -48,7 +49,7 @@ This is a personal NixOS configuration repository for multiple systems. It manag
   - `sonarr.nix`: Sonarr service and nginx config
   - `ssh.nix`: SSH and tmux configuration (harmony only)
   - `steam.nix`: Steam gaming platform (melaan only)
-  - `system.nix`: Core system settings, programs, and system packages (applied to all systems)
+  - `system.nix`: Core system settings, programs, and common packages (applied to all systems)
   - `unpackerr.nix`: Unpackerr container
   - `users.nix`: User account definitions (shared across systems)
   - `zfs.nix`: ZFS filesystem and services configuration

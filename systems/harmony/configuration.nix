@@ -10,6 +10,7 @@
     ../modules/glances.nix
     ../modules/gluetun.nix
     ../modules/homepage.nix
+    ../modules/lm_sensors.nix
     ../modules/minecraft.nix
     ../modules/networking.nix
     ../modules/nginx.nix

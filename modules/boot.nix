@@ -1,6 +1,5 @@
 {pkgs, ...}: {
   boot = {
-    kernelModules = ["coretemp"];
     # Use latest kernel for all systems
     kernelPackages = pkgs.linuxPackages_latest;
     loader = {
