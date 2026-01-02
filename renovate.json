@@ -1,6 +1,9 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
+  "nix": {
+    "enabled": true
+  },
   "customManagers": [
     {
       "customType": "regex",
@@ -13,9 +16,13 @@
   ],
   "packageRules": [
     {
-      "description": "Auto-merge Docker image updates",
+      "description": "Auto-merge all dependency updates",
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "automerge": true
+    },
+    {
+      "description": "Pin Docker image versions",
       "matchDatasources": ["docker"],
-      "automerge": false,
       "rangeStrategy": "pin"
     }
   ]
