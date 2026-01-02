@@ -1,6 +1,6 @@
-# NixOS Configuration
+# Nix System Configuration
 
-This repository contains the NixOS configurations for multiple systems.
+This repository contains Nix system configurations for multiple systems including NixOS and nix-darwin (macOS).
 
 ## Systems
 

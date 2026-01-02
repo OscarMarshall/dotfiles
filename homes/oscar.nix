@@ -69,7 +69,9 @@
         searchUpKey = ["^[[A" "^[OA"];
       };
       envExtra = ''
-        source ~/.iterm2_shell_integration.zsh
+        if [ -f "$HOME/.iterm2_shell_integration.zsh" ]; then
+          source "$HOME/.iterm2_shell_integration.zsh"
+        fi
       '';
     };
   };

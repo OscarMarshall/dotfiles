@@ -13,7 +13,7 @@ jobs:
     if: |
       (
         (github.event_name == 'push' && !contains(github.event.head_commit.message, 'Auto-fix:')) ||
-        (github.event_name == 'pull_request' && !contains(github.event.pull_request.head.commit.message, 'Auto-fix:') && github.event.pull_request.head.repo.full_name == github.repository)
+        (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
       )
     permissions:
       contents: write
@@ -22,6 +22,18 @@ jobs:
         with:
           ref: ${{ github.head_ref || github.ref }}
           token: ${{ secrets.PAT }}
+          fetch-depth: 2
+
+      - name: Check if last commit was auto-fix
+        id: check-auto-fix
+        run: |
+          LAST_COMMIT_MSG=$(git log -1 --pretty=%B)
+          if [[ "$LAST_COMMIT_MSG" == *"Auto-fix:"* ]]; then
+            echo "Last commit was auto-fix, skipping"
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@c5a866b6ab867e88becbed4467b93592bce69f8a # v21
@@ -30,10 +42,12 @@ jobs:
         uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39 # v13
 
       - name: Run statix fix
+        if: steps.check-auto-fix.outputs.skip != 'true'
         run: |
           nix run nixpkgs#statix -- fix
 
       - name: Run formatter
+        if: steps.check-auto-fix.outputs.skip != 'true'
         run: |
           # Allow nix fmt to return 0 (no changes) or 1 (files formatted) without failing the job.
           # Any other non-zero exit code is treated as a real error.
@@ -47,6 +61,7 @@ jobs:
           fi
 
       - name: Commit and push changes
+        if: steps.check-auto-fix.outputs.skip != 'true'
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'

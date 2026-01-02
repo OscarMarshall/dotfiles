@@ -4,7 +4,8 @@
   pkgs,
   ...
 }: {
-  system.autoUpgrade = {
+  # NixOS-specific configuration
+  system.autoUpgrade = lib.mkIf (!pkgs.stdenv.isDarwin) {
     enable = true;
     allowReboot = lib.mkIf (config.networking.hostName == "harmony") true;
     flake = "github:OscarMarshall/nix";
@@ -21,9 +22,10 @@
     ];
   };
 
-  time.timeZone = "America/Los_Angeles";
+  time.timeZone = lib.mkDefault "America/Los_Angeles";
 
-  i18n = {
+  # NixOS-specific i18n and console settings
+  i18n = lib.mkIf (!pkgs.stdenv.isDarwin) {
     defaultLocale = "en_US.UTF-8";
     extraLocaleSettings = {
       LC_ADDRESS = "en_US.UTF-8";
@@ -38,7 +40,7 @@
     };
   };
 
-  console = {
+  console = lib.mkIf (!pkgs.stdenv.isDarwin) {
     font = "Lat2-Terminus16";
     keyMap = "us";
   };
