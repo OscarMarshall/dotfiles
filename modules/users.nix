@@ -12,12 +12,6 @@
         isNormalUser = true;
         extraGroups = ["wheel"];
         hashedPassword = "$y$j9T$PIOU1O0/eDXQdlTWkzuf5.$AhnTDMJLgzM04nt6pzz/ae.3U.3LUWhte6PiBw.Mzb2";
-        packages = lib.mkIf (config.networking.hostName == "melaan") (with pkgs; [
-          google-chrome
-          ghostty
-          krita
-          rnote
-        ]);
       };
       oscar = {
         description = "Oscar Marshall";
