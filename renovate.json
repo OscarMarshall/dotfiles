@@ -15,7 +15,7 @@
     {
       "description": "Auto-merge Docker image updates",
       "matchDatasources": ["docker"],
-      "automerge": false,
+      "automerge": true,
       "rangeStrategy": "pin"
     }
   ]
