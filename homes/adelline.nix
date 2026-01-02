@@ -7,7 +7,6 @@
 }: {
   home = {
     username = "adelline";
-    homeDirectory = "/home/adelline";
     stateVersion = "25.05";
 
     packages = lib.mkIf (osConfig.networking.hostName == "melaan") (
