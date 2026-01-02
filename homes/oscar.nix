@@ -22,7 +22,7 @@
         pkgs.pinentry-tty
       ]
       ++ lib.optionals (osConfig.networking.hostName == "melaan") [
-        pkgs.prism-launcher
+        pkgs.prismlauncher
       ];
   };
 
