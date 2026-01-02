@@ -16,6 +16,7 @@
       url = "github:OscarMarshall/nix-minecraft";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    nixos-hardware.url = "github:NixOS/nixos-hardware/master";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     systems.url = "github:nix-systems/default";
   };
@@ -23,6 +24,7 @@
     agenix,
     git-hooks,
     home-manager,
+    nixos-hardware,
     nixpkgs,
     self,
     systems,
@@ -30,24 +32,48 @@
   }: let
     forEachSystem = nixpkgs.lib.genAttrs (import systems);
   in {
-    nixosConfigurations.harmony = nixpkgs.lib.nixosSystem {
-      specialArgs = {inherit inputs;};
-      modules = [
-        ./configuration.nix
-        agenix.nixosModules.default
-        {environment.systemPackages = [agenix.packages.x86_64-linux.default];}
-        home-manager.nixosModules.home-manager
-        {
-          home-manager = {
-            useGlobalPkgs = true;
-            useUserPackages = true;
-            users.oscar = ./home.nix;
-          };
+    nixosConfigurations = {
+      harmony = nixpkgs.lib.nixosSystem {
+        specialArgs = {inherit inputs;};
+        modules = [
+          ./systems/harmony/configuration.nix
+          agenix.nixosModules.default
+          {environment.systemPackages = [agenix.packages.x86_64-linux.default];}
+          home-manager.nixosModules.home-manager
+          {
+            home-manager = {
+              useGlobalPkgs = true;
+              useUserPackages = true;
+              users = {
+                oscar = ./homes/oscar.nix;
+                adelline = ./homes/adelline.nix;
+              };
+            };
 
-          # Optionally, use home-manager.extraSpecialArgs to pass
-          # arguments to home.nix
-        }
-      ];
+            # Optionally, use home-manager.extraSpecialArgs to pass
+            # arguments to home.nix
+          }
+        ];
+      };
+
+      melaan = nixpkgs.lib.nixosSystem {
+        specialArgs = {inherit inputs;};
+        modules = [
+          ./systems/melaan/configuration.nix
+          nixos-hardware.nixosModules.framework-12-13th-gen-intel
+          home-manager.nixosModules.home-manager
+          {
+            home-manager = {
+              useGlobalPkgs = true;
+              useUserPackages = true;
+              users = {
+                oscar = ./homes/oscar.nix;
+                adelline = ./homes/adelline.nix;
+              };
+            };
+          }
+        ];
+      };
     };
 
     # Run the hooks with `nix fmt`.
