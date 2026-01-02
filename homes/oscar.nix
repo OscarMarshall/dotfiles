@@ -1,4 +1,9 @@
-{pkgs, ...}: {
+{
+  pkgs,
+  lib,
+  osConfig,
+  ...
+}: {
   home = {
     # Home Manager needs a bit of information about you and the
     # paths it should manage.
@@ -11,10 +16,14 @@
       EDITOR = "emacs";
     };
     shell.enableZshIntegration = true;
-    packages = [
-      pkgs.emacs
-      pkgs.pinentry-tty
-    ];
+    packages =
+      [
+        pkgs.emacs
+        pkgs.pinentry-tty
+      ]
+      ++ lib.optionals (osConfig.networking.hostName == "melaan") [
+        pkgs.prismlauncher
+      ];
   };
 
   programs = {
