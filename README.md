@@ -6,6 +6,7 @@ This repository contains the NixOS configurations for multiple systems.
 
 - **harmony**: Home server with media services, Minecraft servers, and more
 - **melaan**: Framework laptop running GNOME desktop
+- **OMARSHAL-M-2FD2**: Oscar's work MacBook Pro running nix-darwin
 
 ## Repository Structure
 
@@ -19,9 +20,12 @@ The configuration is organized into modular components for better maintainabilit
   - **`melaan/`**: Configuration files for the melaan laptop
     - `configuration.nix`: GNOME desktop and user configuration
     - `hardware-configuration.nix`: Framework-specific hardware configuration
+  - **`omarshal-m-2fd2/`**: Configuration files for the OMARSHAL-M-2FD2 MacBook Pro
+    - `configuration.nix`: nix-darwin system configuration
 - **`homes/`**: Home Manager configurations
-  - `oscar.nix`: Oscar's home-manager configuration
-  - `adelline.nix`: Adelline's home-manager configuration
+  - `oscar.nix`: Oscar's home-manager configuration (used on harmony and melaan)
+  - `adelline.nix`: Adelline's home-manager configuration (used on harmony and melaan)
+  - `omarshal.nix`: Oscar's home-manager configuration for macOS (used on OMARSHAL-M-2FD2)
 - **`cachix.nix`**: Binary cache configuration
 - **`modules/`**: Modular configuration organized by functionality (used by harmony):
   - `autobrr.nix`: Autobrr service and nginx config
@@ -142,9 +146,12 @@ To create a PAT:
 Build and switch to a configuration:
 
 ```bash
-# For harmony server
+# For harmony server (NixOS)
 sudo nixos-rebuild switch --flake .#harmony
 
-# For melaan laptop
+# For melaan laptop (NixOS)
 sudo nixos-rebuild switch --flake .#melaan
+
+# For OMARSHAL-M-2FD2 MacBook Pro (nix-darwin)
+darwin-rebuild switch --flake .#OMARSHAL-M-2FD2
 ```
