@@ -20,32 +20,17 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'automated') ||
       contains(github.event.pull_request.labels.*.name, 'dependencies')
     steps:
-      - name: Check PR author and labels
-        id: check
-        run: |
-          PR_AUTHOR="${{ github.event.pull_request.user.login }}"
-          echo "PR author: $PR_AUTHOR"
-          
-          # Check if PR is from a bot or has automated/dependencies labels
-          if [[ "$PR_AUTHOR" == "dependabot[bot]" ]] || [[ "$PR_AUTHOR" == "github-actions[bot]" ]] || [[ "$PR_AUTHOR" == "renovate[bot]" ]]; then
-            echo "is_automated=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'automated') }}" == "true" ]] || [[ "${{ contains(github.event.pull_request.labels.*.name, 'dependencies') }}" == "true" ]]; then
-            echo "is_automated=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_automated=false" >> $GITHUB_OUTPUT
-            echo "PR is not automated"
-            exit 0
-          fi
-
       - name: Wait for check-flake to complete
-        if: steps.check.outputs.is_automated == 'true'
         run: |
           echo "Waiting for check-flake workflow to complete for PR #${{ github.event.pull_request.number }}..."
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
           echo "PR head SHA: $HEAD_SHA"
           
           # Wait up to 10 minutes for the check-flake workflow to complete
-          for i in {1..60}; do
+          MAX_ITERATIONS=60
+          SLEEP_SECONDS=10
+          
+          for i in $(seq 1 $MAX_ITERATIONS); do
             # Get check runs for this SHA
             CHECK_RUNS=$(gh api "/repos/${{ github.repository }}/commits/$HEAD_SHA/check-runs" --jq '.check_runs')
             
@@ -53,8 +38,8 @@ jobs:
             CHECK_FLAKE=$(echo "$CHECK_RUNS" | jq '.[] | select(.name == "check-flake")')
             
             if [[ -z "$CHECK_FLAKE" ]]; then
-              echo "No check-flake run found yet... waiting ($i/60)"
-              sleep 10
+              echo "No check-flake run found yet... waiting ($i/$MAX_ITERATIONS)"
+              sleep $SLEEP_SECONDS
               continue
             fi
             
@@ -74,8 +59,8 @@ jobs:
               fi
             fi
             
-            echo "⏳ Check-flake workflow is still running... ($i/60)"
-            sleep 10
+            echo "⏳ Check-flake workflow is still running... ($i/$MAX_ITERATIONS)"
+            sleep $SLEEP_SECONDS
           done
           
           echo "⏱️ Timeout waiting for check-flake workflow"
@@ -84,7 +69,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Approve PR
-        if: steps.check.outputs.is_automated == 'true'
         run: |
           # Check if already approved by github-actions bot
           EXISTING_REVIEWS=$(gh pr view ${{ github.event.pull_request.number }} --json reviews --jq '.reviews[] | select(.author.login == "github-actions[bot]") | .state')
@@ -99,7 +83,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Enable auto-merge
-        if: steps.check.outputs.is_automated == 'true'
         run: |
           echo "🔄 Enabling auto-merge for PR #${{ github.event.pull_request.number }}"
           gh pr merge ${{ github.event.pull_request.number }} --auto --squash || {
