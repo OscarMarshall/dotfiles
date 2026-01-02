@@ -1,4 +1,9 @@
 _: {
+  security.acme = {
+    acceptTerms = true;
+    defaults.email = "letsencrypt@alias.oscarmarshall.com";
+  };
+
   services.nginx = {
     enable = true;
 
@@ -36,8 +41,6 @@ _: {
     '';
   };
 
-  security.acme = {
-    acceptTerms = true;
-    defaults.email = "letsencrypt@alias.oscarmarshall.com";
-  };
+  # Open firewall ports for HTTP and HTTPS
+  networking.firewall.allowedTCPPorts = [80 443];
 }

@@ -1,15 +1,15 @@
-_: {
+{
+  config,
+  lib,
+  ...
+}: {
   networking = {
-    hostId = "7dab76c0";
-    hostName = "harmony";
+    hostId = lib.mkIf (config.networking.hostName == "harmony") "7dab76c0";
     networkmanager.enable = true;
-    firewall = {
-      allowedTCPPorts = [
-        80
-        443
-        25565
-      ];
-      allowedUDPPorts = [51820];
-    };
+  };
+
+  users.users = {
+    adelline.extraGroups = ["networkmanager"];
+    oscar.extraGroups = ["networkmanager"];
   };
 }

@@ -1,17 +1,29 @@
 # NixOS Configuration
 
-This repository contains the NixOS configuration for the Harmony server.
+This repository contains the NixOS configurations for multiple systems.
+
+## Systems
+
+- **harmony**: Home server with media services, Minecraft servers, and more
+- **melaan**: Framework laptop running GNOME desktop
 
 ## Repository Structure
 
 The configuration is organized into modular components for better maintainability. See [docs/MODULE-ORGANIZATION.md](docs/MODULE-ORGANIZATION.md) for detailed documentation on the module structure.
 
 - **`flake.nix`**: Main flake configuration defining inputs and outputs
-- **`configuration.nix`**: Top-level configuration that imports all modules
-- **`hardware-configuration.nix`**: Hardware-specific configuration (auto-generated)
-- **`home.nix`**: Home Manager configuration for user "oscar"
+- **`systems/`**: System-specific configuration directories
+  - **`harmony/`**: Configuration files for the harmony server
+    - `configuration.nix`: Top-level configuration that imports all modules
+    - `hardware-configuration.nix`: Hardware-specific configuration (auto-generated)
+  - **`melaan/`**: Configuration files for the melaan laptop
+    - `configuration.nix`: GNOME desktop and user configuration
+    - `hardware-configuration.nix`: Framework-specific hardware configuration
+- **`homes/`**: Home Manager configurations
+  - `oscar.nix`: Oscar's home-manager configuration
+  - `adelline.nix`: Adelline's home-manager configuration
 - **`cachix.nix`**: Binary cache configuration
-- **`modules/`**: Modular configuration organized by functionality:
+- **`modules/`**: Modular configuration organized by functionality (used by harmony):
   - `autobrr.nix`: Autobrr service and nginx config
   - `boot.nix`: Boot loader configuration
   - `cross-seed.nix`: Cross-seed service
@@ -32,7 +44,7 @@ The configuration is organized into modular components for better maintainabilit
   - `sonarr.nix`: Sonarr service and nginx config
   - `system.nix`: Core system settings, programs, and system packages
   - `unpackerr.nix`: Unpackerr container
-  - `users.nix`: User account definitions
+  - `users.nix`: User account definitions (shared across systems)
   - `zfs.nix`: ZFS filesystem and services configuration
 
 ## Development
@@ -109,8 +121,12 @@ Docker images are pinned to specific versions for reproducibility and stability.
 
 ## Usage
 
-Build and switch to the configuration:
+Build and switch to a configuration:
 
 ```bash
+# For harmony server
 sudo nixos-rebuild switch --flake .#harmony
+
+# For melaan laptop
+sudo nixos-rebuild switch --flake .#melaan
 ```
