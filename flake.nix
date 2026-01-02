@@ -12,6 +12,10 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    nix-darwin = {
+      url = "github:nix-darwin/nix-darwin/master";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nix-minecraft = {
       url = "github:OscarMarshall/nix-minecraft";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -19,15 +23,21 @@
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     systems.url = "github:nix-systems/default";
+    zen-browser = {
+      url = "github:0xc000022070/zen-browser-flake";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
   outputs = inputs @ {
     agenix,
     git-hooks,
     home-manager,
+    nix-darwin,
     nixos-hardware,
     nixpkgs,
     self,
     systems,
+    zen-browser,
     ...
   }: let
     forEachSystem = nixpkgs.lib.genAttrs (import systems);
@@ -70,6 +80,24 @@
                 oscar = ./homes/oscar.nix;
                 adelline = ./homes/adelline.nix;
               };
+            };
+          }
+        ];
+      };
+    };
+
+    darwinConfigurations = {
+      OMARSHAL-M-2FD2 = nix-darwin.lib.darwinSystem {
+        specialArgs = {inherit inputs;};
+        modules = [
+          ./systems/omarshal-m-2fd2/configuration.nix
+          home-manager.darwinModules.home-manager
+          {
+            home-manager = {
+              useGlobalPkgs = true;
+              useUserPackages = true;
+              users.omarshal = ./homes/omarshal.nix;
+              extraSpecialArgs = {inherit inputs;};
             };
           }
         ];
