@@ -14,6 +14,7 @@
         google-chrome
         ghostty
         krita
+        prism-launcher
         rnote
       ]
     );
