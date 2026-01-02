@@ -13,7 +13,7 @@
         upgrade = true;
       };
       brews = [
-        # rbenv is handled by home-manager
+        # No system-level Homebrew packages needed
       ];
       casks = [
         "arc"
