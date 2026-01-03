@@ -21,9 +21,5 @@
   programs = {
     java.enable = true;
     rbenv.enable = true;
-    zsh.envExtra = lib.mkAfter ''
-      eval "$(/opt/homebrew/bin/brew shellenv)"
-    '';
   };
 }
-

@@ -61,6 +61,7 @@
                 oscar = ./homes/oscar.nix;
                 adelline = ./homes/adelline.nix;
               };
+              extraSpecialArgs = {inherit inputs;};
             };
 
             # Optionally, use home-manager.extraSpecialArgs to pass
@@ -83,6 +84,7 @@
                 oscar = ./homes/oscar.nix;
                 adelline = ./homes/adelline.nix;
               };
+              extraSpecialArgs = {inherit inputs;};
             };
           }
         ];

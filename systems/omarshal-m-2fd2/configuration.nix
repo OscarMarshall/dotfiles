@@ -1,12 +1,11 @@
 {inputs, ...}: {
   imports = [
     ../../cachix.nix
-    ../../modules/darwin-homebrew.nix
-    ../../modules/darwin-packages.nix
-    ../../modules/darwin-system.nix
-    ../../modules/darwin-users.nix
+    ../../modules/homebrew.nix
     ../../modules/nixpkgs.nix
+    ../../modules/steam.nix
     ../../modules/system.nix
+    ../../modules/users.nix
   ];
 
   # Set hostname for this system
