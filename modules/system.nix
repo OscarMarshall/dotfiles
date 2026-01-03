@@ -14,13 +14,6 @@
 
   # Darwin-specific configuration
   system = lib.mkIf pkgs.stdenv.isDarwin {
-    # Set Git commit hash for darwin-version.
-    configurationRevision = inputs.self.rev or inputs.self.dirtyRev or null;
-
-    # Used for backwards compatibility, please read the changelog before changing.
-    # $ darwin-rebuild changelog
-    stateVersion = lib.mkIf (config.networking.hostName == "omarshal-m-2fd2") 5;
-
     activationScripts.applications.text = let
       env = pkgs.buildEnv {
         name = "system-applications";
@@ -41,6 +34,9 @@
         done
       '';
   };
+
+  # Set Git commit hash for darwin-version / system revision
+  system.configurationRevision = lib.mkIf pkgs.stdenv.isDarwin (inputs.self.rev or inputs.self.dirtyRev or null);
 
   nix = {
     gc = {

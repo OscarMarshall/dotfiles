@@ -1,0 +1,66 @@
+{
+  inputs,
+  pkgs,
+  lib,
+  osConfig,
+  ...
+}: {
+  home.packages =
+    [
+      pkgs.pinentry-tty
+      pkgs.prusa-slicer
+      pkgs.rcon-cli
+    ]
+    ++ lib.optionals (osConfig.networking.hostName == "melaan") [
+      pkgs.prismlauncher
+    ]
+    ++ lib.optionals pkgs.stdenv.isDarwin [
+      (pkgs.aspellWithDicts (dicts: [
+        dicts.en
+        dicts.en-computers
+        dicts.en-science
+      ]))
+      pkgs.babashka
+      pkgs.bash
+      pkgs.bash-language-server
+      pkgs.clj-kondo
+      pkgs.cljfmt
+      pkgs.clojure
+      pkgs.clojure-lsp
+      pkgs.cmake
+      pkgs.codex
+      pkgs.coreutils-prefixed
+      pkgs.discord
+      pkgs.editorconfig-core-c
+      pkgs.eslint
+      pkgs.fd
+      pkgs.gnupg
+      pkgs.inkscape
+      pkgs.insomnia
+      pkgs.ghostty
+      pkgs.logseq
+      pkgs.metals
+      pkgs.mkalias
+      pkgs.mpv
+      pkgs.multimarkdown
+      pkgs.nil
+      pkgs.nixfmt-rfc-style
+      pkgs.nodePackages_latest.js-beautify
+      pkgs.nodePackages_latest.nodejs
+      pkgs.pinentry_mac
+      pkgs.prettier
+      pkgs.ripgrep
+      pkgs.rsync
+      pkgs.ruby-lsp
+      pkgs.rubyPackages.solargraph
+      pkgs.scalafmt
+      pkgs.shellcheck
+      pkgs.shfmt
+      pkgs.stylelint
+      pkgs.typescript
+      pkgs.typescript-language-server
+      pkgs.vscode-langservers-extracted
+      pkgs.yaml-language-server
+      inputs.zen-browser.packages.aarch64-darwin.default
+    ];
+}

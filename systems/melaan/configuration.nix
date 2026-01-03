@@ -4,6 +4,7 @@ _: {
     ../../cachix.nix
     ../../modules/boot.nix
     ../../modules/flatpak.nix
+    ../../modules/fonts.nix
     ../../modules/gnome.nix
     ../../modules/networking.nix
     ../../modules/nixpkgs.nix

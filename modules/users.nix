@@ -20,24 +20,21 @@
           openssh.authorizedKeys.keys = [
             "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOn+wO9sZ8GoCRrg1BOkBK7/dPUojEdEaWoq2lHFYp9K omarshal"
           ];
-          packages = [
-            pkgs.rcon-cli
-          ];
+          shell = pkgs.zsh;
         }
         (lib.mkIf (!pkgs.stdenv.isDarwin) {
           isNormalUser = true;
           hashedPassword = "$y$j9T$rqKfWUlPbBLAGwIXUhAW61$LaP13MwCfvgtNlxZ/77.Pcu.tLapKf8CmepJ.GudcT4";
         })
-        (lib.mkIf pkgs.stdenv.isDarwin {
+        (lib.mkIf (config.networking.hostName == "omarshal-m-2fd2") {
           home = pkgs.lib.mkDefault /Users/omarshal;
-          shell = pkgs.zsh;
         })
       ];
-      # Create omarshal as an alias to oscar on darwin
-      omarshal = lib.mkIf pkgs.stdenv.isDarwin config.users.users.oscar;
+      # Create omarshal as an alias to oscar on OMARSHAL-M-2FD2
+      omarshal = lib.mkIf (config.networking.hostName == "omarshal-m-2fd2") config.users.users.oscar;
     };
   };
 
   # Set primary user for darwin
-  system.primaryUser = lib.mkIf (pkgs.stdenv.isDarwin && config.networking.hostName == "omarshal-m-2fd2") "omarshal";
+  system.primaryUser = lib.mkIf (config.networking.hostName == "omarshal-m-2fd2") "omarshal";
 }

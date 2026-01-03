@@ -7,6 +7,7 @@
     ../../modules/autobrr.nix
     ../../modules/boot.nix
     ../../modules/cross-seed.nix
+    ../../modules/fonts.nix
     ../../modules/glances.nix
     ../../modules/gluetun.nix
     ../../modules/homepage.nix
