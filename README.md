@@ -131,6 +131,7 @@ To enable Renovate, you need to create a `RENOVATE_TOKEN` secret in your reposit
    - `workflow` scope (if you want Renovate to update GitHub Actions workflows)
 
 To create a PAT:
+
 1. Go to GitHub **Settings** → **Developer settings** → **Personal access tokens** → **Tokens (classic)**
 2. Click **Generate new token** → **Generate new token (classic)**
 3. Select the required scopes mentioned above
