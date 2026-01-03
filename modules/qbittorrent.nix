@@ -17,7 +17,7 @@
   };
 
   virtualisation.oci-containers.containers.qbittorrent = {
-    image = "lscr.io/linuxserver/qbittorrent:5.1.4";
+    image = "lscr.io/linuxserver/qbittorrent:20.04.1";
     volumes = [
       "/var/lib/qBittorrent:/config"
       "/metalminds/torrents:/metalminds/torrents"
