@@ -119,6 +119,24 @@ Renovate runs daily at midnight UTC and will automatically create pull requests 
 
 Docker images are pinned to specific versions for reproducibility and stability.
 
+#### Setting up Renovate
+
+To enable Renovate, you need to create a `RENOVATE_TOKEN` secret in your repository settings:
+
+1. Go to your repository's **Settings** → **Secrets and variables** → **Actions**
+2. Click **New repository secret**
+3. Name: `RENOVATE_TOKEN`
+4. Value: A GitHub Personal Access Token (PAT) with the following permissions:
+   - `repo` scope (for private repositories) or `public_repo` scope (for public repositories)
+   - `workflow` scope (if you want Renovate to update GitHub Actions workflows)
+
+To create a PAT:
+
+1. Go to GitHub **Settings** → **Developer settings** → **Personal access tokens** → **Tokens (classic)**
+2. Click **Generate new token** → **Generate new token (classic)**
+3. Select the required scopes mentioned above
+4. Copy the token and add it as the `RENOVATE_TOKEN` secret
+
 ## Usage
 
 Build and switch to a configuration:
