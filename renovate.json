@@ -1,17 +1,23 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:best-practices"],
+  "extends": [
+    "config:best-practices"
+  ],
   "nix": {
     "enabled": true
   },
   "lockFileMaintenance": {
     "enabled": true,
-    "extends": ["schedule:daily"]
+    "extends": [
+      "schedule:daily"
+    ]
   },
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": ["^modules/.+\\.nix$"],
+      "managerFilePatterns": [
+        "/^modules/.+\\.nix$/"
+      ],
       "matchStrings": [
         "image\\s*=\\s*\"(?<depName>[^:]+):(?<currentValue>[^\"]+)\""
       ],
@@ -21,19 +27,30 @@
   "packageRules": [
     {
       "description": "Auto-merge all dependency updates",
-      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "digest"
+      ],
       "automerge": true
     },
     {
       "description": "Pin Docker image versions",
-      "matchDatasources": ["docker"],
+      "matchDatasources": [
+        "docker"
+      ],
       "rangeStrategy": "pin"
     },
     {
       "description": "Use semantic versioning for linuxserver images",
-      "matchDatasources": ["docker"],
-      "matchPackagePatterns": ["^lscr\\.io/linuxserver/"],
-      "versioning": "regex:^(version-)?(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)(-r(?<build>\\d+))?(-ls(?<revision>\\d+))?$"
+      "matchDatasources": [
+        "docker"
+      ],
+      "versioning": "regex:^(version-)?(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)(-r(?<build>\\d+))?(-ls(?<revision>\\d+))?$",
+      "matchPackageNames": [
+        "/^lscr\\.io/linuxserver//"
+      ]
     }
   ]
 }
