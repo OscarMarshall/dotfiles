@@ -35,6 +35,12 @@
       '';
   };
 
+  # Add mkalias to darwin systems
+  environment.systemPackages = lib.mkIf pkgs.stdenv.isDarwin [
+    pkgs.mkalias
+    pkgs.coreutils-prefixed
+  ];
+
   # Set Git commit hash for darwin-version / system revision
   system.configurationRevision = lib.mkIf pkgs.stdenv.isDarwin (inputs.self.rev or inputs.self.dirtyRev or null);
 

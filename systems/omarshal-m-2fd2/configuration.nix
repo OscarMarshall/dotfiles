@@ -1,12 +1,12 @@
 {inputs, ...}: {
   imports = [
     ../../cachix.nix
-    ../../modules/fonts.nix
-    ../../modules/homebrew.nix
-    ../../modules/nixpkgs.nix
-    ../../modules/steam.nix
-    ../../modules/system.nix
-    ../../modules/users.nix
+    ../modules/fonts.nix
+    ../modules/homebrew.nix
+    ../modules/nixpkgs.nix
+    ../modules/steam.nix
+    ../modules/system.nix
+    ../modules/users.nix
   ];
 
   # Set hostname for this system

@@ -11,15 +11,7 @@
     inputs.zen-browser.homeModules.twilight
   ];
 
-  home = {
-    username = lib.mkForce "omarshal";
-    sessionVariables = {
-      ITERM2_SQUELCH_MARK = 1;
-    };
-  };
+  home.username = lib.mkForce "omarshal";
 
-  programs = {
-    java.enable = true;
-    rbenv.enable = true;
-  };
+  programs.java.enable = true;
 }

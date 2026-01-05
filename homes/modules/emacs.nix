@@ -36,6 +36,30 @@ in {
     sessionVariables = {
       EDITOR = "emacs";
     };
+    packages = [
+      (pkgs.aspellWithDicts (dicts: [
+        dicts.en
+        dicts.en-computers
+        dicts.en-science
+      ]))
+      pkgs.editorconfig-core-c
+      pkgs.metals
+      pkgs.multimarkdown
+      pkgs.nil
+      pkgs.nixfmt-rfc-style
+      pkgs.nodePackages_latest.js-beautify
+      pkgs.prettier
+      pkgs.ruby-lsp
+      pkgs.rubyPackages.solargraph
+      pkgs.scalafmt
+      pkgs.shellcheck
+      pkgs.shfmt
+      pkgs.stylelint
+      pkgs.typescript
+      pkgs.typescript-language-server
+      pkgs.vscode-langservers-extracted
+      pkgs.yaml-language-server
+    ];
   };
 
   services.emacs = {

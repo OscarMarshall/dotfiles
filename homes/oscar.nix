@@ -6,9 +6,16 @@
   ...
 }: {
   imports = [
-    ./oscar/emacs.nix
-    ./oscar/packages.nix
-    ./oscar/programs.nix
+    ./modules/clojure.nix
+    ./modules/darwin-packages.nix
+    ./modules/desktop-environment.nix
+    ./modules/direnv.nix
+    ./modules/emacs.nix
+    ./modules/fzf.nix
+    ./modules/git.nix
+    ./modules/packages.nix
+    ./modules/starship.nix
+    ./modules/zsh.nix
   ];
 
   home = {
@@ -16,4 +23,6 @@
     shell.enableZshIntegration = true;
     stateVersion = "25.05";
   };
+
+  programs.home-manager.enable = true;
 }
