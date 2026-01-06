@@ -63,7 +63,10 @@ in {
   };
 
   services.emacs = {
-    package = if pkgs.stdenv.isDarwin then darwinEmacs else pkgs.emacs;
+    package =
+      if pkgs.stdenv.isDarwin
+      then darwinEmacs
+      else pkgs.emacs;
     enable = true;
   };
 }
