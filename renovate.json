@@ -14,9 +14,9 @@
       "customType": "regex",
       "managerFilePatterns": ["/.+\\.nix$/"],
       "matchStrings": [
-        "image\\s*=\\s*\"(?<depName>[^:@]+)[:@](?<currentValue>[^\"]+)\""
+        "image\\s*=\\s*\"(?<depName>[^:]+):(?<currentValue>[^\"]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?\""
       ],
-      "autoReplaceStringTemplate": "image = \"{{{depName}}}@{{{newValue}}}\"",
+      "autoReplaceStringTemplate": "image = \"{{{depName}}}:{{{newValue}}}@{{{newDigest}}}\"",
       "datasourceTemplate": "docker"
     }
   ]
