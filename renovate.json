@@ -12,10 +12,11 @@
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": ["/^modules/.+\\.nix$/"],
+      "managerFilePatterns": ["/.+\\.nix$/"],
       "matchStrings": [
         "image\\s*=\\s*\"(?<depName>[^:@]+)[:@](?<currentValue>[^\"]+)\""
       ],
+      "autoReplaceStringTemplate": "image = \"{{{depName}}}@{{{newValue}}}\"",
       "datasourceTemplate": "docker"
     }
   ]
