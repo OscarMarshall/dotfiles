@@ -1,6 +1,6 @@
 # Repository Overview
 
-This is a personal NixOS configuration repository for multiple systems. It manages system configuration, services, and user environment using NixOS flakes and Home Manager.
+This is a personal NixOS configuration repository for multiple systems. It manages system configuration, services, and user environment using NixOS flakes, Home Manager, and the **Dendritic Design Pattern** with flake-parts.
 
 ## Systems
 
@@ -9,57 +9,98 @@ This is a personal NixOS configuration repository for multiple systems. It manag
 
 ## Repository Structure
 
-- **`flake.nix`**: Main flake configuration defining inputs (nixpkgs, agenix, home-manager, nix-minecraft, nixos-hardware) and multiple NixOS system configurations
-- **`systems/`**: System-specific configuration directories
-  - **`harmony/`**: Configuration files for the harmony server
-    - `configuration.nix`: Top-level configuration that imports all modules
-    - `hardware-configuration.nix`: Hardware-specific configuration (auto-generated)
-  - **`melaan/`**: Configuration files for the melaan laptop
-    - `configuration.nix`: Top-level configuration that imports relevant modules
-    - `hardware-configuration.nix`: Framework-specific hardware configuration
-- **`homes/`**: Home Manager configurations
-  - `oscar.nix`: Oscar's home-manager configuration
-  - `adelline.nix`: Adelline's home-manager configuration
+- **`flake.nix`**: Main flake configuration using flake-parts.lib.mkFlake with import-tree for automatic module discovery
+- **`modules/`**: Dendritic feature modules organized by category
+  - **`lib/`**: Helper functions and development tools
+    - `default.nix`: Helper for creating NixOS configurations (mkNixos)
+    - `dev-tools.nix`: Pre-commit hooks, formatter, and dev shell
+  - **`system/`**: Core system configuration modules
+    - `agenix.nix`: Agenix secret management integration
+    - `boot.nix`: Boot loader configuration (latest kernel)
+    - `home-manager.nix`: Home Manager integration
+    - `networking.nix`: Network settings, host IDs, NetworkManager
+    - `nixpkgs.nix`: Nixpkgs config and overlays
+    - `secrets.nix`: Secret path definitions
+    - `system-core.nix`: Core system settings (auto-upgrade, nix settings, locale, timezone, zsh)
+    - `zfs.nix`: ZFS filesystem configuration
+  - **`services/`**: Service modules (one per service)
+    - `apcupsd.nix`: APC UPS daemon
+    - `autobrr.nix`: Autobrr service with nginx
+    - `cross-seed.nix`: Cross-seed torrent service
+    - `glances.nix`: System monitoring
+    - `gluetun.nix`: VPN container
+    - `homepage.nix`: Homepage dashboard with nginx
+    - `lm_sensors.nix`: Hardware monitoring
+    - `minecraft.nix`: Minecraft servers (Fabric and NeoForge)
+    - `nginx.nix`: Base nginx with ACME
+    - `plex.nix`: Plex media server with nginx
+    - `printing.nix`: CUPS printing service
+    - `profilarr.nix`: Profilarr container with nginx
+    - `prowlarr.nix`: Prowlarr and Flaresolverr with nginx
+    - `qbittorrent.nix`: qBittorrent container with nginx
+    - `radarr.nix`: Radarr service with nginx
+    - `samba.nix`: File sharing
+    - `sonarr.nix`: Sonarr service with nginx
+    - `ssh.nix`: SSH and tmux
+    - `unpackerr.nix`: Unpackerr container
+  - **`programs/`**: Desktop programs and applications
+    - `flatpak.nix`: Flatpak service
+    - `gnome.nix`: GNOME desktop environment
+    - `pipewire.nix`: Audio with pipewire
+    - `steam.nix`: Steam gaming platform
+  - **`users/`**: User configurations with both NixOS and Home Manager aspects
+    - `oscar.nix`: Oscar's user account and home-manager config
+    - `adelline.nix`: Adelline's user account and home-manager config
+  - **`hosts/`**: Host-specific configurations
+    - **`harmony/`**: Home server configuration
+      - `flake-parts.nix`: Creates nixosConfiguration
+      - `configuration.nix`: Imports feature modules for this host
+    - **`melaan/`**: Laptop configuration
+      - `flake-parts.nix`: Creates nixosConfiguration
+      - `configuration.nix`: Imports feature modules for this host
+- **`systems/`**: Hardware-specific files (auto-generated)
+  - `harmony/hardware-configuration.nix`: Hardware config
+  - `melaan/hardware-configuration.nix`: Hardware config
 - **`cachix.nix`**: Binary cache configuration
-- **`modules/`**: Modular configuration organized by service/component (32 modules):
-  - `apcupsd.nix`: APC UPS daemon service
-  - `autobrr.nix`: Autobrr service and nginx config
-  - `boot.nix`: Boot loader configuration (latest kernel for all systems)
-  - `cross-seed.nix`: Cross-seed service
-  - `flatpak.nix`: Flatpak service (melaan only)
-  - `glances.nix`: Glances system monitoring service
-  - `gluetun.nix`: VPN container
-  - `gnome.nix`: GNOME desktop environment (melaan only)
-  - `homepage.nix`: Homepage dashboard and nginx config
-  - `lm_sensors.nix`: Hardware monitoring with lm_sensors and coretemp kernel module (harmony only)
-  - `minecraft.nix`: Minecraft server configurations and firewall
-  - `networking.nix`: Network settings, hostId, NetworkManager
-  - `nginx.nix`: Base nginx settings, ACME configuration, and firewall rules
-  - `nixpkgs.nix`: Nixpkgs overlays and package settings
-  - `pipewire.nix`: Audio with pipewire (melaan only)
-  - `plex.nix`: Plex service and nginx config
-  - `printing.nix`: CUPS printing (melaan only)
-  - `profilarr.nix`: Profilarr container and nginx config
-  - `prowlarr.nix`: Prowlarr and Flaresolverr services with nginx config
-  - `qbittorrent.nix`: qBittorrent container, user/group, and nginx config
-  - `radarr.nix`: Radarr service and nginx config
-  - `samba.nix`: File sharing configuration
-  - `secrets.nix`: Agenix secret definitions
-  - `sonarr.nix`: Sonarr service and nginx config
-  - `ssh.nix`: SSH (OpenSSH) and tmux configuration (harmony only)
-  - `steam.nix`: Steam gaming platform (melaan only)
-  - `system.nix`: Core system settings, programs, and common packages (applied to all systems)
-  - `unpackerr.nix`: Unpackerr container
-  - `users.nix`: User account definitions (shared across systems)
-  - `zfs.nix`: ZFS filesystem and services configuration
-- **`secrets/`**: Directory containing agenix-encrypted secrets (`.age` files) - DO NOT modify or expose these files
+- **`secrets/`**: Agenix-encrypted secrets (`.age` files) - DO NOT modify or expose these files
 - **`secrets/secrets.nix`**: Public keys for agenix encryption
-- **`docs/MODULE-ORGANIZATION.md`**: Detailed documentation on module structure and best practices
+- **`docs/`**: Documentation
+  - `MODULE-ORGANIZATION.md`: Detailed module documentation
+
+## Architecture: Dendritic Design Pattern
+
+This configuration uses the **Dendritic Design Pattern** which provides:
+
+- **Feature-based organization**: Each module represents a feature (service, app, or configuration aspect)
+- **Bottom-up composition**: Features define their requirements; hosts import features they need
+- **Co-location**: All configuration for a feature lives in one place (service config, nginx vhost, firewall rules, etc.)
+- **Reusability**: Features can be easily shared between hosts and imported by other features
+
+### Module Pattern
+
+Each feature module follows this structure:
+
+```nix
+{inputs, ...}: {
+  flake.modules.nixos.<feature-name> = {config, pkgs, ...}: {
+    # NixOS configuration for this feature
+    # Can import other features via imports
+  };
+  
+  flake.modules.homeManager.<feature-name> = {pkgs, ...}: {
+    # Home Manager configuration (optional)
+  };
+}
+```
+
+Features can import other features, and hosts compose features together declaratively.
 
 ## Key Technologies
 
 - **NixOS**: Declarative Linux distribution that allows reproducible system configurations
 - **Nix Flakes**: Modern Nix package and configuration management with lockfile-based dependency pinning
+- **flake-parts**: Framework for organizing flake outputs into composable modules
+- **import-tree**: Automatic discovery and importing of all modules in a directory tree
 - **Home Manager**: Manages user-specific configuration (dotfiles, packages, shell, etc.) declaratively
 - **agenix**: Secret management using age encryption to securely store sensitive data in the repository
 - **Docker/OCI containers**: Several services run in containers for isolation and ease of management (gluetun, qBittorrent, etc.)
@@ -108,11 +149,10 @@ Note: These commands typically require root/sudo access and are run on the targe
 2. **State Version**: Never change `system.stateVersion` or `home.stateVersion` unless you understand the implications (see comments in files)
 3. **Declarative Configuration**: All system configuration should be in Nix files, avoid imperative changes
 4. **Flake Lock**: `flake.lock` pins dependency versions; update explicitly with `nix flake update`
-5. **Service Configuration**: Most services are configured declaratively via NixOS options in their respective module files
-6. **Module Organization**: Each service has its own module with co-located configuration (nginx configs, firewall rules, user groups)
-7. **System-Specific Modules**: Some modules are only imported by specific systems (e.g., gnome.nix only for melaan, minecraft.nix only for harmony)
-8. **User Groups**: User "oscar" has specific group memberships for service access (minecraft, qbittorrent, radarr, sonarr, wheel)
-9. **User "adelline"**: Has networkmanager group on melaan, wheel group on all systems
+5. **Feature Modules**: Each feature should be self-contained with all related configuration (service, nginx, firewall, users) co-located
+6. **Module Organization**: Features are organized by category (system, services, programs, users, hosts)
+7. **System-Level vs User-Level**: System-wide configs go in system modules; user-specific configs go in home-manager
+8. **Host Composition**: Hosts import only the features they need from their configuration.nix
 
 ## Security Considerations
 
@@ -124,28 +164,28 @@ Note: These commands typically require root/sudo access and are run on the targe
 
 ## Common Patterns
 
-- Services are typically enabled with `services.<name>.enable = true` in their respective module
-- Each service module includes its nginx virtual host configuration where applicable
-- Docker containers are defined in individual container modules (gluetun.nix, qbittorrent.nix, profilarr.nix, unpackerr.nix)
-- nginx virtual hosts are co-located with their services, not centralized in nginx.nix
-- Firewall rules are co-located with the services that need them (nginx.nix for HTTP/HTTPS, minecraft.nix for Minecraft port)
+- Feature modules define `flake.modules.nixos.<feature-name>` (and optionally `flake.modules.homeManager.<feature-name>`)
+- Features can import other features via `imports = with inputs.self.modules.nixos; [feature1 feature2];`
+- Service modules include co-located nginx virtual hosts where applicable
+- Docker containers are defined in individual service modules
+- Firewall rules are co-located with the services that need them
 - File paths use `/metalminds/` prefix for the ZFS storage pool
-- Secret paths in modules use relative paths: `../secrets/filename.age`
-- System-specific modules are only imported in the relevant system's configuration.nix
-- NetworkManager is only enabled on melaan and managed in networking.nix
+- Secret paths in modules use relative paths: `../../secrets/filename.age`
+- User packages are managed in home-manager, not NixOS user packages
+- System-wide settings (like defaultUserShell) go in system-core.nix
 
 ## Module Organization
 
-The configuration is organized into 31 focused modules:
+The configuration follows the dendritic design pattern with these categories:
 
-- **Core System**: boot.nix, networking.nix, system.nix, users.nix, zfs.nix (shared across systems)
-- **Infrastructure**: apcupsd.nix, glances.nix, nginx.nix, nixpkgs.nix, secrets.nix, ssh.nix (harmony only)
-- **Desktop Environment** (melaan only): flatpak.nix, gnome.nix, pipewire.nix, printing.nix, steam.nix
-- **Containers**: gluetun.nix, qbittorrent.nix, profilarr.nix, unpackerr.nix
-- **Media Services**: autobrr.nix, cross-seed.nix, plex.nix, prowlarr.nix, radarr.nix, sonarr.nix
-- **Other Services**: homepage.nix, minecraft.nix, samba.nix
+- **lib/** (2 modules): Helper functions and dev tools
+- **system/** (8 modules): Core system config (boot, networking, nixpkgs, system-core, secrets, zfs, agenix, home-manager)
+- **services/** (19 modules): Service modules (nginx, plex, minecraft, arr stack, etc.)
+- **programs/** (4 modules): Desktop applications (gnome, steam, flatpak, pipewire)
+- **users/** (2 modules): User configs with NixOS + Home Manager aspects (oscar, adelline)
+- **hosts/** (2 hosts): Host-specific feature composition (harmony, melaan)
 
-Each module is self-contained with related configuration co-located together. See `docs/MODULE-ORGANIZATION.md` for detailed documentation.
+Each feature module is self-contained with related configuration co-located together. See `docs/MODULE-ORGANIZATION.md` for detailed documentation.
 
 ## Limitations for AI Agents
 
@@ -154,3 +194,4 @@ Each module is self-contained with related configuration co-located together. Se
 - Cannot decrypt or modify agenix secrets
 - Cannot access the actual "harmony" or "melaan" systems
 - Focus on configuration file correctness and NixOS best practices
+- All modules are automatically discovered by import-tree; manual imports in flake.nix are not needed
