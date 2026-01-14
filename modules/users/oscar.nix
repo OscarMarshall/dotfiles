@@ -13,20 +13,17 @@ in {
       ];
     };
 
-    users = {
-      defaultUserShell = pkgs.zsh;
-      users."${username}" = {
-        description = "Oscar Marshall";
-        isNormalUser = true;
-        extraGroups = ["wheel"];
-        hashedPassword = "$y$j9T$rqKfWUlPbBLAGwIXUhAW61$LaP13MwCfvgtNlxZ/77.Pcu.tLapKf8CmepJ.GudcT4";
-        openssh.authorizedKeys.keys = [
-          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOn+wO9sZ8GoCRrg1BOkBK7/dPUojEdEaWoq2lHFYp9K omarshal"
-        ];
-        packages = [
-          pkgs.rcon-cli
-        ];
-      };
+    users.users."${username}" = {
+      description = "Oscar Marshall";
+      isNormalUser = true;
+      extraGroups = ["wheel"];
+      hashedPassword = "$y$j9T$rqKfWUlPbBLAGwIXUhAW61$LaP13MwCfvgtNlxZ/77.Pcu.tLapKf8CmepJ.GudcT4";
+      openssh.authorizedKeys.keys = [
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOn+wO9sZ8GoCRrg1BOkBK7/dPUojEdEaWoq2lHFYp9K omarshal"
+      ];
+      packages = [
+        pkgs.rcon-cli
+      ];
     };
   };
 

@@ -8,14 +8,11 @@ in {
       ];
     };
 
-    users = {
-      defaultUserShell = pkgs.zsh;
-      users."${username}" = {
-        description = "Adelline Marshall";
-        isNormalUser = true;
-        extraGroups = ["wheel"];
-        hashedPassword = "$y$j9T$PIOU1O0/eDXQdlTWkzuf5.$AhnTDMJLgzM04nt6pzz/ae.3U.3LUWhte6PiBw.Mzb2";
-      };
+    users.users."${username}" = {
+      description = "Adelline Marshall";
+      isNormalUser = true;
+      extraGroups = ["wheel"];
+      hashedPassword = "$y$j9T$PIOU1O0/eDXQdlTWkzuf5.$AhnTDMJLgzM04nt6pzz/ae.3U.3LUWhte6PiBw.Mzb2";
     };
   };
 
