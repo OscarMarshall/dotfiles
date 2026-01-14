@@ -21,9 +21,6 @@ in {
       openssh.authorizedKeys.keys = [
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOn+wO9sZ8GoCRrg1BOkBK7/dPUojEdEaWoq2lHFYp9K omarshal"
       ];
-      packages = [
-        pkgs.rcon-cli
-      ];
     };
   };
 
@@ -47,6 +44,7 @@ in {
         [
           pkgs.emacs
           pkgs.pinentry-tty
+          pkgs.rcon-cli
         ]
         ++ lib.optionals (osConfig.networking.hostName == "melaan") [
           pkgs.prismlauncher
