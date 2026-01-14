@@ -84,4 +84,5 @@
 
   # Add oscar to minecraft group for managing servers
   users.users.oscar.extraGroups = ["minecraft"];
+  };
 }
