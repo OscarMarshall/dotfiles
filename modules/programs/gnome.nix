@@ -1,5 +1,5 @@
-{pkgs, ...}: {
-  flake.modules.nixos.gnome = {
+{
+  flake.modules.nixos.gnome = {pkgs, ...}: {
     environment = {
       gnome.excludePackages = with pkgs; [
         epiphany
