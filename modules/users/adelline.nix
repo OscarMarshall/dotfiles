@@ -11,7 +11,7 @@ in {
     users = {
       defaultUserShell = pkgs.zsh;
       users."${username}" = {
-        description = "Adelline";
+        description = "Adelline Marshall";
         isNormalUser = true;
         extraGroups = ["wheel"];
         hashedPassword = "$y$j9T$PIOU1O0/eDXQdlTWkzuf5.$AhnTDMJLgzM04nt6pzz/ae.3U.3LUWhte6PiBw.Mzb2";
@@ -19,20 +19,29 @@ in {
     };
   };
 
-  flake.modules.homeManager."${username}" = _: {
+  flake.modules.homeManager."${username}" = {
+    config,
+    pkgs,
+    lib,
+    osConfig,
+    ...
+  }: {
     home = {
       username = "${username}";
       stateVersion = "25.05";
+
+      packages = lib.mkIf (osConfig.networking.hostName == "melaan") (
+        with pkgs; [
+          google-chrome
+          ghostty
+          krita
+          prismlauncher
+          rnote
+        ]
+      );
     };
 
     programs = {
-      git = {
-        enable = true;
-        settings.user = {
-          name = "Adelline Huang";
-          email = "adelline.huang@gmail.com";
-        };
-      };
       home-manager.enable = true;
     };
   };
