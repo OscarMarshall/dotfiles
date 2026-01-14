@@ -24,7 +24,7 @@
     ++ [
       # External modules
       inputs.nixos-hardware.nixosModules.framework-12-13th-gen-intel
-      ../../systems/melaan/hardware-configuration.nix
+      ./hardware-configuration.nix
       ../../cachix.nix
     ];
 

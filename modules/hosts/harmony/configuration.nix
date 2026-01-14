@@ -40,7 +40,7 @@
     ++ [
       # External modules
       inputs.nix-minecraft.nixosModules.minecraft-servers
-      ../../systems/harmony/hardware-configuration.nix
+      ./hardware-configuration.nix
       ../../cachix.nix
     ];
 
