@@ -98,8 +98,9 @@ in {
           searchDownKey = ["^[[B" "^[OB"];
           searchUpKey = ["^[[A" "^[OA"];
         };
-        envExtra = ''
-          source ~/.iterm2_shell_integration.zsh
+        initExtra = ''
+          # Source iTerm2 shell integration if it exists
+          [ -f ~/.iterm2_shell_integration.zsh ] && source ~/.iterm2_shell_integration.zsh
         '';
       };
     };

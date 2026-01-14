@@ -4,36 +4,34 @@
     lib,
     ...
   }: {
-    imports = with inputs.self.modules.nixos; [
-      # System base
-      boot
-      networking
-      nixpkgs
-      system-core
+    imports =
+      (with inputs.self.modules.nixos; [
+        # System base
+        boot
+        networking
+        nixpkgs
+        system-core
 
-      # Infrastructure
-      home-manager
+        # Infrastructure
+        home-manager
 
-      # Desktop environment
-      flatpak
-      gnome
-      pipewire
-      printing
-      steam
+        # Desktop environment
+        flatpak
+        gnome
+        pipewire
+        printing
+        steam
 
-      # Users
-      oscar
-      adelline
-    ];
-
-    # Import Framework hardware configuration
-    imports = [inputs.nixos-hardware.nixosModules.framework-12-13th-gen-intel];
-
-    # Import hardware configuration
-    imports = [../../systems/melaan/hardware-configuration.nix];
-
-    # Import cachix configuration
-    imports = [../../cachix.nix];
+        # Users
+        oscar
+        adelline
+      ])
+      ++ [
+        # External modules
+        inputs.nixos-hardware.nixosModules.framework-12-13th-gen-intel
+        ../../systems/melaan/hardware-configuration.nix
+        ../../cachix.nix
+      ];
 
     # This value determines the NixOS release from which the default
     # settings for stateful data, like file locations and database versions
