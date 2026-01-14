@@ -1,27 +1,23 @@
-{
-  inputs,
-  systems,
-  ...
-}: let
-  forEachSystem = inputs.nixpkgs.lib.genAttrs (import systems);
-in {
-  # Run the hooks with `nix fmt`.
-  flake.formatter = forEachSystem (
-    system: let
-      pkgs = inputs.nixpkgs.legacyPackages.${system};
-      inherit (inputs.self.checks.${system}.pre-commit-check) config;
+{inputs, ...}: {
+  perSystem = {
+    config,
+    pkgs,
+    system,
+    ...
+  }: {
+    # Run the hooks with `nix fmt`.
+    formatter = let
+      inherit (config.checks.pre-commit-check) config;
       inherit (config) package configFile;
       script = ''
         ${pkgs.lib.getExe package} run --all-files --config ${configFile}
       '';
     in
-      pkgs.writeShellScriptBin "pre-commit-run" script
-  );
+      pkgs.writeShellScriptBin "pre-commit-run" script;
 
-  # Run the hooks in a sandbox with `nix flake check`.
-  # Read-only filesystem and no internet access.
-  flake.checks = forEachSystem (system: {
-    pre-commit-check = inputs.git-hooks.lib.${system}.run {
+    # Run the hooks in a sandbox with `nix flake check`.
+    # Read-only filesystem and no internet access.
+    checks.pre-commit-check = inputs.git-hooks.lib.${system}.run {
       src = ./.;
       hooks = {
         alejandra.enable = true;
@@ -33,19 +29,16 @@ in {
         };
       };
     };
-  });
 
-  # Enter a development shell with `nix develop`.
-  # The hooks will be installed automatically.
-  # Or run pre-commit manually with `nix develop -c pre-commit run --all-files`
-  flake.devShells = forEachSystem (system: {
-    default = let
-      pkgs = inputs.nixpkgs.legacyPackages.${system};
-      inherit (inputs.self.checks.${system}.pre-commit-check) shellHook enabledPackages;
+    # Enter a development shell with `nix develop`.
+    # The hooks will be installed automatically.
+    # Or run pre-commit manually with `nix develop -c pre-commit run --all-files`
+    devShells.default = let
+      inherit (config.checks.pre-commit-check) shellHook enabledPackages;
     in
       pkgs.mkShell {
         inherit shellHook;
         buildInputs = enabledPackages;
       };
-  });
+  };
 }
