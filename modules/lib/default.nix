@@ -10,7 +10,7 @@
         specialArgs = {inherit inputs;};
         modules = [
           {networking.hostName = hostName;}
-          inputs.self.modules.nixos.${hostName}
+          ../hosts/${hostName}/configuration.nix
         ];
       };
     };
