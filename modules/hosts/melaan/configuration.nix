@@ -1,6 +1,10 @@
-{inputs, ...}: {
+{
+  inputs,
+  modules,
+  ...
+}: {
   imports =
-    (with inputs.self.modules.nixos; [
+    (with modules.nixos; [
       # System base
       boot
       networking

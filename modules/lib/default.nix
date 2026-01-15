@@ -7,7 +7,11 @@
     mkNixos = system: hostName: {
       ${hostName} = inputs.nixpkgs.lib.nixosSystem {
         inherit system;
-        specialArgs = {inherit inputs;};
+        specialArgs = {
+          inherit inputs;
+          # Make feature modules available without circular dependency
+          inherit (inputs.self) modules;
+        };
         modules = [
           {networking.hostName = hostName;}
           ../hosts/${hostName}/configuration.nix
