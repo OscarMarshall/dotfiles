@@ -1,6 +1,7 @@
 # Repository Overview
 
-This is a personal NixOS configuration repository for multiple systems. It manages system configuration, services, and user environment using NixOS flakes and Home Manager.
+This is a personal NixOS configuration repository for multiple systems. It manages system configuration, services, and
+user environment using NixOS flakes and Home Manager.
 
 ## Systems
 
@@ -9,7 +10,8 @@ This is a personal NixOS configuration repository for multiple systems. It manag
 
 ## Repository Structure
 
-- **`flake.nix`**: Main flake configuration defining inputs (nixpkgs, agenix, home-manager, nix-minecraft, nixos-hardware) and multiple NixOS system configurations
+- **`flake.nix`**: Main flake configuration defining inputs (nixpkgs, agenix, home-manager, nix-minecraft,
+  nixos-hardware) and multiple NixOS system configurations
 - **`systems/`**: System-specific configuration directories
   - **`harmony/`**: Configuration files for the harmony server
     - `configuration.nix`: Top-level configuration that imports all modules
@@ -62,7 +64,8 @@ This is a personal NixOS configuration repository for multiple systems. It manag
 - **Nix Flakes**: Modern Nix package and configuration management with lockfile-based dependency pinning
 - **Home Manager**: Manages user-specific configuration (dotfiles, packages, shell, etc.) declaratively
 - **agenix**: Secret management using age encryption to securely store sensitive data in the repository
-- **Docker/OCI containers**: Several services run in containers for isolation and ease of management (gluetun, qBittorrent, etc.)
+- **Docker/OCI containers**: Several services run in containers for isolation and ease of management (gluetun,
+  qBittorrent, etc.)
 
 ## Important Services
 
@@ -86,7 +89,8 @@ The melaan laptop includes:
 
 This is a NixOS system configuration, not a traditional software project. Changes are applied by:
 
-1. **Testing configuration**: Use `nixos-rebuild test --flake .#<system>` to test changes without modifying boot configuration
+1. **Testing configuration**: Use `nixos-rebuild test --flake .#<system>` to test changes without modifying boot
+   configuration
 2. **Building configuration**: Use `nixos-rebuild build --flake .#<system>` to build the configuration
 3. **Switching configuration**: Use `nixos-rebuild switch --flake .#<system>` to apply and activate changes
 4. **Updating flake inputs**: Use `nix flake update` to update dependencies
@@ -104,14 +108,20 @@ Note: These commands typically require root/sudo access and are run on the targe
 
 ## Best Practices
 
-1. **Secrets Management**: All secrets are encrypted using agenix. Never commit plaintext secrets or modify `.age` files directly
-2. **State Version**: Never change `system.stateVersion` or `home.stateVersion` unless you understand the implications (see comments in files)
+1. **Secrets Management**: All secrets are encrypted using agenix. Never commit plaintext secrets or modify `.age` files
+   directly
+2. **State Version**: Never change `system.stateVersion` or `home.stateVersion` unless you understand the implications
+   (see comments in files)
 3. **Declarative Configuration**: All system configuration should be in Nix files, avoid imperative changes
 4. **Flake Lock**: `flake.lock` pins dependency versions; update explicitly with `nix flake update`
-5. **Service Configuration**: Most services are configured declaratively via NixOS options in their respective module files
-6. **Module Organization**: Each service has its own module with co-located configuration (nginx configs, firewall rules, user groups)
-7. **System-Specific Modules**: Some modules are only imported by specific systems (e.g., gnome.nix only for melaan, minecraft.nix only for harmony)
-8. **User Groups**: User "oscar" has specific group memberships for service access (minecraft, qbittorrent, radarr, sonarr, wheel)
+5. **Service Configuration**: Most services are configured declaratively via NixOS options in their respective module
+   files
+6. **Module Organization**: Each service has its own module with co-located configuration (nginx configs, firewall
+   rules, user groups)
+7. **System-Specific Modules**: Some modules are only imported by specific systems (e.g., gnome.nix only for melaan,
+   minecraft.nix only for harmony)
+8. **User Groups**: User "oscar" has specific group memberships for service access (minecraft, qbittorrent, radarr,
+   sonarr, wheel)
 9. **User "adelline"**: Has networkmanager group on melaan, wheel group on all systems
 
 ## Security Considerations
@@ -126,9 +136,11 @@ Note: These commands typically require root/sudo access and are run on the targe
 
 - Services are typically enabled with `services.<name>.enable = true` in their respective module
 - Each service module includes its nginx virtual host configuration where applicable
-- Docker containers are defined in individual container modules (gluetun.nix, qbittorrent.nix, profilarr.nix, unpackerr.nix)
+- Docker containers are defined in individual container modules (gluetun.nix, qbittorrent.nix, profilarr.nix,
+  unpackerr.nix)
 - nginx virtual hosts are co-located with their services, not centralized in nginx.nix
-- Firewall rules are co-located with the services that need them (nginx.nix for HTTP/HTTPS, minecraft.nix for Minecraft port)
+- Firewall rules are co-located with the services that need them (nginx.nix for HTTP/HTTPS, minecraft.nix for Minecraft
+  port)
 - File paths use `/metalminds/` prefix for the ZFS storage pool
 - Secret paths in modules use relative paths: `../secrets/filename.age`
 - System-specific modules are only imported in the relevant system's configuration.nix
@@ -145,7 +157,8 @@ The configuration is organized into 31 focused modules:
 - **Media Services**: autobrr.nix, cross-seed.nix, plex.nix, prowlarr.nix, radarr.nix, sonarr.nix
 - **Other Services**: homepage.nix, minecraft.nix, samba.nix
 
-Each module is self-contained with related configuration co-located together. See `docs/MODULE-ORGANIZATION.md` for detailed documentation.
+Each module is self-contained with related configuration co-located together. See `docs/MODULE-ORGANIZATION.md` for
+detailed documentation.
 
 ## Limitations for AI Agents
 
