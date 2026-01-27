@@ -6,6 +6,7 @@ let
       (
         { host, ... }:
         {
+          includes = [ ];
           homeManager =
             { pkgs, ... }:
             {

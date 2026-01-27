@@ -10,6 +10,7 @@ let
       (
         { host, ... }:
         {
+          includes = [ ];
           homeManager =
             { pkgs, ... }:
             {
@@ -41,12 +42,13 @@ in
           (
             { host, ... }:
             {
+              includes = [ ];
               homeManager.home.packages = with pkgs; lib.optionals (host.class == "darwin") [ pinentry_mac ];
             }
           )
         ]
         ++ lib.optionals (user.userName == "omarshal") [
-          { homeManager.programs.git.settings.user.email = "omarshal@meraki.com"; }
+          { includes = [ ]; homeManager.programs.git.settings.user.email = "omarshal@meraki.com"; }
         ];
 
       nixos.users.users.oscar = {
