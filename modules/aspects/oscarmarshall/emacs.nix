@@ -6,6 +6,7 @@
   oscarmarshall.emacs =
     { host, ... }:
     {
+      includes = [ ];
       homeManager =
         { pkgs, ... }:
         {
