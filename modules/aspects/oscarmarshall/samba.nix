@@ -1,6 +1,7 @@
 { lib, ... }:
 {
   oscarmarshall.samba = pool: shares: {
+    includes = [ ];
     nixos = {
       services = {
         samba = {

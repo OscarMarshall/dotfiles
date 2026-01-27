@@ -1,7 +1,9 @@
 {
-  oscarmarshall.homepage.nixos =
-    { config, ... }:
-    {
+  oscarmarshall.homepage = {
+    includes = [ ];
+    nixos =
+      { config, ... }:
+      {
       services.homepage-dashboard = {
         enable = true;
         environmentFile = config.age.secrets."homepage-dashboard.env".path;
@@ -100,4 +102,5 @@
         locations."/".proxyPass = "http://127.0.0.1:8082/";
       };
     };
+  };
 }

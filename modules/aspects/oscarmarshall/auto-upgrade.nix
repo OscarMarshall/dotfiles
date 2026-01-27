@@ -2,6 +2,7 @@
   oscarmarshall.auto-upgrade =
     { allowReboot }:
     {
+      includes = [ ];
       nixos = {
         system.autoUpgrade = {
           enable = true;

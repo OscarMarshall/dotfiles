@@ -1,11 +1,14 @@
 {
-  oscarmarshall.lm-sensors.nixos =
-    { pkgs, ... }:
-    {
-      # Enable coretemp kernel module for temperature monitoring
-      boot.kernelModules = [ "coretemp" ];
+  oscarmarshall.lm-sensors = {
+    includes = [ ];
+    nixos =
+      { pkgs, ... }:
+      {
+        # Enable coretemp kernel module for temperature monitoring
+        boot.kernelModules = [ "coretemp" ];
 
-      # Install lm_sensors for hardware monitoring
-      environment.systemPackages = with pkgs; [ lm_sensors ];
-    };
+        # Install lm_sensors for hardware monitoring
+        environment.systemPackages = with pkgs; [ lm_sensors ];
+      };
+  };
 }

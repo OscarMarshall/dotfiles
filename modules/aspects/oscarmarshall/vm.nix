@@ -1,15 +1,18 @@
 { oscarmarshall, ... }:
 {
-  oscarmarshall.vm.provides = {
-    gui.includes = [
-      oscarmarshall.vm
-      oscarmarshall.vm-bootable._.gui
-      oscarmarshall.xfce-desktop
-    ];
+  oscarmarshall.vm = {
+    includes = [ ];
+    provides = {
+      gui.includes = [
+        oscarmarshall.vm
+        oscarmarshall.vm-bootable._.gui
+        oscarmarshall.xfce-desktop
+      ];
 
-    tui.includes = [
-      oscarmarshall.vm
-      oscarmarshall.vm-bootable._.tui
-    ];
+      tui.includes = [
+        oscarmarshall.vm
+        oscarmarshall.vm-bootable._.tui
+      ];
+    };
   };
 }

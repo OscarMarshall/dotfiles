@@ -14,6 +14,7 @@ in
   flake-file.inputs.ragenix.url = "github:yaxitech/ragenix";
 
   oscarmarshall.secrets = {
+    includes = [ ];
     nixos = {
       imports = lib.optionals (inputs ? ragenix) [ inputs.ragenix.nixosModules.default ];
       inherit age;
