@@ -1,5 +1,6 @@
 {
   oscarmarshall.auto-login = user: {
+    includes = [ ];
     nixos =
       { config, lib, ... }:
       lib.mkIf config.services.displayManager.enable {

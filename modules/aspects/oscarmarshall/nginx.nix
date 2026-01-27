@@ -1,6 +1,8 @@
 {
   oscarmarshall.nginx = {
+    includes = [ ];
     provides.virtual-host = url: port: {
+      includes = [ ];
       nixos.services.nginx.virtualHosts.${url} = {
         forceSSL = true;
         enableACME = true;

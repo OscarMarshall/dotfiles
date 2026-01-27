@@ -1,6 +1,7 @@
 { lib, ... }:
 {
   oscarmarshall.zfs = pools: {
+    includes = [ ];
     nixos =
       { config, pkgs, ... }:
       let
