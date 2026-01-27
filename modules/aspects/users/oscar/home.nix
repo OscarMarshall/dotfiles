@@ -48,7 +48,10 @@ in
           )
         ]
         ++ lib.optionals (user.userName == "omarshal") [
-          { includes = [ ]; homeManager.programs.git.settings.user.email = "omarshal@meraki.com"; }
+          {
+            includes = [ ];
+            homeManager.programs.git.settings.user.email = "omarshal@meraki.com";
+          }
         ];
 
       nixos.users.users.oscar = {

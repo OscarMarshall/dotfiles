@@ -27,6 +27,12 @@
     # ({ host, ... }: { nixos.foo = [ 42 ]; }) # DO-NOT-DO-THIS.
     #
     # Instead try to be explicit if a function is intended for ONLY { host }.
-    (den.lib.take.exactly ({ OS, host }: den.lib.take.unused OS { includes = [ ]; nixos.networking.hostName = host.hostName; }))
+    (den.lib.take.exactly (
+      { OS, host }:
+      den.lib.take.unused OS {
+        includes = [ ];
+        nixos.networking.hostName = host.hostName;
+      }
+    ))
   ];
 }

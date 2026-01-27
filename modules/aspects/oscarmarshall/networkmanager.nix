@@ -2,7 +2,10 @@
 {
   oscarmarshall.networkmanager = den.lib.parametric.atLeast {
     includes = [
-      { includes = [ ]; nixos.networking.networkmanager.enable = true; }
+      {
+        includes = [ ];
+        nixos.networking.networkmanager.enable = true;
+      }
       (
         { user, ... }:
         {
