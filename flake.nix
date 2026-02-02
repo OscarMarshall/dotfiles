@@ -1,123 +1,36 @@
+# DO-NOT-EDIT. This file was auto-generated using github:vic/flake-file.
+# Use `nix run .#write-flake` to regenerate it.
 {
+
+  outputs = inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);
+
   inputs = {
-    agenix = {
-      url = "github:ryantm/agenix";
-      inputs.nixpkgs.follows = "nixpkgs";
+    darwin.url = "github:nix-darwin/nix-darwin";
+    den.url = "github:vic/den";
+    flake-aspects.url = "github:vic/flake-aspects";
+    flake-compat.url = "github:NixOS/flake-compat";
+    flake-file.url = "github:vic/flake-file";
+    flake-parts = {
+      inputs.nixpkgs-lib.follows = "nixpkgs-lib";
+      url = "github:hercules-ci/flake-parts";
     };
-    git-hooks = {
-      url = "github:cachix/git-hooks.nix";
+    flake-utils.url = "github:numtide/flake-utils";
+    git-hooks.url = "github:cachix/git-hooks.nix";
+    home-manager.url = "github:nix-community/home-manager";
+    import-tree.url = "github:vic/import-tree";
+    nix-auto-follow = {
       inputs.nixpkgs.follows = "nixpkgs";
+      url = "github:fzakaria/nix-auto-follow";
     };
-    home-manager = {
-      url = "github:nix-community/home-manager";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    nix-minecraft = {
-      url = "github:OscarMarshall/nix-minecraft";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    nix-doom-emacs-unstraightened.url = "github:marienz/nix-doom-emacs-unstraightened";
+    nix-minecraft.url = "github:Infinidoge/nix-minecraft";
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    nixpkgs-lib.follows = "nixpkgs";
+    ragenix.url = "github:yaxitech/ragenix";
     systems.url = "github:nix-systems/default";
+    treefmt-nix.url = "github:numtide/treefmt-nix";
+    zen-browser.url = "github:0xc000022070/zen-browser-flake";
   };
-  outputs = inputs @ {
-    agenix,
-    git-hooks,
-    home-manager,
-    nixos-hardware,
-    nixpkgs,
-    self,
-    systems,
-    ...
-  }: let
-    forEachSystem = nixpkgs.lib.genAttrs (import systems);
-  in {
-    nixosConfigurations = {
-      harmony = nixpkgs.lib.nixosSystem {
-        specialArgs = {inherit inputs;};
-        modules = [
-          ./systems/harmony/configuration.nix
-          agenix.nixosModules.default
-          {environment.systemPackages = [agenix.packages.x86_64-linux.default];}
-          home-manager.nixosModules.home-manager
-          {
-            home-manager = {
-              useGlobalPkgs = true;
-              useUserPackages = true;
-              users = {
-                oscar = ./homes/oscar.nix;
-                adelline = ./homes/adelline.nix;
-              };
-            };
 
-            # Optionally, use home-manager.extraSpecialArgs to pass
-            # arguments to home.nix
-          }
-        ];
-      };
-
-      melaan = nixpkgs.lib.nixosSystem {
-        specialArgs = {inherit inputs;};
-        modules = [
-          ./systems/melaan/configuration.nix
-          nixos-hardware.nixosModules.framework-12-13th-gen-intel
-          home-manager.nixosModules.home-manager
-          {
-            home-manager = {
-              useGlobalPkgs = true;
-              useUserPackages = true;
-              users = {
-                oscar = ./homes/oscar.nix;
-                adelline = ./homes/adelline.nix;
-              };
-            };
-          }
-        ];
-      };
-    };
-
-    # Run the hooks with `nix fmt`.
-    formatter = forEachSystem (
-      system: let
-        pkgs = nixpkgs.legacyPackages.${system};
-        inherit (self.checks.${system}.pre-commit-check) config;
-        inherit (config) package configFile;
-        script = ''
-          ${pkgs.lib.getExe package} run --all-files --config ${configFile}
-        '';
-      in
-        pkgs.writeShellScriptBin "pre-commit-run" script
-    );
-
-    # Run the hooks in a sandbox with `nix flake check`.
-    # Read-only filesystem and no internet access.
-    checks = forEachSystem (system: {
-      pre-commit-check = inputs.git-hooks.lib.${system}.run {
-        src = ./.;
-        hooks = {
-          alejandra.enable = true;
-          flake-checker.enable = true;
-          statix.enable = true;
-          prettier = {
-            enable = true;
-            settings.write = true;
-          };
-        };
-      };
-    });
-
-    # Enter a development shell with `nix develop`.
-    # The hooks will be installed automatically.
-    # Or run pre-commit manually with `nix develop -c pre-commit run --all-files`
-    devShells = forEachSystem (system: {
-      default = let
-        pkgs = nixpkgs.legacyPackages.${system};
-        inherit (self.checks.${system}.pre-commit-check) shellHook enabledPackages;
-      in
-        pkgs.mkShell {
-          inherit shellHook;
-          buildInputs = enabledPackages;
-        };
-    });
-  };
 }

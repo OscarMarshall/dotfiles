@@ -1,3 +1,5 @@
+.DS_Store
 \#*#.*
+
 # Pre-commit hooks auto-generated config
 /.pre-commit-config.yaml
