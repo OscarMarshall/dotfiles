@@ -12,11 +12,9 @@
       ghostty
       zen-browser
       (
-        { HM-OS-USER }:
         {
           includes = [
             (den._.unfree [ "google-chrome" ])
-
           ];
 
           homeManager =
@@ -24,7 +22,7 @@
             {
               home.packages =
                 with pkgs;
-                lib.optionals HM-OS-USER.user.graphical [
+                [
                   google-chrome
                   inkscape
                   krita
