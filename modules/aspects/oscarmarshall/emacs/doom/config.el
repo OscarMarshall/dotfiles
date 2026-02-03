@@ -31,14 +31,15 @@
 ;; There are two ways to load a theme. Both assume the theme is installed and
 ;; available. You can either set `doom-theme' or manually load a theme with the
 ;; `load-theme' function. This is the default:
-;; (setq doom-theme 'doom-solarized-dark-high-contrast)
+(setq doom-theme 'catppuccin)
 (add-hook 'ns-system-appearance-change-functions
           (lambda (appearance)
             "Load theme, taking current system APPEARANCE into consideration."
-            (mapc #'disable-theme custom-enabled-themes)
-            (pcase appearance
-              ('light (load-theme 'doom-solarized-light t))
-              ('dark (load-theme 'doom-solarized-dark t)))))
+            ;;(mapc #'disable-theme custom-enabled-themes)
+            (setq catppuccin-flavor (pcase appearance
+                                      ('light 'latte)
+                                      ('dark 'mocha)))
+            (catppuccin-reload)))
 
 
 

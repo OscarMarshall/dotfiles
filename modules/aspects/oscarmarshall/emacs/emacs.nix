@@ -80,6 +80,7 @@
             cmake
             editorconfig-core-c
             eslint
+            gnupg
             metals
             multimarkdown
             nixd

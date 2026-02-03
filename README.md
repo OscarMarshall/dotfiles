@@ -1,4 +1,4 @@
-s# Getting Started Guide
+# Getting Started Guide
 
 Steps you can follow after cloning this template:
 
