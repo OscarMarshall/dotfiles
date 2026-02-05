@@ -1,5 +1,12 @@
 {
   oscarmarshall.auto-login = user: {
+    homeManager = {
+      users.${user}.dconf = {
+        enable = true;
+        settings."org/gnome/desktop/screensaver".lock-enabled = false;
+      };
+    };
+
     nixos =
       { config, lib, ... }:
       lib.mkIf config.services.displayManager.enable {
