@@ -1,9 +1,4 @@
-{
-  den,
-  inputs,
-  lib,
-  ...
-}:
+{ inputs, lib, ... }:
 {
   flake-file.inputs.nix-minecraft.url = "github:Infinidoge/nix-minecraft";
 
@@ -11,10 +6,10 @@
     { administrators }:
     {
       includes = [
-        (den._.unfree [
-          "minecraft-server"
-          "neoforge"
-        ])
+        # (den._.unfree [
+        #   "minecraft-server"
+        #   "neoforge"
+        # ])
       ];
 
       nixos =

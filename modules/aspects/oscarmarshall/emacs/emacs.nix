@@ -10,9 +10,9 @@
 
   oscarmarshall.emacs = den.lib.parametric {
     includes = [
-      (den._.unfree [ "aspell-dict-en-science" ])
+      #(den._.unfree [ "aspell-dict-en-science" ])
       (
-        { HM-OS-USER }:
+        { host, ... }:
         {
           homeManager =
             { pkgs, ... }:
@@ -22,7 +22,7 @@
                 emacs-pgtk.overrideAttrs (old: {
                   patches =
                     (old.patches or [ ])
-                    ++ lib.optionals (HM-OS-USER.host.class == "darwin") [
+                    ++ lib.optionals (host.class == "darwin") [
                       # fix-window-role
                       (fetchpatch {
                         url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/a18d28c5044c98c81971679be819c0a1afb38a5f/patches/emacs-28/fix-window-role.patch";
@@ -53,6 +53,14 @@
     homeManager =
       { pkgs, ... }:
       {
+        home.packages = [
+          (pkgs.aspellWithDicts (dicts: [
+            dicts.en
+            dicts.en-computers
+            dicts.en-science
+          ]))
+        ];
+
         imports = lib.optionals (inputs ? nix-doom-emacs-unstraightened) [ inputs.nix-doom-emacs-unstraightened.homeModule ];
 
         home.sessionVariables.EDITOR = "emacs";
@@ -83,8 +91,11 @@
             gnupg
             metals
             multimarkdown
+
+            lix
             nixd
             nixfmt
+
             nodePackages_latest.js-beautify
             nodePackages_latest.nodejs
             pinentry-emacs

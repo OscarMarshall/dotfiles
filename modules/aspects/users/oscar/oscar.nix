@@ -10,32 +10,26 @@
       den._.primary-user
       (den._.user-shell "fish")
       emacs
-      ghostty
-      pinentry
-      zen-browser
-      (
-        { HM-OS-USER }:
+      gpg
+      (host-flag "graphical" [
+        discord
+        ghostty
+        prusa-slicer
+        steam
+        zen-browser
         {
           homeManager =
             { pkgs, ... }:
             {
-              home.packages =
-                with pkgs;
-                lib.optionals HM-OS-USER.user.graphical [
-                  inkscape
-                  prismlauncher
-                ];
+              home.packages = with pkgs; [
+                inkscape
+                prismlauncher
+                zeal
+              ];
             };
         }
-      )
-      (
-        { HM-OS-USER }:
-        {
-          homeManager.programs.git.settings.user.email = lib.mkIf (HM-OS-USER.user.userName == "omarshal") (
-            lib.mkForce "omarshal@meraki.com"
-          );
-        }
-      )
+      ])
+      (host-flag "work" [ { homeManager.programs.git.settings.user.email = lib.mkForce "omarshal@meraki.com"; } ])
     ];
 
     nixos.users.users.oscar = {
@@ -55,7 +49,6 @@
             ripgrep
             rsync
           ];
-          shell.enableFishIntegration = true;
         };
 
         programs = {

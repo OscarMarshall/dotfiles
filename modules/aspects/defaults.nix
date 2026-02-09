@@ -19,6 +19,12 @@
     # Disable booting when running on CI on all NixOS hosts.
     (if config ? _module.args.CI then oscarmarshall.ci-no-boot else { })
 
+    {
+      darwin.nixpkgs.config.allowUnfree = true;
+      homeManager.nixpkgs.config.allowUnfree = true;
+      nixos.nixpkgs.config.allowUnfree = true;
+    }
+
     # NOTE: be cautious when adding fully parametric functions to defaults. defaults are included on EVERY
     # host/user/home, and IF you are not careful you could be duplicating config values. For example:
     #

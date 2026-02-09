@@ -1,21 +1,25 @@
 {
-  den.homes.x86_64-linux.oscar = {
+  den.homes.x86_64-linux."dev203.meraki.com" = {
+    aspect = "oscar";
     userName = "omarshal";
-    graphical = false;
+    work = true;
   };
-  den.hosts.aarch64-darwin.OMARSHAL-M-2FD2.users.oscar = {
-    userName = "omarshal";
+
+  den.hosts.aarch64-darwin.OMARSHAL-M-2FD2 = {
     graphical = true;
+    work = true;
+
+    users.oscar.userName = "omarshal";
   };
-  den.hosts.x86_64-linux.harmony.users.oscar = {
-    graphical = false;
-  };
-  den.hosts.x86_64-linux.melaan.users = {
-    adelline = {
-      graphical = true;
-    };
-    oscar = {
-      graphical = true;
+
+  den.hosts.x86_64-linux.harmony.users.oscar = { };
+
+  den.hosts.x86_64-linux.melaan = {
+    graphical = true;
+
+    users = {
+      adelline = { };
+      oscar = { };
     };
   };
 }

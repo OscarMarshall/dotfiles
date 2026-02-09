@@ -4,7 +4,6 @@
     includes = with oscarmarshall; [
       fonts
       nix
-      steam
     ];
 
     darwin = {
@@ -18,13 +17,10 @@
         casks = [
           "arc"
           "dash"
-          "discord"
-          "gpg-suite"
-          "logseq"
-          "makemkv"
-          "prismlauncher"
+          #"gpg-suite"
+          #"logseq"
+          #"makemkv"
           "proton-mail"
-          "prusaslicer"
         ];
       };
 
