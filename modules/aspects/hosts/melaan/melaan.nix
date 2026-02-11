@@ -9,7 +9,6 @@
 
   den.aspects.melaan = {
     includes = with oscarmarshall; [
-      (auto-login "adelline")
       #(auto-upgrade { allowReboot = false; }) # TODO: Enable when done dogfooding
       boot
       fonts

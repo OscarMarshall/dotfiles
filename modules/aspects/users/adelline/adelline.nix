@@ -8,6 +8,7 @@ in
       den._.primary-user
       (den._.user-shell "fish")
       # (den._.unfree [ "google-chrome" ])
+      disable-gnome-lockscreen
       discord
       ghostty
       steam
