@@ -1,4 +1,7 @@
 { den, oscarmarshall, ... }:
+let
+  name = "Adelline Marshall";
+in
 {
   den.aspects.adelline = {
     includes = with oscarmarshall; [
@@ -9,6 +12,21 @@
       ghostty
       steam
       zen-browser
+      (
+        { user, ... }:
+        let
+          shared = {
+            description = name;
+          };
+        in
+        {
+          darwin.users.users.${user.userName} = shared;
+
+          nixos.users.users.${user.userName} = shared // {
+            hashedPassword = "$y$j9T$PIOU1O0/eDXQdlTWkzuf5.$AhnTDMJLgzM04nt6pzz/ae.3U.3LUWhte6PiBw.Mzb2";
+          };
+        }
+      )
     ];
 
     homeManager =
