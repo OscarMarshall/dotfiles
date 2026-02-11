@@ -3,27 +3,11 @@
   den.aspects.OMARSHAL-M-2FD2 = {
     includes = with oscarmarshall; [
       fonts
+      homebrew
       nix
     ];
 
     darwin = {
-      homebrew = {
-        enable = true;
-        onActivation = {
-          autoUpdate = true;
-          cleanup = "zap";
-          upgrade = true;
-        };
-        casks = [
-          "arc"
-          "dash"
-          #"gpg-suite"
-          #"logseq"
-          #"makemkv"
-          "proton-mail"
-        ];
-      };
-
       # Used for backwards compatibility, please read the changelog before changing.
       #
       # $ darwin-rebuild changelog

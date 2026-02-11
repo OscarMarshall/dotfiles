@@ -10,20 +10,21 @@
           homeManager =
             { pkgs, ... }:
             {
-              programs.ghostty = {
-                enable = true;
-                package = if (host.class == "darwin") then null else pkgs.ghostty;
-                settings = {
-                  font-family = "fira-code";
-                  keybind = [ "global:super+$=toggle_quick_terminal" ];
-                  theme = "light:Catppuccin Latte,dark:Catppuccin Mocha";
-                };
-              };
+              programs.ghostty.package = if (host.class == "darwin") then null else pkgs.ghostty;
             };
         }
       )
     ];
 
     darwin.homebrew.casks = [ "ghostty" ];
+
+    homeManager.programs.ghostty = {
+      enable = true;
+      settings = {
+        font-family = "fira-code";
+        keybind = [ "global:super+$=toggle_quick_terminal" ];
+        theme = "light:Catppuccin Latte,dark:Catppuccin Mocha";
+      };
+    };
   };
 }

@@ -12,6 +12,7 @@
 
     # Enable home-manager on all hosts.
     den._.home-manager
+    { homeManager.programs.home-manager.enable = true; }
 
     # Automatically create the user on host.
     den._.define-user

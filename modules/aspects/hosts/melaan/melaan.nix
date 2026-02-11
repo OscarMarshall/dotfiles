@@ -19,7 +19,6 @@
       nix
       pipewire
       secrets
-      steam # TODO: Delete when ready
     ];
 
     nixos = {

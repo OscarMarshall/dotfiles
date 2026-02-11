@@ -1,7 +1,7 @@
 {
   oscarmarshall.auto-login = user: {
     homeManager = {
-      users.${user}.dconf = {
+      dconf = {
         enable = true;
         settings."org/gnome/desktop/screensaver".lock-enabled = false;
       };
