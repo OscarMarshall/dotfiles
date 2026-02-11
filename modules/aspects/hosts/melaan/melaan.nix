@@ -58,6 +58,6 @@
     #
     # You can update Home Manager without changing this value. See the Home Manager release notes for a list of state
     # version changes in each release.
-    homeManager.home.stateVersion = "25.05";
+    provides.adelline.homeManager.home.stateVersion = "25.05";
   };
 }
