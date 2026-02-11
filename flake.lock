@@ -59,7 +59,7 @@
     },
     "darwin_2": {
       "inputs": {
-        "nixpkgs": "nixpkgs_7"
+        "nixpkgs": "nixpkgs"
       },
       "locked": {
         "lastModified": 1770184146,
@@ -244,7 +244,7 @@
     },
     "flake-utils_2": {
       "inputs": {
-        "systems": "systems_5"
+        "systems": "systems"
       },
       "locked": {
         "lastModified": 1731533236,
@@ -321,7 +321,7 @@
     },
     "home-manager_2": {
       "inputs": {
-        "nixpkgs": "nixpkgs_8"
+        "nixpkgs": "nixpkgs_3"
       },
       "locked": {
         "lastModified": 1770586272,
@@ -339,7 +339,7 @@
     },
     "home-manager_3": {
       "inputs": {
-        "nixpkgs": "nixpkgs_11"
+        "nixpkgs": "nixpkgs_3"
       },
       "locked": {
         "lastModified": 1770586272,
