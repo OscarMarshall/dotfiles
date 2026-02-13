@@ -1,14 +1,14 @@
 {
   config,
   den,
-  oscarmarshall,
+  my,
   ...
 }:
 {
   # These are functions that produce configs
   den.default.includes = [
     # ${user}.provides.${host} and ${host}.provides.${user}
-    oscarmarshall.routes
+    my.routes
 
     # Enable home-manager on all hosts.
     den._.home-manager
@@ -18,7 +18,7 @@
     den._.define-user
 
     # Disable booting when running on CI on all NixOS hosts.
-    (if config ? _module.args.CI then oscarmarshall.ci-no-boot else { })
+    (if config ? _module.args.CI then my.ci-no-boot else { })
 
     {
       darwin.nixpkgs.config.allowUnfree = true;

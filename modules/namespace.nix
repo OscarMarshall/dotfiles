@@ -1,4 +1,4 @@
 { inputs, ... }:
 {
-  imports = [ (inputs.den.namespace "oscarmarshall" false) ];
+  imports = [ (inputs.den.namespace "my" false) ];
 }

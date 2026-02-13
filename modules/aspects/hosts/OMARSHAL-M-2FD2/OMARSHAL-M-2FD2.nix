@@ -1,7 +1,7 @@
-{ oscarmarshall, ... }:
+{ my, ... }:
 {
   den.aspects.OMARSHAL-M-2FD2 = {
-    includes = with oscarmarshall; [
+    includes = with my; [
       fonts
       homebrew
       nix

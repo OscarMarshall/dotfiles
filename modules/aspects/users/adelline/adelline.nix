@@ -1,10 +1,10 @@
-{ den, oscarmarshall, ... }:
+{ den, my, ... }:
 let
   name = "Adelline Marshall";
 in
 {
   den.aspects.adelline = {
-    includes = with oscarmarshall; [
+    includes = with my; [
       den._.primary-user
       (den._.user-shell "fish")
       # (den._.unfree [ "google-chrome" ])

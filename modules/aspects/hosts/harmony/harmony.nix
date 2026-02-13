@@ -1,35 +1,48 @@
+{ my, ... }:
 {
-  inputs,
-  lib,
-  my,
-  ...
-}:
-{
-  flake-file.inputs.nixos-hardware.url = "github:NixOS/nixos-hardware/master";
-
-  den.aspects.melaan = {
+  den.aspects.harmony = {
     includes = with my; [
-      #(auto-upgrade { allowReboot = false; }) # TODO: Enable when done dogfooding
+      (auto-upgrade { allowReboot = true; })
+      autobrr
       boot
+      cross-seed
       fonts
-      gnome
+      gluetun
+      homepage
+      lm-sensors
       locale
+      (minecraft-servers { administrators = [ "oscar" ]; })
       networkmanager
+      nginx
       nix
-      pipewire
+      profilarr
+      prowlarr
+      (qbittorrent { administrators = [ "oscar" ]; })
+      (radarr { administrators = [ "oscar" ]; })
+      (samba "/metalminds" [
+        "backups"
+        "documents"
+        "minecraft-worlds"
+        "movies"
+        "music"
+        "pictures"
+        "shows"
+        "torrents"
+        "yarg-charts"
+      ])
+      secrets
+      (sonarr { administrators = [ "oscar" ]; })
+      ssh-server
+      unpackerr
+      (zfs [ "metalminds" ])
     ];
 
     nixos = {
-      imports = lib.optionals (inputs ? nixos-hardware) [ inputs.nixos-hardware.nixosModules.framework-12-13th-gen-intel ];
-
-      networking.networkmanager.enable = true;
-
-      programs.steam.enable = true;
+      networking.hostId = "7dab76c0";
 
       services = {
-        flatpak.enable = true;
-        openssh.enable = true;
-        printing.enable = true;
+        apcupsd.enable = true;
+        glances.enable = true;
       };
 
       # This option defines the first version of NixOS you have installed on this particular machine, and is used to
@@ -57,9 +70,6 @@
     #
     # You can update Home Manager without changing this value. See the Home Manager release notes for a list of state
     # version changes in each release.
-    provides = {
-      adelline.homeManager.home.stateVersion = "25.05";
-      oscar.homeManager.home.stateVersion = "25.05";
-    };
+    homeManager.home.stateVersion = "25.05";
   };
 }

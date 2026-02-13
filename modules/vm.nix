@@ -3,7 +3,7 @@
 { inputs, ... }:
 {
 
-  den.aspects.oscarmarshall.includes = [ <oscarmarshall/vm/tui> ];
+  den.aspects.my.includes = [ <my/vm/tui> ];
 
   perSystem =
     { pkgs, ... }:
