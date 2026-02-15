@@ -61,9 +61,7 @@
           ]))
         ];
 
-        imports = lib.optionals (
-          (inputs ? nix-doom-emacs-unstraightened) && pkgs.stdenv.isLinux
-        ) [ inputs.nix-doom-emacs-unstraightened.homeModule ];
+        imports = lib.optionals (inputs ? nix-doom-emacs-unstraightened) [ inputs.nix-doom-emacs-unstraightened.homeModule ];
 
         home.sessionVariables.EDITOR = "emacs";
 

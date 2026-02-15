@@ -12,15 +12,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  flake-check:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    name: Nix flake check ${{matrix.os}}
-    runs-on: ${{matrix.os}}
+  build-linux:
+    name: Build Linux hosts
+    runs-on: ubuntu-latest
     steps:
       - uses: wimpysworld/nothing-but-nix@main
-        if: matrix.os == 'ubuntu-latest'
 
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
         with:
@@ -42,4 +38,38 @@ jobs:
           }
           EOF
 
-      - run: nix flake check
+      - name: Build harmony
+        run: nix build .#nixosConfigurations.harmony.config.system.build.toplevel
+
+      - name: Build melaan
+        run: nix build .#nixosConfigurations.melaan.config.system.build.toplevel
+
+      - name: Build dev203.meraki.com
+        run: nix build .#homeConfigurations.\"x86_64-linux.dev203.meraki.com\".activationPackage
+
+  build-darwin:
+    name: Build Darwin hosts
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+          token: ${{ secrets.PAT }}
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@c5a866b6ab867e88becbed4467b93592bce69f8a # v21
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39 # v13
+
+      - run: nix flake metadata
+
+      - run: |
+          cat <<-EOF > modules/ci-runtime.nix
+          {
+            _module.args.CI = true;
+          }
+          EOF
+
+      - name: Build OMARSHAL-M-2FD2
+        run: nix build .#darwinConfigurations.OMARSHAL-M-2FD2.config.system.build.toplevel
