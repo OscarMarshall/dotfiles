@@ -1,10 +1,11 @@
+{ den, ... }:
 {
   my.steam = {
     includes = [
-      # (den._.unfree [
-      #   "steam"
-      #   "steam-unwrapped"
-      # ])
+      (den._.unfree [
+        "steam"
+        "steam-unwrapped"
+      ])
     ];
 
     darwin.homebrew.casks = [ "steam" ];

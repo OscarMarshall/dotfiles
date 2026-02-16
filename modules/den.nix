@@ -1,5 +1,6 @@
 {
   den.homes.x86_64-linux."dev203.meraki.com" = {
+    stateVersion = "25.11";
     aspect = "oscar";
     userName = "omarshal";
     work = true;

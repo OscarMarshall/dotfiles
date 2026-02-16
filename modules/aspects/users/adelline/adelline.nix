@@ -7,7 +7,7 @@ in
     includes = with my; [
       den._.primary-user
       (den._.user-shell "fish")
-      # (den._.unfree [ "google-chrome" ])
+      (den._.unfree [ "google-chrome" ])
       discord
       ghostty
       steam
