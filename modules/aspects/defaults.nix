@@ -13,18 +13,15 @@
     # Enable home-manager on all hosts.
     den._.home-manager
     { homeManager.programs.home-manager.enable = true; }
+    (den.lib.take.exactly (
+      { HM, home }: den.lib.take.unused HM { homeManager.home.stateVersion = home.stateVersion or null; }
+    ))
 
     # Automatically create the user on host.
     den._.define-user
 
     # Disable booting when running on CI on all NixOS hosts.
     (if config ? _module.args.CI then my.ci-no-boot else { })
-
-    {
-      darwin.nixpkgs.config.allowUnfree = true;
-      homeManager.nixpkgs.config.allowUnfree = true;
-      nixos.nixpkgs.config.allowUnfree = true;
-    }
 
     # NOTE: be cautious when adding fully parametric functions to defaults. defaults are included on EVERY
     # host/user/home, and IF you are not careful you could be duplicating config values. For example:

@@ -10,7 +10,7 @@
 
   my.emacs = den.lib.parametric {
     includes = [
-      #(den._.unfree [ "aspell-dict-en-science" ])
+      (den._.unfree [ "aspell-dict-en-science" ])
       (
         { host, ... }:
         {
@@ -53,14 +53,6 @@
     homeManager =
       { pkgs, ... }:
       {
-        home.packages = [
-          (pkgs.aspellWithDicts (dicts: [
-            dicts.en
-            dicts.en-computers
-            dicts.en-science
-          ]))
-        ];
-
         imports = lib.optionals (inputs ? nix-doom-emacs-unstraightened) [ inputs.nix-doom-emacs-unstraightened.homeModule ];
 
         home.sessionVariables.EDITOR = "emacs";

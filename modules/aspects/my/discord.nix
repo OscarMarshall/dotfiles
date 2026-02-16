@@ -1,8 +1,7 @@
+{ den, ... }:
 {
   my.discord = {
-    includes = [
-      # (den._.unfree [ "discord" ])
-    ];
+    includes = [ (den._.unfree [ "discord" ]) ];
 
     homeManager =
       { pkgs, ... }:
