@@ -1,7 +1,7 @@
 { den, ... }:
 {
   my.plex.nixos = {
-    includes = [ (den.unfree [ "plexmediaserver" ]) ];
+    includes = [ (den._.unfree [ "plexmediaserver" ]) ];
 
     services.plex = {
       enable = true;
