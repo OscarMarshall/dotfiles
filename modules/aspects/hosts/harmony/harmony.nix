@@ -15,6 +15,7 @@
       networkmanager
       nginx
       nix
+      plex
       profilarr
       prowlarr
       (qbittorrent { administrators = [ "oscar" ]; })
