@@ -1,5 +1,8 @@
+{ den, ... }:
 {
   my.plex.nixos = {
+    includes = [ (den.unfree [ "plexmediaserver" ]) ];
+
     services.plex = {
       enable = true;
       openFirewall = true;
