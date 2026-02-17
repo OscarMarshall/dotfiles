@@ -43,8 +43,8 @@ jobs:
       - name: Build melaan
         run: nix build .#nixosConfigurations.melaan.config.system.build.toplevel
 
-      - name: Build dev203.meraki.com
-        run: nix build .#homeConfigurations.\"dev203.meraki.com\".activationPackage
+      - name: Build omarshal
+        run: nix build .#homeConfigurations.omarshal.activationPackage
 
   build-darwin:
     name: Build Darwin hosts
