@@ -7,6 +7,7 @@ let
           automatic = true;
           options = "--delete-older-than 7d";
         };
+        optimise.automatic = true;
         package = pkgs.lixPackageSets.stable.lix;
         settings = {
           experimental-features = [

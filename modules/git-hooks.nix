@@ -1,9 +1,15 @@
-{ inputs, lib, ... }:
+{ inputs, ... }:
 
 {
-  flake-file.inputs.git-hooks.url = "github:cachix/git-hooks.nix";
+  flake-file.inputs.git-hooks = {
+    url = "github:cachix/git-hooks.nix";
+    inputs = {
+      flake-compat.follows = "flake-compat";
+      nixpkgs.follows = "nixpkgs";
+    };
+  };
 
-  imports = lib.optionals (inputs ? git-hooks) [ inputs.git-hooks.flakeModule ];
+  imports = [ (inputs.git-hooks.flakeModule or { }) ];
 
   perSystem =
     { config, ... }:

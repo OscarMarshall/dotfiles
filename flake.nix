@@ -5,7 +5,10 @@
   outputs = inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);
 
   inputs = {
-    darwin.url = "github:nix-darwin/nix-darwin";
+    darwin = {
+      inputs.nixpkgs.follows = "nixpkgs";
+      url = "github:nix-darwin/nix-darwin";
+    };
     den.url = "github:vic/den";
     flake-aspects.url = "github:vic/flake-aspects";
     flake-compat.url = "github:NixOS/flake-compat";
@@ -14,23 +17,60 @@
       inputs.nixpkgs-lib.follows = "nixpkgs-lib";
       url = "github:hercules-ci/flake-parts";
     };
-    flake-utils.url = "github:numtide/flake-utils";
-    git-hooks.url = "github:cachix/git-hooks.nix";
-    home-manager.url = "github:nix-community/home-manager";
-    import-tree.url = "github:vic/import-tree";
-    nix-auto-follow = {
-      inputs.nixpkgs.follows = "nixpkgs";
-      url = "github:fzakaria/nix-auto-follow";
+    git-hooks = {
+      inputs = {
+        flake-compat.follows = "flake-compat";
+        nixpkgs.follows = "nixpkgs";
+      };
+      url = "github:cachix/git-hooks.nix";
     };
-    nix-doom-emacs-unstraightened.url = "github:marienz/nix-doom-emacs-unstraightened";
-    nix-minecraft.url = "github:Infinidoge/nix-minecraft";
-    nixos-hardware.url = "github:NixOS/nixos-hardware/master";
-    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    home-manager = {
+      inputs.nixpkgs.follows = "nixpkgs";
+      url = "github:nix-community/home-manager";
+    };
+    import-tree.url = "github:vic/import-tree";
+    nix-doom-emacs-unstraightened = {
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        systems.follows = "systems";
+      };
+      url = "github:marienz/nix-doom-emacs-unstraightened";
+    };
+    nix-minecraft = {
+      inputs = {
+        flake-compat.follows = "flake-compat";
+        nixpkgs.follows = "nixpkgs";
+        systems.follows = "systems";
+      };
+      url = "github:Infinidoge/nix-minecraft";
+    };
+    nixos-hardware.url = "github:NixOS/nixos-hardware";
+    nixpkgs.url = "https://channels.nixos.org/nixpkgs-unstable/nixexprs.tar.xz";
     nixpkgs-lib.follows = "nixpkgs";
-    ragenix.url = "github:yaxitech/ragenix";
+    ragenix = {
+      inputs = {
+        agenix.inputs = {
+          darwin.follows = "darwin";
+          flake-utils.inputs.systems.follows = "systems";
+          home-manager.follows = "home-manager";
+        };
+        flake-utils.inputs.systems.follows = "systems";
+        nixpkgs.follows = "nixpkgs";
+      };
+      url = "github:yaxitech/ragenix";
+    };
     systems.url = "github:nix-systems/default";
-    treefmt-nix.url = "github:numtide/treefmt-nix";
-    zen-browser.url = "github:0xc000022070/zen-browser-flake";
+    treefmt-nix = {
+      inputs.nixpkgs.follows = "nixpkgs";
+      url = "github:numtide/treefmt-nix";
+    };
+    zen-browser = {
+      inputs = {
+        home-manager.follows = "home-manager";
+        nixpkgs.follows = "nixpkgs";
+      };
+      url = "github:0xc000022070/zen-browser-flake";
+    };
   };
 
 }
