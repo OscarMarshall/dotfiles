@@ -6,7 +6,7 @@
     includes = with my; [
       (auto-upgrade { allowReboot = false; })
       boot
-      cachyos-kernel
+      (cachyos-kernel { })
       fonts
       gnome
       locale
