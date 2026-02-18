@@ -8,7 +8,6 @@ This repository contains my personal system configurations for multiple machines
 - **harmony** (x86_64-linux): Home server running media services, Minecraft servers, and infrastructure
 - **melaan** (x86_64-linux): Framework laptop with GNOME desktop
 - **OMARSHAL-M-2FD2** (aarch64-darwin): MacBook with development environment
-- **dev203.meraki.com** (x86_64-linux): Work machine (Home Manager only)
 
 ## Quick Start
 
@@ -34,11 +33,6 @@ sudo nixos-rebuild switch --flake .#<hostname>
 **macOS systems (OMARSHAL-M-2FD2):**
 ```console
 darwin-rebuild switch --flake .#OMARSHAL-M-2FD2
-```
-
-**Home Manager only (dev203.meraki.com):**
-```console
-home-manager switch --flake .#dev203.meraki.com
 ```
 
 ### Validate Configuration

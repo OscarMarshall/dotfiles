@@ -8,7 +8,6 @@ services, and user environments using Nix flakes, Den/Dendritic, and Home Manage
 - **OMARSHAL-M-2FD2**: MacBook (aarch64-darwin) with GNOME-like desktop environment
 - **harmony**: Home server (x86_64-linux) with media services, Minecraft servers, and more
 - **melaan**: Framework laptop (x86_64-linux) running GNOME desktop
-- **dev203.meraki.com**: Work machine (x86_64-linux) - home-only configuration
 
 ## Repository Structure
 
@@ -121,10 +120,6 @@ The **OMARSHAL-M-2FD2** MacBook (aarch64-darwin) includes:
 - **Development**: Emacs, Git, GPG, SSH
 - **Work**: Work-specific configuration
 
-The **dev203.meraki.com** (x86_64-linux) is:
-- **Home-only**: No NixOS system config, only Home Manager for user "omarshal"
-- **Work machine**: work=true flag enabled
-
 ## Building and Deploying
 
 This repository uses flake-file/Dendritic which auto-generates `flake.nix`. Changes are applied differently depending
@@ -139,10 +134,6 @@ on the system type:
 1. **Testing configuration**: `darwin-rebuild check --flake .#OMARSHAL-M-2FD2`
 2. **Building configuration**: `darwin-rebuild build --flake .#OMARSHAL-M-2FD2`
 3. **Switching configuration**: `darwin-rebuild switch --flake .#OMARSHAL-M-2FD2`
-
-### Home Manager Only (dev203.meraki.com)
-1. **Building configuration**: `home-manager build --flake .#dev203.meraki.com`
-2. **Switching configuration**: `home-manager switch --flake .#dev203.meraki.com`
 
 ### Updating Dependencies
 - **Update all inputs**: `nix flake update`
@@ -164,7 +155,7 @@ Note: Build/switch commands typically require appropriate permissions and are ru
 - **Build check (Home)**: `home-manager build --flake .#<home>` builds a home configuration
 - **Formatting**: `nix fmt` formats Nix code (configured via treefmt-nix)
 
-CI runs `nix flake check` on both Ubuntu and macOS runners to validate all configurations.
+CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan) on Ubuntu, Darwin hosts (OMARSHAL-M-2FD2) on macOS.
 
 ## Best Practices
 
@@ -228,7 +219,7 @@ CI runs `nix flake check` on both Ubuntu and macOS runners to validate all confi
 
 The configuration uses Den aspects organized into three main categories:
 
-### Host Aspects (4 hosts)
+### Host Aspects (3 hosts)
 - **harmony** (x86_64-linux): Server configuration with media services, Minecraft, nginx, ZFS, etc.
 - **melaan** (x86_64-linux): Desktop laptop with GNOME, Framework hardware support, multiple users
 - **OMARSHAL-M-2FD2** (aarch64-darwin): MacBook with homebrew, work configuration
@@ -267,7 +258,7 @@ Each `my.*` aspect is a self-contained module that can be included by hosts or u
 - Cannot execute `nixos-rebuild`, `darwin-rebuild`, or `home-manager` commands (requires target system access)
 - Cannot test actual service functionality (no runtime environment)
 - Cannot decrypt or modify ragenix secrets
-- Cannot access the actual systems (harmony, melaan, OMARSHAL-M-2FD2, dev203.meraki.com)
+- Cannot access the actual systems (harmony, melaan, OMARSHAL-M-2FD2)
 - Cannot run `nix run .#write-flake` to regenerate flake.nix (but can modify modules/inputs.nix)
 - Focus on configuration file correctness, Den aspect patterns, and NixOS/Darwin best practices
 - When making changes to flake inputs in modules, note that flake.nix regeneration is required
