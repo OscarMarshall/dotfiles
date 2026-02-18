@@ -57,7 +57,8 @@ jobs:
           done
           
           if [ $iteration -eq $max_iterations ]; then
-            echo "Warning: Reached maximum iterations without convergence"
+            echo "Error: Reached maximum iterations without convergence"
+            exit 1
           fi
 
       - name: Commit and push changes
