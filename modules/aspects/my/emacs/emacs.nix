@@ -6,7 +6,13 @@
 }:
 
 {
-  flake-file.inputs.nix-doom-emacs-unstraightened.url = "github:marienz/nix-doom-emacs-unstraightened";
+  flake-file.inputs.nix-doom-emacs-unstraightened = {
+    url = "github:marienz/nix-doom-emacs-unstraightened";
+    inputs = {
+      nixpkgs.follows = "nixpkgs";
+      systems.follows = "systems";
+    };
+  };
 
   my.emacs = den.lib.parametric {
     includes = [
@@ -53,7 +59,7 @@
     homeManager =
       { pkgs, ... }:
       {
-        imports = lib.optionals (inputs ? nix-doom-emacs-unstraightened) [ inputs.nix-doom-emacs-unstraightened.homeModule ];
+        imports = [ (inputs.nix-doom-emacs-unstraightened.homeModule or { }) ];
 
         home.sessionVariables.EDITOR = "emacs";
 

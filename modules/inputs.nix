@@ -10,10 +10,17 @@
 { ... }:
 {
   flake-file.inputs = {
-    home-manager.url = "github:nix-community/home-manager";
-    darwin.url = "github:nix-darwin/nix-darwin";
+    home-manager = {
+      url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    darwin = {
+      url = "github:nix-darwin/nix-darwin";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
+    # Follow targets
     flake-compat.url = "github:NixOS/flake-compat";
-    flake-utils.url = "github:numtide/flake-utils";
+    systems.url = "github:nix-systems/default";
   };
 }

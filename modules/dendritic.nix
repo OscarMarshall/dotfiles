@@ -4,7 +4,6 @@
   flake-file.inputs.den.url = lib.mkDefault "github:vic/den";
   imports = [
     (inputs.flake-file.flakeModules.dendritic or { })
-    inputs.flake-file.flakeModules.nix-auto-follow
     (inputs.den.flakeModules.dendritic or { })
   ];
 }

@@ -1,15 +1,10 @@
+{ inputs, my, ... }:
 {
-  inputs,
-  lib,
-  my,
-  ...
-}:
-{
-  flake-file.inputs.nixos-hardware.url = "github:NixOS/nixos-hardware/master";
+  flake-file.inputs.nixos-hardware.url = "github:NixOS/nixos-hardware";
 
   den.aspects.melaan = {
     includes = with my; [
-      #(auto-upgrade { allowReboot = false; }) # TODO: Enable when done dogfooding
+      (auto-upgrade { allowReboot = false; })
       boot
       fonts
       gnome
@@ -20,7 +15,7 @@
     ];
 
     nixos = {
-      imports = lib.optionals (inputs ? nixos-hardware) [ inputs.nixos-hardware.nixosModules.framework-12-13th-gen-intel ];
+      imports = [ (inputs.nixos-hardware.nixosModules.framework-12-13th-gen-intel or { }) ];
 
       networking.networkmanager.enable = true;
 

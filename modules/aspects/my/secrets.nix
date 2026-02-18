@@ -1,4 +1,4 @@
-{ inputs, lib, ... }:
+{ inputs, ... }:
 let
   age.secrets = {
     autobrr-secret.file = ../../../secrets/autobrr-secret.age;
@@ -11,19 +11,30 @@ let
   };
 in
 {
-  flake-file.inputs.ragenix.url = "github:yaxitech/ragenix";
+  flake-file.inputs.ragenix = {
+    url = "github:yaxitech/ragenix";
+    inputs = {
+      agenix.inputs = {
+        darwin.follows = "darwin";
+        flake-utils.inputs.systems.follows = "systems";
+        home-manager.follows = "home-manager";
+      };
+      flake-utils.inputs.systems.follows = "systems";
+      nixpkgs.follows = "nixpkgs";
+    };
+  };
 
   my.secrets = {
     nixos = {
-      imports = lib.optionals (inputs ? ragenix) [ inputs.ragenix.nixosModules.default ];
+      imports = [ (inputs.ragenix.nixosModules.default or { }) ];
       inherit age;
     };
     darwin = {
-      imports = lib.optionals (inputs ? ragenix) [ inputs.ragenix.darwinModules.default ];
+      imports = [ (inputs.ragenix.darwinModules.default or { }) ];
       inherit age;
     };
     homeManager = {
-      imports = lib.optionals (inputs ? ragenix) [ inputs.ragenix.homeManagerModules.default ];
+      imports = [ (inputs.ragenix.homeManagerModules.default or { }) ];
       inherit age;
     };
   };

@@ -5,7 +5,14 @@
   ...
 }:
 {
-  flake-file.inputs.nix-minecraft.url = "github:Infinidoge/nix-minecraft";
+  flake-file.inputs.nix-minecraft = {
+    url = "github:Infinidoge/nix-minecraft";
+    inputs = {
+      flake-compat.follows = "flake-compat";
+      nixpkgs.follows = "nixpkgs";
+      systems.follows = "systems";
+    };
+  };
 
   my.minecraft-servers =
     { administrators }:
@@ -20,9 +27,9 @@
       nixos =
         { config, pkgs, ... }:
         {
-          imports = lib.optionals (inputs ? nix-minecraft) [ inputs.nix-minecraft.nixosModules.minecraft-servers ];
+          imports = [ (inputs.nix-minecraft.nixosModules.minecraft-servers or { }) ];
 
-          nixpkgs.overlays = lib.optionals (inputs ? nix-minecraft) [ inputs.nix-minecraft.overlay ];
+          nixpkgs.overlays = [ (inputs.nix-minecraft.overlay or { }) ];
 
           services.minecraft-servers = {
             enable = true;
