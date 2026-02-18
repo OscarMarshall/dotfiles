@@ -28,10 +28,17 @@
   };
 
   my.cachyos-kernel =
-    { variant ? "latest-lto" }:
+    {
+      variant ? "latest-lto",
+    }:
     {
       nixos =
-        { config, pkgs, lib, ... }:
+        {
+          config,
+          pkgs,
+          lib,
+          ...
+        }:
         {
           nixpkgs.overlays = [
             # Use the exact kernel versions as defined in nix-cachyos-kernel repo.
