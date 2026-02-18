@@ -26,11 +26,13 @@ cd dotfiles
 ### Apply Configuration
 
 **NixOS systems (harmony, melaan):**
+
 ```console
 sudo nixos-rebuild switch --flake .#<hostname>
 ```
 
 **macOS systems (OMARSHAL-M-2FD2):**
+
 ```console
 darwin-rebuild switch --flake .#OMARSHAL-M-2FD2
 ```
@@ -97,17 +99,20 @@ den.aspects.oscar = {
 ## Key Features
 
 ### Services
+
 - **Media**: Plex, Radarr, Sonarr, Prowlarr, Autobrr, Cross-seed
 - **Downloads**: qBittorrent (via Gluetun VPN)
 - **Gaming**: Minecraft servers
 - **Infrastructure**: Nginx reverse proxy with Let's Encrypt, Samba file sharing, ZFS storage
 
 ### Desktop
+
 - **GNOME** on melaan and OMARSHAL-M-2FD2 (via homebrew on macOS)
 - **Applications**: Emacs, Ghostty terminal, Zen Browser, Discord, Steam, Krita, PrusaSlicer
 - **Framework laptop** support via nixos-hardware
 
 ### Development
+
 - **Emacs** with doom configuration
 - **Git** with per-machine configuration
 - **GPG** and SSH setup
