@@ -12,14 +12,11 @@
       networkmanager
       nix
       pipewire
+      steam
     ];
 
     nixos = {
       imports = [ (inputs.nixos-hardware.nixosModules.framework-12-13th-gen-intel or { }) ];
-
-      networking.networkmanager.enable = true;
-
-      programs.steam.enable = true;
 
       services = {
         flatpak.enable = true;

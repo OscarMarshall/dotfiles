@@ -6,7 +6,7 @@
       (
         { user, ... }:
         {
-          nixos.users.users.${user.username}.extraGroups = [ "networkmanager" ];
+          nixos.users.users.${user.userName}.extraGroups = [ "networkmanager" ];
         }
       )
     ];
