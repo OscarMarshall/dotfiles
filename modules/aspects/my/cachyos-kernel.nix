@@ -9,7 +9,12 @@
 # - Binary cache support for faster deployments
 #
 # Usage:
-#   Add to your host's includes: cachyos-kernel
+#   Add to your host's includes:
+#     cachyos-kernel                         # Uses "latest-lto" variant by default
+#     (cachyos-kernel { variant = "server"; })  # Use server variant (for harmony)
+#
+# Available variants include: latest-lto (default), server, bore-lto, hardened-lto, etc.
+# See https://github.com/xddxdd/nix-cachyos-kernel for full list of variants.
 #
 # Note: This aspect uses mkForce to override any other kernel settings (including the standard boot aspect).
 #       If you're using ZFS, this will automatically use the CachyOS-patched ZFS module.
@@ -22,34 +27,30 @@
     url = "github:xddxdd/nix-cachyos-kernel/release";
   };
 
-  my.cachyos-kernel.nixos =
-    { config, pkgs, lib, ... }:
+  my.cachyos-kernel =
+    { variant ? "latest-lto" }:
     {
-      nixpkgs.overlays = [
-        # Use the exact kernel versions as defined in nix-cachyos-kernel repo.
-        # Guarantees binary cache availability.
-        inputs.nix-cachyos-kernel.overlays.pinned
-      ];
+      nixos =
+        { config, pkgs, lib, ... }:
+        {
+          nixpkgs.overlays = [
+            # Use the exact kernel versions as defined in nix-cachyos-kernel repo.
+            # Guarantees binary cache availability.
+            inputs.nix-cachyos-kernel.overlays.pinned
+          ];
 
-      boot = {
-        # Use mkForce to override the default kernel (including ZFS aspect if present)
-        kernelPackages = lib.mkForce pkgs.cachyosKernels.linuxPackages-cachyos-latest;
+          boot = {
+            # Use mkForce to override the default kernel (including ZFS aspect if present)
+            kernelPackages = lib.mkForce pkgs.cachyosKernels."linuxPackages-cachyos-${variant}";
 
-        # If ZFS is enabled, use the CachyOS-patched ZFS module
-        zfs.package = lib.mkIf (
-          builtins.elem "zfs" config.boot.supportedFilesystems
-        ) config.boot.kernelPackages.zfs_cachyos;
-      };
+            # Use the CachyOS-patched ZFS module (no-op if ZFS isn't enabled)
+            zfs.package = config.boot.kernelPackages.zfs_cachyos;
+          };
 
-      nix.settings = {
-        substituters = [
-          "https://cache.garnix.io"
-          "https://cache.lantian.pub"
-        ];
-        trusted-public-keys = [
-          "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g="
-          "cache.lantian.pub:8ZNQJS+GqwfWJPAe6SLNuZiJvXmyqDn+/d/PnxaXhLg="
-        ];
-      };
+          nix.settings = {
+            substituters = [ "https://attic.xuyh0120.win/lantian" ];
+            trusted-public-keys = [ "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=" ];
+          };
+        };
     };
 }
