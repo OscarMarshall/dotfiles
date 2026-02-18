@@ -1,0 +1,48 @@
+name: Write Flake
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  update-flake:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: wimpysworld/nothing-but-nix@main
+
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+          token: ${{ secrets.PAT }}
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@c5a866b6ab867e88becbed4467b93592bce69f8a # v21
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39 # v13
+
+      - name: Run write-flake until fixed point
+        run: |
+          # Run write-flake
+          nix run .#write-flake
+
+          # If there are any changes, update the flake.lock
+          if ! git diff --quiet; then
+            nix flake update
+          fi
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if ! git diff --staged --quiet; then
+            git commit -m "Write Flake: Auto-update flake.nix"
+            git push
+          else
+            echo "No changes to commit"
+          fi

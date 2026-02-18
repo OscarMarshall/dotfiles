@@ -1,150 +1,199 @@
-# NixOS Configuration
+# NixOS/Darwin Configuration with Den
 
-This repository contains the NixOS configurations for multiple systems.
+This repository contains my personal system configurations for multiple machines using Nix, managed through the
+[Den](https://vic.github.io/den) aspect-oriented configuration framework.
 
 ## Systems
 
-- **harmony**: Home server with media services, Minecraft servers, and more
-- **melaan**: Framework laptop running GNOME desktop
+- **harmony** (x86_64-linux): Home server running media services, Minecraft servers, and infrastructure
+- **melaan** (x86_64-linux): Framework laptop with GNOME desktop
+- **OMARSHAL-M-2FD2** (aarch64-darwin): MacBook with development environment
 
-## Repository Structure
+## Quick Start
 
-The configuration is organized into modular components for better maintainability. See [docs/MODULE-ORGANIZATION.md](docs/MODULE-ORGANIZATION.md) for detailed documentation on the module structure.
+### Prerequisites
 
-- **`flake.nix`**: Main flake configuration defining inputs and outputs
-- **`systems/`**: System-specific configuration directories
-  - **`harmony/`**: Configuration files for the harmony server
-    - `configuration.nix`: Top-level configuration that imports all modules
-    - `hardware-configuration.nix`: Hardware-specific configuration (auto-generated)
-  - **`melaan/`**: Configuration files for the melaan laptop
-    - `configuration.nix`: GNOME desktop and user configuration
-    - `hardware-configuration.nix`: Framework-specific hardware configuration
-- **`homes/`**: Home Manager configurations
-  - `oscar.nix`: Oscar's home-manager configuration
-  - `adelline.nix`: Adelline's home-manager configuration
-- **`cachix.nix`**: Binary cache configuration
-- **`modules/`**: Modular configuration organized by functionality (used by harmony):
-  - `autobrr.nix`: Autobrr service and nginx config
-  - `boot.nix`: Boot loader configuration
-  - `cross-seed.nix`: Cross-seed service
-  - `gluetun.nix`: VPN container
-  - `homepage.nix`: Homepage dashboard and nginx config
-  - `minecraft.nix`: Minecraft server configurations
-  - `networking.nix`: Network settings and firewall rules
-  - `nginx.nix`: Base nginx settings and ACME configuration
-  - `nixpkgs.nix`: Nixpkgs overlays and package settings
-  - `plex.nix`: Plex service and nginx config
-  - `profilarr.nix`: Profilarr container and nginx config
-  - `prowlarr.nix`: Prowlarr and Flaresolverr services with nginx config
-  - `qbittorrent.nix`: qBittorrent container, user/group, and nginx config
-  - `radarr.nix`: Radarr service and nginx config
-  - `samba.nix`: File sharing configuration
-  - `secrets.nix`: Agenix secret definitions
-  - `services.nix`: Miscellaneous system services
-  - `sonarr.nix`: Sonarr service and nginx config
-  - `system.nix`: Core system settings, programs, and system packages
-  - `unpackerr.nix`: Unpackerr container
-  - `users.nix`: User account definitions (shared across systems)
-  - `zfs.nix`: ZFS filesystem and services configuration
+- [Nix](https://nixos.org/download.html) with flakes enabled
+- Appropriate system (NixOS, macOS, or Linux for home-manager only)
 
-## Development
+### Clone and Build
 
-This configuration includes development tools integrated with [git-hooks.nix](https://github.com/cachix/git-hooks.nix) for automatic checks on commit:
-
-- [Alejandra](https://github.com/kamadorueda/alejandra): An opinionated Nix code formatter
-- [flake-checker](https://github.com/DeterminateSystems/flake-checker): A tool to check flake health
-- [statix](https://github.com/nerdypepper/statix): A linter for Nix code
-- [Prettier](https://prettier.io/): A code formatter for JSON, Markdown, and YAML files
-
-### Setting up pre-commit hooks
-
-To enable automatic checks and formatting on commit:
-
-```bash
-nix develop
+```console
+git clone https://github.com/OscarMarshall/dotfiles.git
+cd dotfiles
 ```
 
-This will set up the pre-commit hooks. After this, whenever you commit changes:
+### Apply Configuration
 
-- Alejandra will automatically format Nix files
-- flake-checker will verify flake health
-- statix will lint Nix code for common issues
-- Prettier will format JSON, Markdown, and YAML files
+**NixOS systems (harmony, melaan):**
 
-### Manual formatting
+```console
+sudo nixos-rebuild switch --flake .#<hostname>
+```
 
-To manually format all Nix files in the repository:
+**macOS systems (OMARSHAL-M-2FD2):**
 
-```bash
+```console
+darwin-rebuild switch --flake .#OMARSHAL-M-2FD2
+```
+
+### Validate Configuration
+
+```console
+# nix flake check currently fails due to cross-architecture issues
+# Use platform-specific builds instead:
+nix build .#nixosConfigurations.harmony.config.system.build.toplevel
+nix build .#nixosConfigurations.melaan.config.system.build.toplevel
+nix build .#darwinConfigurations.OMARSHAL-M-2FD2.config.system.build.toplevel
+
+# Show available outputs
+nix flake show
+
+# Format code
 nix fmt
 ```
 
-Or to format specific files:
+## Architecture
 
-```bash
-nix fmt path/to/file.nix
+This repository uses **Den**, an aspect-oriented configuration system built on flake-parts. Configuration is organized
+into composable aspects:
+
+### Aspects Structure
+
+- **`modules/aspects/hosts/`**: Host-specific configurations (one aspect per host)
+- **`modules/aspects/users/`**: User-specific configurations (one aspect per user)
+- **`modules/aspects/my/`**: Reusable service and feature aspects (~43 total)
+- **`modules/aspects/defaults.nix`**: Default includes applied to all configurations
+
+### Host Aspects
+
+Each host declares which services and features to enable:
+
+```nix
+# modules/aspects/hosts/harmony/harmony.nix
+den.aspects.harmony = {
+  includes = with my; [
+    nginx
+    (minecraft-servers { administrators = [ "oscar" ]; })
+    (qbittorrent { administrators = [ "oscar" ]; })
+    plex
+    # ... more aspects
+  ];
+};
 ```
 
-### Running checks
+### User Aspects
 
-To run all configured checks (including pre-commit hooks):
+Each user declares their environment and applications:
 
-```bash
-nix flake check
+```nix
+# modules/aspects/users/oscar/oscar.nix
+den.aspects.oscar = {
+  includes = with my; [
+    emacs
+    git
+    (host-flag "graphical" {
+      includes = [ discord ghostty ];
+    })
+  ];
+};
 ```
 
-To automatically fix statix issues:
+## Key Features
 
-```bash
-nix run nixpkgs#statix -- fix
+### Services
+
+- **Media**: Plex, Radarr, Sonarr, Prowlarr, Autobrr, Cross-seed
+- **Downloads**: qBittorrent (via Gluetun VPN)
+- **Gaming**: Minecraft servers
+- **Infrastructure**: Nginx reverse proxy with Let's Encrypt, Samba file sharing, ZFS storage
+
+### Desktop
+
+- **GNOME** on melaan (Wayland, via NixOS)
+- **macOS desktop**: Fonts, Homebrew-based applications, and Nix-managed development environment on OMARSHAL-M-2FD2
+- **Applications**: Emacs, Ghostty terminal, Zen Browser, Discord, Steam, Krita, PrusaSlicer
+- **Framework laptop** support via nixos-hardware
+
+### Development
+
+- **Emacs** with doom configuration
+- **Git** with per-machine configuration
+- **GPG** and SSH setup
+- **Shell**: Fish shell via Home Manager
+
+## Secrets Management
+
+Secrets are encrypted using [ragenix](https://github.com/yaxitech/ragenix) (age-based encryption):
+
+```console
+# Edit a secret
+nix run github:yaxitech/ragenix -- -e secrets/my-secret.age
+
+# Re-key secrets after adding a new host
+nix run github:yaxitech/ragenix -- -r
 ```
 
-### CI Enforcement
+Public keys are defined in `secrets/secrets.nix`.
 
-GitHub Actions automatically run on all pull requests and pushes to main/master branches to ensure:
+## Updating
 
-- Code is properly formatted (via Alejandra and Prettier)
-- Nix code follows best practices (via statix)
-- Flake configuration is healthy (via flake-checker)
+### Update All Dependencies
 
-This provides a safety net in case local pre-commit hooks are bypassed.
-
-### Automated Dependency Updates
-
-This repository uses [Renovate Bot](https://docs.renovatebot.com/) to automatically check for updates to Docker image versions used in OCI containers.
-
-Renovate runs daily at midnight UTC and will automatically create pull requests when updates are available. The configuration is in `renovate.json` and includes:
-
-- Custom regex matching to detect Docker images in `.nix` files
-
-Docker images are pinned to specific versions for reproducibility and stability.
-
-#### Setting up Renovate
-
-To enable Renovate, you need to create a `RENOVATE_TOKEN` secret in your repository settings:
-
-1. Go to your repository's **Settings** → **Secrets and variables** → **Actions**
-2. Click **New repository secret**
-3. Name: `RENOVATE_TOKEN`
-4. Value: A GitHub Personal Access Token (PAT) with the following permissions:
-   - `repo` scope (for private repositories) or `public_repo` scope (for public repositories)
-   - `workflow` scope (if you want Renovate to update GitHub Actions workflows)
-
-To create a PAT:
-
-1. Go to GitHub **Settings** → **Developer settings** → **Personal access tokens** → **Tokens (classic)**
-2. Click **Generate new token** → **Generate new token (classic)**
-3. Select the required scopes mentioned above
-4. Copy the token and add it as the `RENOVATE_TOKEN` secret
-
-## Usage
-
-Build and switch to a configuration:
-
-```bash
-# For harmony server
-sudo nixos-rebuild switch --flake .#harmony
-
-# For melaan laptop
-sudo nixos-rebuild switch --flake .#melaan
+```console
+nix flake update
 ```
+
+### Update Specific Input
+
+```console
+nix flake update <input-name>
+```
+
+### Regenerate flake.nix
+
+The `flake.nix` is auto-generated by [flake-file](https://github.com/vic/flake-file). After modifying inputs in
+`modules/inputs.nix`:
+
+```console
+nix run .#write-flake
+```
+
+## Adding New Configuration
+
+### Add a New Service
+
+1. Create `modules/aspects/my/<service>.nix`
+2. Define the aspect (with parameters if needed)
+3. Include in host's aspect: `modules/aspects/hosts/<hostname>/<hostname>.nix`
+
+### Add a New Host
+
+#### NixOS host
+
+1. Create `modules/aspects/hosts/<hostname>/<hostname>.nix`
+2. Add a NixOS `hardware-configuration.nix` for the host
+3. Declare the host in `modules/den.nix`
+
+#### Darwin host
+
+1. Create `modules/aspects/hosts/<hostname>/<hostname>.nix`
+2. Configure the host-specific nix-darwin options in your aspect
+3. Declare the host in `modules/den.nix`
+
+### Add a New User
+
+1. Create `modules/aspects/users/<username>/<username>.nix`
+2. Add user to host declarations in `modules/den.nix`
+
+## Documentation
+
+- [Den Documentation](https://vic.github.io/den) - Aspect system patterns and usage
+- [Dendritic Template](https://github.com/vic/den/tree/main/templates/dendritic) - Template this repo is based on
+- [NixOS Manual](https://nixos.org/manual/nixos/stable/) - NixOS configuration reference
+- [Home Manager Manual](https://nix-community.github.io/home-manager/) - Home Manager options
+- [nix-darwin Manual](https://daiderd.com/nix-darwin/manual/index.html) - macOS system configuration
+
+## License
+
+This is a personal configuration repository. Feel free to use it as reference or template for your own configurations.
