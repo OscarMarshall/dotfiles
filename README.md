@@ -40,8 +40,11 @@ darwin-rebuild switch --flake .#OMARSHAL-M-2FD2
 ### Validate Configuration
 
 ```console
-# Check all configurations
-nix flake check
+# Check all configurations (note: currently fails due to cross-architecture issues)
+# Use platform-specific builds instead:
+nix build .#nixosConfigurations.harmony.config.system.build.toplevel
+nix build .#nixosConfigurations.melaan.config.system.build.toplevel
+nix build .#darwinConfigurations.OMARSHAL-M-2FD2.config.system.build.toplevel
 
 # Show available outputs
 nix flake show
@@ -107,7 +110,8 @@ den.aspects.oscar = {
 
 ### Desktop
 
-- **GNOME** on melaan and OMARSHAL-M-2FD2 (via homebrew on macOS)
+- **GNOME** on melaan (Wayland, via NixOS)
+- **macOS desktop**: Fonts, Homebrew-based applications, and Nix-managed development environment on OMARSHAL-M-2FD2
 - **Applications**: Emacs, Ghostty terminal, Zen Browser, Discord, Steam, Krita, PrusaSlicer
 - **Framework laptop** support via nixos-hardware
 
@@ -165,9 +169,17 @@ nix run .#write-flake
 
 ### Add a New Host
 
+#### NixOS host
+
 1. Create `modules/aspects/hosts/<hostname>/<hostname>.nix`
-2. Add `hardware-configuration.nix`
-3. Declare in `modules/den.nix`
+2. Add a NixOS `hardware-configuration.nix` for the host
+3. Declare the host in `modules/den.nix`
+
+#### Darwin host
+
+1. Create `modules/aspects/hosts/<hostname>/<hostname>.nix`
+2. Configure the host-specific nix-darwin options in your aspect
+3. Declare the host in `modules/den.nix`
 
 ### Add a New User
 

@@ -70,7 +70,7 @@ Each host has its own aspect (e.g., `den.aspects.harmony`) that declares:
 - Which `my.*` aspects to include (services, features, etc.)
 - Host-specific NixOS/Darwin configuration
 - Which users have accounts on the host
-- Hardware configuration
+- Hardware configuration (via `hardware-configuration.nix` for NixOS hosts)
 
 Example: `modules/aspects/hosts/harmony/harmony.nix` includes aspects like nginx, minecraft-servers, qbittorrent, etc.
 
@@ -235,7 +235,7 @@ CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan)
 - **User aspects**: Located in `modules/aspects/users/<username>/<username>.nix`
 - **Reusable aspects**: Located in `modules/aspects/my/<aspect-name>.nix`
 - **Multi-file aspects**: Can use directories (e.g., `my/emacs/emacs.nix` with supporting files)
-- **Hardware config**: Each host has `hardware-configuration.nix` alongside its main aspect file
+- **Hardware config**: NixOS hosts include `hardware-configuration.nix` alongside the main aspect file
 
 ## Aspect Organization
 
@@ -250,7 +250,7 @@ The configuration uses Den aspects organized into three main categories:
   - Includes relevant `my.*` aspects for services and features
   - Defines host-specific NixOS/Darwin configuration
   - Declares which users have accounts
-  - Imports hardware-configuration.nix
+  - Imports hardware-configuration.nix (NixOS hosts only)
 
 ### User Aspects (2 users)
 
@@ -326,6 +326,5 @@ Den aspects receive context parameters like:
 - `home`: Home configuration (stateVersion)
 - `OS`: NixOS-specific context
 - `HM`: Home Manager-specific context
-- `DARWIN`: Darwin-specific context
 
 Use `den.lib.take.exactly` or `den.lib.take.atLeast` to extract specific context parameters safely.
