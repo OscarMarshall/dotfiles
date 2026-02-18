@@ -43,9 +43,6 @@ jobs:
       - name: Build melaan
         run: nix build .#nixosConfigurations.melaan.config.system.build.toplevel
 
-      - name: Build omarshal
-        run: nix build .#homeConfigurations.omarshal.activationPackage
-
   build-darwin:
     name: Build Darwin hosts
     runs-on: macos-latest
