@@ -37,7 +37,7 @@ jobs:
           # Run write-flake in a loop until no changes are detected
           max_iterations=10
           iteration=0
-          
+
           while [ $iteration -lt $max_iterations ]; do
             echo "Iteration $((iteration + 1))/$max_iterations"
             
@@ -55,7 +55,7 @@ jobs:
             
             iteration=$((iteration + 1))
           done
-          
+
           if [ $iteration -eq $max_iterations ]; then
             echo "Error: Reached maximum iterations without convergence"
             exit 1
@@ -65,7 +65,7 @@ jobs:
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          
+
           # Check if there are staged changes
           if ! git diff --staged --quiet; then
             git commit -m "Update flake: Auto-update flake.nix and flake.lock"
