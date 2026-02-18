@@ -1,10 +1,4 @@
 {
-  den.homes.x86_64-linux.omarshal = {
-    stateVersion = "25.11";
-    aspect = "oscar";
-    work = true;
-  };
-
   den.hosts.aarch64-darwin.OMARSHAL-M-2FD2 = {
     graphical = true;
     work = true;
