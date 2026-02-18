@@ -1,169 +1,330 @@
 # Repository Overview
 
-This is a personal NixOS configuration repository for multiple systems. It manages system configuration, services, and
-user environment using NixOS flakes and Home Manager.
+This is a personal NixOS/nix-darwin configuration repository for multiple systems. It manages system configuration,
+services, and user environments using Nix flakes, Den/Dendritic, and Home Manager.
 
 ## Systems
 
-- **harmony**: Home server with media services, Minecraft servers, and more
-- **melaan**: Framework laptop running GNOME desktop
+- **OMARSHAL-M-2FD2**: MacBook (aarch64-darwin) with development environment
+- **harmony**: Home server (x86_64-linux) with media services, Minecraft servers, and more
+- **melaan**: Framework laptop (x86_64-linux) running GNOME desktop
 
 ## Repository Structure
 
-- **`flake.nix`**: Main flake configuration defining inputs (nixpkgs, agenix, home-manager, nix-minecraft,
-  nixos-hardware) and multiple NixOS system configurations
-- **`systems/`**: System-specific configuration directories
-  - **`harmony/`**: Configuration files for the harmony server
-    - `configuration.nix`: Top-level configuration that imports all modules
-    - `hardware-configuration.nix`: Hardware-specific configuration (auto-generated)
-  - **`melaan/`**: Configuration files for the melaan laptop
-    - `configuration.nix`: Top-level configuration that imports relevant modules
-    - `hardware-configuration.nix`: Framework-specific hardware configuration
-- **`homes/`**: Home Manager configurations
-  - `oscar.nix`: Oscar's home-manager configuration
-  - `adelline.nix`: Adelline's home-manager configuration
-- **`cachix.nix`**: Binary cache configuration
-- **`modules/`**: Modular configuration organized by service/component (32 modules):
-  - `apcupsd.nix`: APC UPS daemon service
-  - `autobrr.nix`: Autobrr service and nginx config
-  - `boot.nix`: Boot loader configuration (latest kernel for all systems)
-  - `cross-seed.nix`: Cross-seed service
-  - `flatpak.nix`: Flatpak service (melaan only)
-  - `glances.nix`: Glances system monitoring service
-  - `gluetun.nix`: VPN container
-  - `gnome.nix`: GNOME desktop environment (melaan only)
-  - `homepage.nix`: Homepage dashboard and nginx config
-  - `lm_sensors.nix`: Hardware monitoring with lm_sensors and coretemp kernel module (harmony only)
-  - `minecraft.nix`: Minecraft server configurations and firewall
-  - `networking.nix`: Network settings, hostId, NetworkManager
-  - `nginx.nix`: Base nginx settings, ACME configuration, and firewall rules
-  - `nixpkgs.nix`: Nixpkgs overlays and package settings
-  - `pipewire.nix`: Audio with pipewire (melaan only)
-  - `plex.nix`: Plex service and nginx config
-  - `printing.nix`: CUPS printing (melaan only)
-  - `profilarr.nix`: Profilarr container and nginx config
-  - `prowlarr.nix`: Prowlarr and Flaresolverr services with nginx config
-  - `qbittorrent.nix`: qBittorrent container, user/group, and nginx config
-  - `radarr.nix`: Radarr service and nginx config
-  - `samba.nix`: File sharing configuration
-  - `secrets.nix`: Agenix secret definitions
-  - `sonarr.nix`: Sonarr service and nginx config
-  - `ssh.nix`: SSH (OpenSSH) and tmux configuration (harmony only)
-  - `steam.nix`: Steam gaming platform (melaan only)
-  - `system.nix`: Core system settings, programs, and common packages (applied to all systems)
-  - `unpackerr.nix`: Unpackerr container
-  - `users.nix`: User account definitions (shared across systems)
-  - `zfs.nix`: ZFS filesystem and services configuration
-- **`secrets/`**: Directory containing agenix-encrypted secrets (`.age` files) - DO NOT modify or expose these files
-- **`secrets/secrets.nix`**: Public keys for agenix encryption
-- **`docs/MODULE-ORGANIZATION.md`**: Detailed documentation on module structure and best practices
+This repository uses a Den-based architecture with flake-parts and import-tree for automatic module discovery.
+
+- **`flake.nix`**: Auto-generated flake file (DO NOT EDIT - regenerated via `nix run .#write-flake`)
+- **`modules/`**: Flake-parts modules auto-imported via import-tree
+  - **`den.nix`**: Defines all hosts and homes with their aspect assignments
+  - **`dendritic.nix`**: Dendritic flake module configuration
+  - **`inputs.nix`**: Common flake input declarations (inputs can be declared in any module)
+  - **`namespace.nix`**: Creates the `my` aspects namespace
+  - **`git-hooks.nix`**: Pre-commit hooks configuration
+  - **`treefmt-nix.nix`**: Code formatting configuration
+  - **`vm.nix`**: VM-related flake outputs
+  - **`aspects/`**: Den aspects organized by category
+    - **`defaults.nix`**: Default includes for all hosts/users (routes, home-manager, user creation, etc.)
+    - **`hosts/`**: Host-specific aspects (one directory per host)
+      - **`harmony/`**: harmony.nix, hardware-configuration.nix
+      - **`melaan/`**: melaan.nix, hardware-configuration.nix
+      - **`OMARSHAL-M-2FD2/`**: OMARSHAL-M-2FD2.nix
+    - **`users/`**: User-specific aspects (one directory per user)
+      - **`oscar/`**: oscar.nix, work/ (work-specific config)
+      - **`adelline/`**: adelline.nix
+    - **`my/`**: Reusable aspects in the `my` namespace (~43 aspects)
+      - Core: boot.nix, locale.nix, nix.nix, fonts.nix
+      - Services: nginx.nix, minecraft-servers.nix, plex.nix, prowlarr.nix, radarr.nix, sonarr.nix
+      - Containers: gluetun.nix, qbittorrent.nix, profilarr.nix, unpackerr.nix
+      - Desktop: gnome.nix, pipewire.nix, steam.nix, discord.nix, ghostty.nix
+      - Utilities: auto-upgrade.nix, auto-login.nix, host-flag.nix, routes.nix
+      - Applications: emacs/, git.nix, gpg.nix, ssh-client.nix, ssh-server.nix
+      - Infrastructure: zfs.nix, samba.nix, lm-sensors.nix, networkmanager.nix, secrets.nix
+      - Darwin: homebrew.nix
+      - VM: vm.nix, vm-bootable.nix, ci-no-boot.nix
+- **`secrets/`**: Directory containing ragenix-encrypted secrets (`.age` files) - edit using ragenix, do not expose
+  plaintext
+- **`secrets/secrets.nix`**: Public keys for ragenix encryption
 
 ## Key Technologies
 
-- **NixOS**: Declarative Linux distribution that allows reproducible system configurations
+- **Den**: Aspect-oriented configuration system built on flake-parts (https://vic.github.io/den)
+- **Dendritic**: Template and tooling for Den-based flakes with flake-file integration
+- **flake-parts**: Modular flake framework for composable Nix configurations
+- **import-tree**: Automatic module discovery and importing
+- **flake-file**: Auto-generates flake.nix from module inputs
+- **NixOS**: Declarative Linux distribution for reproducible system configurations
+- **nix-darwin**: NixOS-like system configuration for macOS
 - **Nix Flakes**: Modern Nix package and configuration management with lockfile-based dependency pinning
 - **Home Manager**: Manages user-specific configuration (dotfiles, packages, shell, etc.) declaratively
-- **agenix**: Secret management using age encryption to securely store sensitive data in the repository
-- **Docker/OCI containers**: Several services run in containers for isolation and ease of management (gluetun,
-  qBittorrent, etc.)
+- **ragenix**: Secret management using age encryption (drop-in Rust rewrite of agenix)
+- **Docker/OCI containers**: Several services run in containers for isolation (gluetun, qBittorrent, etc.)
+
+## Den Aspects Architecture
+
+Den uses an "aspect-oriented" approach where configuration is composed from reusable aspects:
+
+### Host Aspects
+
+Each host has its own aspect (e.g., `den.aspects.harmony`) that declares:
+
+- Which `my.*` aspects to include (services, features, etc.)
+- Host-specific NixOS/Darwin configuration
+- Which users have accounts on the host
+- Hardware configuration (via `hardware-configuration.nix` for NixOS hosts)
+
+Example: `modules/aspects/hosts/harmony/harmony.nix` includes aspects like nginx, minecraft-servers, qbittorrent, etc.
+
+### User Aspects
+
+Each user has their own aspect (e.g., `den.aspects.oscar`) that declares:
+
+- User information (name, email, shell)
+- User-specific Home Manager configuration
+- Desktop applications (when on graphical hosts via host-flag)
+- Work-specific config (when work=true)
+
+Example: `modules/aspects/users/oscar/oscar.nix` includes emacs, git config, gpg, ssh-client, etc.
+
+### Reusable Aspects (`my.*`)
+
+The `my` namespace contains ~43 reusable aspects for services, applications, and features. These are functions that
+return configuration and can accept parameters (e.g., `qbittorrent { administrators = [ "oscar" ]; }`).
+
+### Aspect Routing
+
+The `my.routes` aspect (included in defaults) enables bidirectional aspect dependencies:
+
+- `<user>._.<host>` provides user config specific to a host
+- `<host>._.<user>` provides host config specific to a user
+
+Example: `oscar._.harmony` could contain Oscar's harmony-specific settings.
+
+### Host Flags
+
+The `host-flag` helper conditionally includes aspects based on host properties:
+
+- `host-flag "graphical" { ... }` includes aspects only on graphical hosts
+- `host-flag "work" { ... }` includes aspects only on work machines
 
 ## Important Services
 
-The harmony server runs multiple services including:
+The **harmony** server (x86_64-linux) runs:
 
-- **Media Stack**: Plex, Radarr, Sonarr, Prowlarr, qBittorrent (via VPN)
-- **VPN**: gluetun container providing VPN with port forwarding
+- **Media Stack**: Plex, Radarr, Sonarr, Prowlarr, Autobrr, Cross-seed
+- **Downloads**: qBittorrent in gluetun VPN container with port forwarding
 - **Minecraft**: Multiple servers via nix-minecraft
 - **Reverse Proxy**: nginx with Let's Encrypt SSL certificates
-- **Monitoring**: homepage-dashboard, glances
+- **Monitoring**: homepage-dashboard
 - **File Sharing**: Samba shares
 - **Storage**: ZFS pool named "metalminds"
+- **Automatic Updates**: Auto-upgrade with reboot capability
 
-The melaan laptop includes:
+The **melaan** laptop (x86_64-linux) includes:
 
 - **Desktop Environment**: GNOME with Wayland
-- **Applications**: Steam, Chrome, Ghostty, Krita, Rnote
+- **Applications**: Steam, Zen Browser, Ghostty, Krita, Rnote, PrusaSlicer
 - **Framework-specific**: Hardware support via nixos-hardware
+- **Users**: Oscar and Adelline
+
+The **OMARSHAL-M-2FD2** MacBook (aarch64-darwin) includes:
+
+- **Homebrew**: Package manager with automatic updates and cleanup
+- **Development**: Emacs, Git, GPG, SSH
+- **Work**: Work-specific configuration
 
 ## Building and Deploying
 
-This is a NixOS system configuration, not a traditional software project. Changes are applied by:
+This repository uses flake-file/Dendritic which auto-generates `flake.nix`. Changes are applied differently depending on
+the system type:
 
-1. **Testing configuration**: Use `nixos-rebuild test --flake .#<system>` to test changes without modifying boot
-   configuration
-2. **Building configuration**: Use `nixos-rebuild build --flake .#<system>` to build the configuration
-3. **Switching configuration**: Use `nixos-rebuild switch --flake .#<system>` to apply and activate changes
-4. **Updating flake inputs**: Use `nix flake update` to update dependencies
+### NixOS Systems (harmony, melaan)
 
-Where `<system>` is either `harmony` or `melaan`.
+1. **Testing configuration**: `sudo nixos-rebuild test --flake .#<system>`
+2. **Building configuration**: `nixos-rebuild build --flake .#<system>`
+3. **Switching configuration**: `sudo nixos-rebuild switch --flake .#<system>`
 
-Note: These commands typically require root/sudo access and are run on the target system, not in a CI environment.
+### Darwin Systems (OMARSHAL-M-2FD2)
+
+1. **Testing configuration**: `darwin-rebuild check --flake .#OMARSHAL-M-2FD2`
+2. **Building configuration**: `darwin-rebuild build --flake .#OMARSHAL-M-2FD2`
+3. **Switching configuration**: `darwin-rebuild switch --flake .#OMARSHAL-M-2FD2`
+
+### Updating Dependencies
+
+- **Update all inputs**: `nix flake update`
+- **Update specific input**: `nix flake update <input-name>`
+- **Regenerate flake.nix**: `nix run .#write-flake` (must be run manually after changing inputs in any module)
+
+### Testing VMs
+
+- **Run VM**: `nix run .#vm` (if VM configuration exists)
+
+Note: Build/switch commands typically require appropriate permissions and are run on the target system.
 
 ## Validation
 
-- **Syntax check**: `nix flake check` validates flake syntax
-- **Evaluation check**: `nix flake show` displays the flake outputs
-- **Build check harmony**: `nixos-rebuild build --flake .#harmony` builds the harmony configuration without applying it
-- **Build check melaan**: `nixos-rebuild build --flake .#melaan` builds the melaan configuration without applying it
+- **Syntax check**: `nix flake check` validates flake and all configurations (note: currently fails due to
+  nix-doom-emacs-unstraightened cross-architecture build issues)
+- **Show outputs**: `nix flake show` displays all flake outputs (hosts, homes, packages, etc.)
+- **Metadata**: `nix flake metadata` shows input information
+- **Build check (NixOS)**: `nixos-rebuild build --flake .#<host>` builds a NixOS configuration
+- **Build check (Darwin)**: `darwin-rebuild build --flake .#<host>` builds a Darwin configuration
+- **Build check (Home)**: `home-manager build --flake .#<home>` builds a home configuration
+- **Formatting**: `nix fmt` formats Nix code (configured via treefmt-nix)
+
+CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan) on Ubuntu, Darwin hosts
+(OMARSHAL-M-2FD2) on macOS.
 
 ## Best Practices
 
-1. **Secrets Management**: All secrets are encrypted using agenix. Never commit plaintext secrets or modify `.age` files
-   directly
-2. **State Version**: Never change `system.stateVersion` or `home.stateVersion` unless you understand the implications
-   (see comments in files)
-3. **Declarative Configuration**: All system configuration should be in Nix files, avoid imperative changes
-4. **Flake Lock**: `flake.lock` pins dependency versions; update explicitly with `nix flake update`
-5. **Service Configuration**: Most services are configured declaratively via NixOS options in their respective module
-   files
-6. **Module Organization**: Each service has its own module with co-located configuration (nginx configs, firewall
-   rules, user groups)
-7. **System-Specific Modules**: Some modules are only imported by specific systems (e.g., gnome.nix only for melaan,
-   minecraft.nix only for harmony)
-8. **User Groups**: User "oscar" has specific group memberships for service access (minecraft, qbittorrent, radarr,
-   sonarr, wheel)
-9. **User "adelline"**: Has networkmanager group on melaan, wheel group on all systems
+1. **DO NOT EDIT flake.nix**: It's auto-generated by flake-file. Add inputs to `modules/inputs.nix` or other modules,
+   then run `nix run .#write-flake` to regenerate.
+2. **Secrets Management**: All secrets are encrypted using ragenix (age). Never commit plaintext secrets or modify
+   `.age` files directly.
+3. **State Version**: Never change `system.stateVersion` or `home.stateVersion` unless you understand the implications
+   (see NixOS documentation).
+4. **Declarative Configuration**: All system configuration should be in Nix files; avoid imperative changes.
+5. **Flake Lock**: `flake.lock` pins dependency versions; update explicitly with `nix flake update`.
+6. **Aspect Organization**:
+   - Put host-specific config in `modules/aspects/hosts/<hostname>/`
+   - Put user-specific config in `modules/aspects/users/<username>/`
+   - Put reusable config in `modules/aspects/my/`
+   - Use `host-flag` for conditional includes based on host properties
+7. **Input Management**: Declare flake inputs close to their usage in module files, not centralized in one place.
+8. **Module Discovery**: Files in `modules/` are auto-imported via import-tree; no manual imports needed.
+9. **Parametric Aspects**: Use functions for configurable aspects (e.g., `qbittorrent { administrators = [...]; }`)
+10. **Den Documentation**: When working with aspects, refer to https://vic.github.io/den for patterns and examples.
 
 ## Security Considerations
 
 - SSL/TLS is handled by nginx with Let's Encrypt certificates (ACME)
-- Secrets are managed via agenix with age encryption
+- Secrets are managed via ragenix with age encryption
 - VPN (gluetun) protects qBittorrent traffic
-- Firewall is enabled with specific port allowances
-- OpenSSH is enabled for remote access
+- Firewall is enabled with specific port allowances per service
+- OpenSSH is enabled for remote access on harmony
+- Each aspect defines its own security requirements (firewall rules, user groups, etc.)
 
 ## Common Patterns
 
-- Services are typically enabled with `services.<name>.enable = true` in their respective module
-- Each service module includes its nginx virtual host configuration where applicable
-- Docker containers are defined in individual container modules (gluetun.nix, qbittorrent.nix, profilarr.nix,
-  unpackerr.nix)
-- nginx virtual hosts are co-located with their services, not centralized in nginx.nix
-- Firewall rules are co-located with the services that need them (nginx.nix for HTTP/HTTPS, minecraft.nix for Minecraft
-  port)
-- File paths use `/metalminds/` prefix for the ZFS storage pool
-- Secret paths in modules use relative paths: `../secrets/filename.age`
-- System-specific modules are only imported in the relevant system's configuration.nix
-- NetworkManager is only enabled on melaan and managed in networking.nix
+### Den Patterns
 
-## Module Organization
+- **Aspect definition**:
+  `den.aspects.<name> = { includes = [...]; nixos = {...}; darwin = {...}; homeManager = {...}; }`
+- **Parametric aspects**: `my.<name> = params: { ... }` for configurable aspects
+- **Host routing**: Use `host._.user` and `user._.host` for bidirectional config
+- **Conditional config**: Use `host-flag "property" { includes = [...]; }` for conditional includes
+- **Taking parameters**: Use `den.lib.take.exactly` or `den.lib.take.atLeast` to extract specific context parameters
 
-The configuration is organized into 31 focused modules:
+### Configuration Patterns
 
-- **Core System**: boot.nix, networking.nix, system.nix, users.nix, zfs.nix (shared across systems)
-- **Infrastructure**: apcupsd.nix, glances.nix, nginx.nix, nixpkgs.nix, secrets.nix, ssh.nix (harmony only)
-- **Desktop Environment** (melaan only): flatpak.nix, gnome.nix, pipewire.nix, printing.nix, steam.nix
-- **Containers**: gluetun.nix, qbittorrent.nix, profilarr.nix, unpackerr.nix
-- **Media Services**: autobrr.nix, cross-seed.nix, plex.nix, prowlarr.nix, radarr.nix, sonarr.nix
-- **Other Services**: homepage.nix, minecraft.nix, samba.nix
+- **File paths**: Use `/metalminds/` prefix for the ZFS storage pool on harmony
+- **Secret paths**: Use relative paths in aspects: `../../../secrets/filename.age` (adjust for depth)
+- **Service aspects**: Each service aspect defines its own:
+  - NixOS service configuration
+  - Firewall rules (if network-exposed)
+  - nginx virtual host (if web-accessible)
+  - User groups (if requiring special permissions)
+  - Secrets (if needed)
+- **Container aspects**: Docker containers defined with `virtualisation.oci-containers.containers.<name>`
+- **Desktop aspects**: Use `host-flag "graphical"` to conditionally include desktop apps
+- **Work aspects**: Use `host-flag "work"` or check `user.work or false` for work-specific config
 
-Each module is self-contained with related configuration co-located together. See `docs/MODULE-ORGANIZATION.md` for
-detailed documentation.
+### Module Structure
+
+- **Host aspects**: Located in `modules/aspects/hosts/<hostname>/<hostname>.nix`
+- **User aspects**: Located in `modules/aspects/users/<username>/<username>.nix`
+- **Reusable aspects**: Located in `modules/aspects/my/<aspect-name>.nix`
+- **Multi-file aspects**: Can use directories (e.g., `my/emacs/emacs.nix` with supporting files)
+- **Hardware config**: NixOS hosts include `hardware-configuration.nix` alongside the main aspect file
+
+## Aspect Organization
+
+The configuration uses Den aspects organized into three main categories:
+
+### Host Aspects (3 hosts)
+
+- **harmony** (x86_64-linux): Server configuration with media services, Minecraft, nginx, ZFS, etc.
+- **melaan** (x86_64-linux): Desktop laptop with GNOME, Framework hardware support, multiple users
+- **OMARSHAL-M-2FD2** (aarch64-darwin): MacBook with homebrew, work configuration
+- Each host aspect:
+  - Includes relevant `my.*` aspects for services and features
+  - Defines host-specific NixOS/Darwin configuration
+  - Declares which users have accounts
+  - Imports hardware-configuration.nix (NixOS hosts only)
+
+### User Aspects (2 users)
+
+- **oscar**: Primary user with full desktop environment, development tools, emacs, git config
+  - Work-specific configuration in `oscar/work/`
+  - Graphical apps (Discord, Ghostty, Zen Browser, PrusaSlicer) via host-flag
+- **adelline**: Secondary user on melaan with basic GNOME setup
+- Each user aspect:
+  - Defines user account details (name, description, hashed password, SSH keys)
+  - Includes Home Manager configuration
+  - Uses host-flag for conditional desktop apps
+
+### Reusable Aspects (`my.*` - 43 aspects)
+
+Organized by category:
+
+- **Core**: boot, locale, nix, fonts
+- **Networking**: networkmanager, nginx
+- **Services**: minecraft-servers, plex, prowlarr, radarr, sonarr, autobrr, cross-seed, homepage
+- **Containers**: gluetun, qbittorrent, profilarr, unpackerr
+- **Desktop**: gnome, pipewire, steam, discord, ghostty, zen-browser, prusa-slicer, xfce-desktop
+- **Development**: emacs, git, gpg, ssh-client, ssh-server
+- **Infrastructure**: zfs, samba, lm-sensors, secrets, auto-upgrade, auto-login
+- **Darwin**: homebrew
+- **Utilities**: host-flag, routes, vm, vm-bootable, ci-no-boot
+
+Each `my.*` aspect is a self-contained module that can be included by hosts or users.
 
 ## Limitations for AI Agents
 
-- Cannot execute `nixos-rebuild` commands (requires target system access)
+- Cannot execute `nixos-rebuild`, `darwin-rebuild`, or `home-manager` commands (requires target system access)
 - Cannot test actual service functionality (no runtime environment)
-- Cannot decrypt or modify agenix secrets
-- Cannot access the actual "harmony" or "melaan" systems
-- Focus on configuration file correctness and NixOS best practices
+- Cannot decrypt or modify ragenix secrets
+- Cannot access the actual systems (harmony, melaan, OMARSHAL-M-2FD2)
+- Cannot run `nix run .#write-flake` to regenerate flake.nix (but can modify modules/inputs.nix)
+- Focus on configuration file correctness, Den aspect patterns, and NixOS/Darwin best practices
+- When making changes to flake inputs in modules, note that flake.nix regeneration is required
+
+## Working with This Repository
+
+### Adding a New Service
+
+1. Create a new aspect in `modules/aspects/my/<service-name>.nix`
+2. Define the aspect as a function if it needs parameters
+3. Include service configuration, firewall rules, nginx config (if needed)
+4. Add the aspect to the relevant host's `includes` list in `modules/aspects/hosts/<hostname>/<hostname>.nix`
+
+### Adding a New Host
+
+1. Create directory `modules/aspects/hosts/<hostname>/`
+2. Add `<hostname>.nix` with aspect definition and includes
+3. Add `hardware-configuration.nix` (usually copied from target system)
+4. Add host declaration in `modules/den.nix`
+
+### Adding a New User
+
+1. Create directory `modules/aspects/users/<username>/`
+2. Add `<username>.nix` with user aspect definition
+3. Include user in host declarations in `modules/den.nix`
+
+### Modifying Flake Inputs
+
+1. Edit `modules/inputs.nix` or add inputs to specific modules
+2. Note in commit that `nix run .#write-flake` needs to be run
+3. The flake.nix will be auto-regenerated when the command is run
+
+### Understanding Aspect Context
+
+Den aspects receive context parameters like:
+
+- `host`: Host information (hostName, architecture, users)
+- `user`: User information (userName, aspect name)
+- `home`: Home configuration (stateVersion)
+- `OS`: NixOS-specific context
+- `HM`: Home Manager-specific context
+
+Use `den.lib.take.exactly` or `den.lib.take.atLeast` to extract specific context parameters safely.
