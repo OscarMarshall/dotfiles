@@ -40,7 +40,7 @@ darwin-rebuild switch --flake .#OMARSHAL-M-2FD2
 ### Validate Configuration
 
 ```console
-# Check all configurations (note: currently fails due to cross-architecture issues)
+# nix flake check currently fails due to cross-architecture issues
 # Use platform-specific builds instead:
 nix build .#nixosConfigurations.harmony.config.system.build.toplevel
 nix build .#nixosConfigurations.melaan.config.system.build.toplevel
