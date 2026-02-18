@@ -29,6 +29,7 @@
       url = "github:nix-community/home-manager";
     };
     import-tree.url = "github:vic/import-tree";
+    nix-cachyos-kernel.url = "github:xddxdd/nix-cachyos-kernel/release";
     nix-doom-emacs-unstraightened = {
       inputs = {
         nixpkgs.follows = "nixpkgs";
