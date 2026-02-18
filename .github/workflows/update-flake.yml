@@ -45,7 +45,7 @@ jobs:
             nix run .#write-flake
             
             # Check if there are any changes
-            if git diff --quiet && git diff --cached --quiet; then
+            if git diff --quiet; then
               echo "No changes detected, fixed point reached"
               break
             fi
