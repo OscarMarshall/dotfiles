@@ -7,7 +7,7 @@ on:
       - main
 
 jobs:
-  update-flake:
+  write-flake:
     runs-on: ubuntu-latest
     permissions:
       contents: write
