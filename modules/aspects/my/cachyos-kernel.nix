@@ -25,6 +25,11 @@
 {
   flake-file.inputs.nix-cachyos-kernel = {
     url = "github:xddxdd/nix-cachyos-kernel/release";
+    inputs = {
+      flake-compat.follows = "flake-compat";
+      flake-parts.follows = "flake-parts";
+      nixpkgs.follows = "nixpkgs";
+    };
   };
 
   my.cachyos-kernel =
