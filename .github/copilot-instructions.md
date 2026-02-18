@@ -5,7 +5,7 @@ services, and user environments using Nix flakes, Den/Dendritic, and Home Manage
 
 ## Systems
 
-- **OMARSHAL-M-2FD2**: MacBook (aarch64-darwin) with GNOME-like desktop environment
+- **OMARSHAL-M-2FD2**: MacBook (aarch64-darwin) with development environment
 - **harmony**: Home server (x86_64-linux) with media services, Minecraft servers, and more
 - **melaan**: Framework laptop (x86_64-linux) running GNOME desktop
 
@@ -17,7 +17,7 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
 - **`modules/`**: Flake-parts modules auto-imported via import-tree
   - **`den.nix`**: Defines all hosts and homes with their aspect assignments
   - **`dendritic.nix`**: Dendritic flake module configuration
-  - **`inputs.nix`**: Flake input declarations (regenerates flake.nix on change)
+  - **`inputs.nix`**: Common flake input declarations (inputs can be declared in any module)
   - **`namespace.nix`**: Creates the `my` aspects namespace
   - **`git-hooks.nix`**: Pre-commit hooks configuration
   - **`treefmt-nix.nix`**: Code formatting configuration
@@ -27,7 +27,7 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
     - **`hosts/`**: Host-specific aspects (one directory per host)
       - **`harmony/`**: harmony.nix, hardware-configuration.nix
       - **`melaan/`**: melaan.nix, hardware-configuration.nix
-      - **`OMARSHAL-M-2FD2/`**: OMARSHAL-M-2FD2.nix, hardware-configuration.nix
+      - **`OMARSHAL-M-2FD2/`**: OMARSHAL-M-2FD2.nix
     - **`users/`**: User-specific aspects (one directory per user)
       - **`oscar/`**: oscar.nix, work/ (work-specific config)
       - **`adelline/`**: adelline.nix
@@ -41,7 +41,7 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
       - Infrastructure: zfs.nix, samba.nix, lm-sensors.nix, networkmanager.nix, secrets.nix
       - Darwin: homebrew.nix
       - VM: vm.nix, vm-bootable.nix, ci-no-boot.nix
-- **`secrets/`**: Directory containing ragenix-encrypted secrets (`.age` files) - DO NOT modify or expose these files
+- **`secrets/`**: Directory containing ragenix-encrypted secrets (`.age` files) - edit using ragenix, do not expose plaintext
 - **`secrets/secrets.nix`**: Public keys for ragenix encryption
 
 ## Key Technologies
@@ -55,7 +55,7 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
 - **nix-darwin**: NixOS-like system configuration for macOS
 - **Nix Flakes**: Modern Nix package and configuration management with lockfile-based dependency pinning
 - **Home Manager**: Manages user-specific configuration (dotfiles, packages, shell, etc.) declaratively
-- **ragenix**: Secret management using age encryption (successor to agenix)
+- **ragenix**: Secret management using age encryption (drop-in Rust rewrite of agenix)
 - **Docker/OCI containers**: Several services run in containers for isolation (gluetun, qBittorrent, etc.)
 
 ## Den Aspects Architecture
@@ -115,8 +115,7 @@ The **melaan** laptop (x86_64-linux) includes:
 - **Users**: Oscar and Adelline
 
 The **OMARSHAL-M-2FD2** MacBook (aarch64-darwin) includes:
-- **Desktop Environment**: GNOME-like experience via homebrew apps
-- **Homebrew**: Various desktop applications
+- **Homebrew**: Package manager with automatic updates and cleanup
 - **Development**: Emacs, Git, GPG, SSH
 - **Work**: Work-specific configuration
 
@@ -138,7 +137,7 @@ on the system type:
 ### Updating Dependencies
 - **Update all inputs**: `nix flake update`
 - **Update specific input**: `nix flake update <input-name>`
-- **Regenerate flake.nix**: `nix run .#write-flake` (auto-triggered when inputs change in modules/inputs.nix)
+- **Regenerate flake.nix**: `nix run .#write-flake` (must be run manually after changing inputs in any module)
 
 ### Testing VMs
 - **Run VM**: `nix run .#vm` (if VM configuration exists)
@@ -147,7 +146,7 @@ Note: Build/switch commands typically require appropriate permissions and are ru
 
 ## Validation
 
-- **Syntax check**: `nix flake check` validates flake and all configurations
+- **Syntax check**: `nix flake check` validates flake and all configurations (note: currently fails due to nix-doom-emacs-unstraightened cross-architecture build issues)
 - **Show outputs**: `nix flake show` displays all flake outputs (hosts, homes, packages, etc.)
 - **Metadata**: `nix flake metadata` shows input information
 - **Build check (NixOS)**: `nixos-rebuild build --flake .#<host>` builds a NixOS configuration
@@ -296,4 +295,4 @@ Den aspects receive context parameters like:
 - `HM`: Home Manager-specific context
 - `DARWIN`: Darwin-specific context
 
-Use `den.lib.take` helpers to extract specific context parameters safely.
+Use `den.lib.take.exactly` or `den.lib.take.atLeast` to extract specific context parameters safely.
