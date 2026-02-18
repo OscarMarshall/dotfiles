@@ -22,7 +22,7 @@
           supportedFilesystems = [ "zfs" ];
           # Use latest ZFS-compatible kernel instead of absolute latest
           # Note: this might jump back and forth as kernels are added or removed
-          kernelPackages = lib.mkForce latestKernelPackage;
+          kernelPackages = latestKernelPackage;
           zfs = {
             extraPools = pools;
             forceImportRoot = false;

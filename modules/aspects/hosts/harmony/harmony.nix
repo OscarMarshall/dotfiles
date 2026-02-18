@@ -5,6 +5,7 @@
       (auto-upgrade { allowReboot = true; })
       autobrr
       boot
+      (cachyos-kernel { variant = "server-lto"; })
       cross-seed
       fonts
       gluetun
