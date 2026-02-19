@@ -7,7 +7,7 @@
         # Use the default ZFS package for compatibility checking to avoid infinite recursion
         # We can't use config.boot.zfs.package here because it depends on kernelPackages which we're trying to determine
         defaultZfsPackage = pkgs.zfs;
-        
+
         # Find all ZFS-compatible kernel packages
         zfsCompatibleKernelPackages = lib.filterAttrs (
           name: kernelPackages:
