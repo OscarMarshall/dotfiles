@@ -2,7 +2,7 @@
 {
   my.zfs = pools: {
     nixos =
-      { config, pkgs, ... }:
+      { pkgs, ... }:
       let
         # Use the default ZFS package for compatibility checking to avoid infinite recursion
         # We can't use config.boot.zfs.package here because it depends on kernelPackages which we're trying to determine
