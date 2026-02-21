@@ -11,11 +11,7 @@
     my.routes
 
     # Enable home-manager on all hosts.
-    den._.home-manager
     { homeManager.programs.home-manager.enable = true; }
-    (den.lib.take.exactly (
-      { HM, home }: den.lib.take.unused HM { homeManager.home.stateVersion = home.stateVersion or null; }
-    ))
 
     # Automatically create the user on host.
     den._.define-user
@@ -31,6 +27,6 @@
     # ({ host, ... }: { nixos.foo = [ 42 ]; }) # DO-NOT-DO-THIS.
     #
     # Instead try to be explicit if a function is intended for ONLY { host }.
-    (den.lib.take.exactly ({ OS, host }: den.lib.take.unused OS { nixos.networking.hostName = host.hostName; }))
+    (den.lib.take.exactly ({ host }: { nixos.networking.hostName = host.hostName; }))
   ];
 }
