@@ -30,7 +30,7 @@ in
           "--cap-add=NET_ADMIN"
           "--device=/dev/net/tun:/dev/net/tun"
         ]
-        ++ builtins.mapAttrs (host: ip: "--add-host=${host}:${ip}") hosts;
+        ++ builtins.attrValues (builtins.mapAttrs (host: ip: "--add-host=${host}:${ip}") hosts);
       };
     };
 }
