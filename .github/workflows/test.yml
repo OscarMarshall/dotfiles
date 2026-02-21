@@ -18,7 +18,7 @@ jobs:
     name: Build Linux hosts
     runs-on: ubuntu-latest
     steps:
-      - uses: wimpysworld/nothing-but-nix@main
+      - uses: wimpysworld/nothing-but-nix@687c797a730352432950c707ab493fcc951818d7 # v10
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -28,7 +28,10 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@c5a866b6ab867e88becbed4467b93592bce69f8a # v21
 
       - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39 # v13
+        uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
+        with:
+          name: oscarmarshall
+          authToken: "${{ github.event_name != 'pull_request' && secrets.CACHIX_AUTH_TOKEN || '' }}"
 
       - run: nix flake metadata
 
@@ -57,7 +60,10 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@c5a866b6ab867e88becbed4467b93592bce69f8a # v21
 
       - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39 # v13
+        uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
+        with:
+          name: oscarmarshall
+          authToken: "${{ github.event_name != 'pull_request' && secrets.CACHIX_AUTH_TOKEN || '' }}"
 
       - run: nix flake metadata
 

@@ -12,7 +12,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: wimpysworld/nothing-but-nix@main
+      - uses: wimpysworld/nothing-but-nix@687c797a730352432950c707ab493fcc951818d7 # v10
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -23,16 +23,25 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@c5a866b6ab867e88becbed4467b93592bce69f8a # v21
 
       - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39 # v13
+        uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
+        with:
+          name: oscarmarshall
+          authToken: "${{ github.event_name != 'pull_request' && secrets.CACHIX_AUTH_TOKEN || '' }}"
 
-      - name: Run write-flake until fixed point
+      - name: Run write-flake
         run: |
-          # Run write-flake
           nix run .#write-flake
 
-          # If there are any changes, update the flake.lock
           if ! git diff --quiet; then
             nix flake update
+            iterations=0
+            while true; do
+              flake_before=$(cat flake.nix)
+              nix run .#write-flake
+              [ "$(cat flake.nix)" = "$flake_before" ] && break
+              iterations=$((iterations + 1))
+              [ "$iterations" -ge 10 ] && echo "write-flake did not converge" >&2 && exit 1
+            done
           fi
 
       - name: Commit and push changes
