@@ -1,3 +1,8 @@
+let
+  hosts = {
+    "tracker.bakabt.me" = "193.46.255.135";
+  };
+in
 {
   my.gluetun.nixos =
     { config, ... }:
@@ -21,9 +26,11 @@
         };
         environmentFiles = [ config.age.secrets."gluetun.env".path ];
         extraOptions = [
+          "--add-host=tracker.bakabt.me:193.46.255.135"
           "--cap-add=NET_ADMIN"
           "--device=/dev/net/tun:/dev/net/tun"
-        ];
+        ]
+        ++ builtins.mapAttrs (host: ip: "--add-host=${host}:${ip}") hosts;
       };
     };
 }
