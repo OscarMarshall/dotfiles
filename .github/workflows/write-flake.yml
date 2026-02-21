@@ -26,7 +26,7 @@ jobs:
         uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
         with:
           name: oscarmarshall
-          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+          authToken: "${{ github.event_name != 'pull_request' && secrets.CACHIX_AUTH_TOKEN || '' }}"
 
       - name: Run write-flake
         run: |
@@ -34,6 +34,14 @@ jobs:
 
           if ! git diff --quiet; then
             nix flake update
+            iterations=0
+            while true; do
+              flake_before=$(cat flake.nix)
+              nix run .#write-flake
+              [ "$(cat flake.nix)" = "$flake_before" ] && break
+              iterations=$((iterations + 1))
+              [ "$iterations" -ge 10 ] && echo "write-flake did not converge" >&2 && exit 1
+            done
           fi
 
       - name: Commit and push changes
