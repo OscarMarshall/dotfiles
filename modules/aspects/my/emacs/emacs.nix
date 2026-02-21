@@ -66,6 +66,7 @@
         programs.doom-emacs = {
           enable = true;
           doomDir = ./doom;
+          experimentalFetchTree = true;
           extraBinPackages = with pkgs; [
             coreutils
             fd
