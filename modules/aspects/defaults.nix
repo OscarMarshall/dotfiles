@@ -11,7 +11,12 @@
     # Disable booting when running on CI on all NixOS hosts.
     (if config ? _module.args.CI then my.ci-no-boot else { })
 
-    ({ host }: { nixos.networking.hostName = host.hostName; })
+    (
+      { host }:
+      {
+        nixos.networking.hostName = host.hostName;
+      }
+    )
   ];
 
   den.ctx.user.includes = [
