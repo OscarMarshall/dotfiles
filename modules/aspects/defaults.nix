@@ -5,32 +5,25 @@
   ...
 }:
 {
-  # These are functions that produce configs
-  den.default.includes = [
-    # ${user}.provides.${host} and ${host}.provides.${user}
-    my.routes
+  den.default.homeManager.programs.home-manager.enable = true;
 
-    # Enable home-manager on all hosts.
-    den._.home-manager
-    { homeManager.programs.home-manager.enable = true; }
-    (den.lib.take.exactly (
-      { HM, home }: den.lib.take.unused HM { homeManager.home.stateVersion = home.stateVersion or null; }
-    ))
-
-    # Automatically create the user on host.
-    den._.define-user
-
+  den.ctx.host.includes = [
     # Disable booting when running on CI on all NixOS hosts.
     (if config ? _module.args.CI then my.ci-no-boot else { })
 
-    # NOTE: be cautious when adding fully parametric functions to defaults. defaults are included on EVERY
-    # host/user/home, and IF you are not careful you could be duplicating config values. For example:
-    #
-    # This will append 42 into foo option for the {host} and for EVERY {host,user}
-    #
-    # ({ host, ... }: { nixos.foo = [ 42 ]; }) # DO-NOT-DO-THIS.
-    #
-    # Instead try to be explicit if a function is intended for ONLY { host }.
-    (den.lib.take.exactly ({ OS, host }: den.lib.take.unused OS { nixos.networking.hostName = host.hostName; }))
+    (
+      { host }:
+      {
+        nixos.networking.hostName = host.hostName;
+      }
+    )
+  ];
+
+  den.ctx.user.includes = [
+    # ${user}.provides.${host} and ${host}.provides.${user}
+    my.routes
+
+    # Automatically create the user on host.
+    den._.define-user
   ];
 }
