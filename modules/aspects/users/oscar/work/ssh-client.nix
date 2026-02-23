@@ -30,6 +30,7 @@
             {
               "*.meraki.com ${aliases}" = {
                 addKeysToAgent = "yes";
+                forwardAgent = true;
                 identityFile = "~/.ssh/id_ed25519_meraki";
                 serverAliveInterval = 240;
                 extraOptions = lib.mkIf (host.class == "darwin") { UseKeychain = "yes"; };
