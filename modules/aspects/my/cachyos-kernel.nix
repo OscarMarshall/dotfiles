@@ -10,14 +10,14 @@
 #
 # Usage:
 #   Add to your host's includes:
-#     cachyos-kernel                         # Uses "latest-lto" variant by default
-#     (cachyos-kernel { variant = "server"; })  # Use server variant (for harmony)
+#     (cachyos-kernel { }) # Uses "latest-lto" variant by default
+#     (cachyos-kernel { variant = "server-lto"; }) # Use server-lto variant (for harmony)
 #
-# Available variants include: latest-lto (default), server, bore-lto, hardened-lto, etc.
-# See https://github.com/xddxdd/nix-cachyos-kernel for full list of variants.
+# Available variants include: latest-lto (default), server, server-lto, bore-lto, hardened-lto, etc. See
+# https://github.com/xddxdd/nix-cachyos-kernel for full list of variants.
 #
-# Note: This aspect uses mkForce to override any other kernel settings (including the standard boot aspect).
-#       If you're using ZFS, this will automatically use the CachyOS-patched ZFS module.
+# Note: This aspect uses mkForce to override any other kernel settings (including the standard boot aspect). If you're
+#       using ZFS, this will automatically use the CachyOS-patched ZFS module.
 #
 # After adding this aspect, run: nix run .#write-flake
 #
@@ -31,6 +31,11 @@
       variant ? "latest-lto",
     }:
     {
+      nix.settings = {
+        extra-substituters = [ "https://attic.xuyh0120.win/lantian" ];
+        extra-trusted-public-keys = [ "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=" ];
+      };
+
       nixos =
         {
           config,
