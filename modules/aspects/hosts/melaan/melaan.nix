@@ -7,11 +7,9 @@
       (auto-upgrade { allowReboot = false; })
       boot
       (cachyos-kernel { })
-      fonts
       gnome
       locale
       networkmanager
-      nix
       pipewire
       steam
     ];

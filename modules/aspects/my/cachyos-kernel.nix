@@ -31,11 +31,6 @@
       variant ? "latest-lto",
     }:
     {
-      nix.settings = {
-        extra-substituters = [ "https://attic.xuyh0120.win/lantian" ];
-        extra-trusted-public-keys = [ "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=" ];
-      };
-
       nixos =
         {
           config,
@@ -44,6 +39,11 @@
           ...
         }:
         {
+          nix.settings = {
+            extra-substituters = [ "https://attic.xuyh0120.win/lantian" ];
+            extra-trusted-public-keys = [ "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=" ];
+          };
+
           nixpkgs.overlays = [
             # Use the exact kernel versions as defined in nix-cachyos-kernel repo.
             # Guarantees binary cache availability.

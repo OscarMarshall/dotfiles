@@ -1,11 +1,7 @@
 { my, ... }:
 {
   den.aspects.OMARSHAL-M-2FD2 = {
-    includes = with my; [
-      fonts
-      homebrew
-      nix
-    ];
+    includes = with my; [ homebrew ];
 
     darwin = {
       # Used for backwards compatibility, please read the changelog before changing.
