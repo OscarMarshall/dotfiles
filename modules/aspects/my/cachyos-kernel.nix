@@ -52,11 +52,6 @@
             # Use the CachyOS-patched ZFS module (no-op if ZFS isn't enabled)
             zfs.package = config.boot.kernelPackages.zfs_cachyos;
           };
-
-          nix.settings = {
-            extra-substituters = [ "https://attic.xuyh0120.win/lantian" ];
-            extra-trusted-public-keys = [ "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=" ];
-          };
         };
     };
 }
