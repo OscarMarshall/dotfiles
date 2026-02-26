@@ -124,17 +124,43 @@ den.aspects.oscar = {
 
 ## Secrets Management
 
-Secrets are encrypted using [ragenix](https://github.com/yaxitech/ragenix) (age-based encryption):
+Secrets are managed using [agenix-rekey](https://github.com/oddlama/agenix-rekey), an extension for
+[ragenix](https://github.com/yaxitech/ragenix) that uses a single YubiKey master identity to encrypt secrets and
+automatically re-encrypts them for each host.
+
+The YubiKey identity file is at `secrets/yubikey-identity.pub`. Rekeyed secrets (encrypted per-host) are stored
+alongside the host's aspect (e.g., `modules/aspects/hosts/harmony/secrets/`) and committed to the repository.
+
+### First-time YubiKey setup
 
 ```console
-# Edit a secret
-nix run github:yaxitech/ragenix -- -e secrets/my-secret.age
-
-# Re-key secrets after adding a new host
-nix run github:yaxitech/ragenix -- -r
+# Generate a new YubiKey identity (requires age-plugin-yubikey)
+age-plugin-yubikey --generate > secrets/yubikey-identity.pub
 ```
 
-Public keys are defined in `secrets/secrets.nix`.
+### Managing secrets
+
+Use the `agenix` wrapper from agenix-rekey to manage secrets:
+
+```console
+# Enter a shell with the agenix command available
+nix shell github:oddlama/agenix-rekey
+
+# Create or edit a secret (encrypted with the YubiKey master identity)
+agenix edit secrets/my-secret.age
+
+# Re-key secrets for all hosts after adding/changing a secret or host key
+agenix rekey -a
+
+# Generate secrets that have generators defined
+agenix generate
+```
+
+Alternatively, run apps directly through the flake:
+
+```console
+nix run .#agenix-rekey.x86_64-linux.rekey -- -a
+```
 
 ## Updating
 

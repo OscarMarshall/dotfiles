@@ -1,13 +1,13 @@
-{ inputs, ... }:
+{ inputs, pkgs, ... }:
 let
   age.secrets = {
-    autobrr-secret.file = ../../../secrets/autobrr-secret.age;
-    "cross-seed.json".file = ../../../secrets/cross-seed.json.age;
-    "gluetun.env".file = ../../../secrets/gluetun.env.age;
-    "homepage-dashboard.env".file = ../../../secrets/homepage-dashboard.env.age;
-    "minecraft-servers.env".file = ../../../secrets/minecraft-servers.env.age;
-    "qbittorrent.env".file = ../../../secrets/qbittorrent.env.age;
-    "unpackerr.env".file = ../../../secrets/unpackerr.env.age;
+    autobrr-secret.rekeyFile = ../../../secrets/autobrr-secret.age;
+    "cross-seed.json".rekeyFile = ../../../secrets/cross-seed.json.age;
+    "gluetun.env".rekeyFile = ../../../secrets/gluetun.env.age;
+    "homepage-dashboard.env".rekeyFile = ../../../secrets/homepage-dashboard.env.age;
+    "minecraft-servers.env".rekeyFile = ../../../secrets/minecraft-servers.env.age;
+    "qbittorrent.env".rekeyFile = ../../../secrets/qbittorrent.env.age;
+    "unpackerr.env".rekeyFile = ../../../secrets/unpackerr.env.age;
   };
 in
 {
@@ -23,11 +23,23 @@ in
       nixpkgs.follows = "nixpkgs";
     };
   };
+  flake-file.inputs.agenix-rekey = {
+    url = "github:oddlama/agenix-rekey";
+    inputs.nixpkgs.follows = "nixpkgs";
+  };
 
   my.secrets = {
     nixos = {
-      imports = [ (inputs.ragenix.nixosModules.default or { }) ];
+      imports = [
+        (inputs.ragenix.nixosModules.default or { })
+        (inputs.agenix-rekey.nixosModules.default or { })
+      ];
       inherit age;
+      age.rekey = {
+        masterIdentities = [ ../../../secrets/yubikey-identity.pub ];
+        agePlugins = [ pkgs.age-plugin-yubikey ];
+        storageMode = "local";
+      };
     };
     darwin = {
       imports = [ (inputs.ragenix.darwinModules.default or { }) ];

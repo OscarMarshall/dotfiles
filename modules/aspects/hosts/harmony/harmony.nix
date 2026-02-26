@@ -40,6 +40,11 @@
     nixos = {
       networking.hostId = "7dab76c0";
 
+      age.rekey = {
+        hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMkM5uNY0rMy2QMG6IptlxgVl4sQWoeSSNmUp7/f2z1B";
+        localStorageDir = ./secrets;
+      };
+
       services = {
         apcupsd.enable = true;
         glances.enable = true;
