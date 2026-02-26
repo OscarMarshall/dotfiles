@@ -54,7 +54,7 @@
             # Use mkForce to override the default kernel (including ZFS aspect if present)
             kernelPackages = lib.mkForce pkgs.cachyosKernels."linuxPackages-cachyos-${variant}";
 
-            # Use the CachyOS-patched ZFS module (no-op if ZFS isn't enabled)
+            # Configure ZFS to use the CachyOS-patched module (NixOS will only use this if ZFS is enabled)
             zfs.package = config.boot.kernelPackages.zfs_cachyos;
           };
         };
