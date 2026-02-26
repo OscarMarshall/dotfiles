@@ -124,17 +124,34 @@ den.aspects.oscar = {
 
 ## Secrets Management
 
-Secrets are encrypted using [ragenix](https://github.com/yaxitech/ragenix) (age-based encryption):
+Secrets are managed using [agenix-rekey](https://github.com/oddlama/agenix-rekey), an extension for
+[agenix](https://github.com/ryantm/agenix) that uses a single master key (Oscar's SSH key) to encrypt secrets and
+automatically re-encrypts them for each host.
+
+The master public key is at `secrets/master.pub`. Rekeyed secrets (encrypted per-host) are stored in
+`secrets/rekeyed/<hostname>/` and committed to the repository.
+
+Use the `agenix` wrapper from agenix-rekey to manage secrets:
 
 ```console
-# Edit a secret
-nix run github:yaxitech/ragenix -- -e secrets/my-secret.age
+# Enter a shell with the agenix command available
+nix shell github:oddlama/agenix-rekey
 
-# Re-key secrets after adding a new host
-nix run github:yaxitech/ragenix -- -r
+# Create or edit a secret (encrypted with the master key)
+agenix edit secrets/my-secret.age
+
+# Re-key secrets for all hosts after adding/changing a secret or host key
+agenix rekey -a
+
+# Generate secrets that have generators defined
+agenix generate
 ```
 
-Public keys are defined in `secrets/secrets.nix`.
+Alternatively, run apps directly through the flake:
+
+```console
+nix run .#agenix-rekey.x86_64-linux.rekey -- -a
+```
 
 ## Updating
 
