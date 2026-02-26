@@ -5,6 +5,7 @@ in
 {
   "autobrr-secret.age".publicKeys = oscar ++ [ harmony ];
   "cross-seed.json.age".publicKeys = oscar ++ [ harmony ];
+  "github-token.age".publicKeys = oscar ++ [ harmony ];
   "gluetun.env.age".publicKeys = oscar ++ [ harmony ];
   "homepage-dashboard.env.age".publicKeys = oscar ++ [ harmony ];
   "minecraft-servers.env.age".publicKeys = oscar ++ [ harmony ];
