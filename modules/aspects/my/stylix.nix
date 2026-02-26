@@ -8,5 +8,8 @@
     };
   };
 
-  my.stylix.homeManager.imports = [ (inputs.stylix.homeModules.stylix or { }) ];
+  my.stylix = {
+    darwin.imports = [ (inputs.stylix.darwinModules.stylix or { }) ];
+    nixos.imports = [ (inputs.stylix.nixosModules.stylix or { }) ];
+  };
 }

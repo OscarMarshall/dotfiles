@@ -11,13 +11,10 @@
       }.${flavor};
     in
     {
-      includes = [ my.stylix ];
-
       homeManager =
         { config, pkgs, ... }:
         {
           stylix = {
-            enable = true;
             base16Scheme = "${pkgs.base16-schemes}/share/themes/catppuccin-${flavor}.yaml";
             image = config.lib.stylix.pixel base00;
             targets.ghostty.enable = false;
