@@ -25,7 +25,7 @@ jobs:
           ref: ${{ github.head_ref || github.ref }}
 
       - name: Install Nix
-        uses: cachix/install-nix-action@2126ae7fc54c9df00dd18f7f18754393182c73cd # v31.9.1
+        uses: samueldr/lix-gha-installer-action@v2026-02-22
         with:
           extra_nix_config: |
             substituters = https://cache.nixos.org/ https://attic.xuyh0120.win/lantian
@@ -38,9 +38,8 @@ jobs:
           authToken: "${{ github.event_name != 'pull_request' && secrets.CACHIX_AUTH_TOKEN || '' }}"
           extraPullNames: nix-community
 
-      - run: cat /etc/nix/nix.conf
-
-      - run: cat ~/.config/nix/nix.conf
+      - name: Restore and save Nix Store
+        uses: nix-community/cache-nix-action@v7
 
       - run: nix flake metadata
 
@@ -66,7 +65,7 @@ jobs:
           ref: ${{ github.head_ref || github.ref }}
 
       - name: Install Nix
-        uses: cachix/install-nix-action@2126ae7fc54c9df00dd18f7f18754393182c73cd # v31.9.1
+        uses: samueldr/lix-gha-installer-action@v2026-02-22
         with:
           extra_nix_config: |
             substituters = https://cache.nixos.org/ https://attic.xuyh0120.win/lantian
@@ -78,6 +77,9 @@ jobs:
           name: oscarmarshall
           authToken: "${{ github.event_name != 'pull_request' && secrets.CACHIX_AUTH_TOKEN || '' }}"
           extraPullNames: nix-community
+
+      - name: Restore and save Nix Store
+        uses: nix-community/cache-nix-action@v7
 
       - run: nix flake metadata
 
