@@ -37,6 +37,7 @@ in
         )
         (host-flag "graphical" {
           includes = [
+            (catppuccin { })
             discord
             ghostty
             prusa-slicer
