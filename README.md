@@ -125,11 +125,20 @@ den.aspects.oscar = {
 ## Secrets Management
 
 Secrets are managed using [agenix-rekey](https://github.com/oddlama/agenix-rekey), an extension for
-[agenix](https://github.com/ryantm/agenix) that uses a single master key (Oscar's SSH key) to encrypt secrets and
+[ragenix](https://github.com/yaxitech/ragenix) that uses a single YubiKey master identity to encrypt secrets and
 automatically re-encrypts them for each host.
 
-The master public key is at `secrets/master.pub`. Rekeyed secrets (encrypted per-host) are stored in
-`secrets/rekeyed/<hostname>/` and committed to the repository.
+The YubiKey identity file is at `secrets/yubikey-identity.pub`. Rekeyed secrets (encrypted per-host) are stored
+alongside the host's aspect (e.g., `modules/aspects/hosts/harmony/secrets/`) and committed to the repository.
+
+### First-time YubiKey setup
+
+```console
+# Generate a new YubiKey identity (requires age-plugin-yubikey)
+age-plugin-yubikey --generate > secrets/yubikey-identity.pub
+```
+
+### Managing secrets
 
 Use the `agenix` wrapper from agenix-rekey to manage secrets:
 
@@ -137,7 +146,7 @@ Use the `agenix` wrapper from agenix-rekey to manage secrets:
 # Enter a shell with the agenix command available
 nix shell github:oddlama/agenix-rekey
 
-# Create or edit a secret (encrypted with the master key)
+# Create or edit a secret (encrypted with the YubiKey master identity)
 agenix edit secrets/my-secret.age
 
 # Re-key secrets for all hosts after adding/changing a secret or host key

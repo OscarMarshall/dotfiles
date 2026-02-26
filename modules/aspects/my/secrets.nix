@@ -1,4 +1,4 @@
-{ inputs, ... }:
+{ inputs, pkgs, ... }:
 let
   age.secrets = {
     autobrr-secret.rekeyFile = ../../../secrets/autobrr-secret.age;
@@ -11,13 +11,16 @@ let
   };
 in
 {
-  flake-file.inputs.agenix = {
-    url = "github:ryantm/agenix";
+  flake-file.inputs.ragenix = {
+    url = "github:yaxitech/ragenix";
     inputs = {
-      darwin.follows = "darwin";
-      home-manager.follows = "home-manager";
+      agenix.inputs = {
+        darwin.follows = "darwin";
+        flake-utils.inputs.systems.follows = "systems";
+        home-manager.follows = "home-manager";
+      };
+      flake-utils.inputs.systems.follows = "systems";
       nixpkgs.follows = "nixpkgs";
-      systems.follows = "systems";
     };
   };
   flake-file.inputs.agenix-rekey = {
@@ -28,21 +31,22 @@ in
   my.secrets = {
     nixos = {
       imports = [
-        (inputs.agenix.nixosModules.default or { })
+        (inputs.ragenix.nixosModules.default or { })
         (inputs.agenix-rekey.nixosModules.default or { })
       ];
       inherit age;
       age.rekey = {
-        masterIdentities = [ ../../../secrets/master.pub ];
+        masterIdentities = [ ../../../secrets/yubikey-identity.pub ];
+        agePlugins = [ pkgs.age-plugin-yubikey ];
         storageMode = "local";
       };
     };
     darwin = {
-      imports = [ (inputs.agenix.darwinModules.default or { }) ];
+      imports = [ (inputs.ragenix.darwinModules.default or { }) ];
       inherit age;
     };
     homeManager = {
-      imports = [ (inputs.agenix.homeManagerModules.default or { }) ];
+      imports = [ (inputs.ragenix.homeManagerModules.default or { }) ];
       inherit age;
     };
   };
