@@ -2,14 +2,18 @@
 {
   my.zfs = pools: {
     nixos =
-      { config, pkgs, ... }:
+      { pkgs, ... }:
       let
+        # Use the default ZFS package for compatibility checking to avoid infinite recursion
+        # We can't use config.boot.zfs.package here because it depends on kernelPackages which we're trying to determine
+        defaultZfsPackage = pkgs.zfs;
+
         # Find all ZFS-compatible kernel packages
         zfsCompatibleKernelPackages = lib.filterAttrs (
           name: kernelPackages:
           (builtins.match "linux_[0-9]+_[0-9]+" name) != null
           && (builtins.tryEval kernelPackages).success
-          && (!kernelPackages.${config.boot.zfs.package.kernelModuleAttribute}.meta.broken)
+          && (builtins.tryEval (!kernelPackages.${defaultZfsPackage.kernelModuleAttribute}.meta.broken)).value or false
         ) pkgs.linuxKernel.packages;
 
         # Select the latest compatible kernel version
@@ -22,7 +26,7 @@
           supportedFilesystems = [ "zfs" ];
           # Use latest ZFS-compatible kernel instead of absolute latest
           # Note: this might jump back and forth as kernels are added or removed
-          kernelPackages = lib.mkForce latestKernelPackage;
+          kernelPackages = latestKernelPackage;
           zfs = {
             extraPools = pools;
             forceImportRoot = false;

@@ -24,14 +24,19 @@ jobs:
         with:
           ref: ${{ github.head_ref || github.ref }}
 
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@c5a866b6ab867e88becbed4467b93592bce69f8a # v21
+      - name: Install Lix
+        uses: samueldr/lix-gha-installer-action@v2026-02-22
+        with:
+          extra_nix_config: |
+            substituters = https://cache.nixos.org/ https://attic.xuyh0120.win/lantian
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=
 
       - name: Setup Nix cache
         uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
         with:
           name: oscarmarshall
           authToken: "${{ github.event_name != 'pull_request' && secrets.CACHIX_AUTH_TOKEN || '' }}"
+          extraPullNames: nix-community
 
       - run: nix flake metadata
 
@@ -56,14 +61,19 @@ jobs:
         with:
           ref: ${{ github.head_ref || github.ref }}
 
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@c5a866b6ab867e88becbed4467b93592bce69f8a # v21
+      - name: Install Lix
+        uses: samueldr/lix-gha-installer-action@v2026-02-22
+        with:
+          extra_nix_config: |
+            substituters = https://cache.nixos.org/ https://attic.xuyh0120.win/lantian
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=
 
       - name: Setup Nix cache
         uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
         with:
           name: oscarmarshall
           authToken: "${{ github.event_name != 'pull_request' && secrets.CACHIX_AUTH_TOKEN || '' }}"
+          extraPullNames: nix-community
 
       - run: nix flake metadata
 

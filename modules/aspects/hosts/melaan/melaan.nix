@@ -6,11 +6,10 @@
     includes = with my; [
       (auto-upgrade { allowReboot = false; })
       boot
-      fonts
+      (cachyos-kernel { })
       gnome
       locale
       networkmanager
-      nix
       pipewire
       steam
     ];

@@ -5,8 +5,8 @@
       (auto-upgrade { allowReboot = true; })
       autobrr
       boot
+      (cachyos-kernel { variant = "server-lto"; })
       cross-seed
-      fonts
       gluetun
       homepage
       lm-sensors
@@ -14,7 +14,6 @@
       (minecraft-servers { administrators = [ "oscar" ]; })
       networkmanager
       nginx
-      nix
       plex
       profilarr
       prowlarr
