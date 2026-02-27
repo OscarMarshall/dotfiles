@@ -9,18 +9,14 @@
   };
 
   my.stylix = {
-    darwin =
-      { ... }:
-      {
-        imports = [ (inputs.stylix.darwinModules.stylix or { }) ];
-        stylix.enable = true;
-      };
+    darwin = {
+      imports = [ (inputs.stylix.darwinModules.stylix or { }) ];
+      stylix.enable = true;
+    };
 
-    nixos =
-      { ... }:
-      {
-        imports = [ (inputs.stylix.nixosModules.stylix or { }) ];
-        stylix.enable = true;
-      };
+    nixos = {
+      imports = [ (inputs.stylix.nixosModules.stylix or { }) ];
+      stylix.enable = true;
+    };
   };
 }
