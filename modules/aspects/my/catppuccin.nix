@@ -5,6 +5,11 @@
       flavor ? "mocha",
     }:
     {
+      flake-file.inputs.catppuccin-wallpapers = {
+        url = "github:zhichaoh/catppuccin-wallpapers";
+        flake = false;
+      };
+
       homeManager =
         { pkgs, ... }:
         {
