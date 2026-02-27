@@ -28,21 +28,6 @@
 (setq doom-font "Fira Code-12" ;(font-spec :family "Fira Code" :size 12)
       doom-variable-pitch-font (font-spec :family "Helvetica Neue" :size 13))
 
-;; There are two ways to load a theme. Both assume the theme is installed and
-;; available. You can either set `doom-theme' or manually load a theme with the
-;; `load-theme' function. This is the default:
-(setq doom-theme 'catppuccin)
-(add-hook 'ns-system-appearance-change-functions
-          (lambda (appearance)
-            "Load theme, taking current system APPEARANCE into consideration."
-            ;;(mapc #'disable-theme custom-enabled-themes)
-            (setq catppuccin-flavor (pcase appearance
-                                      ('light 'latte)
-                                      ('dark 'mocha)))
-            (catppuccin-reload)))
-
-
-
 ;; This determines the style of line numbers in effect. If set to `nil', line
 ;; numbers are disabled. For relative line numbers, set this to `relative'.
 (setq display-line-numbers-type t)
