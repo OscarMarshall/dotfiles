@@ -24,8 +24,8 @@ jobs:
         with:
           ref: ${{ github.head_ref || github.ref }}
 
-      - name: Install Lix
-        uses: samueldr/lix-gha-installer-action@7b7f14d320d6aacfb65bd1ef761566b3b69e474c # v2026-02-22
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31.9.1
         with:
           extra_nix_config: |
             substituters = https://cache.nixos.org/ https://attic.xuyh0120.win/lantian
@@ -35,7 +35,7 @@ jobs:
         uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
         with:
           name: oscarmarshall
-          authToken: "${{ github.event_name != 'pull_request' && secrets.CACHIX_AUTH_TOKEN || '' }}"
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           extraPullNames: nix-community
 
       - run: nix flake metadata
@@ -61,8 +61,8 @@ jobs:
         with:
           ref: ${{ github.head_ref || github.ref }}
 
-      - name: Install Lix
-        uses: samueldr/lix-gha-installer-action@7b7f14d320d6aacfb65bd1ef761566b3b69e474c # v2026-02-22
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31.9.1
         with:
           extra_nix_config: |
             substituters = https://cache.nixos.org/ https://attic.xuyh0120.win/lantian
@@ -72,7 +72,7 @@ jobs:
         uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
         with:
           name: oscarmarshall
-          authToken: "${{ github.event_name != 'pull_request' && secrets.CACHIX_AUTH_TOKEN || '' }}"
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           extraPullNames: nix-community
 
       - run: nix flake metadata
