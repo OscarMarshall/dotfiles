@@ -18,12 +18,12 @@ in
   };
 
   my.stylix = {
-    darwin = context: {
+    darwin = context@{ config, pkgs, ... }: {
       imports = [ (inputs.stylix.darwinModules.stylix or { }) ];
       stylix = stylix-config context;
     };
 
-    nixos = context: {
+    nixos = context@{ config, pkgs, ... }: {
       imports = [ (inputs.stylix.nixosModules.stylix or { }) ];
       stylix = stylix-config context;
     };
