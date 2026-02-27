@@ -128,6 +128,22 @@
         "type": "github"
       }
     },
+    "catppuccin-wallpapers": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1661293434,
+        "narHash": "sha256-h+cFlTXvUVJPRMpk32jYVDDhHu1daWSezFcvhJqDpmU=",
+        "owner": "zhichaoh",
+        "repo": "catppuccin-wallpapers",
+        "rev": "1023077979591cdeca76aae94e0359da1707a60e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "zhichaoh",
+        "repo": "catppuccin-wallpapers",
+        "type": "github"
+      }
+    },
     "crane": {
       "locked": {
         "lastModified": 1760924934,
@@ -672,6 +688,7 @@
     },
     "root": {
       "inputs": {
+        "catppuccin-wallpapers": "catppuccin-wallpapers",
         "darwin": "darwin",
         "den": "den",
         "flake-aspects": "flake-aspects",
