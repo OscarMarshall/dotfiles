@@ -37,6 +37,7 @@ in
         )
         (host-flag "graphical" {
           includes = [
+            (catppuccin { })
             discord
             ghostty
             prusa-slicer
@@ -79,6 +80,17 @@ in
           fish.enable = true;
           fzf.enable = true;
           starship.enable = true;
+        };
+
+        stylix.fonts = {
+          monospace = {
+            package = pkgs.nerd-fonts.fira-code;
+            name = "FiraCode Nerd Font Mono";
+          };
+          sansSerif = {
+            package = pkgs.fira;
+            name = "Fira Sans";
+          };
         };
       };
   };

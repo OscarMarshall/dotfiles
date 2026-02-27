@@ -24,7 +24,6 @@
       settings = {
         font-family = "fira-code";
         keybind = [ "global:super+Backquote=toggle_quick_terminal" ];
-        theme = "light:Catppuccin Latte,dark:Catppuccin Mocha";
       };
     };
   };

@@ -10,6 +10,7 @@
   den.ctx.host.includes = with my; [
     fonts
     nix
+    stylix
 
     # Disable booting when running on CI on all NixOS hosts.
     (if config ? _module.args.CI then my.ci-no-boot else { })

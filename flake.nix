@@ -5,6 +5,10 @@
   outputs = inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);
 
   inputs = {
+    catppuccin-wallpapers = {
+      flake = false;
+      url = "github:zhichaoh/catppuccin-wallpapers";
+    };
     darwin = {
       inputs.nixpkgs.follows = "nixpkgs";
       url = "github:nix-darwin/nix-darwin";
@@ -59,6 +63,13 @@
         nixpkgs.follows = "nixpkgs";
       };
       url = "github:yaxitech/ragenix";
+    };
+    stylix = {
+      inputs = {
+        home-manager.follows = "home-manager";
+        nixpkgs.follows = "nixpkgs";
+      };
+      url = "github:nix-community/stylix";
     };
     systems.url = "github:nix-systems/default";
     treefmt-nix = {
