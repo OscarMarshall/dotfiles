@@ -1,12 +1,9 @@
 { inputs, ... }:
 let
-  stylix-config =
-    { config, pkgs, ... }:
-    {
-      enable = true;
-      base16Scheme = "${pkgs.base16-schemes}/share/themes/catppuccin-mocha.yaml";
-      image = config.lib.stylix.pixel "base00";
-    };
+  stylix-config = pkgs: {
+    enable = true;
+    base16Scheme = "${pkgs.base16-schemes}/share/themes/catppuccin-mocha.yaml";
+  };
 in
 {
   flake-file.inputs.stylix = {
@@ -18,14 +15,18 @@ in
   };
 
   my.stylix = {
-    darwin = context@{ config, pkgs, ... }: {
-      imports = [ (inputs.stylix.darwinModules.stylix or { }) ];
-      stylix = stylix-config context;
-    };
+    darwin =
+      { pkgs, ... }:
+      {
+        imports = [ (inputs.stylix.darwinModules.stylix or { }) ];
+        stylix = stylix-config pkgs;
+      };
 
-    nixos = context@{ config, pkgs, ... }: {
-      imports = [ (inputs.stylix.nixosModules.stylix or { }) ];
-      stylix = stylix-config context;
-    };
+    nixos =
+      { pkgs, ... }:
+      {
+        imports = [ (inputs.stylix.nixosModules.stylix or { }) ];
+        stylix = stylix-config pkgs;
+      };
   };
 }
