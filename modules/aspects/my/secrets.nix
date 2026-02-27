@@ -2,6 +2,7 @@
 let
   age.secrets = {
     autobrr-secret.file = ../../../secrets/autobrr-secret.age;
+    "beszel-agent.env".file = ../../../secrets/beszel-agent.env.age;
     "cross-seed.json".file = ../../../secrets/cross-seed.json.age;
     "discord-webhook.env".file = ../../../secrets/discord-webhook.env.age;
     "gluetun.env".file = ../../../secrets/gluetun.env.age;
