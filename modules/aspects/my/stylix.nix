@@ -9,14 +9,26 @@
   };
 
   my.stylix = {
-    darwin = {
-      imports = [ (inputs.stylix.darwinModules.stylix or { }) ];
-      stylix.enable = true;
-    };
+    darwin =
+      { config, pkgs, ... }:
+      {
+        imports = [ (inputs.stylix.darwinModules.stylix or { }) ];
+        stylix = {
+          enable = true;
+          base16Scheme = "${pkgs.base16-schemes}/share/themes/catppuccin-mocha.yaml";
+          image = config.lib.stylix.pixel "1e1e2e";
+        };
+      };
 
-    nixos = {
-      imports = [ (inputs.stylix.nixosModules.stylix or { }) ];
-      stylix.enable = true;
-    };
+    nixos =
+      { config, pkgs, ... }:
+      {
+        imports = [ (inputs.stylix.nixosModules.stylix or { }) ];
+        stylix = {
+          enable = true;
+          base16Scheme = "${pkgs.base16-schemes}/share/themes/catppuccin-mocha.yaml";
+          image = config.lib.stylix.pixel "1e1e2e";
+        };
+      };
   };
 }
