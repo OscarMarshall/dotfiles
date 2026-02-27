@@ -1,14 +1,18 @@
 { ... }:
 {
   my.catppuccin =
-    { flavor ? "mocha" }:
+    {
+      flavor ? "mocha",
+    }:
     let
-      base00 = {
-        latte = "eff1f5";
-        frappe = "303446";
-        macchiato = "24273a";
-        mocha = "1e1e2e";
-      }.${flavor};
+      base00 =
+        {
+          latte = "eff1f5";
+          frappe = "303446";
+          macchiato = "24273a";
+          mocha = "1e1e2e";
+        }
+        .${flavor};
     in
     {
       homeManager =
