@@ -3,13 +3,25 @@
     {
       flavor ? "mocha",
     }:
+    let
+      # Catppuccin base00 colors per flavor, used to avoid infinite recursion
+      # when setting stylix.image (see stylix.nix for details).
+      base00 = {
+        latte = "#eff1f5";
+        frappe = "#303446";
+        macchiato = "#24273a";
+        mocha = "#1e1e2e";
+      };
+    in
     {
       homeManager =
-        { config, pkgs, ... }:
+        { pkgs, ... }:
         {
           stylix = {
             base16Scheme = "${pkgs.base16-schemes}/share/themes/catppuccin-${flavor}.yaml";
-            image = config.lib.stylix.pixel "base00";
+            image = pkgs.runCommand "catppuccin-${flavor}-background.png" { } ''
+              ${pkgs.imagemagick}/bin/convert "xc:${base00.${flavor}}" png32:$out
+            '';
             targets.emacs.colors.enable = false;
             targets.ghostty.colors.enable = false;
           };

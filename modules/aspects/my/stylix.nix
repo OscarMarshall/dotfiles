@@ -1,11 +1,16 @@
 { inputs, ... }:
 let
   stylix-config =
-    { config, pkgs, ... }:
+    { pkgs, ... }:
     {
       enable = true;
       base16Scheme = "${pkgs.base16-schemes}/share/themes/catppuccin-mocha.yaml";
-      image = config.lib.stylix.pixel "base00";
+      # Avoid infinite recursion: config.lib.stylix.pixel depends on
+      # config.lib.stylix.colors, which the module system would try to evaluate
+      # while type-checking this option, creating a cycle.
+      image = pkgs.runCommand "stylix-background.png" { } ''
+        ${pkgs.imagemagick}/bin/convert xc:#1e1e2e png32:$out
+      '';
     };
 in
 {
