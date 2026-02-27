@@ -1,4 +1,11 @@
 { inputs, ... }:
+let
+  stylix-config = { config, pkgs, ... }: {
+    enable = true;
+    base16Scheme = "${pkgs.base16-schemes}/share/themes/catppuccin-mocha.yaml";
+    image = config.lib.stylix.pixel "base0A";
+  };
+in
 {
   flake-file.inputs.stylix = {
     url = "github:nix-community/stylix";
@@ -10,25 +17,17 @@
 
   my.stylix = {
     darwin =
-      { config, pkgs, ... }:
+      context:
       {
         imports = [ (inputs.stylix.darwinModules.stylix or { }) ];
-        stylix = {
-          enable = true;
-          base16Scheme = "${pkgs.base16-schemes}/share/themes/catppuccin-mocha.yaml";
-          image = config.lib.stylix.pixel "1e1e2e";
-        };
+        stylix = stylix-config context;
       };
 
     nixos =
-      { config, pkgs, ... }:
+      context:
       {
         imports = [ (inputs.stylix.nixosModules.stylix or { }) ];
-        stylix = {
-          enable = true;
-          base16Scheme = "${pkgs.base16-schemes}/share/themes/catppuccin-mocha.yaml";
-          image = config.lib.stylix.pixel "1e1e2e";
-        };
+        stylix = stylix-config context;
       };
   };
 }
