@@ -12,6 +12,9 @@
   my.zen-browser.homeManager = {
     imports = [ (inputs.zen-browser.homeModules.twilight or { }) ];
 
-    programs.zen-browser.enable = true;
+    programs.zen-browser = {
+      enable = true;
+      suppressXdgMigrationWarning = true;
+    };
   };
 }
