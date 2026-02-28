@@ -2,10 +2,10 @@
 {
   my.healthchecks =
     let
-      port = 8090;
+      port = 19999;
     in
     {
-      includes = [ (my.nginx._.virtual-host "beszel.harmony.silverlight-nex.us" port) ];
+      includes = [ (my.nginx._.virtual-host "netdata.harmony.silverlight-nex.us" port) ];
 
       nixos =
         { config, pkgs, ... }:
@@ -38,7 +38,7 @@
           };
         in
         {
-          # ZFS Event Daemon: send Discord notifications for ZFS pool events
+          # ZFS Event Daemon: send Discord notifications for real-time ZFS pool events
           services.zfs.zed = {
             enableMail = false;
             settings = {
@@ -49,18 +49,20 @@
             };
           };
 
-          # Beszel monitoring hub (web dashboard)
-          services.beszel.hub = {
+          # Netdata monitoring (metrics, dashboards, and Discord health alerts)
+          services.netdata = {
             enable = true;
-            host = "127.0.0.1";
-            inherit port;
-          };
-
-          # Beszel monitoring agent (same machine)
-          services.beszel.agent = {
-            enable = true;
-            environmentFile = config.age.secrets."beszel-agent.env".path;
-            smartmon.enable = true;
+            # Bind only to loopback; nginx handles external access
+            config.web."bind to" = "127.0.0.1";
+            # Discord notifications via health_alarm_notify.conf.
+            # The file is a bash script sourced by Netdata's alarm-notify.sh;
+            # sourcing the age secret sets DISCORD_WEBHOOK_URL at runtime.
+            configDir."health_alarm_notify.conf" = pkgs.writeText "health_alarm_notify.conf" ''
+              # shellcheck disable=SC1090
+              source "${config.age.secrets."discord-webhook.env".path}"
+              SEND_DISCORD="YES"
+              DEFAULT_RECIPIENT_DISCORD="alarms"
+            '';
           };
         };
     };

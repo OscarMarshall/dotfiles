@@ -4,7 +4,6 @@ let
 in
 {
   "autobrr-secret.age".publicKeys = oscar ++ [ harmony ];
-  "beszel-agent.env.age".publicKeys = oscar ++ [ harmony ];
   "cross-seed.json.age".publicKeys = oscar ++ [ harmony ];
   "discord-webhook.env.age".publicKeys = oscar ++ [ harmony ];
   "gluetun.env.age".publicKeys = oscar ++ [ harmony ];
