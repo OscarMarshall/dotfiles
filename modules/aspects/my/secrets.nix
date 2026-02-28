@@ -3,6 +3,8 @@ let
   age.secrets = {
     autobrr-secret.file = ../../../secrets/autobrr-secret.age;
     "cross-seed.json".file = ../../../secrets/cross-seed.json.age;
+    # Content should be: access-tokens = github.com=<token>
+    "github-token".file = ../../../secrets/github-token.age;
     "gluetun.env".file = ../../../secrets/gluetun.env.age;
     "homepage-dashboard.env".file = ../../../secrets/homepage-dashboard.env.age;
     "minecraft-servers.env".file = ../../../secrets/minecraft-servers.env.age;
@@ -25,14 +27,24 @@ in
   };
 
   my.secrets = {
-    nixos = {
-      imports = [ (inputs.ragenix.nixosModules.default or { }) ];
-      inherit age;
-    };
-    darwin = {
-      imports = [ (inputs.ragenix.darwinModules.default or { }) ];
-      inherit age;
-    };
+    nixos =
+      { config, ... }:
+      {
+        imports = [ (inputs.ragenix.nixosModules.default or { }) ];
+        inherit age;
+        nix.extraOptions = ''
+          !include ${config.age.secrets.github-token.path}
+        '';
+      };
+    darwin =
+      { config, ... }:
+      {
+        imports = [ (inputs.ragenix.darwinModules.default or { }) ];
+        inherit age;
+        nix.extraOptions = ''
+          !include ${config.age.secrets.github-token.path}
+        '';
+      };
     homeManager = {
       imports = [ (inputs.ragenix.homeManagerModules.default or { }) ];
       inherit age;
