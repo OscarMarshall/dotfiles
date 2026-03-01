@@ -8,10 +8,7 @@ in
 {
   flake-file.inputs.stylix = {
     url = "github:nix-community/stylix";
-    inputs = {
-      home-manager.follows = "home-manager";
-      nixpkgs.follows = "nixpkgs";
-    };
+    inputs.nixpkgs.follows = "nixpkgs";
   };
 
   my.stylix = {
