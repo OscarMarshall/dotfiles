@@ -3,7 +3,7 @@
     { config, ... }:
     {
       virtualisation.oci-containers.containers.unpackerr = {
-        image = "golift/unpackerr:0.14.5@sha256:8493ffc2dd17e0b8a034552bb52d44e003fa457ee407da97ccc69328bce4a815";
+        image = "golift/unpackerr:0.15.0@sha256:0fa5c63f8aeadc9b23a00b95d9e86bed185f1806b6291dc6b5a3e8974eca96e7";
         volumes = [ "/metalminds/torrents/downloads:/downloads" ];
         environment = {
           TZ = config.time.timeZone;
