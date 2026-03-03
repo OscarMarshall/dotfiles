@@ -61,7 +61,7 @@
       {
         imports = [ (inputs.nix-doom-emacs-unstraightened.homeModule or { }) ];
 
-        home.sessionVariables.EDITOR = "emacs";
+        home.sessionVariables.EDITOR = "emacs -nw";
 
         programs.doom-emacs = {
           enable = true;
