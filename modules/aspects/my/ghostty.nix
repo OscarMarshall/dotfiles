@@ -17,8 +17,6 @@
       )
     ];
 
-    darwin.homebrew.casks = [ "ghostty" ];
-
     homeManager.programs.ghostty = {
       enable = true;
       settings = {
