@@ -1,11 +1,14 @@
 {
   config,
   den,
+  lib,
   my,
   ...
 }:
 {
   den.default.homeManager.programs.home-manager.enable = true;
+
+  den.schema.user.classes = lib.mkDefault [ "homeManager" ];
 
   den.ctx.host.includes = with my; [
     fonts
