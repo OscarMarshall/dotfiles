@@ -1,5 +1,3 @@
-# NOTE: I'd prefer to use pkgs.ghostty-bin for darwin, but that stopped working.
-
 { den, lib, ... }:
 {
   my.ghostty = den.lib.parametric {
@@ -7,9 +5,9 @@
       (
         { host, ... }:
         {
-          homeManager = {
+          homeManager = { pkgs, ... }: {
             programs.ghostty = lib.mkIf (host.class == "darwin") {
-              package = null;
+              package = pkgs.ghostty-bin;
               settings.macos-option-as-alt = true;
             };
           };
@@ -22,7 +20,6 @@
     homeManager.programs.ghostty = {
       enable = true;
       settings = {
-        font-family = "fira-code";
         keybind = [ "global:super+Backquote=toggle_quick_terminal" ];
       };
     };
