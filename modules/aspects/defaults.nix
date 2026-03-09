@@ -13,10 +13,10 @@
         fonts
         nix
         stylix
-    
+
         # Disable booting when running on CI on all NixOS hosts.
         (if config ? _module.args.CI then my.ci-no-boot else { })
-    
+
         (
           { host }:
           {
@@ -28,7 +28,7 @@
       user.includes = with my; [
         # ${user}.provides.${host} and ${host}.provides.${user}
         routes
-    
+
         # Automatically create the user on host.
         den._.define-user
       ];
