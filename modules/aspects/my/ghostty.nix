@@ -5,12 +5,14 @@
       (
         { host, ... }:
         {
-          homeManager = { pkgs, ... }: {
-            programs.ghostty = lib.mkIf (host.class == "darwin") {
-              package = pkgs.ghostty-bin;
-              settings.macos-option-as-alt = true;
+          homeManager =
+            { pkgs, ... }:
+            {
+              programs.ghostty = lib.mkIf (host.class == "darwin") {
+                package = pkgs.ghostty-bin;
+                settings.macos-option-as-alt = true;
+              };
             };
-          };
         }
       )
     ];
