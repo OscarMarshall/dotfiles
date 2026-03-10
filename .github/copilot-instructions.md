@@ -221,7 +221,8 @@ CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan)
 - **Aspect definition**:
   `den.aspects.<name> = { includes = [...]; os = {...}; nixos = {...}; darwin = {...}; homeManager = {...}; }`
 - **`os` class**: Use `os = {...}` for config that applies to both NixOS and Darwin (avoids duplication)
-- **`user.description`**: Set `user.description = "Full Name"` in user aspects instead of repeating in `os`/`nixos`/`darwin` user configs
+- **`user.description`**: Set `user.description = "Full Name"` in user aspects instead of repeating in
+  `os`/`nixos`/`darwin` user configs
 - **Parametric aspects**: `my.<name> = params: { ... }` for configurable aspects
 - **Host routing**: Use `host._.user` and `user._.host` for bidirectional config
 - **Conditional config**: Use `host-flag "property" { includes = [...]; }` for conditional includes
