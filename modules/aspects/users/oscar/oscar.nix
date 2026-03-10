@@ -4,6 +4,8 @@ let
 in
 {
   den.aspects.oscar = {
+    user.description = name;
+
     includes =
       with my;
       builtins.attrValues den.aspects.oscar._
@@ -19,15 +21,8 @@ in
         ssh-client
         (
           { user, ... }:
-          let
-            shared = {
-              description = name;
-            };
-          in
           {
-            darwin.users.users.${user.userName} = shared;
-
-            nixos.users.users.${user.userName} = shared // {
+            nixos.users.users.${user.userName} = {
               hashedPassword = "$y$j9T$rqKfWUlPbBLAGwIXUhAW61$LaP13MwCfvgtNlxZ/77.Pcu.tLapKf8CmepJ.GudcT4";
               openssh.authorizedKeys.keys = [
                 "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOn+wO9sZ8GoCRrg1BOkBK7/dPUojEdEaWoq2lHFYp9K omarshal"
