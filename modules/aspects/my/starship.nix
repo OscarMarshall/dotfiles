@@ -9,7 +9,9 @@ in
       programs.starship = {
         enable = true;
         settings.custom.nix-config-update = {
-          command = "echo ' nix update'";
+          command = "echo 'out of date'";
+          symbol = " ";
+          style = "bold blue";
           # nix flake metadata results are cached by nix (default TTL: 3600s),
           # so this does not hit the network on every prompt render.
           when =
