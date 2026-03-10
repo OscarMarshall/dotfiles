@@ -65,6 +65,15 @@ into composable aspects:
 - **`modules/aspects/my/`**: Reusable service and feature aspects (~43 total)
 - **`modules/aspects/defaults.nix`**: Default includes applied to all configurations
 
+### Configuration Classes
+
+Each aspect can provide configuration for different targets using these classes:
+
+- **`os`**: Applies to both NixOS and Darwin (avoids duplicating identical config in `nixos` and `darwin`)
+- **`nixos`**: NixOS-specific configuration only
+- **`darwin`**: macOS (nix-darwin) specific configuration only
+- **`homeManager`**: Home Manager configuration (cross-platform user environment)
+
 ### Host Aspects
 
 Each host declares which services and features to enable:
@@ -89,6 +98,8 @@ Each user declares their environment and applications:
 ```nix
 # modules/aspects/users/oscar/oscar.nix
 den.aspects.oscar = {
+  user.description = "Oscar Marshall";
+
   includes = with my; [
     emacs
     git
