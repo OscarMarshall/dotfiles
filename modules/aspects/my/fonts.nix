@@ -1,24 +1,13 @@
-let
-  fonts =
-    pkgs:
-    (with pkgs; [
-      fira-code
-      nerd-fonts.fira-code
-      nerd-fonts.symbols-only
-    ]);
-in
 {
   my.fonts = {
-    darwin =
+    os =
       { pkgs, ... }:
       {
-        fonts.packages = fonts pkgs;
-      };
-
-    nixos =
-      { pkgs, ... }:
-      {
-        fonts.packages = fonts pkgs;
+        fonts.packages = with pkgs; [
+          fira-code
+          nerd-fonts.fira-code
+          nerd-fonts.symbols-only
+        ];
       };
   };
 }

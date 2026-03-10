@@ -25,14 +25,10 @@ in
   };
 
   my.secrets = {
-    nixos = {
-      imports = [ (inputs.ragenix.nixosModules.default or { }) ];
-      inherit age;
-    };
-    darwin = {
-      imports = [ (inputs.ragenix.darwinModules.default or { }) ];
-      inherit age;
-    };
+    darwin.imports = [ (inputs.ragenix.darwinModules.default or { }) ];
+    nixos.imports = [ (inputs.ragenix.nixosModules.default or { }) ];
+    os = { inherit age; };
+
     homeManager = {
       imports = [ (inputs.ragenix.homeManagerModules.default or { }) ];
       inherit age;

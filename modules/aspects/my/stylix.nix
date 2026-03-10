@@ -1,10 +1,4 @@
 { inputs, ... }:
-let
-  stylix-config = pkgs: {
-    enable = true;
-    base16Scheme = "${pkgs.base16-schemes}/share/themes/catppuccin-mocha.yaml";
-  };
-in
 {
   flake-file.inputs.stylix = {
     url = "github:nix-community/stylix";
@@ -12,18 +6,16 @@ in
   };
 
   my.stylix = {
-    darwin =
-      { pkgs, ... }:
-      {
-        imports = [ (inputs.stylix.darwinModules.stylix or { }) ];
-        stylix = stylix-config pkgs;
-      };
+    darwin.imports = [ (inputs.stylix.darwinModules.stylix or { }) ];
+    nixos.imports = [ (inputs.stylix.nixosModules.stylix or { }) ];
 
-    nixos =
+    os =
       { pkgs, ... }:
       {
-        imports = [ (inputs.stylix.nixosModules.stylix or { }) ];
-        stylix = stylix-config pkgs;
+        stylix = {
+          enable = true;
+          base16Scheme = "${pkgs.base16-schemes}/share/themes/catppuccin-mocha.yaml";
+        };
       };
   };
 }
