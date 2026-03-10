@@ -8,6 +8,7 @@ in
     homeManager = {
       programs.starship = {
         enable = true;
+        presets = [ "nerd-font-symbols" ];
         settings.custom.nix-config-update = {
           command = "echo 'out of date'";
           symbol = " ";
