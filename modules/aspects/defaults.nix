@@ -34,6 +34,8 @@
         # ${user}.provides.${host} and ${host}.provides.${user}
         routes
 
+        starship
+
         # Automatically create the user on host.
         den._.define-user
       ];

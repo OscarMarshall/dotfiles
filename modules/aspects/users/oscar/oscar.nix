@@ -74,7 +74,6 @@ in
           direnv.enable = true;
           fish.enable = true;
           fzf.enable = true;
-          starship.enable = true;
         };
 
         stylix.fonts = {

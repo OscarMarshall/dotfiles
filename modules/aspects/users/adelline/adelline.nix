@@ -43,7 +43,6 @@
           direnv.enable = true;
           fish.enable = true;
           git.enable = true;
-          starship.enable = true;
         };
       };
   };
