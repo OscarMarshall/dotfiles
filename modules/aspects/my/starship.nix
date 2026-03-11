@@ -1,6 +1,6 @@
 { self, ... }:
 let
-  isDirty = !(self ? rev);
+  isDirty = self ? dirtyRev;
   # Extract the base commit SHA: self.rev when clean, or strip the "-dirty" suffix
   # from self.dirtyRev (available in Nix >= 2.11) when dirty.
   rev =
