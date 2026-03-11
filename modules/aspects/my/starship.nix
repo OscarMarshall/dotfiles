@@ -28,7 +28,7 @@ in
             # at the same time (e.g. uncommitted changes on a non-main rev).
             command =
               let
-                dirtyPart = if isDirty then ''symbols="!"'' else "";
+                dirtyPart = if isDirty then ''symbols="''${symbols}!"'' else "";
                 apiPart =
                   if rev != null then
                     ''
@@ -65,8 +65,8 @@ in
               in
               ''
                 symbols=""
-                ${dirtyPart}
                 ${apiPart}
+                ${dirtyPart}
                 echo "$symbols"
               '';
           };
