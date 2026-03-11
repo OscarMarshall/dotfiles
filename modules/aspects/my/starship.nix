@@ -60,7 +60,7 @@ in
                         # main is ahead of our revision: newer commits are available.
                         ahead) symbols="''${symbols}⇣" ;;
                         # our revision is not reachable from main.
-                        behind | diverged) symbols="''${symbols}$'\ue725'" ;;
+                        behind | diverged) symbols="''${symbols}'" ;;
                       esac
                     ''
                   else
