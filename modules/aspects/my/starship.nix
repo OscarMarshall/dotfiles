@@ -1,8 +1,6 @@
 { self, ... }:
 let
-  inherit (self) lastModified;
   isDirty = !(self ? rev);
-  flakeUrl = "github:OscarMarshall/dotfiles";
 in
 {
   my.starship = {
@@ -27,17 +25,36 @@ in
               }
             else
               {
-                command = "echo '⇣'";
-                # nix flake metadata results are cached by nix (default TTL: 3600s),
-                # so this does not hit the network on every prompt render.
-                when = ''
-                  latest_modified=$(
-                    ${pkgs.nix}/bin/nix flake metadata ${flakeUrl} --json 2>/dev/null |
-                      ${pkgs.jq}/bin/jq -r '.lastModified // empty' 2>/dev/null
-                  );
+                # Compare our pinned revision against main on GitHub to determine
+                # whether we are behind, diverged, or up-to-date.  Results are
+                # cached in ~/.cache/starship/ with a 60-minute TTL so that we
+                # do not hit the GitHub API on every prompt render.
+                command = ''
+                  cache_dir="''${XDG_CACHE_HOME:-$HOME/.cache}/starship"
+                  cache_file="$cache_dir/nix-config-${self.rev}"
 
-                  [ -n "$latest_modified" ] && [ "$latest_modified" -gt "${toString lastModified}" ]
+                  if [ -f "$cache_file" ] && [ -z "$(find "$cache_file" -mmin +60 2>/dev/null)" ]; then
+                    status=$(cat "$cache_file")
+                  else
+                    status=$(
+                      ${pkgs.curl}/bin/curl -sf \
+                        "https://api.github.com/repos/OscarMarshall/dotfiles/compare/${self.rev}...main" |
+                        ${pkgs.jq}/bin/jq -r '.status // empty' 2>/dev/null
+                    )
+                    if [ -n "$status" ]; then
+                      mkdir -p "$cache_dir"
+                      printf '%s' "$status" > "$cache_file"
+                    fi
+                  fi
+
+                  case "$status" in
+                    # main is ahead of our revision: newer commits are available.
+                    ahead) echo '⇣' ;;
+                    # our revision is not reachable from main.
+                    behind | diverged) echo $'\ue725' ;;
+                  esac
                 '';
+                when = true;
               }
           );
         };
