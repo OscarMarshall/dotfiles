@@ -4,9 +4,12 @@ let
   # Extract the base commit SHA: self.rev when clean, or strip the "-dirty" suffix
   # from self.dirtyRev (available in Nix >= 2.11) when dirty.
   rev =
-    if self ? rev then self.rev
-    else if self ? dirtyRev then builtins.substring 0 40 self.dirtyRev
-    else null;
+    if self ? rev then
+      self.rev
+    else if self ? dirtyRev then
+      builtins.substring 0 40 self.dirtyRev
+    else
+      null;
 in
 {
   my.starship = {
