@@ -12,22 +12,22 @@ in
         programs.starship = {
           enable = true;
           presets = [ "nerd-font-symbols" ];
-          settings.custom.nix-config =
+          settings.custom.nix-config = {
+            description = "Shows the current nix config status";
+            shell = [ "${pkgs.bash}/bin/bash" ];
+            style = "bold blue";
+            symbol = "";
+            ignore_timeout = true;
+          }
+          // (
             if isDirty then
               {
-                description = "Shows when nix config is built from a dirty tree";
                 command = "echo '!'";
-                symbol = "";
-                style = "bold blue";
-                when = "true";
+                when = true;
               }
             else
               {
-                description = "Shows when nix config is out of date";
-                command = "echo '↓'";
-                symbol = "";
-                style = "bold blue";
-                shell = [ "bash" ];
+                command = "echo '⇣'";
                 # nix flake metadata results are cached by nix (default TTL: 3600s),
                 # so this does not hit the network on every prompt render.
                 when = ''
@@ -38,7 +38,8 @@ in
 
                   [ -n "$latest_modified" ] && [ "$latest_modified" -gt "${toString lastModified}" ]
                 '';
-              };
+              }
+          );
         };
       };
   };
