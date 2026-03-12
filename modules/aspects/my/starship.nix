@@ -46,9 +46,22 @@ in
                         status=$(cat "$cache_file")
                       else
                         status=$(
-                          ${pkgs.curl}/bin/curl -sf \
-                            "https://api.github.com/repos/OscarMarshall/dotfiles/compare/${rev}...main" |
-                            ${pkgs.jq}/bin/jq -r '.status // empty' 2>/dev/null
+                          retries=2
+                          delay=0.5
+                          while [ "$retries" -ge 0 ]; do
+                            result=$(
+                              ${pkgs.curl}/bin/curl -sf \
+                                --connect-timeout 2 --max-time 3 \
+                                "https://api.github.com/repos/OscarMarshall/dotfiles/compare/${rev}...main" |
+                                ${pkgs.jq}/bin/jq -r '.status // empty' 2>/dev/null || true
+                            )
+                            if [ -n "$result" ]; then
+                              printf '%s' "$result"
+                              break
+                            fi
+                            retries=$((retries - 1))
+                            sleep "$delay"
+                          done
                         )
                         if [ -n "$status" ]; then
                           mkdir -p "$cache_dir"
