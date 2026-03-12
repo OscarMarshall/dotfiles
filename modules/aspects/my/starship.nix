@@ -23,7 +23,6 @@ in
             description = "Shows the current nix config status";
             shell = [ "${pkgs.bash}/bin/bash" ];
             style = "bold blue";
-            symbol = "";
             ignore_timeout = true;
             when = true;
             # Accumulate all applicable indicators into $symbols.
@@ -80,7 +79,7 @@ in
                     "";
               in
               ''
-                symbols=""
+                symbols=""
                 ${apiPart}
                 ${dirtyPart}
                 echo "$symbols"
