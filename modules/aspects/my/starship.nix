@@ -79,10 +79,12 @@ in
                     "";
               in
               ''
-                symbols=""
+                symbols=""
                 ${apiPart}
                 ${dirtyPart}
-                echo "$symbols"
+                if [ "$symbols" != "" ]; then
+                  echo "$symbols"
+                fi
               '';
           };
         };
