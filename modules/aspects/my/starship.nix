@@ -42,7 +42,7 @@ in
                       cache_dir="''${XDG_CACHE_HOME:-$HOME/.cache}/starship"
                       cache_file="$cache_dir/nix-config-${rev}"
 
-                      if [ -f "$cache_file" ] && [ -z "$(find "$cache_file" -mmin +60 2>/dev/null)" ]; then
+                      if [ -f "$cache_file" ] && [ -z "$(${pkgs.findutils}/bin/find "$cache_file" -mmin +60 2>/dev/null)" ]; then
                         status=$(cat "$cache_file")
                       else
                         status=$(
