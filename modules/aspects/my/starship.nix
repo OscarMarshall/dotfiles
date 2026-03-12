@@ -82,7 +82,7 @@ in
                 symbols=""
                 ${apiPart}
                 ${dirtyPart}
-                if [ "$symbols" != "" ]; then
+                if [ -n "$symbols" ]; then
                   echo "$symbols"
                 fi
               '';
