@@ -1,6 +1,6 @@
-{ den, lib, ... }:
+{ lib, ... }:
 {
-  my.ghostty = den.lib.parametric {
+  my.ghostty = {
     includes = [
       (
         { host, ... }:

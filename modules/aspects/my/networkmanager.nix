@@ -1,6 +1,6 @@
-{ den, ... }:
+{ ... }:
 {
-  my.networkmanager = den.lib.parametric.atLeast {
+  my.networkmanager = {
     includes = [
       { nixos.networking.networkmanager.enable = true; }
       (
