@@ -1,4 +1,3 @@
-{ ... }:
 {
   my.networkmanager = {
     includes = [
