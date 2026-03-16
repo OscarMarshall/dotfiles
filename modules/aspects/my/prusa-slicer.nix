@@ -1,8 +1,8 @@
 # NOTE: I'd prefer to use pkgs.prusa-slicer for darwin, but it's currently broken.
 
-{ den, lib, ... }:
+{ lib, ... }:
 {
-  my.prusa-slicer = den.lib.parametric {
+  my.prusa-slicer = {
     includes = [
       (
         { host, ... }:

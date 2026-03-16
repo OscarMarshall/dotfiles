@@ -14,7 +14,7 @@
     };
   };
 
-  my.emacs = den.lib.parametric {
+  my.emacs = {
     includes = [
       (den._.unfree [ "aspell-dict-en-science" ])
       (

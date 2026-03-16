@@ -1,6 +1,6 @@
 { den, my, ... }:
 {
-  den.aspects.oscar.provides.work = den.lib.parametric {
+  den.aspects.oscar.provides.work = {
     includes = [
       (my.host-flag "work" {
         includes = builtins.attrValues den.aspects.oscar._.work._ ++ [
