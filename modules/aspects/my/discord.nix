@@ -1,12 +1,16 @@
-{ den, ... }:
+{ den, lib, ... }:
 {
-  my.discord = {
-    includes = [ (den._.unfree [ "discord" ]) ];
+  my.discord =
+    { host, ... }:
+    {
+      includes = [ (den._.unfree [ "discord" ]) ];
 
-    homeManager =
-      { pkgs, ... }:
-      {
-        home.packages = with pkgs; [ discord ];
-      };
-  };
+      darwin.homebrew.casks = [ "discord" ];
+
+      homeManager =
+        { pkgs, ... }:
+        {
+          home.packages = with pkgs; lib.optionals (host != "darwin") [ discord ];
+        };
+    };
 }
