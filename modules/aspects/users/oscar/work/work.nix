@@ -3,7 +3,7 @@
   den.aspects.oscar.provides.work = {
     includes = [
       (my.host-flag "work" {
-        includes = builtins.attrValues den.aspects.oscar._.work._ ++ [
+        includes = builtins.attrValues den.aspects.oscar.provides.work.provides ++ [
           (my.host-flag "graphical" { includes = [ my.slack ]; })
         ];
 
