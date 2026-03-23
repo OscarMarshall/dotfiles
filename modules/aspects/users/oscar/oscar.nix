@@ -55,6 +55,7 @@ in
     darwin.homebrew.casks = [
       "arc"
       "dash"
+      "domzilla-caffeine"
       "proton-mail"
     ];
 
