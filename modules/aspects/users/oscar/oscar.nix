@@ -8,7 +8,7 @@ in
 
     includes =
       with my;
-      builtins.attrValues den.aspects.oscar._
+      builtins.attrValues den.aspects.oscar.provides
       ++ [
         den._.primary-user
         (den._.user-shell "fish")

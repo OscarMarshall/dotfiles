@@ -1,5 +1,5 @@
 {
-  den.aspects.oscar._.work._.ssh-client =
+  den.aspects.oscar.provides.work.provides.ssh-client =
     { host, ... }:
     {
       homeManager =
