@@ -11,7 +11,7 @@
           context@{ host, ... }:
           {
             includes = lib.optionals host.${flag} or false [
-              (den.lib.owned parametric-aspect)
+              (den.lib.statics.owned parametric-aspect)
               (den.lib.statics parametric-aspect)
               (parametric-aspect context)
             ];
@@ -21,7 +21,7 @@
           context@{ home, ... }:
           {
             includes = lib.optionals home.${flag} or false [
-              (den.lib.owned parametric-aspect)
+              (den.lib.statics.owned parametric-aspect)
               (den.lib.statics parametric-aspect)
               (parametric-aspect context)
             ];
