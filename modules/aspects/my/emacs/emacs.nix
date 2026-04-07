@@ -95,8 +95,8 @@
             nixd
             nixfmt
 
-            nodePackages_latest.js-beautify
-            nodePackages_latest.nodejs
+            js-beautify
+            nodejs
             pinentry-emacs
             prettier
             ruby-lsp
