@@ -34,6 +34,7 @@ in
           includes = [
             (catppuccin { })
             discord
+            docsets
             ghostty
             prusa-slicer
             steam
@@ -46,7 +47,6 @@ in
               home.packages = with pkgs; [
                 inkscape
                 prismlauncher
-                zeal
               ];
             };
         })
@@ -54,7 +54,6 @@ in
 
     darwin.homebrew.casks = [
       "arc"
-      "dash"
       "domzilla-caffeine"
       "proton-mail"
     ];
