@@ -1,7 +1,12 @@
 { my, ... }:
 {
   den.aspects.OMARSHAL-M-2FD2 = {
-    includes = with my; [ homebrew ];
+    includes = with my; [
+      docsets
+      homebrew
+      orca-slicer
+      prusa-slicer
+    ];
 
     darwin = {
       # Used for backwards compatibility, please read the changelog before changing.

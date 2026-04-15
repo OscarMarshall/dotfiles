@@ -94,6 +94,10 @@ Each user has their own aspect (e.g., `den.aspects.oscar`) that declares:
 
 Example: `modules/aspects/users/oscar/oscar.nix` includes emacs, git config, gpg, ssh-client, etc.
 
+Note: user classes are restricted to Home Manager in `modules/aspects/defaults.nix`
+(`den.schema.user.classes = [ "homeManager" ];`). Put Darwin/NixOS host-level settings (for example
+`darwin.homebrew.casks`) in host aspects or host `provides`, not directly in user aspects.
+
 ### Reusable Aspects (`my.*`)
 
 The `my` namespace contains ~43 reusable aspects for services, applications, and features. These are functions that
