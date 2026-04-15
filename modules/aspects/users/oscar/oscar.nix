@@ -53,12 +53,6 @@ in
         })
       ];
 
-    darwin.homebrew.casks = [
-      "arc"
-      "domzilla-caffeine"
-      "proton-mail"
-    ];
-
     homeManager =
       { pkgs, ... }:
       {
