@@ -111,7 +111,7 @@ den.aspects.oscar = {
 ```
 
 Note: In this repo, user classes are currently restricted to `homeManager` in
-`/home/runner/work/dotfiles/dotfiles/modules/aspects/defaults.nix` (`den.schema.user.classes = [ "homeManager" ];`).
+`modules/aspects/defaults.nix` (`den.schema.user.classes = [ "homeManager" ];`).
 So host-level options (for example `darwin.homebrew.casks`) should be declared from host aspects (or host `provides`)
 rather than user aspects.
 
