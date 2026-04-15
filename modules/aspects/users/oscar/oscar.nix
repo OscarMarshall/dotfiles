@@ -35,6 +35,7 @@ in
             (catppuccin { })
             discord
             ghostty
+            orca-slicer
             prusa-slicer
             steam
             zen-browser
