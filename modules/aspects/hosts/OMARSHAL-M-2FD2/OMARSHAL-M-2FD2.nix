@@ -1,9 +1,23 @@
 { my, ... }:
 {
   den.aspects.OMARSHAL-M-2FD2 = {
-    includes = with my; [ homebrew ];
+    includes = with my; [
+      discord
+      docsets
+      homebrew
+      orca-slicer
+      prusa-slicer
+      slack
+      steam
+    ];
 
     darwin = {
+      homebrew.casks = [
+        "arc"
+        "domzilla-caffeine"
+        "proton-mail"
+      ];
+
       # Used for backwards compatibility, please read the changelog before changing.
       #
       # $ darwin-rebuild changelog
