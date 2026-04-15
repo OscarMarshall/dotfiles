@@ -36,6 +36,7 @@ in
             discord
             docsets
             ghostty
+            orca-slicer
             prusa-slicer
             steam
             zen-browser
