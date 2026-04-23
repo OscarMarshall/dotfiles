@@ -73,6 +73,8 @@ Each aspect can provide configuration for different targets using these classes:
 - **`nixos`**: NixOS-specific configuration only
 - **`darwin`**: macOS (nix-darwin) specific configuration only
 - **`homeManager`**: Home Manager configuration (cross-platform user environment)
+- **`hmLinux`/`hmDarwin`**: Platform-specific Home Manager classes forwarded into `homeManager` by
+  `modules/aspects/defaults.nix`
 
 ### Host Aspects
 
@@ -97,18 +99,17 @@ Each user declares their environment and applications:
 
 ```nix
 # modules/aspects/users/oscar/oscar.nix
-den.aspects.oscar = {
+den.aspects.oscar = { host, lib, ... }: {
   user.description = "Oscar Marshall";
 
-  includes = with my; [
-    emacs
-    git
-    (host-flag "graphical" {
-      includes = [ discord ghostty ];
-    })
-  ];
+  includes = [
+    my.emacs
+    my.git
+  ] ++ lib.optionals (host.graphical or false) [ my.discord my.ghostty ];
 };
 ```
+
+Use an aspect function signature (`{ host, lib, ... }:`) when you need context-aware conditional logic.
 
 ## Key Features
 

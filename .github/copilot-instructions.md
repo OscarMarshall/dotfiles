@@ -71,6 +71,8 @@ Each aspect can provide configuration for different targets using these classes:
 - **`nixos`**: NixOS-specific configuration only
 - **`darwin`**: macOS (nix-darwin) specific configuration only
 - **`homeManager`**: Home Manager configuration (cross-platform user environment)
+- **`hmLinux`/`hmDarwin`**: Platform-specific Home Manager classes forwarded into `homeManager` by
+  `modules/aspects/defaults.nix`
 
 ### Host Aspects
 
@@ -89,7 +91,7 @@ Each user has their own aspect (e.g., `den.aspects.oscar`) that declares:
 
 - User display name via `user.description`
 - User-specific Home Manager configuration
-- Desktop applications (when on graphical hosts via host-flag)
+- Desktop applications (when on graphical hosts via direct `host.graphical` checks)
 - Work-specific config (when work=true)
 
 Example: `modules/aspects/users/oscar/oscar.nix` includes emacs, git config, gpg, ssh-client, etc.
@@ -103,17 +105,17 @@ return configuration and can accept parameters (e.g., `qbittorrent { administrat
 
 The `my.routes` aspect (included in defaults) enables bidirectional aspect dependencies:
 
-- `<user>._.<host>` provides user config specific to a host
-- `<host>._.<user>` provides host config specific to a user
+- `oscar.provides.harmony` provides user config specific to a host
+- `harmony.provides.oscar` provides host config specific to a user
 
-Example: `oscar._.harmony` could contain Oscar's harmony-specific settings.
+Example: `den.aspects.oscar.provides.harmony` could contain Oscar's harmony-specific settings.
 
 ### Host Flags
 
-The `host-flag` helper conditionally includes aspects based on host properties:
+Use direct host-flag checks in aspect code:
 
-- `host-flag "graphical" { ... }` includes aspects only on graphical hosts
-- `host-flag "work" { ... }` includes aspects only on work machines
+- `lib.optionals (host.graphical or false) [ ... ]` for graphical-only packages/aspects
+- `lib.mkIf (host.work or false) { ... }` for work-only settings
 
 ## Important Services
 
@@ -198,7 +200,8 @@ CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan)
    - Put host-specific config in `modules/aspects/hosts/<hostname>/`
    - Put user-specific config in `modules/aspects/users/<username>/`
    - Put reusable config in `modules/aspects/my/`
-   - Use `host-flag` for conditional includes based on host properties
+   - Use direct host checks (`host.graphical`, `host.work`) for conditional config
+   - Use `hmLinux`/`hmDarwin` for platform-specific Home Manager config in user aspects
    - Use `os` class for config identical on NixOS and Darwin; avoid duplicating in `nixos` and `darwin`
 7. **Input Management**: Declare flake inputs close to their usage in module files, not centralized in one place.
 8. **Module Discovery**: Files in `modules/` are auto-imported via import-tree; no manual imports needed.
@@ -224,8 +227,8 @@ CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan)
 - **`user.description`**: Set `user.description = "Full Name"` in user aspects instead of repeating in
   `os`/`nixos`/`darwin` user configs
 - **Parametric aspects**: `my.<name> = params: { ... }` for configurable aspects
-- **Host routing**: Use `host._.user` and `user._.host` for bidirectional config
-- **Conditional config**: Use `host-flag "property" { includes = [...]; }` for conditional includes
+- **Host routing**: Use `<host>.provides.<user>` and `<user>.provides.<host>` for bidirectional config
+- **Conditional config**: Use `lib.optionals (host.<flag> or false) [ ... ]` / `lib.mkIf` for conditional config
 - **Taking parameters**: Use `den.lib.take.exactly` or `den.lib.take.atLeast` to extract specific context parameters
 
 ### Configuration Patterns
@@ -239,8 +242,8 @@ CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan)
   - User groups (if requiring special permissions)
   - Secrets (if needed)
 - **Container aspects**: Docker containers defined with `virtualisation.oci-containers.containers.<name>`
-- **Desktop aspects**: Use `host-flag "graphical"` to conditionally include desktop apps
-- **Work aspects**: Use `host-flag "work"` or check `user.work or false` for work-specific config
+- **Desktop aspects**: Gate graphical config with direct checks like `host.graphical or false`
+- **Work aspects**: Gate work config with direct checks like `host.work or false`
 
 ### Module Structure
 
@@ -269,12 +272,12 @@ The configuration uses Den aspects organized into three main categories:
 
 - **oscar**: Primary user with full desktop environment, development tools, emacs, git config
   - Work-specific configuration in `oscar/work/`
-  - Graphical apps (Discord, Ghostty, Zen Browser, PrusaSlicer) via host-flag
+  - Graphical apps (Discord, Ghostty, Zen Browser, PrusaSlicer) via direct `host.graphical` checks
 - **adelline**: Secondary user on melaan with basic GNOME setup
 - Each user aspect:
   - Defines user account details (name via `user.description`, hashed password, SSH keys)
   - Includes Home Manager configuration
-  - Uses host-flag for conditional desktop apps
+  - Uses direct host checks for conditional desktop apps
 
 ### Reusable Aspects (`my.*` - 43 aspects)
 

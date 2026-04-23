@@ -1,10 +1,33 @@
 {
   config,
   den,
+  lib,
   my,
   self,
   ...
 }:
+let
+  hmPlatforms =
+    { aspect-chain, ... }:
+    den._.forward {
+      each = [
+        "Linux"
+        "Darwin"
+        "Aarch64"
+        "64bit"
+      ];
+      fromClass = platform: "hm${platform}";
+      intoClass = _: "homeManager";
+      intoPath = _: [ ];
+      fromAspect = _: lib.head aspect-chain;
+      guard = { pkgs, ... }: platform: lib.mkIf pkgs.stdenv."is${platform}";
+      adaptArgs =
+        { config, ... }:
+        {
+          osConfig = config;
+        };
+    };
+in
 {
   den = {
     schema.user.classes = [ "homeManager" ];
@@ -27,6 +50,8 @@
       };
 
       user.includes = with my; [
+        hmPlatforms
+
         # ${user}.provides.${host} and ${host}.provides.${user}
         den._.mutual-provider
 
