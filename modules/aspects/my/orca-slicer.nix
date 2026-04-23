@@ -1,18 +1,10 @@
-{ lib, ... }:
 {
   my.orca-slicer = {
-    includes = [
-      (
-        { host, ... }:
-        {
-          homeManager =
-            { pkgs, ... }:
-            {
-              home.packages = with pkgs; lib.optionals (host.class != "darwin") [ orca-slicer ];
-            };
-        }
-      )
-    ];
+    hmLinux =
+      { pkgs, ... }:
+      {
+        home.packages = [ pkgs.orca-slicer ];
+      };
 
     darwin.homebrew.casks = [ "orcaslicer" ];
   };
