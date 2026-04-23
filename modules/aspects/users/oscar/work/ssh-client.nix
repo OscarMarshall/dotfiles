@@ -42,6 +42,6 @@ in
           };
         };
       };
-    hmDarwin.programs.ssh.matchBlocks."*.meraki.com ${aliases}".extraOptions.useKeychain = "yes";
+    hmDarwin.programs.ssh.matchBlocks."*.meraki.com ${aliases}".extraOptions.UseKeychain = "yes";
   };
 }
