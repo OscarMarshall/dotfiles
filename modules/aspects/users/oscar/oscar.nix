@@ -23,6 +23,7 @@ in
             email = "3111765+OscarMarshall@users.noreply.github.com";
           })
           gpg
+          nix-index-database
           ssh-client
         ]
         ++ lib.optionals (host.graphical or false) [
