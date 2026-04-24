@@ -1,10 +1,26 @@
 {
   my.bat.homeManager =
-    { lib, pkgs, ... }:
+    { pkgs, ... }:
+    let
+      nocheck = pkg: pkg.overrideAttrs (_: {
+        doCheck = false;
+        nativeCheckInputs = [ ];
+      });
+    in
     {
       programs.bat = {
         enable = true;
-        extraPackages = lib.filter lib.isDerivation (builtins.attrValues pkgs.bat-extras);
+        extraPackages = map nocheck (
+          with pkgs.bat-extras;
+          [
+            batdiff
+            batgrep
+            batman
+            batpipe
+            batwatch
+            prettybat
+          ]
+        );
       };
     };
 }
