@@ -4,7 +4,7 @@
     {
       programs.bat = {
         enable = true;
-        extraPackages = [ pkgs.bat-extrasbat-extras ];
+        extraPackages = [ pkgs.bat-extras.bat-extras ];
       };
     };
 }
