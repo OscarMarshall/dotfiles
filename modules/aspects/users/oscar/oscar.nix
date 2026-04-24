@@ -9,7 +9,7 @@ let
 in
 {
   den.aspects.oscar =
-    { host, user }:
+    { host, ... }:
     {
       includes =
         with my;
@@ -39,14 +39,17 @@ in
           zen-browser
         ];
 
-      user.description = name;
-
-      nixos.users.users.${user.userName} = {
-        hashedPassword = "$y$j9T$rqKfWUlPbBLAGwIXUhAW61$LaP13MwCfvgtNlxZ/77.Pcu.tLapKf8CmepJ.GudcT4";
-        openssh.authorizedKeys.keys = [
-          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOn+wO9sZ8GoCRrg1BOkBK7/dPUojEdEaWoq2lHFYp9K omarshal"
-        ];
-      };
+      user =
+        { pkgs, ... }:
+        {
+          description = name;
+        }
+        // (lib.optionalAttrs pkgs.stdenv.isLinux {
+          hashedPassword = "$y$j9T$rqKfWUlPbBLAGwIXUhAW61$LaP13MwCfvgtNlxZ/77.Pcu.tLapKf8CmepJ.GudcT4";
+          openssh.authorizedKeys.keys = [
+            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOn+wO9sZ8GoCRrg1BOkBK7/dPUojEdEaWoq2lHFYp9K omarshal"
+          ];
+        });
 
       darwin.homebrew.casks = [
         "arc"
