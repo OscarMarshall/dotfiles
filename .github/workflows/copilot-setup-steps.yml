@@ -3,32 +3,32 @@ name: "Copilot Setup Steps"
 # Automatically run the setup steps when they are changed to allow for easy validation, and
 # allow manual testing through the repository's "Actions" tab
 on:
-    workflow_dispatch:
-    push:
-        paths:
-            - .github/workflows/copilot-setup-steps.yml
-    pull_request:
-        paths:
-            - .github/workflows/copilot-setup-steps.yml
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
 
 jobs:
-    # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.
-    copilot-setup-steps:
-        runs-on: ubuntu-latest
+  # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
 
-        permissions:
-            contents: read
+    permissions:
+      contents: read
 
-        steps:
-            - uses: wimpysworld/nothing-but-nix@687c797a730352432950c707ab493fcc951818d7 # v10
+    steps:
+      - uses: wimpysworld/nothing-but-nix@687c797a730352432950c707ab493fcc951818d7 # v10
 
-            - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-            - name: Install Nix
-              uses: cachix/install-nix-action@ab739621df7a23f52766f9ccc97f38da6b7af14f # v31.10.5
+      - name: Install Nix
+        uses: cachix/install-nix-action@ab739621df7a23f52766f9ccc97f38da6b7af14f # v31.10.5
 
-            - name: Setup Nix cache
-              uses: cachix/cachix-action@1eb2ef646ac0255473d23a5907ad7b04ce94065c # v17
-              with:
-                  name: oscarmarshall
-                  extraPullNames: nix-community
+      - name: Setup Nix cache
+        uses: cachix/cachix-action@1eb2ef646ac0255473d23a5907ad7b04ce94065c # v17
+        with:
+          name: oscarmarshall
+          extraPullNames: nix-community
