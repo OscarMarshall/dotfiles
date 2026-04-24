@@ -23,7 +23,7 @@ in
             email = "3111765+OscarMarshall@users.noreply.github.com";
           })
           gpg
-          (nh { flake = "~/dotfiles"; })
+          nh
           ssh-client
         ]
         ++ lib.optionals (host.graphical or false) [

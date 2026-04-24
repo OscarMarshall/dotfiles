@@ -1,14 +1,10 @@
 {
-  my.nh =
-    { flake }:
-    {
-      homeManager.programs.nh = {
-        enable = true;
-        inherit flake;
-        clean = {
-          enable = true;
-          extraArgs = "--keep-since 7d";
-        };
-      };
+  my.nh.homeManager.programs.nh = {
+    enable = true;
+    flake = "github:OscarMarshall/dotfiles";
+    clean = {
+      enable = true;
+      extraArgs = "--keep-since 7d";
     };
+  };
 }
