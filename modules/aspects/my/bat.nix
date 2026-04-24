@@ -1,10 +1,10 @@
 {
   my.bat.homeManager =
-    { pkgs, ... }:
+    { lib, pkgs, ... }:
     {
       programs.bat = {
         enable = true;
-        extraPackages = builtins.attrValues pkgs.bat-extras;
+        extraPackages = lib.filter lib.isDerivation (builtins.attrValues pkgs.bat-extras);
       };
     };
 }
