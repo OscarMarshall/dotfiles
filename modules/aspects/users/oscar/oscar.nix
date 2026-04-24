@@ -15,6 +15,7 @@ in
         with my;
         builtins.attrValues den.aspects.oscar.provides
         ++ [
+          bat
           den._.primary-user
           (den._.user-shell "fish")
           emacs
