@@ -295,15 +295,25 @@ Organized by category:
 
 Each `my.*` aspect is a self-contained module that can be included by hosts or users.
 
-## Limitations for AI Agents
+## Capabilities and Limitations for AI Agents
+
+### Available Capabilities
+
+- **`nix` is available**: The Copilot environment has `nix` pre-installed. You can use it to:
+  - Evaluate flake outputs: `nix flake show`, `nix flake metadata`
+  - Check configuration syntax and evaluate expressions: `nix eval`
+  - Build derivations to validate configuration: `nix build .#<output>`
+  - Run flake apps: `nix run .#<app>` (note: `nix run .#write-flake` regenerates flake.nix)
+  - The `oscarmarshall` and `nix-community` Cachix caches are configured for read-only access
+
+### Limitations
 
 - Cannot execute `nixos-rebuild`, `darwin-rebuild`, or `home-manager` commands (requires target system access)
 - Cannot test actual service functionality (no runtime environment)
 - Cannot decrypt or modify ragenix secrets
 - Cannot access the actual systems (harmony, melaan, OMARSHAL-M-2FD2)
-- Cannot run `nix run .#write-flake` to regenerate flake.nix (but can modify modules/inputs.nix)
 - Focus on configuration file correctness, Den aspect patterns, and NixOS/Darwin best practices
-- When making changes to flake inputs in modules, note that flake.nix regeneration is required
+- When making changes to flake inputs in modules, regenerate flake.nix with `nix run .#write-flake`
 
 ## Working with This Repository
 
