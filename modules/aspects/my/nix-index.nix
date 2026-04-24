@@ -6,7 +6,7 @@
   };
 
   my.nix-index.homeManager = {
-    imports = [ inputs.nix-index-database.homeModules.default ];
+    imports = [ (inputs.nix-index-database.homeModules.default or { }) ];
 
     programs = {
       nix-index.enable = true;
