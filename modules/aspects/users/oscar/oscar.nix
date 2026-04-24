@@ -24,6 +24,7 @@ in
           })
           gpg
           nh
+          nix-index
           ssh-client
         ]
         ++ lib.optionals (host.graphical or false) [
