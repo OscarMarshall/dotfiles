@@ -1,0 +1,39 @@
+name: "Copilot Setup Steps"
+
+# Automatically run the setup steps when they are changed to allow for easy validation, and
+# allow manual testing through the repository's "Actions" tab
+on:
+    workflow_dispatch:
+    push:
+        paths:
+            - .github/workflows/copilot-setup-steps.yml
+    pull_request:
+        paths:
+            - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+    # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.
+    copilot-setup-steps:
+        runs-on: ubuntu-latest
+
+        permissions:
+            contents: read
+
+        steps:
+            - uses: wimpysworld/nothing-but-nix@687c797a730352432950c707ab493fcc951818d7 # v10
+
+            - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+            - name: Install lix
+              run: |
+                  curl -sSf -L https://install.lix.systems/lix | sh -s -- install linux \
+                    --no-confirm \
+                    --nix-build-user-count 4 \
+                    --extra-conf "trusted-users = root runner"
+                  echo "/nix/var/nix/profiles/default/bin" >> "$GITHUB_PATH"
+
+            - name: Setup Nix cache
+              uses: cachix/cachix-action@1eb2ef646ac0255473d23a5907ad7b04ce94065c # v17
+              with:
+                  name: oscarmarshall
+                  extraPullNames: nix-community
