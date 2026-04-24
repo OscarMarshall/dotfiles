@@ -5,7 +5,7 @@
     inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  my.nix-index-database.homeManager = {
+  my.nix-index.homeManager = {
     imports = [ inputs.nix-index-database.homeModules.default ];
 
     programs = {
