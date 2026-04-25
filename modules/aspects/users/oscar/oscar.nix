@@ -6,6 +6,32 @@
 }:
 let
   name = "Oscar Marshall";
+  graphicalAspect =
+    { host, ... }:
+    {
+      includes =
+        with my;
+        lib.optionals (host.graphical or false) [
+          (catppuccin { })
+          discord
+          doc-browser
+          ghostty
+          orca-slicer
+          prusa-slicer
+          steam
+          zen-browser
+        ];
+      homeManager =
+        { pkgs, ... }:
+        {
+          home.packages =
+            with pkgs;
+            lib.optionals (host.graphical or false) [
+              inkscape
+              prismlauncher
+            ];
+        };
+    };
 in
 {
   den.aspects.oscar =
@@ -26,16 +52,6 @@ in
           nh
           nix-index
           ssh-client
-        ]
-        ++ lib.optionals (host.graphical or false) [
-          (catppuccin { })
-          discord
-          doc-browser
-          ghostty
-          orca-slicer
-          prusa-slicer
-          steam
-          zen-browser
         ];
 
       user =
@@ -67,10 +83,6 @@ in
                 gnupg
                 ripgrep
                 rsync
-              ]
-              ++ lib.optionals (host.graphical or false) [
-                inkscape
-                prismlauncher
               ];
           };
 
