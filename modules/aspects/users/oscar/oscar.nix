@@ -6,29 +6,12 @@
 }:
 let
   name = "Oscar Marshall";
-in
-{
-  den.aspects.oscar =
+  graphicalAspect =
     { host, ... }:
     {
       includes =
         with my;
-        builtins.attrValues den.aspects.oscar.provides
-        ++ [
-          bat
-          den._.primary-user
-          (den._.user-shell "fish")
-          emacs
-          (git {
-            inherit name;
-            email = "3111765+OscarMarshall@users.noreply.github.com";
-          })
-          gpg
-          nh
-          nix-index
-          ssh-client
-        ]
-        ++ lib.optionals (host.graphical or false) [
+        lib.optionals (host.graphical or false) [
           (catppuccin { })
           discord
           doc-browser
@@ -38,59 +21,82 @@ in
           steam
           zen-browser
         ];
-
-      user =
-        { pkgs, ... }:
-        {
-          description = name;
-        }
-        // (lib.optionalAttrs pkgs.stdenv.isLinux {
-          hashedPassword = "$y$j9T$rqKfWUlPbBLAGwIXUhAW61$LaP13MwCfvgtNlxZ/77.Pcu.tLapKf8CmepJ.GudcT4";
-          openssh.authorizedKeys.keys = [
-            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOn+wO9sZ8GoCRrg1BOkBK7/dPUojEdEaWoq2lHFYp9K omarshal"
-          ];
-        });
-
-      darwin.homebrew.casks = [
-        "arc"
-        "domzilla-caffeine"
-        "proton-mail"
-      ];
-
       homeManager =
         { pkgs, ... }:
         {
-          home = {
-            packages =
-              with pkgs;
-              [
-                fd
-                gnupg
-                ripgrep
-                rsync
-              ]
-              ++ lib.optionals (host.graphical or false) [
-                inkscape
-                prismlauncher
-              ];
-          };
-
-          programs = {
-            direnv.enable = true;
-            fish.enable = true;
-            fzf.enable = true;
-          };
-
-          stylix.fonts = {
-            monospace = {
-              package = pkgs.nerd-fonts.fira-code;
-              name = "FiraCode Nerd Font Mono";
-            };
-            sansSerif = {
-              package = pkgs.fira;
-              name = "Fira Sans";
-            };
-          };
+          home.packages =
+            with pkgs;
+            lib.optionals (host.graphical or false) [
+              inkscape
+              prismlauncher
+            ];
         };
     };
+in
+{
+  den.aspects.oscar = {
+    includes = builtins.attrValues den.aspects.oscar.provides ++ [
+      graphicalAspect
+      den._.primary-user
+      my.bat
+      (den._.user-shell "fish")
+      my.emacs
+      (my.git {
+        inherit name;
+        email = "3111765+OscarMarshall@users.noreply.github.com";
+      })
+      my.gpg
+      my.nh
+      my.nix-index
+      my.ssh-client
+    ];
+
+    user =
+      { pkgs, ... }:
+      {
+        description = name;
+      }
+      // (lib.optionalAttrs pkgs.stdenv.isLinux {
+        hashedPassword = "$y$j9T$rqKfWUlPbBLAGwIXUhAW61$LaP13MwCfvgtNlxZ/77.Pcu.tLapKf8CmepJ.GudcT4";
+        openssh.authorizedKeys.keys = [
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOn+wO9sZ8GoCRrg1BOkBK7/dPUojEdEaWoq2lHFYp9K omarshal"
+        ];
+      });
+
+    darwin.homebrew.casks = [
+      "arc"
+      "domzilla-caffeine"
+      "proton-mail"
+    ];
+
+    homeManager =
+      { pkgs, ... }:
+      {
+        home = {
+          packages = with pkgs; [
+            fd
+            gnupg
+            ripgrep
+            rsync
+          ];
+        };
+
+        programs = {
+          direnv.enable = true;
+          fish.enable = true;
+          fzf.enable = true;
+        };
+
+        stylix.fonts = {
+          monospace = {
+            package = pkgs.nerd-fonts.fira-code;
+            name = "FiraCode Nerd Font Mono";
+          };
+          sansSerif = {
+            package = pkgs.fira;
+            name = "Fira Sans";
+          };
+        };
+      };
+  };
 }
