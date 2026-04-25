@@ -38,6 +38,12 @@
     ];
 
     nixos = {
+      age.rekey = {
+        # Obtain with `ssh-keyscan harmony` or from ~/.ssh/known_hosts
+        hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMkM5uNY0rMy2QMG6IptlxgVl4sQWoeSSNmUp7/f2z1B";
+        localStorageDir = ./secrets;
+      };
+
       networking.hostId = "7dab76c0";
 
       services = {
