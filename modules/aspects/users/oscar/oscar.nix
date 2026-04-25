@@ -39,6 +39,7 @@ in
       graphicalAspect
       den._.primary-user
       (den._.user-shell "fish")
+      my.bat
       my.emacs
       (my.git {
         inherit name;
