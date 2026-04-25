@@ -63,6 +63,17 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
 
 Den uses an "aspect-oriented" approach where configuration is composed from reusable aspects:
 
+### Configuration Classes
+
+Each aspect can provide configuration for different targets using these classes:
+
+- **`os`**: Applies to both NixOS and Darwin (use this to avoid duplicating identical config in `nixos` and `darwin`)
+- **`nixos`**: NixOS-specific configuration only
+- **`darwin`**: macOS (nix-darwin) specific configuration only
+- **`homeManager`**: Home Manager configuration (cross-platform user environment)
+- **`hmLinux`/`hmDarwin`**: Platform-specific Home Manager classes forwarded into `homeManager` by
+  `modules/aspects/defaults.nix`
+
 ### Host Aspects
 
 Each host has its own aspect (e.g., `den.aspects.harmony`) that declares:
@@ -78,9 +89,9 @@ Example: `modules/aspects/hosts/harmony/harmony.nix` includes aspects like nginx
 
 Each user has their own aspect (e.g., `den.aspects.oscar`) that declares:
 
-- User information (name, email, shell)
+- User display name via `user.description`
 - User-specific Home Manager configuration
-- Desktop applications (when on graphical hosts via host-flag)
+- Desktop applications (when on graphical hosts via direct `host.graphical` checks)
 - Work-specific config (when work=true)
 
 Example: `modules/aspects/users/oscar/oscar.nix` includes emacs, git config, gpg, ssh-client, etc.
@@ -94,17 +105,17 @@ return configuration and can accept parameters (e.g., `qbittorrent { administrat
 
 The `my.routes` aspect (included in defaults) enables bidirectional aspect dependencies:
 
-- `<user>._.<host>` provides user config specific to a host
-- `<host>._.<user>` provides host config specific to a user
+- `oscar.provides.harmony` provides user config specific to a host
+- `harmony.provides.oscar` provides host config specific to a user
 
-Example: `oscar._.harmony` could contain Oscar's harmony-specific settings.
+Example: `den.aspects.oscar.provides.harmony` could contain Oscar's harmony-specific settings.
 
 ### Host Flags
 
-The `host-flag` helper conditionally includes aspects based on host properties:
+Use direct host-flag checks in aspect code:
 
-- `host-flag "graphical" { ... }` includes aspects only on graphical hosts
-- `host-flag "work" { ... }` includes aspects only on work machines
+- `lib.optionals (host.graphical or false) [ ... ]` for graphical-only packages/aspects
+- `lib.mkIf (host.work or false) { ... }` for work-only settings
 
 ## Important Services
 
@@ -189,7 +200,9 @@ CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan)
    - Put host-specific config in `modules/aspects/hosts/<hostname>/`
    - Put user-specific config in `modules/aspects/users/<username>/`
    - Put reusable config in `modules/aspects/my/`
-   - Use `host-flag` for conditional includes based on host properties
+   - Use direct host checks (`host.graphical`, `host.work`) for conditional config
+   - Use `hmLinux`/`hmDarwin` for platform-specific Home Manager config in user aspects
+   - Use `os` class for config identical on NixOS and Darwin; avoid duplicating in `nixos` and `darwin`
 7. **Input Management**: Declare flake inputs close to their usage in module files, not centralized in one place.
 8. **Module Discovery**: Files in `modules/` are auto-imported via import-tree; no manual imports needed.
 9. **Parametric Aspects**: Use functions for configurable aspects (e.g., `qbittorrent { administrators = [...]; }`)
@@ -209,10 +222,13 @@ CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan)
 ### Den Patterns
 
 - **Aspect definition**:
-  `den.aspects.<name> = { includes = [...]; nixos = {...}; darwin = {...}; homeManager = {...}; }`
+  `den.aspects.<name> = { includes = [...]; os = {...}; nixos = {...}; darwin = {...}; homeManager = {...}; }`
+- **`os` class**: Use `os = {...}` for config that applies to both NixOS and Darwin (avoids duplication)
+- **`user.description`**: Set `user.description = "Full Name"` in user aspects instead of repeating in
+  `os`/`nixos`/`darwin` user configs
 - **Parametric aspects**: `my.<name> = params: { ... }` for configurable aspects
-- **Host routing**: Use `host._.user` and `user._.host` for bidirectional config
-- **Conditional config**: Use `host-flag "property" { includes = [...]; }` for conditional includes
+- **Host routing**: Use `<host>.provides.<user>` and `<user>.provides.<host>` for bidirectional config
+- **Conditional config**: Use `lib.optionals (host.<flag> or false) [ ... ]` / `lib.mkIf` for conditional config
 - **Taking parameters**: Use `den.lib.take.exactly` or `den.lib.take.atLeast` to extract specific context parameters
 
 ### Configuration Patterns
@@ -226,8 +242,8 @@ CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan)
   - User groups (if requiring special permissions)
   - Secrets (if needed)
 - **Container aspects**: Docker containers defined with `virtualisation.oci-containers.containers.<name>`
-- **Desktop aspects**: Use `host-flag "graphical"` to conditionally include desktop apps
-- **Work aspects**: Use `host-flag "work"` or check `user.work or false` for work-specific config
+- **Desktop aspects**: Gate graphical config with direct checks like `host.graphical or false`
+- **Work aspects**: Gate work config with direct checks like `host.work or false`
 
 ### Module Structure
 
@@ -256,12 +272,12 @@ The configuration uses Den aspects organized into three main categories:
 
 - **oscar**: Primary user with full desktop environment, development tools, emacs, git config
   - Work-specific configuration in `oscar/work/`
-  - Graphical apps (Discord, Ghostty, Zen Browser, PrusaSlicer) via host-flag
+  - Graphical apps (Discord, Ghostty, Zen Browser, PrusaSlicer) via direct `host.graphical` checks
 - **adelline**: Secondary user on melaan with basic GNOME setup
 - Each user aspect:
-  - Defines user account details (name, description, hashed password, SSH keys)
+  - Defines user account details (name via `user.description`, hashed password, SSH keys)
   - Includes Home Manager configuration
-  - Uses host-flag for conditional desktop apps
+  - Uses direct host checks for conditional desktop apps
 
 ### Reusable Aspects (`my.*` - 43 aspects)
 
@@ -279,15 +295,25 @@ Organized by category:
 
 Each `my.*` aspect is a self-contained module that can be included by hosts or users.
 
-## Limitations for AI Agents
+## Capabilities and Limitations for AI Agents
+
+### Available Capabilities
+
+- **`nix` is available**: The Copilot environment has `nix` pre-installed. You can use it to:
+  - Evaluate flake outputs: `nix flake show`, `nix flake metadata`
+  - Check configuration syntax and evaluate expressions: `nix eval`
+  - Build derivations to validate configuration: `nix build .#<output>`
+  - Run flake apps: `nix run .#<app>` (note: `nix run .#write-flake` regenerates flake.nix)
+  - The `oscarmarshall` and `nix-community` Cachix caches are configured for read-only access
+
+### Limitations
 
 - Cannot execute `nixos-rebuild`, `darwin-rebuild`, or `home-manager` commands (requires target system access)
 - Cannot test actual service functionality (no runtime environment)
 - Cannot decrypt or modify ragenix secrets
 - Cannot access the actual systems (harmony, melaan, OMARSHAL-M-2FD2)
-- Cannot run `nix run .#write-flake` to regenerate flake.nix (but can modify modules/inputs.nix)
 - Focus on configuration file correctness, Den aspect patterns, and NixOS/Darwin best practices
-- When making changes to flake inputs in modules, note that flake.nix regeneration is required
+- When making changes to flake inputs in modules, regenerate flake.nix with `nix run .#write-flake`
 
 ## Working with This Repository
 
@@ -324,7 +350,5 @@ Den aspects receive context parameters like:
 - `host`: Host information (hostName, architecture, users)
 - `user`: User information (userName, aspect name)
 - `home`: Home configuration (stateVersion)
-- `OS`: NixOS-specific context
-- `HM`: Home Manager-specific context
 
 Use `den.lib.take.exactly` or `den.lib.take.atLeast` to extract specific context parameters safely.

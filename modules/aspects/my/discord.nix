@@ -3,10 +3,12 @@
   my.discord = {
     includes = [ (den._.unfree [ "discord" ]) ];
 
-    homeManager =
+    darwin.homebrew.casks = [ "discord" ];
+
+    hmLinux =
       { pkgs, ... }:
       {
-        home.packages = with pkgs; [ discord ];
+        home.packages = [ pkgs.discord ];
       };
   };
 }

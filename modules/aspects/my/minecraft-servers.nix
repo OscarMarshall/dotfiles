@@ -38,6 +38,14 @@
             dataDir = "/metalminds/minecraft-worlds";
             environmentFile = config.age.secrets."minecraft-servers.env".path;
             servers = {
+              vanilla = {
+                enable = true;
+                package = pkgs.fabricServers.fabric-1_21_11;
+                serverProperties = {
+                  server-port = 25568;
+                  white-list = false;
+                };
+              };
               chicken-house = {
                 enable = true;
                 package = pkgs.fabricServers.fabric-1_21_8;

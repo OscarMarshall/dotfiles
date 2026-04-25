@@ -1,6 +1,6 @@
 { inputs, pkgs, ... }:
 let
-  age.secrets = {
+  ageSecrets = {
     autobrr-secret.rekeyFile = ../../../secrets/autobrr-secret.age;
     "cross-seed.json".rekeyFile = ../../../secrets/cross-seed.json.age;
     "gluetun.env".rekeyFile = ../../../secrets/gluetun.env.age;
@@ -29,25 +29,22 @@ in
   };
 
   my.secrets = {
+    darwin.imports = [ (inputs.ragenix.darwinModules.default or { }) ];
     nixos = {
       imports = [
         (inputs.ragenix.nixosModules.default or { })
         (inputs.agenix-rekey.nixosModules.default or { })
       ];
-      inherit age;
-      age.rekey = {
-        masterIdentities = [ ../../../secrets/yubikey-identity.pub ];
-        agePlugins = [ pkgs.age-plugin-yubikey ];
-        storageMode = "local";
+      age = {
+        secrets = ageSecrets;
+        rekey = {
+          masterIdentities = [ ../../../secrets/yubikey-identity.pub ];
+          agePlugins = [ pkgs.age-plugin-yubikey ];
+          storageMode = "local";
+        };
       };
     };
-    darwin = {
-      imports = [ (inputs.ragenix.darwinModules.default or { }) ];
-      inherit age;
-    };
-    homeManager = {
-      imports = [ (inputs.ragenix.homeManagerModules.default or { }) ];
-      inherit age;
-    };
+
+    homeManager.imports = [ (inputs.ragenix.homeManagerModules.default or { }) ];
   };
 }
