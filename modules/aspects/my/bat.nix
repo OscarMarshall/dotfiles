@@ -5,11 +5,10 @@
       programs.bat = {
         enable = true;
         extraPackages = [
-          pkgs.bat-extras.core.overrideAttrs
-          (_: {
+          (pkgs.bat-extras.core.overrideAttrs (_: {
             doCheck = false;
             nativeCheckInputs = [ ];
-          })
+          }))
         ];
       };
     };
