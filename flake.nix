@@ -4,15 +4,6 @@
   outputs = inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);
 
   inputs = {
-    agenix = {
-      url = "github:ryantm/agenix";
-      inputs = {
-        darwin.follows = "darwin";
-        home-manager.follows = "home-manager";
-        nixpkgs.follows = "nixpkgs";
-        systems.follows = "systems";
-      };
-    };
     agenix-rekey = {
       url = "github:oddlama/agenix-rekey";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -66,6 +57,18 @@
     };
     nixos-hardware.url = "github:NixOS/nixos-hardware";
     nixpkgs.url = "https://channels.nixos.org/nixpkgs-unstable/nixexprs.tar.xz";
+    ragenix = {
+      url = "github:yaxitech/ragenix";
+      inputs = {
+        agenix.inputs = {
+          darwin.follows = "darwin";
+          home-manager.follows = "home-manager";
+          nixpkgs.follows = "nixpkgs";
+          systems.follows = "systems";
+        };
+        nixpkgs.follows = "nixpkgs";
+      };
+    };
     stylix = {
       url = "github:nix-community/stylix";
       inputs.nixpkgs.follows = "nixpkgs";
