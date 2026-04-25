@@ -1,13 +1,16 @@
 { inputs, ... }:
 {
   flake-file.inputs = {
-    agenix = {
-      url = "github:ryantm/agenix";
+    ragenix = {
+      url = "github:yaxitech/ragenix";
       inputs = {
-        darwin.follows = "darwin";
-        home-manager.follows = "home-manager";
+        agenix.inputs = {
+          darwin.follows = "darwin";
+          home-manager.follows = "home-manager";
+          nixpkgs.follows = "nixpkgs";
+          systems.follows = "systems";
+        };
         nixpkgs.follows = "nixpkgs";
-        systems.follows = "systems";
       };
     };
 
@@ -21,7 +24,7 @@
     { config, pkgs, lib, ... }:
     {
       imports = [
-        (inputs.agenix.nixosModules.default or { })
+        (inputs.ragenix.nixosModules.default or { })
         (inputs.agenix-rekey.nixosModules.default or { })
       ];
 
