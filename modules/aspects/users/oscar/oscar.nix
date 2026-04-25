@@ -38,8 +38,8 @@ in
     includes = builtins.attrValues den.aspects.oscar.provides ++ [
       graphicalAspect
       den._.primary-user
-      my.bat
       (den._.user-shell "fish")
+      my.bat
       my.emacs
       (my.git {
         inherit name;
