@@ -12,9 +12,15 @@
   imports = [ (inputs.git-hooks.flakeModule or { }) ];
 
   perSystem =
-    { config, ... }:
+    { config, pkgs, inputs', ... }:
     {
-      devShells.default = config.pre-commit.devShell;
+      devShells.default = pkgs.mkShell {
+        inputsFrom = [ config.pre-commit.devShell ];
+        packages = [
+          inputs'.ragenix.packages.default
+          inputs'.agenix-rekey.packages.default
+        ];
+      };
 
       pre-commit = {
         check.enable = true;
