@@ -4,6 +4,10 @@
   outputs = inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);
 
   inputs = {
+    agenix-rekey = {
+      url = "github:oddlama/agenix-rekey";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     catppuccin-wallpapers = {
       url = "github:zhichaoh/catppuccin-wallpapers";
       flake = false;
@@ -58,10 +62,10 @@
       inputs = {
         agenix.inputs = {
           darwin.follows = "darwin";
-          flake-utils.inputs.systems.follows = "systems";
           home-manager.follows = "home-manager";
+          nixpkgs.follows = "nixpkgs";
+          systems.follows = "systems";
         };
-        flake-utils.inputs.systems.follows = "systems";
         nixpkgs.follows = "nixpkgs";
       };
     };
