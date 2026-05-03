@@ -1,22 +1,51 @@
 { lib, my, ... }:
+let
+  port = 7878;
+in
 {
   my.radarr =
-    let
-      port = 7878;
-    in
     { administrators }:
     {
       includes = with my; [ (nginx._.virtual-host "radarr.harmony.silverlight-nex.us" port) ];
 
-      nixos = {
-        users.users = {
-          radarr.extraGroups = [ "qbittorrent" ];
-        }
-        // (lib.genAttrs administrators (user: {
-          extraGroups = [ "radarr" ];
-        }));
+      nixos =
+        { config, ... }:
+        {
+          age.secrets = {
+            radarr-api-key = {
+              rekeyFile = ../../../secrets/radarr-api-key.age;
+              generator.script = "alphanum";
+              intermediary = true;
+            };
+            "radarr.env" = {
+              rekeyFile = ../../../secrets/radarr.env.age;
+              generator = {
+                dependencies = { inherit (config.age.secrets) radarr-api-key; };
+                script =
+                  {
+                    lib,
+                    decrypt,
+                    deps,
+                    ...
+                  }:
+                  ''
+                    printf 'RADARR__AUTH__APIKEY="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps.radarr-api-key.file})"
+                  '';
+              };
+            };
+          };
 
-        services.radarr.enable = true;
-      };
+          users.users = {
+            radarr.extraGroups = [ "qbittorrent" ];
+          }
+          // (lib.genAttrs administrators (user: {
+            extraGroups = [ "radarr" ];
+          }));
+
+          services.radarr = {
+            enable = true;
+            environmentFiles = [ config.age.secrets."radarr.env".path ];
+          };
+        };
     };
 }

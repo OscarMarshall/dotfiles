@@ -10,9 +10,14 @@
       nixos =
         { config, ... }:
         {
+          age.secrets.autobrr-secret = {
+            rekeyFile = ../../../secrets/autobrr-session-secret.age;
+            generator.script = "alphanum";
+          };
+
           services.autobrr = {
             enable = true;
-            secretFile = config.age.secrets.autobrr-secret.path;
+            secretFile = config.age.secrets.autobrr-session-secret.path;
             settings = {
               inherit port;
               checkForUpdates = true;

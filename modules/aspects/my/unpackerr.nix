@@ -2,6 +2,24 @@
   my.unpackerr.nixos =
     { config, ... }:
     {
+      age.secrets."unpackerr.env" = {
+        rekeyFile = ../../../secrets/unpackerr.env.age;
+        generator = {
+          dependencies = { inherit (config.age.secrets) radarr-api-key sonarr-api-key; };
+          script =
+            {
+              lib,
+              decrypt,
+              deps,
+              ...
+            }:
+            ''
+              printf 'UN_RADARR_0_API_KEY="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps."radarr-api-key".file})"
+              printf 'UN_SONARR_0_API_KEY="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps."sonarr-api-key".file})"
+            '';
+        };
+      };
+
       virtualisation.oci-containers.containers.unpackerr = {
         image = "golift/unpackerr:0.15.2@sha256:057e34740d26c34d81ec8e2faf8ec11f8dbfc77489b7a42826f52b37e5ee1b6c";
         volumes = [ "/metalminds/torrents/downloads:/downloads" ];

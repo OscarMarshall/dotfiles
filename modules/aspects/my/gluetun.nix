@@ -2,6 +2,31 @@
   my.gluetun.nixos =
     { config, ... }:
     {
+      age.secrets = {
+        proton-vpn-wireguard-private-key = {
+          rekeyFile = ../../../secrets/proton-vpn-wireguard-private-key.age;
+          intermediary = true;
+        };
+        "gluetun.env" = {
+          rekeyFile = ../../../secrets/gluetun.env.age;
+          generator = {
+            dependencies = { inherit (config.age.secrets) proton-vpn-wireguard-private-key; };
+            script =
+              {
+                lib,
+                decrypt,
+                deps,
+                ...
+              }:
+              ''
+                printf 'WIREGUARD_PRIVATE_KEY="%s"\n' "$(
+                  ${decrypt} ${lib.escapeShellArg deps.proton-vpn-wireguard-private-key.file}
+                )"
+              '';
+          };
+        };
+      };
+
       virtualisation.oci-containers.containers.gluetun = {
         image = "qmcgaw/gluetun:v3.41.1@sha256:1a5bf4b4820a879cdf8d93d7ef0d2d963af56670c9ebff8981860b6804ebc8ab";
         volumes = [ "/var/lib/gluetun:/gluetun" ];
