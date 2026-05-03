@@ -58,37 +58,12 @@ in
       {
         description = name;
       }
-      // (lib.optionalAttrs pkgs.stdenv.isLinux {
-        hashedPasswordFile = config.age.secrets.oscar-hashed-password.file;
-        openssh.authorizedKeys.keys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGt95coA4j19+fPxpOLRfIFb7AvAXdSmf1MyOPibmhe/" ];
-      });
-
-    os =
-      { config, ... }:
-      {
-        age.secrets = {
-          oscar-password = {
-            rekeyFile = ../../../../secrets/oscar-password.age;
-            intermediary = true;
-          };
-          oscar-hashed-password = {
-            rekeyFile = ../../../../secrets/oscar-hashed-password.age;
-            generator = {
-              dependencies = { inherit (config.age.secrets) oscar-password; };
-              script =
-                {
-                  lib,
-                  decrypt,
-                  deps,
-                  ...
-                }:
-                ''
-                  mkpasswd "$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
-                '';
-            };
-          };
-        };
-      };
+      // (lib.optionalAttrs pkgs.stdenv.isLinux (
+        {
+          openssh.authorizedKeys.keys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGt95coA4j19+fPxpOLRfIFb7AvAXdSmf1MyOPibmhe/" ];
+        }
+        // (lib.optionalAttrs (config ? age) { hashedPasswordFile = config.age.secrets.oscar-hashed-password.file; })
+      ));
 
     darwin.homebrew.casks = [
       "arc"

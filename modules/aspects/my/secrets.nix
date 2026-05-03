@@ -21,7 +21,7 @@
   };
 
   my.secrets.nixos =
-    { pkgs, ... }:
+    { config, pkgs, ... }:
     {
       imports = [
         (inputs.ragenix.nixosModules.default or { })
@@ -32,6 +32,30 @@
         masterIdentities = [ ../../../secrets/yubikey-identity.pub ];
         agePlugins = [ pkgs.age-plugin-yubikey ];
         storageMode = "local";
+      };
+
+      age.secrets = {
+        oscar-password = {
+          rekeyFile = ../../../secrets/oscar-password.age;
+          intermediary = true;
+        };
+
+        oscar-hashed-password = {
+          rekeyFile = ../../../secrets/oscar-hashed-password.age;
+          generator = {
+            dependencies = { inherit (config.age.secrets) oscar-password; };
+            script =
+              {
+                lib,
+                decrypt,
+                deps,
+                ...
+              }:
+              ''
+                mkpasswd "$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
+              '';
+          };
+        };
       };
     };
 }

@@ -14,7 +14,7 @@ in
           age.secrets = {
             radarr-api-key = {
               rekeyFile = ../../../secrets/radarr-api-key.age;
-              generator.script = "alphanum";
+              generator.script = "alnum";
               intermediary = true;
             };
             "radarr.env" = {

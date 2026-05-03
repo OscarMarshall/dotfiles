@@ -14,7 +14,7 @@
           age.secrets = {
             sonarr-api-key = {
               rekeyFile = ../../../secrets/sonarr-api-key.age;
-              generator.script = "alphanum";
+              generator.script = "alnum";
               intermediary = true;
             };
             "sonarr.env" = {

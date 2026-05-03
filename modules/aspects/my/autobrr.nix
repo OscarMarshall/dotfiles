@@ -11,13 +11,13 @@
         { config, ... }:
         {
           age.secrets.autobrr-secret = {
-            rekeyFile = ../../../secrets/autobrr-session-secret.age;
-            generator.script = "alphanum";
+            rekeyFile = ../../../secrets/autobrr-secret.age;
+            generator.script = "alnum";
           };
 
           services.autobrr = {
             enable = true;
-            secretFile = config.age.secrets.autobrr-session-secret.path;
+            secretFile = config.age.secrets.autobrr-secret.path;
             settings = {
               inherit port;
               checkForUpdates = true;
