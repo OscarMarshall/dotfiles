@@ -1,15 +1,4 @@
 { inputs, ... }:
-let
-  config =
-    { pkgs, ... }:
-    {
-      age.rekey = {
-        masterIdentities = [ ../../../secrets/yubikey-identity.pub ];
-        agePlugins = [ pkgs.age-plugin-yubikey ];
-        storageMode = "local";
-      };
-    };
-in
 {
   flake-file.inputs = {
     ragenix = {
@@ -31,35 +20,18 @@ in
     };
   };
 
-  my.secrets = {
-    darwin =
-      inputs':
-      {
-        imports = [
-          (inputs.ragenix.darwinModules.default or { })
-          (inputs.agenix-rekey.darwinModules.default or { })
-        ];
-      }
-      // (config inputs');
+  my.secrets.nixos =
+    { pkgs, ... }:
+    {
+      imports = [
+        (inputs.ragenix.nixosModules.default or { })
+        (inputs.agenix-rekey.nixosModules.default or { })
+      ];
 
-    nixos =
-      inputs':
-      {
-        imports = [
-          (inputs.ragenix.nixosModules.default or { })
-          (inputs.agenix-rekey.nixosModules.default or { })
-        ];
-      }
-      // (config inputs');
-
-    homeManager =
-      inputs':
-      {
-        imports = [
-          (inputs.ragenix.homeManagerModules.default or { })
-          (inputs.agenix-rekey.homeManagerModules.default or { })
-        ];
-      }
-      // (config inputs');
-  };
+      age.rekey = {
+        masterIdentities = [ ../../../secrets/yubikey-identity.pub ];
+        agePlugins = [ pkgs.age-plugin-yubikey ];
+        storageMode = "local";
+      };
+    };
 }
