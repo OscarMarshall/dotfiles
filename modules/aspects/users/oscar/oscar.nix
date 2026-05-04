@@ -40,7 +40,7 @@ let
         {
           users.users.${user.name} = {
             openssh.authorizedKeys.keys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGt95coA4j19+fPxpOLRfIFb7AvAXdSmf1MyOPibmhe/" ];
-            hashedPasswordFile = config.age.secrets.oscar-hashed-password.file;
+            hashedPasswordFile = toString config.age.secrets.oscar-hashed-password.file;
           };
         };
     };
