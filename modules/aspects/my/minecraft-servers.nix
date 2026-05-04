@@ -24,29 +24,28 @@
         ])
       ];
 
+      secrets =
+        { secrets, ... }:
+        {
+          "minecraft-servers.env".generator = {
+            dependencies = { inherit (secrets) oscar-password; };
+            script =
+              {
+                lib,
+                decrypt,
+                deps,
+                ...
+              }:
+              ''
+                printf 'RCON_PASSWORD="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
+              '';
+          };
+        };
+
       nixos =
         { config, pkgs, ... }:
         {
           imports = [ (inputs.nix-minecraft.nixosModules.minecraft-servers or { }) ];
-
-          age.secrets = {
-            "minecraft-servers.env" = {
-              rekeyFile = ../../../secrets/minecraft-servers.env.age;
-              generator = {
-                dependencies = { inherit (config.age.secrets) oscar-password; };
-                script =
-                  {
-                    lib,
-                    decrypt,
-                    deps,
-                    ...
-                  }:
-                  ''
-                    printf 'RCON_PASSWORD="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
-                  '';
-              };
-            };
-          };
 
           nixpkgs.overlays = [ (inputs.nix-minecraft.overlay or { }) ];
 

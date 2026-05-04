@@ -27,6 +27,28 @@ let
           osConfig = config;
         };
     };
+  secrets =
+    { aspect-chain, ... }:
+    den._.forward {
+      each = [
+        "nixos"
+        "darwin"
+        "homeManager"
+      ];
+      fromClass = _: "secrets";
+      intoClass = lib.id;
+      intoPath = _: [
+        "age"
+        "secrets"
+      ];
+      fromAspect = _: lib.head aspect-chain;
+      adaptArgs =
+        { config, ... }:
+        {
+          inherit config;
+          inherit (config.age) secrets;
+        };
+    };
 in
 {
   den = {
@@ -34,10 +56,13 @@ in
 
     ctx = {
       host = {
-        includes = with my; [
-          fonts
-          nix
-          stylix
+        includes = [
+          secrets
+
+          my.fonts
+          my.nix
+          my.secrets
+          my.stylix
 
           # Automatically set hostname.
           den._.hostname
@@ -49,13 +74,13 @@ in
         os.system.configurationRevision = self.rev or self.dirtyRev or null;
       };
 
-      user.includes = with my; [
+      user.includes = [
         hmPlatforms
 
         # ${user}.provides.${host} and ${host}.provides.${user}
         den._.mutual-provider
 
-        starship
+        my.starship
 
         # Automatically create the user on host.
         den._.define-user

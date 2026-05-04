@@ -1,4 +1,13 @@
 { inputs, ... }:
+let
+  rekey = host: pkgs: {
+    masterIdentities = [ ../../../secrets/yubikey-identity.pub ];
+    agePlugins = [ pkgs.age-plugin-yubikey ];
+    storageMode = "local";
+    localStorageDir = ../../../. + "/secrets/rekeyed/${host.name}";
+    generatedSecretsDir = ../../../secrets/generated;
+  };
+in
 {
   flake-file.inputs = {
     ragenix = {
@@ -20,42 +29,40 @@
     };
   };
 
-  my.secrets.nixos =
-    { config, pkgs, ... }:
+  my.secrets =
+    { host, ... }:
     {
-      imports = [
-        (inputs.ragenix.nixosModules.default or { })
-        (inputs.agenix-rekey.nixosModules.default or { })
-      ];
+      darwin =
+        { pkgs, ... }:
+        {
+          imports = [
+            (inputs.ragenix.darwinModules.default or { })
+            (inputs.agenix-rekey.darwinModules.default or { })
+          ];
 
-      age.rekey = {
-        masterIdentities = [ ../../../secrets/yubikey-identity.pub ];
-        agePlugins = [ pkgs.age-plugin-yubikey ];
-        storageMode = "local";
-      };
-
-      age.secrets = {
-        oscar-password = {
-          rekeyFile = ../../../secrets/oscar-password.age;
-          intermediary = true;
+          age.rekey = rekey host pkgs;
         };
 
-        oscar-hashed-password = {
-          rekeyFile = ../../../secrets/oscar-hashed-password.age;
-          generator = {
-            dependencies = { inherit (config.age.secrets) oscar-password; };
-            script =
-              {
-                lib,
-                decrypt,
-                deps,
-                ...
-              }:
-              ''
-                mkpasswd "$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
-              '';
-          };
+      homeManager =
+        { pkgs, ... }:
+        {
+          imports = [
+            (inputs.ragenix.homeManagerModules.default or { })
+            (inputs.agenix-rekey.homeManagerModules.default or { })
+          ];
+
+          age.rekey = rekey host pkgs;
         };
-      };
+
+      nixos =
+        { pkgs, ... }:
+        {
+          imports = [
+            (inputs.ragenix.nixosModules.default or { })
+            (inputs.agenix-rekey.nixosModules.default or { })
+          ];
+
+          age.rekey = rekey host pkgs;
+        };
     };
 }

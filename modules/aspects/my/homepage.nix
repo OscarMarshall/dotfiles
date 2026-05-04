@@ -3,37 +3,38 @@
   my.homepage = {
     includes = with my; [ (nginx._.virtual-host "harmony.silverlight-nex.us" port) ];
 
+    secrets =
+      { secrets, ... }:
+      {
+        "homepage-dashboard.env".generator = {
+          dependencies = { inherit (secrets) prowlarr-api-key radarr-api-key sonarr-api-key; };
+          script =
+            {
+              lib,
+              decrypt,
+              deps,
+              ...
+            }:
+            ''
+              printf 'HOMEPAGE_VAR_PROWLARR_API_KEY="%s"\n' "$(
+                ${decrypt} ${lib.escapeShellArg deps.prowlarr-api-key.file}
+              )"
+              printf 'HOMEPAGE_VAR_RADARR_API_KEY="%s"\n' "$(
+                ${decrypt} ${lib.escapeShellArg deps.radarr-api-key.file}
+              )"
+              printf 'HOMEPAGE_VAR_SONARR_API_KEY="%s"\n' "$(
+                ${decrypt} ${lib.escapeShellArg deps.sonarr-api-key.file}
+              )"
+            '';
+        };
+      };
+
     nixos =
       { config, ... }:
       let
         port = config.services.homepage-dashboard.listenPort;
       in
       {
-        age.secrets."homepage-dashboard.env" = {
-          rekeyFile = ../../../secrets/homepage-dashboard.env.age;
-          generator = {
-            dependencies = { inherit (config.age.secrets) prowlarr-api-key radarr-api-key sonarr-api-key; };
-            script =
-              {
-                lib,
-                decrypt,
-                deps,
-                ...
-              }:
-              ''
-                    printf 'HOMEPAGE_VAR_PROWLARR_API_KEY="%s"\n' "$(
-                  ${decrypt} ${lib.escapeShellArg deps.prowlarr-api-key.file}
-                )"
-                printf 'HOMEPAGE_VAR_RADARR_API_KEY="%s"\n' "$(
-                  ${decrypt} ${lib.escapeShellArg deps.radarr-api-key.file}
-                )"
-                printf 'HOMEPAGE_VAR_SONARR_API_KEY="%s"\n' "$(
-                  ${decrypt} ${lib.escapeShellArg deps.sonarr-api-key.file}
-                )"
-              '';
-          };
-        };
-
         services.homepage-dashboard = {
           enable = true;
           environmentFile = config.age.secrets."homepage-dashboard.env".path;

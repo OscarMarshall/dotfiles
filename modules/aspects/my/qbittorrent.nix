@@ -9,33 +9,27 @@ in
     {
       includes = with my; [ (nginx._.virtual-host "qbittorrent.harmony.silverlight-nex.us" port) ];
 
+      secrets =
+        { secrets, ... }:
+        {
+          "qbittorrent.env".generator = {
+            dependencies = { inherit (secrets) cross-seed-api-key; };
+            script =
+              {
+                lib,
+                decrypt,
+                deps,
+                ...
+              }:
+              ''
+                printf 'CROSS_SEED_API_KEY=%s\n' "$(${decrypt} ${lib.escapeShellArg deps."cross-seed-api-key".file})"
+              '';
+          };
+        };
+
       nixos =
         { config, ... }:
         {
-          age.secrets = {
-            "qbittorrent.env" = {
-              rekeyFile = ../../../secrets/qbittorrent.env.age;
-              generator = {
-                dependencies = { inherit (config.age.secrets) cross-seed-api-key; };
-                script =
-                  {
-                    lib,
-                    decrypt,
-                    deps,
-                    ...
-                  }:
-                  ''
-                    key=$(${decrypt} ${lib.escapeShellArg deps."cross-seed-api-key".file})
-                    printf 'CROSS_SEED_API_KEY=%s\n' "$key"
-                  '';
-              };
-            };
-            qbittorrent-password = {
-              rekeyFile = ../../../secrets/qbittorrent-password.age;
-              intermediary = true;
-            };
-          };
-
           users = {
             users = {
               qbittorrent = {

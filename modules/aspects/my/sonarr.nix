@@ -8,33 +8,31 @@
     {
       includes = with my; [ (nginx._.virtual-host "sonarr.harmony.silverlight-nex.us" port) ];
 
+      secrets =
+        { secrets, ... }:
+        {
+          sonarr-api-key = {
+            generator.script = "alnum";
+            intermediary = true;
+          };
+          "sonarr.env".generator = {
+            dependencies = { inherit (secrets) sonarr-api-key; };
+            script =
+              {
+                lib,
+                decrypt,
+                deps,
+                ...
+              }:
+              ''
+                printf 'SONARR__AUTH__APIKEY="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps.sonarr-api-key.file})"
+              '';
+          };
+        };
+
       nixos =
         { config, ... }:
         {
-          age.secrets = {
-            sonarr-api-key = {
-              rekeyFile = ../../../secrets/sonarr-api-key.age;
-              generator.script = "alnum";
-              intermediary = true;
-            };
-            "sonarr.env" = {
-              rekeyFile = ../../../secrets/sonarr.env.age;
-              generator = {
-                dependencies = { inherit (config.age.secrets) sonarr-api-key; };
-                script =
-                  {
-                    lib,
-                    decrypt,
-                    deps,
-                    ...
-                  }:
-                  ''
-                    printf 'SONARR__AUTH__APIKEY="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps.sonarr-api-key.file})"
-                  '';
-              };
-            };
-          };
-
           users.users = {
             sonarr.extraGroups = [ "qbittorrent" ];
           }

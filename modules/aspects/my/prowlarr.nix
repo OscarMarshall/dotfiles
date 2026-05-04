@@ -7,33 +7,31 @@
     {
       includes = with my; [ (nginx._.virtual-host "prowlarr.harmony.silverlight-nex.us" port) ];
 
+      secrets =
+        { secrets, ... }:
+        {
+          prowlarr-api-key = {
+            generator.script = "alnum";
+            intermediary = true;
+          };
+          "prowlarr.env".generator = {
+            dependencies = { inherit (secrets) prowlarr-api-key; };
+            script =
+              {
+                lib,
+                decrypt,
+                deps,
+                ...
+              }:
+              ''
+                printf 'PROWLARR__AUTH__APIKEY="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps.prowlarr-api-key.file})"
+              '';
+          };
+        };
+
       nixos =
         { config, ... }:
         {
-          age.secrets = {
-            prowlarr-api-key = {
-              rekeyFile = ../../../secrets/prowlarr-api-key.age;
-              generator.script = "alnum";
-              intermediary = true;
-            };
-            "prowlarr.env" = {
-              rekeyFile = ../../../secrets/prowlarr.env.age;
-              generator = {
-                dependencies = { inherit (config.age.secrets) prowlarr-api-key; };
-                script =
-                  {
-                    lib,
-                    decrypt,
-                    deps,
-                    ...
-                  }:
-                  ''
-                    printf 'PROWLARR__AUTH__APIKEY="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps.prowlarr-api-key.file})"
-                  '';
-              };
-            };
-          };
-
           services = {
             prowlarr = {
               enable = true;

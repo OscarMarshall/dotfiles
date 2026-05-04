@@ -8,33 +8,31 @@ in
     {
       includes = with my; [ (nginx._.virtual-host "radarr.harmony.silverlight-nex.us" port) ];
 
+      secrets =
+        { secrets, ... }:
+        {
+          radarr-api-key = {
+            generator.script = "alnum";
+            intermediary = true;
+          };
+          "radarr.env".generator = {
+            dependencies = { inherit (secrets) radarr-api-key; };
+            script =
+              {
+                lib,
+                decrypt,
+                deps,
+                ...
+              }:
+              ''
+                printf 'RADARR__AUTH__APIKEY="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps.radarr-api-key.file})"
+              '';
+          };
+        };
+
       nixos =
         { config, ... }:
         {
-          age.secrets = {
-            radarr-api-key = {
-              rekeyFile = ../../../secrets/radarr-api-key.age;
-              generator.script = "alnum";
-              intermediary = true;
-            };
-            "radarr.env" = {
-              rekeyFile = ../../../secrets/radarr.env.age;
-              generator = {
-                dependencies = { inherit (config.age.secrets) radarr-api-key; };
-                script =
-                  {
-                    lib,
-                    decrypt,
-                    deps,
-                    ...
-                  }:
-                  ''
-                    printf 'RADARR__AUTH__APIKEY="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps.radarr-api-key.file})"
-                  '';
-              };
-            };
-          };
-
           users.users = {
             radarr.extraGroups = [ "qbittorrent" ];
           }

@@ -32,11 +32,22 @@ let
             ];
         };
     };
+  userAspect =
+    { user, ... }:
+    {
+      nixos =
+        { config, ... }:
+        {
+          users.users.${user.name} = {
+            openssh.authorizedKeys.keys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGt95coA4j19+fPxpOLRfIFb7AvAXdSmf1MyOPibmhe/" ];
+            hashedPasswordFile = config.age.secrets.oscar-hashed-password.file;
+          };
+        };
+    };
 in
 {
   den.aspects.oscar = {
     includes = builtins.attrValues den.aspects.oscar.provides ++ [
-      graphicalAspect
       den._.primary-user
       (den._.user-shell "fish")
       my.bat
@@ -51,19 +62,35 @@ in
       my.nix-index
       my.proton-pass
       my.ssh-client
+      graphicalAspect
+      userAspect
     ];
 
-    user =
-      { config, pkgs, ... }:
+    secrets =
+      { secrets, ... }:
       {
-        description = name;
-      }
-      // (lib.optionalAttrs pkgs.stdenv.isLinux (
-        {
-          openssh.authorizedKeys.keys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGt95coA4j19+fPxpOLRfIFb7AvAXdSmf1MyOPibmhe/" ];
-        }
-        // (lib.optionalAttrs (config ? age) { hashedPasswordFile = config.age.secrets.oscar-hashed-password.file; })
-      ));
+        oscar-password = {
+          rekeyFile = ../../../../secrets/oscar-password.age;
+          intermediary = true;
+        };
+
+        oscar-hashed-password.generator = {
+          dependencies = { inherit (secrets) oscar-password; };
+          script =
+            {
+              decrypt,
+              deps,
+              lib,
+              pkgs,
+              ...
+            }:
+            ''
+              ${pkgs.mkpasswd}/bin/mkpasswd "$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
+            '';
+        };
+      };
+
+    user.description = name;
 
     darwin.homebrew.casks = [
       "arc"
