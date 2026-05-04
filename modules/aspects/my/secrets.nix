@@ -55,14 +55,38 @@ in
         };
 
       nixos =
-        { pkgs, ... }:
+        { config, pkgs, ... }:
         {
           imports = [
             (inputs.ragenix.nixosModules.default or { })
             (inputs.agenix-rekey.nixosModules.default or { })
           ];
 
-          age.rekey = rekey host pkgs;
+          age = {
+            rekey = rekey host pkgs;
+
+            secrets = {
+              oscar-password = {
+                rekeyFile = ../../../secrets/oscar-password.age;
+                intermediary = true;
+              };
+
+              oscar-hashed-password.generator = {
+                dependencies = { inherit (config.age.secrets) oscar-password; };
+                script =
+                  {
+                    decrypt,
+                    deps,
+                    lib,
+                    pkgs,
+                    ...
+                  }:
+                  ''
+                    ${pkgs.mkpasswd}/bin/mkpasswd "$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
+                  '';
+              };
+            };
+          };
         };
     };
 }
