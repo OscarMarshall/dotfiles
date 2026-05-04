@@ -49,6 +49,24 @@ let
           inherit (config.age) secrets;
         };
     };
+  nixosSecrets =
+    { aspect-chain, ... }:
+    den._.forward {
+      each = [ "nixos" ];
+      fromClass = _: "nixosSecrets";
+      intoClass = lib.id;
+      intoPath = _: [
+        "age"
+        "secrets"
+      ];
+      fromAspect = _: lib.head aspect-chain;
+      adaptArgs =
+        { config, ... }:
+        {
+          inherit config;
+          inherit (config.age) secrets;
+        };
+    };
 in
 {
   den = {
@@ -58,6 +76,7 @@ in
       host = {
         includes = [
           secrets
+          nixosSecrets
 
           my.fonts
           my.nix

@@ -68,6 +68,30 @@ in
 
     user.description = name;
 
+    nixosSecrets =
+      { secrets, ... }:
+      {
+        oscar-password = {
+          rekeyFile = ../../../../secrets/oscar-password.age;
+          intermediary = true;
+        };
+
+        oscar-hashed-password.generator = {
+          dependencies = { inherit (secrets) oscar-password; };
+          script =
+            {
+              decrypt,
+              deps,
+              lib,
+              pkgs,
+              ...
+            }:
+            ''
+              ${pkgs.mkpasswd}/bin/mkpasswd "$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
+            '';
+        };
+      };
+
     darwin.homebrew.casks = [
       "arc"
       "domzilla-caffeine"
