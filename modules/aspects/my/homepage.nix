@@ -42,7 +42,7 @@ in
           widgets = [
             {
               glances = {
-                url = "http://127.0.0.1:${config.services.glances.port}";
+                url = "http://127.0.0.1:${toString config.services.glances.port}";
                 version = 4;
                 cputemp = true;
                 uptime = true;
