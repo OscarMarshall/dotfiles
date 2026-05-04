@@ -1,4 +1,7 @@
 { my, ... }:
+let
+  port = 8080;
+in
 {
   my.homepage = {
     includes = with my; [ (nginx._.virtual-host "harmony.silverlight-nex.us" port) ];
@@ -31,9 +34,6 @@
 
     nixos =
       { config, ... }:
-      let
-        port = config.services.homepage-dashboard.listenPort;
-      in
       {
         services.homepage-dashboard = {
           enable = true;
