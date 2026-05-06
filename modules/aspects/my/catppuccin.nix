@@ -18,8 +18,8 @@
             image = "${inputs.catppuccin-wallpapers}/os/nix-black-4k.png";
             targets.emacs.colors.enable = false;
             cursor = {
-              name = "mochaDark";
-              package = pkgs.catppuccin-cursors;
+              name = "catppuccin-mocha-dark-cursors";
+              package = pkgs.catppuccin-cursors.mochaDark;
               size = 24;
             };
           };
