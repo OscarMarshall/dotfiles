@@ -38,7 +38,7 @@ let
       nixos =
         { config, ... }:
         {
-          users.users.${user.name} = {
+          users.users.${user.userName} = {
             openssh.authorizedKeys.keys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGt95coA4j19+fPxpOLRfIFb7AvAXdSmf1MyOPibmhe/" ];
             hashedPasswordFile = toString config.age.secrets.oscar-hashed-password.file;
           };
