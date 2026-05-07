@@ -136,17 +136,39 @@ Use an aspect function signature (`{ host, lib, ... }:`) when you need context-a
 
 ## Secrets Management
 
-Secrets are encrypted using [ragenix](https://github.com/yaxitech/ragenix) (age-based encryption):
+Secrets are managed with [ragenix](https://github.com/yaxitech/ragenix) (age encryption) extended by
+[agenix-rekey](https://github.com/oddlama/agenix-rekey). A YubiKey acts as the single master identity; host keys are
+derived automatically. Primitive secrets are encrypted to the YubiKey and marked `intermediary = true`. Template secrets
+(env files, JSON configs) are generated from primitives and then rekeyed per host.
+
+The `nix develop` shell (or `nix develop .#`) provides both the `ragenix` and `agenix-rekey` CLI tools.
 
 ```console
-# Edit a secret
-nix run github:yaxitech/ragenix -- -e secrets/my-secret.age
+# Enter the dev shell to get the CLI tools
+nix develop
 
-# Re-key secrets after adding a new host
-nix run github:yaxitech/ragenix -- -r
+# Edit or create a primitive secret
+ragenix -e secrets/<name>.age
+
+# Generate template secrets from primitives
+agenix generate
+
+# Rekey all secrets for all hosts and commit
+agenix rekey -a
+git add modules/aspects/hosts/harmony/secrets/
+git add modules/aspects/hosts/melaan/secrets/
 ```
 
-Public keys are defined in `secrets/secrets.nix`.
+### Secrets Architecture
+
+- **Primitive secrets** (`secrets/*.age`, `intermediary = true`): encrypted to the YubiKey master identity, never
+  rekeyed to hosts directly.
+- **Template secrets**: generated from primitives by `agenix generate`, then rekeyed per host via `agenix rekey -a`.
+  Output lives alongside the host aspect in `modules/aspects/hosts/<hostname>/secrets/`.
+- **`nixosSecrets` class**: used in user/host aspects for NixOS-only secrets (e.g. hashed passwords). Forwarded only to
+  `nixos.age.secrets`, never to Darwin or Home Manager configs.
+
+Each NixOS host that consumes rekeyed secrets must declare `age.rekey.hostPubkey` in its host aspect.
 
 ## Updating
 
