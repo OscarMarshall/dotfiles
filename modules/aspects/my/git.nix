@@ -6,7 +6,10 @@
         inherit user;
         init.defaultBranch = "main";
         pull.rebase = true;
-        push.autoSetupRemote = true;
+        push = {
+          autoSetupRemote = true;
+          default = "current";
+        };
       };
     };
   };
