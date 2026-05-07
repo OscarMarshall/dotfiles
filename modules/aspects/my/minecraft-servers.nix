@@ -24,6 +24,24 @@
         ])
       ];
 
+      secrets =
+        { secrets, ... }:
+        {
+          "minecraft-servers.env".generator = {
+            dependencies = { inherit (secrets) oscar-password; };
+            script =
+              {
+                lib,
+                decrypt,
+                deps,
+                ...
+              }:
+              ''
+                printf 'RCON_PASSWORD="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
+              '';
+          };
+        };
+
       nixos =
         { config, pkgs, ... }:
         {

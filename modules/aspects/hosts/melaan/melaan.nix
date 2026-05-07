@@ -17,6 +17,8 @@
     nixos = {
       imports = [ (inputs.nixos-hardware.nixosModules.framework-12-13th-gen-intel or { }) ];
 
+      age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILqFHtkApjVtbJj4hR4sEyHJhwrZ74+gR3OviJk9VxYb";
+
       services = {
         flatpak.enable = true;
         openssh.enable = true;

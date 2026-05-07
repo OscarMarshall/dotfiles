@@ -1,13 +1,31 @@
 { lib, my, ... }:
+let
+  port = 8080;
+  port' = toString port;
+in
 {
   my.qbittorrent =
-    let
-      port = 8080;
-      port' = toString port;
-    in
     { administrators }:
     {
       includes = with my; [ (nginx._.virtual-host "qbittorrent.harmony.silverlight-nex.us" port) ];
+
+      secrets =
+        { secrets, ... }:
+        {
+          "qbittorrent.env".generator = {
+            dependencies = { inherit (secrets) cross-seed-api-key; };
+            script =
+              {
+                lib,
+                decrypt,
+                deps,
+                ...
+              }:
+              ''
+                printf 'CROSS_SEED_API_KEY=%s\n' "$(${decrypt} ${lib.escapeShellArg deps."cross-seed-api-key".file})"
+              '';
+          };
+        };
 
       nixos =
         { config, ... }:
