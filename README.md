@@ -142,20 +142,20 @@ derived automatically. Primitive secrets are encrypted to the YubiKey. Mark a pr
 only if it is exclusively consumed by generators (never referenced directly by services). Template secrets (env files,
 JSON configs) are generated from primitives and then rekeyed per host.
 
-The `nix develop` shell (or `nix develop .#`) provides both the `ragenix` and `agenix-rekey` CLI tools.
+The dev shell (automatically activated by [direnv](https://direnv.net/) via the `.envrc` in the repo root)
+provides the `agenix` CLI tool from agenix-rekey, which is the single script needed to add/update/generate/rekey
+secrets.
 
 > **Note**: Editing primitive secrets, running `agenix generate`, and running `agenix rekey` require physical YubiKey
 > access and must be performed by a human.
 
 ```console
-# Enter the dev shell to get the CLI tools
-nix develop
-
 # Edit or create a primitive secret (human only — requires YubiKey)
-ragenix -e secrets/<name>.age
+agenix edit secrets/<name>.age
 
 # Generate template secrets from primitives (human only — requires YubiKey)
 agenix generate
+git add secrets/generated/
 
 # Rekey all secrets for all hosts and commit (human only — requires YubiKey)
 agenix rekey -a
@@ -167,15 +167,15 @@ git add secrets/rekeyed/melaan/
 
 - **Primitive secrets** (`secrets/*.age`): encrypted to the YubiKey master identity. Add `intermediary = true` only
   if the secret is exclusively consumed by generators.
-- **Template secrets**: generated from primitives by `agenix generate`, then rekeyed per host via `agenix rekey -a`.
-  Output lives in `secrets/rekeyed/<hostname>/`.
+- **Template secrets**: generated from primitives by `agenix generate` into `secrets/generated/`, then rekeyed per
+  host via `agenix rekey -a` into `secrets/rekeyed/<hostname>/`.
 - **`secrets` class**: use in host/user/service aspects to declare secrets — preferred over setting `age.secrets`
   directly. Forwarded to `age.secrets` on all platforms (NixOS, Darwin, Home Manager) by `defaults.nix`.
 - **`nixosSecrets` class**: used in user/host aspects for NixOS-only secrets (e.g. hashed passwords). Forwarded only to
   `nixos.age.secrets`, never to Darwin or Home Manager configs. Prefer `secrets` unless the secret must be excluded
   from non-NixOS hosts.
 
-Each NixOS host that consumes rekeyed secrets must declare `age.rekey.hostPubkey` in its host aspect.
+Each host that consumes rekeyed secrets must declare `age.rekey.hostPubkey` in its host aspect.
 
 ## Updating
 

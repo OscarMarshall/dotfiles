@@ -199,7 +199,7 @@ CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan)
    outputs live in `secrets/rekeyed/<hostname>/`. Never commit plaintext secrets or edit `.age` files directly.
    Use the `secrets` class (not `age.secrets` directly) to declare secrets in aspects — it routes to `age.secrets` on
    all platforms. Use `nixosSecrets` only when the secret must be excluded from Darwin/Home Manager (e.g. hashed login
-   passwords). Each NixOS host that uses secrets must set `age.rekey.hostPubkey` in its host aspect.
+   passwords). Each host that uses secrets must set `age.rekey.hostPubkey` in its host aspect.
 3. **State Version**: Never change `system.stateVersion` or `home.stateVersion` unless you understand the implications
    (see NixOS documentation).
 4. **Declarative Configuration**: All system configuration should be in Nix files; avoid imperative changes.
@@ -378,7 +378,8 @@ Use `den.lib.take.exactly` or `den.lib.take.atLeast` to extract specific context
 
 ### Working with Secrets (agenix-rekey)
 
-The `nix develop` shell provides `ragenix` and `agenix-rekey` CLI tools.
+The `nix develop` shell provides the `agenix` CLI tool from agenix-rekey (automatically activated by direnv via the
+`.envrc` in the repo root). The `agenix` script is the single tool needed to add/update/generate/rekey secrets.
 
 > **Note**: Creating/editing primitive secrets, running `agenix generate`, and running `agenix rekey` all require
 > physical access to the YubiKey and must be performed by a human. AI agents cannot perform these steps.
@@ -386,20 +387,19 @@ The `nix develop` shell provides `ragenix` and `agenix-rekey` CLI tools.
 **Creating or editing a primitive secret (human only):**
 
 ```bash
-nix develop
-ragenix -e secrets/<name>.age
+agenix edit secrets/<name>.age
 ```
 
 **Adding a new primitive secret:**
 
 1. Add a `secrets.<name>` entry with `rekeyFile` (and `intermediary = true` if it is only used by generators) in
    the relevant aspect.
-2. **Human step**: Run `ragenix -e secrets/<name>.age` to encrypt the value.
+2. **Human step**: Run `agenix edit secrets/<name>.age` to encrypt the value.
 
 **Adding a new template/generated secret:**
 
 1. Define a `generator` block in the relevant `secrets.<name>` entry (see existing aspects for examples).
-2. **Human step**: Run `agenix generate` to produce the template secret.
+2. **Human step**: Run `agenix generate` to produce the template secret in `secrets/generated/`.
 
 **Rekeying after adding a host or changing secrets (human only):**
 
@@ -408,7 +408,7 @@ agenix rekey -a
 git add secrets/rekeyed/<hostname>/
 ```
 
-Each NixOS host that consumes rekeyed secrets must declare `age.rekey.hostPubkey` in its host aspect.
+Each host that consumes rekeyed secrets must declare `age.rekey.hostPubkey` in its host aspect.
 
 ## Documentation Update Policy
 
@@ -416,3 +416,6 @@ Whenever making changes that affect documented behaviour (secrets architecture, 
 build/deploy steps, modifying the aspect system), **always update both `README.md` and
 `.github/copilot-instructions.md`** in the same commit or PR. This ensures the documentation stays accurate for both
 human readers and AI agents working on this repository.
+
+If a user's request contradicts existing documented conventions, update the documentation to reflect the new direction
+in the same change — documentation should always match the actual conventions in use, not prior ones.
