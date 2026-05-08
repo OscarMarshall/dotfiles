@@ -13,7 +13,11 @@ permissions:
 
 jobs:
   enable-automerge:
-    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    if: >
+      github.actor == 'dependabot[bot]' &&
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'dependabot/')
     runs-on: ubuntu-latest
     steps:
       - name: Enable auto-merge on Dependabot PR
