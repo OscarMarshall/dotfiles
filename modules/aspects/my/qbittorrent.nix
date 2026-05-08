@@ -33,10 +33,11 @@ in
                 trap '${pkgs.coreutils}/bin/rm -f "$salt_file"' EXIT
                 ${pkgs.openssl}/bin/openssl rand 16 > "$salt_file"
                 salt_hex="$(${pkgs.coreutils}/bin/od -An -tx1 -v "$salt_file" | ${pkgs.coreutils}/bin/tr -d ' \n')"
+                password_hex="$(printf '%s' "$PASSWORD" | ${pkgs.coreutils}/bin/od -An -tx1 -v | ${pkgs.coreutils}/bin/tr -d ' \n')"
 
                 salt_b64="$(${pkgs.coreutils}/bin/base64 -w0 "$salt_file")"
-                digest_b64="$(printf '%s' "$PASSWORD" | ${pkgs.openssl}/bin/openssl kdf -binary -keylen 64 -digest SHA512 \
-                  -kdfopt pass:stdin \
+                digest_b64="$(${pkgs.openssl}/bin/openssl kdf -binary -keylen 64 -digest SHA512 \
+                  -kdfopt hexpass:"$password_hex" \
                   -kdfopt hexsalt:"$salt_hex" \
                   -kdfopt iter:100000 PBKDF2 | ${pkgs.coreutils}/bin/base64 -w0)"
 
