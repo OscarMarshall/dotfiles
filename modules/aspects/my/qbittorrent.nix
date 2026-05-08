@@ -55,8 +55,10 @@ in
                 ...
               }:
               ''
-                printf 'CROSS_SEED_API_KEY=%s\n' "$(${decrypt} ${lib.escapeShellArg deps."cross-seed-api-key".file})"
-                printf 'QBITTORRENT_PASSWORD_PBKDF2=%s\n' "$(${decrypt} ${lib.escapeShellArg deps."qbittorrent-password-pbkdf2".file})"
+                printf 'CROSS_SEED_API_KEY="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps."cross-seed-api-key".file})"
+                printf 'QBITTORRENT_PASSWORD_PBKDF2="%s"\n' "$(${decrypt} ${
+                  lib.escapeShellArg deps."qbittorrent-password-pbkdf2".file
+                })"
               '';
           };
         };
@@ -124,23 +126,15 @@ in
                 ''
                   # qBittorrent writes config under ${config.services.qbittorrent.profileDir}/qBittorrent/config/
                   config_file="${config.services.qbittorrent.profileDir}/qBittorrent/config/qBittorrent.conf"
-                  password_pbkdf2="$(${pkgs.gnugrep}/bin/grep '^QBITTORRENT_PASSWORD_PBKDF2=' ${
-                    config.age.secrets."qbittorrent.env".path
-                  } | ${pkgs.coreutils}/bin/cut -d= -f2-)"
+                  set -a
+                  . ${config.age.secrets."qbittorrent.env".path}
+                  set +a
+                  password_pbkdf2="$QBITTORRENT_PASSWORD_PBKDF2"
 
                   if ${pkgs.gnugrep}/bin/grep -q 'Password_PBKDF2=' "$config_file"; then
                     ${pkgs.gnused}/bin/sed -i "s|Password_PBKDF2=.*|Password_PBKDF2=$password_pbkdf2|" "$config_file"
                   else
-                    ${pkgs.gawk}/bin/awk -v password_pbkdf2="$password_pbkdf2" '
-                      /WebUI\\Username=/ && !inserted {
-                        print;
-                        print "WebUI\\Password_PBKDF2=" password_pbkdf2;
-                        inserted = 1;
-                        next;
-                      }
-                      { print }
-                    ' "$config_file" > "$config_file.tmp"
-                    ${pkgs.coreutils}/bin/mv "$config_file.tmp" "$config_file"
+                    ${pkgs.gnused}/bin/sed -i "/^WebUI\\\\Username=/a WebUI\\\\Password_PBKDF2=$password_pbkdf2" "$config_file"
                   fi
                 ''
               ];
