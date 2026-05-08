@@ -20,6 +20,8 @@
       (vpn-confinement._.namespace {
         webUiPort = 8080;
         accessibleFrom = [ "10.10.10.0/24" ];
+        secretName = "Harmony_P2P-US-CA-898.conf";
+        secretFile = ../../../secrets/Harmony_P2P-US-CA-898.conf.age;
       })
       (vpn-confinement._.service "qbittorrent")
       (radarr { administrators = [ "oscar" ]; })

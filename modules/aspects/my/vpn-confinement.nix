@@ -14,9 +14,11 @@
       {
         webUiPort ? 8080,
         accessibleFrom ? [ "10.10.10.0/24" ],
+        secretName ? "Harmony_P2P-US-CA-898.conf",
+        secretFile ? ../../../secrets/Harmony_P2P-US-CA-898.conf.age,
       }:
       {
-        nixosSecrets."Harmony_P2P-US-CA-898.conf".file = ../../../secrets/Harmony_P2P-US-CA-898.conf.age;
+        nixosSecrets.${secretName}.file = secretFile;
 
         nixos =
           { config, ... }:
@@ -25,7 +27,7 @@
 
             vpnNamespaces.proton0 = {
               enable = true;
-              wireguardConfigFile = config.age.secrets."Harmony_P2P-US-CA-898.conf".path;
+              wireguardConfigFile = config.age.secrets.${secretName}.path;
               inherit accessibleFrom;
               portMappings = [
                 {
