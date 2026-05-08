@@ -1,6 +1,7 @@
 { inputs, my, ... }:
 let
   port = 8080;
+  namespace = "proton0";
   namespaceAddress = "192.168.15.1";
 in
 {
@@ -31,7 +32,7 @@ in
               }:
               ''
                 PASSWORD="$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
-                salt_plain="$(${pkgs.openssl}/bin/openssl rand -base64 24 | ${pkgs.gnused}/bin/sed 's/[^A-Za-z0-9]//g' | ${pkgs.coreutils}/bin/head -c 16)"
+                salt_plain="$(${pkgs.openssl}/bin/openssl rand -hex 16)"
 
                 salt_b64="$(printf '%s' "$salt_plain" | ${pkgs.coreutils}/bin/base64 -w0)"
                 digest_b64="$(${pkgs.openssl}/bin/openssl kdf -binary -keylen 64 -digest SHA512 \
@@ -100,7 +101,9 @@ in
               AutoRun = {
                 enabled = true;
                 program = ''
-                  ${pkgs.curl}/bin/curl -XPOST http://${config.vpnNamespaces.proton0.bridgeAddress}:${toString config.services.cross-seed.settings.port}/api/webhook \
+                  ${pkgs.curl}/bin/curl -XPOST http://${
+                    config.vpnNamespaces.${namespace}.bridgeAddress
+                  }:${toString config.services.cross-seed.settings.port}/api/webhook \
                     -H "X-Api-Key: $CROSS_SEED_API_KEY" \
                     -d "infoHash=%I" \
                     -d "includeSingleEpisodes=true"
@@ -156,7 +159,7 @@ in
             };
           };
 
-          vpnNamespaces.proton0 = {
+          vpnNamespaces.${namespace} = {
             enable = true;
             wireguardConfigFile = config.age.secrets."Harmony_P2P-US-CA-898.conf".path;
             accessibleFrom = [ "10.10.10.0/24" ];
