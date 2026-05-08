@@ -30,7 +30,6 @@
         "torrents"
         "yarg-charts"
       ])
-      secrets
       (sonarr { administrators = [ "oscar" ]; })
       ssh-server
       unpackerr
@@ -38,6 +37,7 @@
     ];
 
     nixos = {
+      age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMkM5uNY0rMy2QMG6IptlxgVl4sQWoeSSNmUp7/f2z1B";
       networking.hostId = "7dab76c0";
 
       services = {
@@ -70,6 +70,6 @@
     #
     # You can update Home Manager without changing this value. See the Home Manager release notes for a list of state
     # version changes in each release.
-    homeManager.home.stateVersion = "25.05";
+    provides.oscar.homeManager.home.stateVersion = "25.05";
   };
 }
