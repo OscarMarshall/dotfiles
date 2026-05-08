@@ -2,6 +2,9 @@
 let
   port = 8080;
   port' = toString port;
+  namespaceAddress = "192.168.15.1";
+  bridgeAddress = "192.168.15.5";
+  accessibleFromSubnet = "10.10.10.0/24";
 in
 {
   flake-file.inputs.vpn-confinement.url = "github:Maroka-chan/VPN-Confinement";
@@ -54,7 +57,7 @@ in
             nginx.virtualHosts."qbittorrent.harmony.silverlight-nex.us" = {
               forceSSL = true;
               enableACME = true;
-              locations."/".proxyPass = "http://192.168.15.1:${port'}/";
+              locations."/".proxyPass = "http://${namespaceAddress}:${port'}/";
             };
 
             qbittorrent = {
@@ -68,7 +71,7 @@ in
                 AutoRun = {
                   enabled = true;
                   program = ''
-                    ${pkgs.curl}/bin/curl -XPOST http://192.168.15.5:${toString config.services.cross-seed.settings.port}/api/webhook \
+                    ${pkgs.curl}/bin/curl -XPOST http://${bridgeAddress}:${toString config.services.cross-seed.settings.port}/api/webhook \
                       -H "X-Api-Key: $CROSS_SEED_API_KEY" \
                       -d "infoHash=%I" \
                       -d "includeSingleEpisodes=true"
@@ -102,7 +105,7 @@ in
           vpnNamespaces.proton0 = {
             enable = true;
             wireguardConfigFile = config.age.secrets."Harmony_P2P-US-CA-898.conf".path;
-            accessibleFrom = [ "10.10.10.0/24" ];
+            accessibleFrom = [ accessibleFromSubnet ];
             portMappings = [
               {
                 from = port;
