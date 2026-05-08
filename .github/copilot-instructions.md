@@ -35,7 +35,7 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
     - **`my/`**: Reusable aspects in the `my` namespace (~43 aspects)
       - Core: boot.nix, locale.nix, nix.nix, fonts.nix
       - Services: nginx.nix, minecraft-servers.nix, plex.nix, prowlarr.nix, qbittorrent.nix, radarr.nix, sonarr.nix
-      - Containers: gluetun.nix, profilarr.nix, unpackerr.nix
+      - Containers: profilarr.nix, unpackerr.nix
       - Desktop: gnome.nix, pipewire.nix, steam.nix, discord.nix, ghostty.nix
       - Utilities: auto-upgrade.nix, auto-login.nix, host-flag.nix, routes.nix
       - Applications: emacs/, git.nix, gpg.nix, ssh-client.nix, ssh-server.nix
@@ -59,8 +59,7 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
 - **Home Manager**: Manages user-specific configuration (dotfiles, packages, shell, etc.) declaratively
 - **ragenix**: Secret management using age encryption (drop-in Rust rewrite of agenix)
 - **agenix-rekey**: Extends ragenix with YubiKey master identity, per-host rekeying, and template secret generation
-- **Docker/OCI containers**: Several services run in containers for isolation (profilarr, unpackerr, optional gluetun,
-  etc.)
+- **Docker/OCI containers**: Several services run in containers for isolation (profilarr, unpackerr, etc.)
 
 ## Den Aspects Architecture
 
@@ -310,7 +309,7 @@ Organized by category:
 - **Core**: boot, locale, nix, fonts
 - **Networking**: networkmanager, nginx
 - **Services**: minecraft-servers, plex, prowlarr, radarr, sonarr, autobrr, cross-seed, homepage
-- **Containers**: optional gluetun, profilarr, unpackerr
+- **Containers**: profilarr, unpackerr
 - **Desktop**: gnome, pipewire, steam, discord, ghostty, zen-browser, prusa-slicer, xfce-desktop
 - **Development**: emacs, git, gpg, ssh-client, ssh-server
 - **Infrastructure**: zfs, samba, lm-sensors, secrets, auto-upgrade, auto-login

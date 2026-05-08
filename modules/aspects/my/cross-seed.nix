@@ -81,10 +81,6 @@
           };
         };
 
-        systemd.services.cross-seed.vpnConfinement = {
-          enable = true;
-          vpnNamespace = "proton0";
-        };
       };
   };
 }
