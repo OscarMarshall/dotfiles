@@ -33,47 +33,9 @@
 
       nixos =
         { config, pkgs, ... }:
-        let
-          hostName = config.networking.hostName;
-
-          # Script used by ZED to send ZFS event notifications to Discord.
-          # ZED invocation: $ZED_EMAIL_PROG -s "$SUBJECT" $ZED_EMAIL_ADDR < $TMPFILE
-          zedNotifyScript = pkgs.writeShellApplication {
-            name = "zed-discord-notify";
-            runtimeInputs = with pkgs; [ curl jq ];
-            text = ''
-              # shellcheck disable=SC1090
-              source "${config.age.secrets."netdata-secrets.env".path}"
-              SUBJECT=""
-              while getopts "s:r:" opt; do
-                case "$opt" in
-                  s) SUBJECT="$OPTARG" ;;
-                  *) ;;
-                esac
-              done
-              BODY=$(cat)
-              MESSAGE=$(printf '🚨 **ZFS Alert on ${hostName}**\n**%s**\n```\n%s\n```' \
-                "$SUBJECT" "$BODY")
-              PAYLOAD=$(jq -rn --arg content "$MESSAGE" '{"content": $content}')
-              curl -fsS -X POST "$DISCORD_WEBHOOK_URL" \
-                -H "Content-Type: application/json" \
-                --data-binary "$PAYLOAD"
-            '';
-          };
-        in
         {
-          # ZFS Event Daemon: send Discord notifications for real-time ZFS pool events
-          services.zfs.zed = {
-            enableMail = false;
-            settings = {
-              ZED_EMAIL_PROG = "${zedNotifyScript}/bin/zed-discord-notify";
-              ZED_EMAIL_ADDR = "discord";
-              ZED_NOTIFY_VERBOSE = 0;
-              ZED_NOTIFY_INTERVAL_SECS = 3600;
-            };
-          };
-
           # Netdata monitoring (metrics, dashboards, and Discord health alerts)
+          # Includes built-in ZFS pool health/capacity alerting.
           services.netdata = {
             enable = true;
             # Bind only to loopback; nginx handles external access
