@@ -8,6 +8,7 @@
       (cachyos-kernel { variant = "server-lto"; })
       cross-seed
       gluetun
+      healthchecks
       homepage
       lm-sensors
       locale
