@@ -14,7 +14,12 @@ in
 {
   my.starship = {
     homeManager =
-      { pkgs, ... }:
+      {
+        config,
+        osConfig ? { },
+        pkgs,
+        ...
+      }:
       {
         programs.starship = {
           enable = true;
@@ -31,9 +36,25 @@ in
             command =
               let
                 dirtyPart = if isDirty then ''symbols="''${symbols}!"'' else "";
+                tokenPath =
+                  if osConfig ? age && osConfig.age ? secrets && osConfig.age.secrets ? nix-access-tokens then
+                    osConfig.age.secrets.nix-access-tokens.path
+                  else if config ? age && config.age ? secrets && config.age.secrets ? nix-access-tokens then
+                    config.age.secrets.nix-access-tokens.path
+                  else
+                    "";
                 apiPart =
                   if rev != null then
                     ''
+                      github_token=""
+                      if [ -n "${tokenPath}" ] && [ -r "${tokenPath}" ]; then
+                        while IFS= read -r line; do
+                          case "$line" in
+                            access-tokens*=*github.com=*) github_token="''${line##*github.com=}" ;;
+                          esac
+                        done < "${tokenPath}"
+                      fi
+
                       # Compare our pinned revision against main on GitHub to determine
                       # whether we are behind, diverged, or up-to-date.  Results are
                       # cached in ~/.cache/starship/ with a 60-minute TTL so that we
@@ -49,8 +70,14 @@ in
                           delay=0.5
                           while [ "$retries" -ge 0 ]; do
                             result=$(
+                              if [ -n "$github_token" ]; then
+                                auth_args=(-H "Authorization: Bearer $github_token")
+                              else
+                                auth_args=()
+                              fi
                               ${pkgs.curl}/bin/curl -sf \
                                 --connect-timeout 2 --max-time 3 \
+                                ''${auth_args[@]} \
                                 "https://api.github.com/repos/OscarMarshall/dotfiles/compare/${rev}...main" |
                                 ${pkgs.jq}/bin/jq -r '.status // empty' 2>/dev/null || true
                             )
