@@ -181,6 +181,7 @@ Each host that consumes rekeyed secrets must declare `age.rekey.hostPubkey` in i
 GitHub automation:
 
 - Dependabot handles GitHub Actions and Nix (`flake.lock`) updates.
+- Dependabot PRs are automatically set to auto-merge once required checks pass.
 - Renovate is kept only for Docker image updates referenced from Nix files.
 
 ### Update All Dependencies
