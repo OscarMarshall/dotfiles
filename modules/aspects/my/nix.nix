@@ -1,5 +1,5 @@
-let
-  config =
+{
+  my.nix.os =
     { pkgs, ... }:
     {
       nix = {
@@ -25,10 +25,4 @@ let
         };
       };
     };
-in
-{
-  my.nix = {
-    darwin = config;
-    nixos = config;
-  };
 }

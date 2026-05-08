@@ -1,13 +1,20 @@
 {
-  my.gpg =
-    { host, ... }:
-    {
-      homeManager =
-        { pkgs, ... }:
-        {
-          home.packages = with pkgs; if host.class == "darwin" then [ pinentry_mac ] else [ pinentry-all ];
-          programs.gpg.enable = true;
-          services.gpg-agent.enable = true;
-        };
+  my.gpg = {
+    homeManager = {
+      programs.gpg.enable = true;
+      services.gpg-agent.enable = true;
     };
+
+    hmLinux =
+      { pkgs, ... }:
+      {
+        home.packages = [ pkgs.pinentry-all ];
+      };
+
+    hmDarwin =
+      { pkgs, ... }:
+      {
+        home.packages = [ pkgs.pinentry_mac ];
+      };
+  };
 }

@@ -4,6 +4,8 @@
     includes = with my; [ homebrew ];
 
     darwin = {
+      age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAa8OO2Jgwvuz7J9LyceUlvlEk7GYkRJGnLaIzzYQCDQ";
+
       # Used for backwards compatibility, please read the changelog before changing.
       #
       # $ darwin-rebuild changelog

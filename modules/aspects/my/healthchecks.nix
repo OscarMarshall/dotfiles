@@ -7,6 +7,8 @@
     {
       includes = [ (my.nginx._.virtual-host "netdata.harmony.silverlight-nex.us" port) ];
 
+      secrets."discord-webhook.env".rekeyFile = ../../../secrets/discord-webhook.env.age;
+
       nixos =
         { config, pkgs, ... }:
         let

@@ -65,6 +65,17 @@ into composable aspects:
 - **`modules/aspects/my/`**: Reusable service and feature aspects (~43 total)
 - **`modules/aspects/defaults.nix`**: Default includes applied to all configurations
 
+### Configuration Classes
+
+Each aspect can provide configuration for different targets using these classes:
+
+- **`os`**: Applies to both NixOS and Darwin (avoids duplicating identical config in `nixos` and `darwin`)
+- **`nixos`**: NixOS-specific configuration only
+- **`darwin`**: macOS (nix-darwin) specific configuration only
+- **`homeManager`**: Home Manager configuration (cross-platform user environment)
+- **`hmLinux`/`hmDarwin`**: Platform-specific Home Manager classes forwarded into `homeManager` by
+  `modules/aspects/defaults.nix`
+
 ### Host Aspects
 
 Each host declares which services and features to enable:
@@ -88,16 +99,17 @@ Each user declares their environment and applications:
 
 ```nix
 # modules/aspects/users/oscar/oscar.nix
-den.aspects.oscar = {
-  includes = with my; [
-    emacs
-    git
-    (host-flag "graphical" {
-      includes = [ discord ghostty ];
-    })
-  ];
+den.aspects.oscar = { host, lib, ... }: {
+  user.description = "Oscar Marshall";
+
+  includes = [
+    my.emacs
+    my.git
+  ] ++ lib.optionals (host.graphical or false) [ my.discord my.ghostty ];
 };
 ```
+
+Use an aspect function signature (`{ host, lib, ... }:`) when you need context-aware conditional logic.
 
 ## Key Features
 
@@ -124,17 +136,45 @@ den.aspects.oscar = {
 
 ## Secrets Management
 
-Secrets are encrypted using [ragenix](https://github.com/yaxitech/ragenix) (age-based encryption):
+Secrets are managed with [ragenix](https://github.com/yaxitech/ragenix) (age encryption) extended by
+[agenix-rekey](https://github.com/oddlama/agenix-rekey). A YubiKey acts as the single master identity; host keys are
+derived automatically. Primitive secrets are encrypted to the YubiKey. Mark a primitive secret `intermediary = true`
+only if it is exclusively consumed by generators (never referenced directly by services). Template secrets (env files,
+JSON configs) are generated from primitives and then rekeyed per host.
+
+The dev shell (automatically activated by [direnv](https://direnv.net/) via the `.envrc` in the repo root) provides the
+`agenix` CLI tool from agenix-rekey, which is the single script needed to add/update/generate/rekey secrets.
+
+> **Note**: Editing primitive secrets, running `agenix generate`, and running `agenix rekey` require physical YubiKey
+> access and must be performed by a human.
 
 ```console
-# Edit a secret
-nix run github:yaxitech/ragenix -- -e secrets/my-secret.age
+# Edit or create a primitive secret (human only — requires YubiKey)
+agenix edit secrets/<name>.age
 
-# Re-key secrets after adding a new host
-nix run github:yaxitech/ragenix -- -r
+# Generate template secrets from primitives (human only — requires YubiKey)
+agenix generate
+git add secrets/generated/
+
+# Rekey all secrets for all hosts and commit (human only — requires YubiKey)
+agenix rekey -a
+git add secrets/rekeyed/harmony/
+git add secrets/rekeyed/melaan/
 ```
 
-Public keys are defined in `secrets/secrets.nix`.
+### Secrets Architecture
+
+- **Primitive secrets** (`secrets/*.age`): encrypted to the YubiKey master identity. Add `intermediary = true` only if
+  the secret is exclusively consumed by generators.
+- **Template secrets**: generated from primitives by `agenix generate` into `secrets/generated/`, then rekeyed per host
+  via `agenix rekey -a` into `secrets/rekeyed/<hostname>/`.
+- **`secrets` class**: use in host/user/service aspects to declare secrets — preferred over setting `age.secrets`
+  directly. Forwarded to `age.secrets` on all platforms (NixOS, Darwin, Home Manager) by `defaults.nix`.
+- **`nixosSecrets` class**: used in user/host aspects for NixOS-only secrets (e.g. hashed passwords). Forwarded only to
+  `nixos.age.secrets`, never to Darwin or Home Manager configs. Prefer `secrets` unless the secret must be excluded from
+  non-NixOS hosts.
+
+Each host that consumes rekeyed secrets must declare `age.rekey.hostPubkey` in its host aspect.
 
 ## Updating
 
