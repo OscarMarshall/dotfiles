@@ -1,13 +1,34 @@
 {
   my.nix = {
-    secrets.github-token.rekeyFile = ../../../secrets/github-token.age;
+    secrets =
+      { secrets, ... }:
+      {
+        github-token = {
+          rekeyFile = ../../../secrets/github-token.age;
+          intermediary = true;
+        };
+
+        github-nix-access-tokens.generator = {
+          dependencies = { inherit (secrets) github-token; };
+          script =
+            {
+              decrypt,
+              deps,
+              lib,
+              ...
+            }:
+            ''
+              printf 'access-tokens = github.com=%s\n' "$(${decrypt} ${lib.escapeShellArg deps.github-token.file})"
+            '';
+        };
+      };
 
     os =
       { config, pkgs, ... }:
       {
         nix = {
           extraOptions = ''
-            !include ${config.age.secrets.github-token.path}
+            !include ${config.age.secrets.github-nix-access-tokens.path}
           '';
           gc = {
             automatic = true;
