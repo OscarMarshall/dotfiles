@@ -1,14 +1,14 @@
-{ lib, my, ... }:
+{ inputs, lib, ... }:
 let
   port = 8080;
   port' = toString port;
 in
 {
+  flake-file.inputs.vpn-confinement.url = "github:Maroka-chan/VPN-Confinement";
+
   my.qbittorrent =
     { administrators }:
     {
-      includes = with my; [ (nginx._.virtual-host "qbittorrent.harmony.silverlight-nex.us" port) ];
-
       secrets =
         { secrets, ... }:
         {
@@ -27,9 +27,13 @@ in
           };
         };
 
+      nixosSecrets."Harmony_P2P-US-CA-898.conf".file = ../../../secrets/Harmony_P2P-US-CA-898.conf.age;
+
       nixos =
-        { config, ... }:
+        { config, pkgs, ... }:
         {
+          imports = [ (inputs.vpn-confinement.nixosModules.default or { }) ];
+
           users = {
             users = {
               qbittorrent = {
@@ -46,24 +50,65 @@ in
             groups.qbittorrent.gid = 985;
           };
 
-          virtualisation.oci-containers.containers = {
-            gluetun.ports = [ "${port'}:${port'}" ];
-            qbittorrent = {
-              image = "lscr.io/linuxserver/qbittorrent:5.1.4-r1-ls435@sha256:e0cedcadd62f809efdeddfd32e4d1192f9a74e6e64ed6753bfc6e2c3ed4a714a";
-              volumes = [
-                "/var/lib/qBittorrent:/config"
-                "/metalminds/torrents:/metalminds/torrents"
-              ];
-              environment = {
-                PUID = toString config.users.users.qbittorrent.uid;
-                PGID = toString config.users.groups.qbittorrent.gid;
-                TZ = config.time.timeZone;
-                WEBUI_PORT = port';
-              };
-              environmentFiles = [ config.age.secrets."qbittorrent.env".path ];
-              dependsOn = [ "gluetun" ];
-              extraOptions = [ "--network=container:gluetun" ];
+          services = {
+            nginx.virtualHosts."qbittorrent.harmony.silverlight-nex.us" = {
+              forceSSL = true;
+              enableACME = true;
+              locations."/".proxyPass = "http://192.168.15.1:${port'}/";
             };
+
+            qbittorrent = {
+              enable = true;
+              package = pkgs.qbittorrent-nox;
+              webuiPort = port;
+              user = "qbittorrent";
+              group = "qbittorrent";
+              profileDir = "/var/lib/qBittorrent";
+              serverConfig = {
+                AutoRun = {
+                  enabled = true;
+                  program = ''
+                    ${pkgs.curl}/bin/curl -XPOST http://192.168.15.5:${toString config.services.cross-seed.settings.port}/api/webhook \
+                      -H "X-Api-Key: $CROSS_SEED_API_KEY" \
+                      -d "infoHash=%I" \
+                      -d "includeSingleEpisodes=true"
+                  '';
+                };
+                BitTorrent.Session = {
+                  DefaultSavePath = "/metalminds/torrents/downloads";
+                  IgnoreSlowTorrentsForQueueing = true;
+                  MaxActiveTorrents = 999999999;
+                  MaxActiveUploads = 999999999;
+                  Tags = "cross-seed";
+                };
+                Preferences.WebUI = {
+                  Password_PBKDF2 = "@ByteArray(3+DJBBGQhl1i7uYQ4PAZAA==:FTHL6psR2VpGAUnpsh/SlTa5mPjZZ6ab6YwkzqH0JxUL94iDPCKHFpkZQoAqnlv/0rri76zKo6on73kwI3s7dA==)";
+                  ReverseProxySupportEnabled = true;
+                  TrustedReverseProxiesList = "qbittorrent.harmony.silverlight-nex.us";
+                  Username = "oscar";
+                };
+              };
+            };
+          };
+
+          systemd.services.qbittorrent = {
+            serviceConfig.EnvironmentFile = [ config.age.secrets."qbittorrent.env".path ];
+            vpnConfinement = {
+              enable = true;
+              vpnNamespace = "proton0";
+            };
+          };
+
+          vpnNamespaces.proton0 = {
+            enable = true;
+            wireguardConfigFile = config.age.secrets."Harmony_P2P-US-CA-898.conf".path;
+            accessibleFrom = [ "10.10.10.0/24" ];
+            portMappings = [
+              {
+                from = port;
+                to = port;
+              }
+            ];
           };
         };
     };

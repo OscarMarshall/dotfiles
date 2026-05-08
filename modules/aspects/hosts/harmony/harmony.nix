@@ -7,7 +7,6 @@
       boot
       (cachyos-kernel { variant = "server-lto"; })
       cross-seed
-      gluetun
       homepage
       lm-sensors
       locale

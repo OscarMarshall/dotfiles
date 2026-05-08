@@ -34,8 +34,8 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
       - **`adelline/`**: adelline.nix
     - **`my/`**: Reusable aspects in the `my` namespace (~43 aspects)
       - Core: boot.nix, locale.nix, nix.nix, fonts.nix
-      - Services: nginx.nix, minecraft-servers.nix, plex.nix, prowlarr.nix, radarr.nix, sonarr.nix
-      - Containers: gluetun.nix, qbittorrent.nix, profilarr.nix, unpackerr.nix
+      - Services: nginx.nix, minecraft-servers.nix, plex.nix, prowlarr.nix, qbittorrent.nix, radarr.nix, sonarr.nix
+      - Containers: gluetun.nix, profilarr.nix, unpackerr.nix
       - Desktop: gnome.nix, pipewire.nix, steam.nix, discord.nix, ghostty.nix
       - Utilities: auto-upgrade.nix, auto-login.nix, host-flag.nix, routes.nix
       - Applications: emacs/, git.nix, gpg.nix, ssh-client.nix, ssh-server.nix
@@ -59,7 +59,8 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
 - **Home Manager**: Manages user-specific configuration (dotfiles, packages, shell, etc.) declaratively
 - **ragenix**: Secret management using age encryption (drop-in Rust rewrite of agenix)
 - **agenix-rekey**: Extends ragenix with YubiKey master identity, per-host rekeying, and template secret generation
-- **Docker/OCI containers**: Several services run in containers for isolation (gluetun, qBittorrent, etc.)
+- **Docker/OCI containers**: Several services run in containers for isolation (profilarr, unpackerr, optional gluetun,
+  etc.)
 
 ## Den Aspects Architecture
 
@@ -124,7 +125,7 @@ Use direct host-flag checks in aspect code:
 The **harmony** server (x86_64-linux) runs:
 
 - **Media Stack**: Plex, Radarr, Sonarr, Prowlarr, Autobrr, Cross-seed
-- **Downloads**: qBittorrent in gluetun VPN container with port forwarding
+- **Downloads**: native qBittorrent under VPN-Confinement
 - **Minecraft**: Multiple servers via nix-minecraft
 - **Reverse Proxy**: nginx with Let's Encrypt SSL certificates
 - **Monitoring**: homepage-dashboard
@@ -221,7 +222,7 @@ CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan)
 - SSL/TLS is handled by nginx with Let's Encrypt certificates (ACME)
 - Secrets are managed via ragenix + agenix-rekey with a YubiKey master identity (age encryption). Primitive secrets are
   never rekeyed directly to hosts; template secrets are generated and then rekeyed per host.
-- VPN (gluetun) protects qBittorrent traffic
+- VPN-Confinement protects qBittorrent traffic
 - Firewall is enabled with specific port allowances per service
 - OpenSSH is enabled for remote access on harmony
 - Each aspect defines its own security requirements (firewall rules, user groups, etc.)
@@ -309,7 +310,7 @@ Organized by category:
 - **Core**: boot, locale, nix, fonts
 - **Networking**: networkmanager, nginx
 - **Services**: minecraft-servers, plex, prowlarr, radarr, sonarr, autobrr, cross-seed, homepage
-- **Containers**: gluetun, qbittorrent, profilarr, unpackerr
+- **Containers**: gluetun, profilarr, unpackerr
 - **Desktop**: gnome, pipewire, steam, discord, ghostty, zen-browser, prusa-slicer, xfce-desktop
 - **Development**: emacs, git, gpg, ssh-client, ssh-server
 - **Infrastructure**: zfs, samba, lm-sensors, secrets, auto-upgrade, auto-login
