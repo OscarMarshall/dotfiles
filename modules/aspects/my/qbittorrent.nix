@@ -2,6 +2,7 @@
 let
   port = 8080;
   port' = toString port;
+  crossSeedPort = 2468;
   namespaceAddress = "192.168.15.1";
   bridgeAddress = "192.168.15.5";
   accessibleFromSubnet = "10.10.10.0/24";
@@ -71,7 +72,7 @@ in
                 AutoRun = {
                   enabled = true;
                   program = ''
-                    ${pkgs.curl}/bin/curl -XPOST http://${bridgeAddress}:${toString config.services.cross-seed.settings.port}/api/webhook \
+                    ${pkgs.curl}/bin/curl -XPOST http://${bridgeAddress}:${toString crossSeedPort}/api/webhook \
                       -H "X-Api-Key: $CROSS_SEED_API_KEY" \
                       -d "infoHash=%I" \
                       -d "includeSingleEpisodes=true"

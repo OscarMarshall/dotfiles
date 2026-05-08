@@ -310,7 +310,7 @@ Organized by category:
 - **Core**: boot, locale, nix, fonts
 - **Networking**: networkmanager, nginx
 - **Services**: minecraft-servers, plex, prowlarr, radarr, sonarr, autobrr, cross-seed, homepage
-- **Containers**: gluetun, profilarr, unpackerr
+- **Containers**: optional gluetun, profilarr, unpackerr
 - **Desktop**: gnome, pipewire, steam, discord, ghostty, zen-browser, prusa-slicer, xfce-desktop
 - **Development**: emacs, git, gpg, ssh-client, ssh-server
 - **Infrastructure**: zfs, samba, lm-sensors, secrets, auto-upgrade, auto-login
