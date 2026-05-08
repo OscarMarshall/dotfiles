@@ -51,7 +51,10 @@ in
             (inputs.agenix-rekey.homeManagerModules.default or { })
           ];
 
-          age.rekey = rekey host pkgs;
+          age.rekey = (rekey host pkgs) // {
+            hostKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOn+wO9sZ8GoCRrg1BOkBK7/dPUojEdEaWoq2lHFYp9K";
+          };
+          age.identityPaths = [ "~/.ssh/id_ed25519" ];
         };
 
       nixos =
