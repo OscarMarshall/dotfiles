@@ -1,4 +1,4 @@
-{ self, ... }:
+{ lib, self, ... }:
 let
   isDirty = self ? dirtyRev;
   # Extract the base commit SHA: self.rev when clean, or strip the "-dirty" suffix
@@ -36,22 +36,18 @@ in
             command =
               let
                 dirtyPart = if isDirty then ''symbols="''${symbols}!"'' else "";
-                tokenPath =
-                  if osConfig ? age && osConfig.age ? secrets && osConfig.age.secrets ? nix-access-tokens then
-                    osConfig.age.secrets.nix-access-tokens.path
-                  else if config ? age && config.age ? secrets && config.age.secrets ? nix-access-tokens then
-                    config.age.secrets.nix-access-tokens.path
-                  else
-                    "";
+                tokenPath = lib.attrByPath [ "age" "secrets" "nix-access-tokens" "path" ] (
+                  lib.attrByPath [ "age" "secrets" "nix-access-tokens" "path" ] "" config
+                ) osConfig;
                 apiPart =
                   if rev != null then
                     ''
                       github_token=""
                       if [ -n "${tokenPath}" ] && [ -r "${tokenPath}" ]; then
                         while IFS= read -r line; do
-                          case "$line" in
-                            access-tokens*=*github.com=*) github_token="''${line##*github.com=}" ;;
-                          esac
+                          if [[ "$line" =~ ^[[:space:]]*access-tokens[[:space:]]*=[[:space:]]*github\.com=(.+)$ ]]; then
+                            github_token="''${BASH_REMATCH[1]}"
+                          fi
                         done < "${tokenPath}"
                       fi
 
@@ -71,7 +67,7 @@ in
                           while [ "$retries" -ge 0 ]; do
                             result=$(
                               if [ -n "$github_token" ]; then
-                                auth_args=(-H "Authorization: Bearer $github_token")
+                                auth_args=(-H "Authorization: token $github_token")
                               else
                                 auth_args=()
                               fi
