@@ -10,6 +10,12 @@ let
       builtins.substring 0 40 self.dirtyRev
     else
       null;
+  nixAccessTokensSecretPath = [
+    "age"
+    "secrets"
+    "nix-access-tokens"
+    "path"
+  ];
 in
 {
   my.starship = {
@@ -38,18 +44,22 @@ in
                 dirtyPart = if isDirty then ''symbols="''${symbols}!"'' else "";
                 tokenPath =
                   let
-                    secretPath = [ "age" "secrets" "nix-access-tokens" "path" ];
-                    osTokenPath = lib.attrByPath secretPath null osConfig;
+                    osTokenPath = lib.attrByPath nixAccessTokensSecretPath null osConfig;
                   in
-                  if osTokenPath != null then osTokenPath else lib.attrByPath secretPath "" config;
+                  if osTokenPath != null then
+                    osTokenPath
+                  else
+                    lib.attrByPath nixAccessTokensSecretPath "" config;
                 apiPart =
                   if rev != null then
                     ''
                       github_token=""
+                      # Expected format: access-tokens = github.com=<token> [host=<token>...]
                       if [ -n "${tokenPath}" ] && [ -r "${tokenPath}" ]; then
                         while IFS= read -r line; do
                           if [[ "$line" =~ ^[[:space:]]*access-tokens[[:space:]]*=[[:space:]].*github\.com=([^[:space:]]+) ]]; then
                             github_token="''${BASH_REMATCH[1]}"
+                            break
                           fi
                         done < "${tokenPath}"
                       fi
