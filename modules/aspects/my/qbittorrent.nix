@@ -122,7 +122,7 @@ in
               EnvironmentFile = [ config.age.secrets."qbittorrent.env".path ];
               ExecStartPre = lib.mkAfter [
                 ''
-                  config_file=/var/lib/qBittorrent/qBittorrent/config/qBittorrent.conf
+                  config_file="${config.services.qbittorrent.profileDir}/qBittorrent/config/qBittorrent.conf"
                   password_pbkdf2="$(${pkgs.gnugrep}/bin/grep '^QBITTORRENT_PASSWORD_PBKDF2=' ${
                     config.age.secrets."qbittorrent.env".path
                   } | ${pkgs.coreutils}/bin/cut -d= -f2-)"
@@ -130,7 +130,7 @@ in
                   if ${pkgs.gnugrep}/bin/grep -q 'Password_PBKDF2=' "$config_file"; then
                     ${pkgs.gnused}/bin/sed -i "s|Password_PBKDF2=.*|Password_PBKDF2=$password_pbkdf2|" "$config_file"
                   else
-                    ${pkgs.gnused}/bin/sed -i "/WebUI\\\\Username=/a WebUI\\\\Password_PBKDF2=$password_pbkdf2" "$config_file"
+                    ${pkgs.gnused}/bin/sed -i "/WebUI\\Username=/a WebUI\\Password_PBKDF2=$password_pbkdf2" "$config_file"
                   fi
                 ''
               ];
