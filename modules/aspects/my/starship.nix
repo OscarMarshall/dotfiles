@@ -10,10 +10,10 @@ let
       builtins.substring 0 40 self.dirtyRev
     else
       null;
-  nixAccessTokensSecretPath = [
+  githubAccessTokenSecretPath = [
     "age"
     "secrets"
-    "nix-access-tokens"
+    "github-access-token"
     "path"
   ];
 in
@@ -44,24 +44,18 @@ in
                 dirtyPart = if isDirty then ''symbols="''${symbols}!"'' else "";
                 tokenPath =
                   let
-                    osTokenPath = lib.attrByPath nixAccessTokensSecretPath null osConfig;
+                    osTokenPath = lib.attrByPath githubAccessTokenSecretPath null osConfig;
                   in
                   if osTokenPath != null then
                     osTokenPath
                   else
-                    lib.attrByPath nixAccessTokensSecretPath "" config;
+                    lib.attrByPath githubAccessTokenSecretPath "" config;
                 apiPart =
                   if rev != null then
                     ''
                       github_token=""
-                      # Expected format: access-tokens = github.com=<token> [host=<token>...]
                       if [ -n "${tokenPath}" ] && [ -r "${tokenPath}" ]; then
-                        while IFS= read -r line; do
-                          if [[ "$line" =~ ^[[:space:]]*access-tokens[[:space:]]*=[[:space:]].*github\.com=([^[:space:]]+) ]]; then
-                            github_token="''${BASH_REMATCH[1]}"
-                            break
-                          fi
-                        done < "${tokenPath}"
+                        github_token="$(${pkgs.coreutils}/bin/cat "${tokenPath}" 2>/dev/null || true)"
                       fi
 
                       if [ -n "$github_token" ]; then
