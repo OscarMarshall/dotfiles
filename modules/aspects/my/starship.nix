@@ -36,16 +36,15 @@ in
             command =
               let
                 dirtyPart = if isDirty then ''symbols="''${symbols}!"'' else "";
-                tokenPath = lib.attrByPath [ "age" "secrets" "nix-access-tokens" "path" ] (
-                  lib.attrByPath [ "age" "secrets" "nix-access-tokens" "path" ] "" config
-                ) osConfig;
+                tokenPath =
+                  lib.attrByPath [ "age" "secrets" "nix-access-tokens" "path" ] "" (config // osConfig);
                 apiPart =
                   if rev != null then
                     ''
                       github_token=""
                       if [ -n "${tokenPath}" ] && [ -r "${tokenPath}" ]; then
                         while IFS= read -r line; do
-                          if [[ "$line" =~ ^[[:space:]]*access-tokens[[:space:]]*=[[:space:]]*github\.com=(.+)$ ]]; then
+                          if [[ "$line" =~ ^[[:space:]]*access-tokens[[:space:]]*=[[:space:]]*github\.com=([^[:space:]]+)[[:space:]]*$ ]]; then
                             github_token="''${BASH_REMATCH[1]}"
                           fi
                         done < "${tokenPath}"
@@ -62,15 +61,15 @@ in
                         status=$(cat "$cache_file")
                       else
                         status=$(
+                          if [ -n "$github_token" ]; then
+                            auth_args=(-H "Authorization: token $github_token")
+                          else
+                            auth_args=()
+                          fi
                           retries=2
                           delay=0.5
                           while [ "$retries" -ge 0 ]; do
                             result=$(
-                              if [ -n "$github_token" ]; then
-                                auth_args=(-H "Authorization: token $github_token")
-                              else
-                                auth_args=()
-                              fi
                               ${pkgs.curl}/bin/curl -sf \
                                 --connect-timeout 2 --max-time 3 \
                                 ''${auth_args[@]} \
