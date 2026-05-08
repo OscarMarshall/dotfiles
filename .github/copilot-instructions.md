@@ -39,7 +39,7 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
       - Desktop: gnome.nix, pipewire.nix, steam.nix, discord.nix, ghostty.nix
       - Utilities: auto-upgrade.nix, auto-login.nix, host-flag.nix, routes.nix
       - Applications: emacs/, git.nix, gpg.nix, ssh-client.nix, ssh-server.nix
-      - Infrastructure: zfs.nix, samba.nix, lm-sensors.nix, networkmanager.nix, secrets.nix
+      - Infrastructure: zfs.nix, samba.nix, lm-sensors.nix, networkmanager.nix, secrets.nix, vpn-confinement.nix
       - Darwin: homebrew.nix
       - VM: vm.nix, vm-bootable.nix, ci-no-boot.nix
 - **`secrets/`**: Directory containing ragenix/agenix-rekey-encrypted secrets (`.age` files). Primitive secrets are
@@ -312,7 +312,7 @@ Organized by category:
 - **Containers**: profilarr, unpackerr
 - **Desktop**: gnome, pipewire, steam, discord, ghostty, zen-browser, prusa-slicer, xfce-desktop
 - **Development**: emacs, git, gpg, ssh-client, ssh-server
-- **Infrastructure**: zfs, samba, lm-sensors, secrets, auto-upgrade, auto-login
+- **Infrastructure**: zfs, samba, lm-sensors, secrets, auto-upgrade, auto-login, vpn-confinement
 - **Darwin**: homebrew
 - **Utilities**: host-flag, routes, vm, vm-bootable, ci-no-boot
 

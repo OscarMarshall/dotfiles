@@ -17,6 +17,8 @@
       profilarr
       prowlarr
       (qbittorrent { administrators = [ "oscar" ]; })
+      vpn-confinement
+      (vpn-confinement._.service "qbittorrent")
       (radarr { administrators = [ "oscar" ]; })
       (samba "/metalminds" [
         "backups"

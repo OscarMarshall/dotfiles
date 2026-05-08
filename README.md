@@ -120,6 +120,8 @@ Use an aspect function signature (`{ host, lib, ... }:`) when you need context-a
 - **Gaming**: Minecraft servers
 - **Infrastructure**: Nginx reverse proxy with Let's Encrypt, Samba file sharing, ZFS storage
 
+The VPN namespace is declared in a reusable `my.vpn-confinement` aspect, and services opt in via its sub-aspects.
+
 ### Desktop
 
 - **GNOME** on melaan (Wayland, via NixOS)

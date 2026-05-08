@@ -1,23 +1,52 @@
-{ inputs, lib, ... }:
+{ my, ... }:
 let
   port = 8080;
-  port' = toString port;
   crossSeedPort = 2468;
   namespaceAddress = "192.168.15.1";
   bridgeAddress = "192.168.15.5";
-  accessibleFromSubnet = "10.10.10.0/24";
 in
 {
-  flake-file.inputs.vpn-confinement.url = "github:Maroka-chan/VPN-Confinement";
-
   my.qbittorrent =
     { administrators }:
     {
+      includes = [
+        (my.nginx._.virtual-host "qbittorrent.harmony.silverlight-nex.us" {
+          host = namespaceAddress;
+          port = port;
+        })
+      ];
+
       secrets =
         { secrets, ... }:
         {
+          "qbittorrent-password-pbkdf2".generator = {
+            dependencies = { inherit (secrets) oscar-password; };
+            script =
+              {
+                lib,
+                pkgs,
+                decrypt,
+                deps,
+                ...
+              }:
+              ''
+                PASSWORD="$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
+
+                PASSWORD="$PASSWORD" ${pkgs.python3}/bin/python - <<'PY'
+                import base64
+                import hashlib
+                import os
+
+                password = os.environ["PASSWORD"].encode()
+                salt = os.urandom(16)
+                digest = hashlib.pbkdf2_hmac("sha512", password, salt, 100000, 64)
+                print(f"@ByteArray({base64.b64encode(salt).decode()}:{base64.b64encode(digest).decode()})")
+                PY
+              '';
+          };
+
           "qbittorrent.env".generator = {
-            dependencies = { inherit (secrets) cross-seed-api-key; };
+            dependencies = { inherit (secrets) cross-seed-api-key qbittorrent-password-pbkdf2; };
             script =
               {
                 lib,
@@ -27,17 +56,19 @@ in
               }:
               ''
                 printf 'CROSS_SEED_API_KEY=%s\n' "$(${decrypt} ${lib.escapeShellArg deps."cross-seed-api-key".file})"
+                printf 'QBITTORRENT_PASSWORD_PBKDF2=%s\n' "$(${decrypt} ${lib.escapeShellArg deps."qbittorrent-password-pbkdf2".file})"
               '';
           };
         };
 
-      nixosSecrets."Harmony_P2P-US-CA-898.conf".file = ../../../secrets/Harmony_P2P-US-CA-898.conf.age;
-
       nixos =
-        { config, pkgs, ... }:
         {
-          imports = [ inputs.vpn-confinement.nixosModules.default ];
-
+          config,
+          lib,
+          pkgs,
+          ...
+        }:
+        {
           users = {
             users = {
               qbittorrent = {
@@ -54,65 +85,51 @@ in
             groups.qbittorrent.gid = 985;
           };
 
-          services = {
-            nginx.virtualHosts."qbittorrent.harmony.silverlight-nex.us" = {
-              forceSSL = true;
-              enableACME = true;
-              locations."/".proxyPass = "http://${namespaceAddress}:${port'}/";
-            };
-
-            qbittorrent = {
-              enable = true;
-              package = pkgs.qbittorrent-nox;
-              webuiPort = port;
-              user = "qbittorrent";
-              group = "qbittorrent";
-              profileDir = "/var/lib/qBittorrent";
-              serverConfig = {
-                AutoRun = {
-                  enabled = true;
-                  program = ''
-                    ${pkgs.curl}/bin/curl -XPOST http://${bridgeAddress}:${toString crossSeedPort}/api/webhook \
-                      -H "X-Api-Key: $CROSS_SEED_API_KEY" \
-                      -d "infoHash=%I" \
-                      -d "includeSingleEpisodes=true"
-                  '';
-                };
-                BitTorrent.Session = {
-                  DefaultSavePath = "/metalminds/torrents/downloads";
-                  IgnoreSlowTorrentsForQueueing = true;
-                  MaxActiveTorrents = 999999999;
-                  MaxActiveUploads = 999999999;
-                  Tags = "cross-seed";
-                };
-                Preferences.WebUI = {
-                  Password_PBKDF2 = "@ByteArray(3+DJBBGQhl1i7uYQ4PAZAA==:FTHL6psR2VpGAUnpsh/SlTa5mPjZZ6ab6YwkzqH0JxUL94iDPCKHFpkZQoAqnlv/0rri76zKo6on73kwI3s7dA==)";
-                  ReverseProxySupportEnabled = true;
-                  TrustedReverseProxiesList = "qbittorrent.harmony.silverlight-nex.us";
-                  Username = "oscar";
-                };
+          services.qbittorrent = {
+            enable = true;
+            package = pkgs.qbittorrent-nox;
+            webuiPort = port;
+            user = "qbittorrent";
+            group = "qbittorrent";
+            profileDir = "/var/lib/qBittorrent";
+            serverConfig = {
+              AutoRun = {
+                enabled = true;
+                program = ''
+                  ${pkgs.curl}/bin/curl -XPOST http://${bridgeAddress}:${toString crossSeedPort}/api/webhook \
+                    -H "X-Api-Key: $CROSS_SEED_API_KEY" \
+                    -d "infoHash=%I" \
+                    -d "includeSingleEpisodes=true"
+                '';
+              };
+              BitTorrent.Session = {
+                DefaultSavePath = "/metalminds/torrents/downloads";
+                IgnoreSlowTorrentsForQueueing = true;
+                MaxActiveTorrents = 999999999;
+                MaxActiveUploads = 999999999;
+                Tags = "cross-seed";
+              };
+              Preferences.WebUI = {
+                Password_PBKDF2 = "@ByteArray(placeholder:placeholder)";
+                ReverseProxySupportEnabled = true;
+                TrustedReverseProxiesList = "qbittorrent.harmony.silverlight-nex.us";
+                Username = "oscar";
               };
             };
           };
 
           systemd.services.qbittorrent = {
-            serviceConfig.EnvironmentFile = [ config.age.secrets."qbittorrent.env".path ];
-            vpnConfinement = {
-              enable = true;
-              vpnNamespace = "proton0";
+            serviceConfig = {
+              EnvironmentFile = [ config.age.secrets."qbittorrent.env".path ];
+              ExecStartPre = lib.mkAfter [
+                ''
+                  password_pbkdf2="$(${pkgs.gnugrep}/bin/grep '^QBITTORRENT_PASSWORD_PBKDF2=' ${
+                    config.age.secrets."qbittorrent.env".path
+                  } | ${pkgs.coreutils}/bin/cut -d= -f2-)"
+                  ${pkgs.gnused}/bin/sed -i "s|Password_PBKDF2=.*|Password_PBKDF2=$password_pbkdf2|" /var/lib/qBittorrent/qBittorrent/config/qBittorrent.conf
+                ''
+              ];
             };
-          };
-
-          vpnNamespaces.proton0 = {
-            enable = true;
-            wireguardConfigFile = config.age.secrets."Harmony_P2P-US-CA-898.conf".path;
-            accessibleFrom = [ accessibleFromSubnet ];
-            portMappings = [
-              {
-                from = port;
-                to = port;
-              }
-            ];
           };
         };
     };
