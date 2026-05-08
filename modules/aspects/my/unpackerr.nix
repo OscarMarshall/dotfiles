@@ -45,7 +45,6 @@
             Group = "unpackerr";
             EnvironmentFile = config.age.secrets."unpackerr.env".path;
             Environment = [
-              "TZ=${config.time.timeZone}"
               "UN_SONARR_0_URL=https://sonarr.harmony.silverlight-nex.us"
               "UN_SONARR_0_PATHS_0=/metalminds/torrents/downloads"
               "UN_RADARR_0_URL=https://radarr.harmony.silverlight-nex.us"
