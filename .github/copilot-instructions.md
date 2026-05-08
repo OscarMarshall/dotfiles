@@ -34,8 +34,8 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
       - **`adelline/`**: adelline.nix
     - **`my/`**: Reusable aspects in the `my` namespace (~43 aspects)
       - Core: boot.nix, locale.nix, nix.nix, fonts.nix
-      - Services: nginx.nix, minecraft-servers.nix, plex.nix, prowlarr.nix, radarr.nix, sonarr.nix
-      - Containers: gluetun.nix, qbittorrent.nix, profilarr.nix, unpackerr.nix
+      - Services: nginx.nix, minecraft-servers.nix, plex.nix, prowlarr.nix, radarr.nix, sonarr.nix, unpackerr.nix
+      - Containers: gluetun.nix, qbittorrent.nix, profilarr.nix
       - Desktop: gnome.nix, pipewire.nix, steam.nix, discord.nix, ghostty.nix
       - Utilities: auto-upgrade.nix, auto-login.nix, host-flag.nix, routes.nix
       - Applications: emacs/, git.nix, gpg.nix, ssh-client.nix, ssh-server.nix
@@ -308,8 +308,8 @@ Organized by category:
 
 - **Core**: boot, locale, nix, fonts
 - **Networking**: networkmanager, nginx
-- **Services**: minecraft-servers, plex, prowlarr, radarr, sonarr, autobrr, cross-seed, homepage
-- **Containers**: gluetun, qbittorrent, profilarr, unpackerr
+- **Services**: minecraft-servers, plex, prowlarr, radarr, sonarr, unpackerr, autobrr, cross-seed, homepage
+- **Containers**: gluetun, qbittorrent, profilarr
 - **Desktop**: gnome, pipewire, steam, discord, ghostty, zen-browser, prusa-slicer, xfce-desktop
 - **Development**: emacs, git, gpg, ssh-client, ssh-server
 - **Infrastructure**: zfs, samba, lm-sensors, secrets, auto-upgrade, auto-login
