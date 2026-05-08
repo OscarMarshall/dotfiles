@@ -164,6 +164,8 @@ the system type:
 
 ### Updating Dependencies
 
+- Dependabot handles GitHub Actions and Nix (`flake.lock`) updates.
+- Renovate is kept only for Docker image updates referenced from Nix files.
 - **Update all inputs**: `nix flake update`
 - **Update specific input**: `nix flake update <input-name>`
 - **Regenerate flake.nix**: `nix run .#write-flake` (must be run manually after changing inputs in any module)
@@ -203,7 +205,8 @@ CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan)
 3. **State Version**: Never change `system.stateVersion` or `home.stateVersion` unless you understand the implications
    (see NixOS documentation).
 4. **Declarative Configuration**: All system configuration should be in Nix files; avoid imperative changes.
-5. **Flake Lock**: `flake.lock` pins dependency versions; update explicitly with `nix flake update`.
+5. **Flake Lock**: `flake.lock` pins dependency versions. Dependabot can update it automatically, or update manually with
+   `nix flake update`.
 6. **Aspect Organization**:
    - Put host-specific config in `modules/aspects/hosts/<hostname>/`
    - Put user-specific config in `modules/aspects/users/<username>/`
