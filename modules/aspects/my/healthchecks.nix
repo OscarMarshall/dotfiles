@@ -7,7 +7,29 @@
     {
       includes = [ (my.nginx._.virtual-host "netdata.harmony.silverlight-nex.us" port) ];
 
-      secrets."discord-webhook.env".rekeyFile = ../../../secrets/discord-webhook.env.age;
+      secrets =
+        { secrets, ... }:
+        {
+          discord-webhook-url = {
+            rekeyFile = ../../../secrets/discord-webhook-url.age;
+            intermediary = true;
+          };
+          "netdata-secrets.env".generator = {
+            dependencies = { inherit (secrets) discord-webhook-url; };
+            script =
+              {
+                lib,
+                decrypt,
+                deps,
+                ...
+              }:
+              ''
+                printf 'DISCORD_WEBHOOK_URL="%s"\n' "$(
+                  ${decrypt} ${lib.escapeShellArg deps.discord-webhook-url.file}
+                )"
+              '';
+          };
+        };
 
       nixos =
         { config, pkgs, ... }:
@@ -21,7 +43,7 @@
             runtimeInputs = with pkgs; [ curl jq ];
             text = ''
               # shellcheck disable=SC1090
-              source "${config.age.secrets."discord-webhook.env".path}"
+              source "${config.age.secrets."netdata-secrets.env".path}"
               SUBJECT=""
               while getopts "s:r:" opt; do
                 case "$opt" in
@@ -61,7 +83,7 @@
             # sourcing the age secret sets DISCORD_WEBHOOK_URL at runtime.
             configDir."health_alarm_notify.conf" = pkgs.writeText "health_alarm_notify.conf" ''
               # shellcheck disable=SC1090
-              source "${config.age.secrets."discord-webhook.env".path}"
+              source "${config.age.secrets."netdata-secrets.env".path}"
               SEND_DISCORD="YES"
               DEFAULT_RECIPIENT_DISCORD="alarms"
             '';
