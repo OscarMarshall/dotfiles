@@ -36,7 +36,7 @@ in
       nixos =
         { config, pkgs, ... }:
         {
-          imports = [ (inputs.vpn-confinement.nixosModules.default or { }) ];
+          imports = [ inputs.vpn-confinement.nixosModules.default ];
 
           users = {
             users = {
