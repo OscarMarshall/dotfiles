@@ -1,8 +1,4 @@
 { inputs, ... }:
-let
-  port = 8080;
-  accessibleFromSubnet = "10.10.10.0/24";
-in
 {
   flake-file.inputs.vpn-confinement.url = "github:Maroka-chan/VPN-Confinement";
 
@@ -14,24 +10,31 @@ in
       };
     };
 
-    nixosSecrets."Harmony_P2P-US-CA-898.conf".file = ../../../secrets/Harmony_P2P-US-CA-898.conf.age;
-
-    nixos =
-      { config, ... }:
+    provides.namespace =
       {
-        imports = [ inputs.vpn-confinement.nixosModules.default ];
+        webUiPort ? 8080,
+        accessibleFrom ? [ "10.10.10.0/24" ],
+      }:
+      {
+        nixosSecrets."Harmony_P2P-US-CA-898.conf".file = ../../../secrets/Harmony_P2P-US-CA-898.conf.age;
 
-        vpnNamespaces.proton0 = {
-          enable = true;
-          wireguardConfigFile = config.age.secrets."Harmony_P2P-US-CA-898.conf".path;
-          accessibleFrom = [ accessibleFromSubnet ];
-          portMappings = [
-            {
-              from = port;
-              to = port;
-            }
-          ];
-        };
+        nixos =
+          { config, ... }:
+          {
+            imports = [ inputs.vpn-confinement.nixosModules.default ];
+
+            vpnNamespaces.proton0 = {
+              enable = true;
+              wireguardConfigFile = config.age.secrets."Harmony_P2P-US-CA-898.conf".path;
+              inherit accessibleFrom;
+              portMappings = [
+                {
+                  from = webUiPort;
+                  to = webUiPort;
+                }
+              ];
+            };
+          };
       };
   };
 }

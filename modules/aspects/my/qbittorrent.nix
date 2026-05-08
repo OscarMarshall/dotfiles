@@ -110,7 +110,6 @@ in
                 Tags = "cross-seed";
               };
               Preferences.WebUI = {
-                Password_PBKDF2 = "@ByteArray(placeholder:placeholder)";
                 ReverseProxySupportEnabled = true;
                 TrustedReverseProxiesList = "qbittorrent.harmony.silverlight-nex.us";
                 Username = "oscar";
@@ -123,10 +122,16 @@ in
               EnvironmentFile = [ config.age.secrets."qbittorrent.env".path ];
               ExecStartPre = lib.mkAfter [
                 ''
+                  config_file=/var/lib/qBittorrent/qBittorrent/config/qBittorrent.conf
                   password_pbkdf2="$(${pkgs.gnugrep}/bin/grep '^QBITTORRENT_PASSWORD_PBKDF2=' ${
                     config.age.secrets."qbittorrent.env".path
                   } | ${pkgs.coreutils}/bin/cut -d= -f2-)"
-                  ${pkgs.gnused}/bin/sed -i "s|Password_PBKDF2=.*|Password_PBKDF2=$password_pbkdf2|" /var/lib/qBittorrent/qBittorrent/config/qBittorrent.conf
+
+                  if ${pkgs.gnugrep}/bin/grep -q 'Password_PBKDF2=' "$config_file"; then
+                    ${pkgs.gnused}/bin/sed -i "s|Password_PBKDF2=.*|Password_PBKDF2=$password_pbkdf2|" "$config_file"
+                  else
+                    ${pkgs.gnused}/bin/sed -i "/WebUI\\\\Username=/a WebUI\\\\Password_PBKDF2=$password_pbkdf2" "$config_file"
+                  fi
                 ''
               ];
             };

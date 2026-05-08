@@ -17,7 +17,10 @@
       profilarr
       prowlarr
       (qbittorrent { administrators = [ "oscar" ]; })
-      vpn-confinement
+      (vpn-confinement._.namespace {
+        webUiPort = 8080;
+        accessibleFrom = [ "10.10.10.0/24" ];
+      })
       (vpn-confinement._.service "qbittorrent")
       (radarr { administrators = [ "oscar" ]; })
       (samba "/metalminds" [
