@@ -20,17 +20,41 @@
       };
 
     nixos =
-      { config, ... }:
       {
-        virtualisation.oci-containers.containers.unpackerr = {
-          image = "golift/unpackerr:0.15.2@sha256:057e34740d26c34d81ec8e2faf8ec11f8dbfc77489b7a42826f52b37e5ee1b6c";
-          volumes = [ "/metalminds/torrents/downloads:/downloads" ];
-          environment = {
-            TZ = config.time.timeZone;
-            UN_SONARR_0_URL = "https://sonarr.harmony.silverlight-nex.us";
-            UN_RADARR_0_URL = "https://radarr.harmony.silverlight-nex.us";
+        config,
+        lib,
+        pkgs,
+        ...
+      }:
+      {
+        users.users.unpackerr = {
+          isSystemUser = true;
+          group = "unpackerr";
+          extraGroups = [ "qbittorrent" ];
+        };
+        users.groups.unpackerr = { };
+
+        systemd.services.unpackerr = {
+          description = "Unpackerr daemon";
+          after = [ "network-online.target" ];
+          wants = [ "network-online.target" ];
+          wantedBy = [ "multi-user.target" ];
+          serviceConfig = {
+            Type = "simple";
+            User = "unpackerr";
+            Group = "unpackerr";
+            EnvironmentFile = config.age.secrets."unpackerr.env".path;
+            Environment = [
+              "TZ=${config.time.timeZone}"
+              "UN_SONARR_0_URL=https://sonarr.harmony.silverlight-nex.us"
+              "UN_SONARR_0_PATHS_0=/metalminds/torrents/downloads"
+              "UN_RADARR_0_URL=https://radarr.harmony.silverlight-nex.us"
+              "UN_RADARR_0_PATHS_0=/metalminds/torrents/downloads"
+            ];
+            ExecStart = lib.getExe pkgs.unpackerr;
+            Restart = "always";
+            RestartSec = "5s";
           };
-          environmentFiles = [ config.age.secrets."unpackerr.env".path ];
         };
       };
   };
