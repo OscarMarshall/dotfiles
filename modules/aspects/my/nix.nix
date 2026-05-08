@@ -30,7 +30,7 @@
       {
         nix = {
           extraOptions = ''
-            !include ${config.age.secrets.github-nix-access-tokens.path}
+            !include ${config.age.secrets.nix-access-tokens.path}
           '';
           gc = {
             automatic = true;
