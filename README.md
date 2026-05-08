@@ -120,7 +120,8 @@ Use an aspect function signature (`{ host, lib, ... }:`) when you need context-a
 - **Gaming**: Minecraft servers
 - **Infrastructure**: Nginx reverse proxy with Let's Encrypt, Samba file sharing, ZFS storage
 
-The VPN namespace is declared in a reusable `my.vpn-confinement` aspect, and services opt in via its sub-aspects.
+The VPN input and service confinement opt-in are provided by a reusable `my.vpn-confinement` aspect, while qBittorrent
+declares the `proton0` namespace directly in its own aspect.
 
 ### Desktop
 

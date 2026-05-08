@@ -1,15 +1,15 @@
-{ my, ... }:
+{ inputs, my, ... }:
 let
   port = 8080;
-  crossSeedPort = 2468;
   namespaceAddress = "192.168.15.1";
-  bridgeAddress = "192.168.15.5";
 in
 {
   my.qbittorrent =
     { administrators }:
     {
       includes = [
+        my."vpn-confinement"
+        (my."vpn-confinement"._.service "qbittorrent")
         (my.nginx._.virtual-host "qbittorrent.harmony.silverlight-nex.us" {
           host = namespaceAddress;
           port = port;
@@ -31,17 +31,15 @@ in
               }:
               ''
                 PASSWORD="$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
+                salt_plain="$(${pkgs.openssl}/bin/openssl rand -base64 24 | ${pkgs.gnused}/bin/sed 's/[^A-Za-z0-9]//g' | ${pkgs.coreutils}/bin/head -c 16)"
 
-                PASSWORD="$PASSWORD" ${pkgs.python3}/bin/python - <<'PY'
-                import base64
-                import hashlib
-                import os
+                salt_b64="$(printf '%s' "$salt_plain" | ${pkgs.coreutils}/bin/base64 -w0)"
+                digest_b64="$(${pkgs.openssl}/bin/openssl kdf -binary -keylen 64 -digest SHA512 \
+                  -kdfopt pass:"$PASSWORD" \
+                  -kdfopt salt:"$salt_plain" \
+                  -kdfopt iter:100000 PBKDF2 | ${pkgs.coreutils}/bin/base64 -w0)"
 
-                password = os.environ["PASSWORD"].encode()
-                salt = os.urandom(16)
-                digest = hashlib.pbkdf2_hmac("sha512", password, salt, 100000, 64)
-                print(f"@ByteArray({base64.b64encode(salt).decode()}:{base64.b64encode(digest).decode()})")
-                PY
+                printf '@ByteArray(%s:%s)\n' "$salt_b64" "$digest_b64"
               '';
           };
 
@@ -63,6 +61,8 @@ in
           };
         };
 
+      nixosSecrets."Harmony_P2P-US-CA-898.conf".file = ../../../secrets/Harmony_P2P-US-CA-898.conf.age;
+
       nixos =
         {
           config,
@@ -71,6 +71,8 @@ in
           ...
         }:
         {
+          imports = [ inputs.vpn-confinement.nixosModules.default ];
+
           users = {
             users = {
               qbittorrent = {
@@ -98,7 +100,7 @@ in
               AutoRun = {
                 enabled = true;
                 program = ''
-                  ${pkgs.curl}/bin/curl -XPOST http://${bridgeAddress}:${toString crossSeedPort}/api/webhook \
+                  ${pkgs.curl}/bin/curl -XPOST http://${config.vpnNamespaces.proton0.bridgeAddress}:${toString config.services.cross-seed.settings.port}/api/webhook \
                     -H "X-Api-Key: $CROSS_SEED_API_KEY" \
                     -d "infoHash=%I" \
                     -d "includeSingleEpisodes=true"
@@ -152,6 +154,18 @@ in
                 ''
               ];
             };
+          };
+
+          vpnNamespaces.proton0 = {
+            enable = true;
+            wireguardConfigFile = config.age.secrets."Harmony_P2P-US-CA-898.conf".path;
+            accessibleFrom = [ "10.10.10.0/24" ];
+            portMappings = [
+              {
+                from = config.services.qbittorrent.webuiPort;
+                to = config.services.qbittorrent.webuiPort;
+              }
+            ];
           };
         };
     };

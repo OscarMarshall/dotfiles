@@ -264,6 +264,8 @@ CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan)
   - nginx virtual host (if web-accessible)
   - User groups (if requiring special permissions)
   - Secrets (if needed)
+- **VPN-Confinement pattern**: `my.vpn-confinement` provides service opt-in via `vpn-confinement._.service "<name>"`;
+  service aspects (e.g. qBittorrent) declare their own `vpnNamespaces` config.
 - **Container aspects**: Docker containers defined with `virtualisation.oci-containers.containers.<name>`
 - **Desktop aspects**: Gate graphical config with direct checks like `host.graphical or false`
 - **Work aspects**: Gate work config with direct checks like `host.work or false`
