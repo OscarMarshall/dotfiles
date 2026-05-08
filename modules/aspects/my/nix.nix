@@ -3,13 +3,13 @@
     secrets =
       { secrets, ... }:
       {
-        github-token = {
-          rekeyFile = ../../../secrets/github-token.age;
+        github-access-token = {
+          rekeyFile = ../../../secrets/github-access-token.age;
           intermediary = true;
         };
 
-        github-nix-access-tokens.generator = {
-          dependencies = { inherit (secrets) github-token; };
+        nix-access-tokens.generator = {
+          dependencies = { inherit (secrets) github-access-token; };
           script =
             {
               decrypt,
@@ -18,7 +18,9 @@
               ...
             }:
             ''
-              printf 'access-tokens = github.com=%s\n' "$(${decrypt} ${lib.escapeShellArg deps.github-token.file})"
+              printf 'access-tokens = github.com=%s\n' "$(
+                ${decrypt} ${lib.escapeShellArg deps.github-access-token.file}
+              )"
             '';
         };
       };
