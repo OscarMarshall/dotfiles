@@ -38,7 +38,7 @@
                 --arg radarrApiKey "$RADARR_API_KEY" \
                 --arg sonarrApiKey "$SONARR_API_KEY" \
                 --arg qbittorrentPassword "$QBITTORRENT_PASSWORD" \
-                --arg webuiPort "${toString config.virtualisation.oci-containers.containers.qbittorrent.environment.WEBUI_PORT}" \
+                --arg webuiPort "${toString config.services.qbittorrent.webuiPort}" \
                 '{
                   apiKey: $apiKey,
                   torznab: [
@@ -80,6 +80,7 @@
             matchMode = "partial";
           };
         };
+
       };
   };
 }

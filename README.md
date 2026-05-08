@@ -116,9 +116,11 @@ Use an aspect function signature (`{ host, lib, ... }:`) when you need context-a
 ### Services
 
 - **Media**: Plex, Radarr, Sonarr, Prowlarr, Autobrr, Cross-seed
-- **Downloads**: qBittorrent (via Gluetun VPN)
+- **Downloads**: native qBittorrent confined with VPN-Confinement
 - **Gaming**: Minecraft servers
 - **Infrastructure**: Nginx reverse proxy with Let's Encrypt, Samba file sharing, ZFS storage
+
+The VPN namespace is declared in a reusable `my.vpn-confinement` aspect, and services opt in via its sub-aspects.
 
 ### Desktop
 

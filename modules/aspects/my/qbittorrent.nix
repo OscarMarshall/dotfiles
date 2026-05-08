@@ -1,19 +1,52 @@
-{ lib, my, ... }:
+{ my, ... }:
 let
   port = 8080;
-  port' = toString port;
+  crossSeedPort = 2468;
+  namespaceAddress = "192.168.15.1";
+  bridgeAddress = "192.168.15.5";
 in
 {
   my.qbittorrent =
     { administrators }:
     {
-      includes = with my; [ (nginx._.virtual-host "qbittorrent.harmony.silverlight-nex.us" port) ];
+      includes = [
+        (my.nginx._.virtual-host "qbittorrent.harmony.silverlight-nex.us" {
+          host = namespaceAddress;
+          port = port;
+        })
+      ];
 
       secrets =
         { secrets, ... }:
         {
+          "qbittorrent-password-pbkdf2".generator = {
+            dependencies = { inherit (secrets) oscar-password; };
+            script =
+              {
+                lib,
+                pkgs,
+                decrypt,
+                deps,
+                ...
+              }:
+              ''
+                PASSWORD="$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
+
+                PASSWORD="$PASSWORD" ${pkgs.python3}/bin/python - <<'PY'
+                import base64
+                import hashlib
+                import os
+
+                password = os.environ["PASSWORD"].encode()
+                salt = os.urandom(16)
+                digest = hashlib.pbkdf2_hmac("sha512", password, salt, 100000, 64)
+                print(f"@ByteArray({base64.b64encode(salt).decode()}:{base64.b64encode(digest).decode()})")
+                PY
+              '';
+          };
+
           "qbittorrent.env".generator = {
-            dependencies = { inherit (secrets) cross-seed-api-key; };
+            dependencies = { inherit (secrets) cross-seed-api-key qbittorrent-password-pbkdf2; };
             script =
               {
                 lib,
@@ -22,13 +55,21 @@ in
                 ...
               }:
               ''
-                printf 'CROSS_SEED_API_KEY=%s\n' "$(${decrypt} ${lib.escapeShellArg deps."cross-seed-api-key".file})"
+                printf 'CROSS_SEED_API_KEY="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps."cross-seed-api-key".file})"
+                printf 'QBITTORRENT_PASSWORD_PBKDF2="%s"\n' "$(${decrypt} ${
+                  lib.escapeShellArg deps."qbittorrent-password-pbkdf2".file
+                })"
               '';
           };
         };
 
       nixos =
-        { config, ... }:
+        {
+          config,
+          lib,
+          pkgs,
+          ...
+        }:
         {
           users = {
             users = {
@@ -46,23 +87,70 @@ in
             groups.qbittorrent.gid = 985;
           };
 
-          virtualisation.oci-containers.containers = {
-            gluetun.ports = [ "${port'}:${port'}" ];
-            qbittorrent = {
-              image = "lscr.io/linuxserver/qbittorrent:5.1.4-r1-ls435@sha256:e0cedcadd62f809efdeddfd32e4d1192f9a74e6e64ed6753bfc6e2c3ed4a714a";
-              volumes = [
-                "/var/lib/qBittorrent:/config"
-                "/metalminds/torrents:/metalminds/torrents"
-              ];
-              environment = {
-                PUID = toString config.users.users.qbittorrent.uid;
-                PGID = toString config.users.groups.qbittorrent.gid;
-                TZ = config.time.timeZone;
-                WEBUI_PORT = port';
+          services.qbittorrent = {
+            enable = true;
+            package = pkgs.qbittorrent-nox;
+            webuiPort = port;
+            user = "qbittorrent";
+            group = "qbittorrent";
+            profileDir = "/var/lib/qBittorrent";
+            serverConfig = {
+              AutoRun = {
+                enabled = true;
+                program = ''
+                  ${pkgs.curl}/bin/curl -XPOST http://${bridgeAddress}:${toString crossSeedPort}/api/webhook \
+                    -H "X-Api-Key: $CROSS_SEED_API_KEY" \
+                    -d "infoHash=%I" \
+                    -d "includeSingleEpisodes=true"
+                '';
               };
-              environmentFiles = [ config.age.secrets."qbittorrent.env".path ];
-              dependsOn = [ "gluetun" ];
-              extraOptions = [ "--network=container:gluetun" ];
+              BitTorrent.Session = {
+                DefaultSavePath = "/metalminds/torrents/downloads";
+                IgnoreSlowTorrentsForQueueing = true;
+                MaxActiveTorrents = 999999999;
+                MaxActiveUploads = 999999999;
+                Tags = "cross-seed";
+              };
+              Preferences.WebUI = {
+                ReverseProxySupportEnabled = true;
+                TrustedReverseProxiesList = "qbittorrent.harmony.silverlight-nex.us";
+                Username = "oscar";
+              };
+            };
+          };
+
+          systemd.services.qbittorrent = {
+            serviceConfig = {
+              EnvironmentFile = [ config.age.secrets."qbittorrent.env".path ];
+              ExecStartPre = lib.mkAfter [
+                ''
+                  # qBittorrent writes config under ${config.services.qbittorrent.profileDir}/qBittorrent/config/
+                  config_file="${config.services.qbittorrent.profileDir}/qBittorrent/config/qBittorrent.conf"
+                  password_pbkdf2="$(${pkgs.gnugrep}/bin/grep '^QBITTORRENT_PASSWORD_PBKDF2=' ${
+                    config.age.secrets."qbittorrent.env".path
+                  } | ${pkgs.coreutils}/bin/cut -d= -f2- | ${pkgs.gnused}/bin/sed 's/^\"//; s/\"$//')"
+                  if [ -z "$password_pbkdf2" ]; then
+                    echo "QBITTORRENT_PASSWORD_PBKDF2 is empty or missing in ${config.age.secrets."qbittorrent.env".path}" >&2
+                    exit 1
+                  fi
+
+                  if ${pkgs.gnugrep}/bin/grep -q 'Password_PBKDF2=' "$config_file"; then
+                    ${pkgs.gnused}/bin/sed -i "s|Password_PBKDF2=.*|Password_PBKDF2=$password_pbkdf2|" "$config_file"
+                  else
+                    if ! ${pkgs.gnugrep}/bin/grep -Fq 'WebUI\\Username=' "$config_file"; then
+                      echo "Unable to locate WebUI\\Username in $config_file" >&2
+                      exit 1
+                    fi
+
+                    ${pkgs.gnused}/bin/sed -i "/^WebUI\\\\Username=/a WebUI\\\\Password_PBKDF2=$password_pbkdf2" "$config_file"
+
+                    if ! ${pkgs.gnugrep}/bin/grep -q 'Password_PBKDF2=' "$config_file"; then
+                      echo "Unable to add Password_PBKDF2 to $config_file" >&2
+                      exit 1
+                    fi
+                  fi
+                ''
+              ];
             };
           };
         };

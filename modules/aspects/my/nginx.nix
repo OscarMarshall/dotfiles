@@ -1,12 +1,18 @@
 {
   my.nginx = {
-    provides.virtual-host = url: port: {
-      nixos.services.nginx.virtualHosts.${url} = {
-        forceSSL = true;
-        enableACME = true;
-        locations."/".proxyPass = "http://127.0.0.1:${toString port}/";
+    provides.virtual-host =
+      url: target:
+      let
+        host = if builtins.isAttrs target then target.host else "127.0.0.1";
+        port = if builtins.isAttrs target then target.port else target;
+      in
+      {
+        nixos.services.nginx.virtualHosts.${url} = {
+          forceSSL = true;
+          enableACME = true;
+          locations."/".proxyPass = "http://${host}:${toString port}/";
+        };
       };
-    };
     nixos = {
       security.acme = {
         acceptTerms = true;
