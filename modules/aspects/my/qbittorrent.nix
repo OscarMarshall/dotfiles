@@ -126,23 +126,19 @@ in
                 ''
                   # qBittorrent writes config under ${config.services.qbittorrent.profileDir}/qBittorrent/config/
                   config_file="${config.services.qbittorrent.profileDir}/qBittorrent/config/qBittorrent.conf"
-                  password_pbkdf2="$(
-                    (
-                      set -a
-                      . ${config.age.secrets."qbittorrent.env".path}
-                      printf '%s' "$QBITTORRENT_PASSWORD_PBKDF2"
-                    )
-                  )"
+                  password_pbkdf2="$(${pkgs.gnugrep}/bin/grep '^QBITTORRENT_PASSWORD_PBKDF2=' ${
+                    config.age.secrets."qbittorrent.env".path
+                  } | ${pkgs.coreutils}/bin/cut -d= -f2- | ${pkgs.gnused}/bin/sed 's/^\"//; s/\"$//')"
 
                   if ${pkgs.gnugrep}/bin/grep -q 'Password_PBKDF2=' "$config_file"; then
                     ${pkgs.gnused}/bin/sed -i "s|Password_PBKDF2=.*|Password_PBKDF2=$password_pbkdf2|" "$config_file"
                   else
-                    if ! ${pkgs.gnugrep}/bin/grep -q '^WebUI\\Username=' "$config_file"; then
-                      echo "Expected WebUI\\Username entry in $config_file before setting Password_PBKDF2" >&2
+                    ${pkgs.gnused}/bin/sed -i "/^WebUI\\\\Username=/a WebUI\\\\Password_PBKDF2=$password_pbkdf2" "$config_file"
+
+                    if ! ${pkgs.gnugrep}/bin/grep -q 'Password_PBKDF2=' "$config_file"; then
+                      echo "Unable to add Password_PBKDF2 to $config_file" >&2
                       exit 1
                     fi
-
-                    ${pkgs.gnused}/bin/sed -i "/^WebUI\\\\Username=/a WebUI\\\\Password_PBKDF2=$password_pbkdf2" "$config_file"
                   fi
                 ''
               ];
