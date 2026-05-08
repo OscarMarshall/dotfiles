@@ -129,10 +129,19 @@ in
                   password_pbkdf2="$(${pkgs.gnugrep}/bin/grep '^QBITTORRENT_PASSWORD_PBKDF2=' ${
                     config.age.secrets."qbittorrent.env".path
                   } | ${pkgs.coreutils}/bin/cut -d= -f2- | ${pkgs.gnused}/bin/sed 's/^\"//; s/\"$//')"
+                  if [ -z "$password_pbkdf2" ]; then
+                    echo "QBITTORRENT_PASSWORD_PBKDF2 is empty or missing in ${config.age.secrets."qbittorrent.env".path}" >&2
+                    exit 1
+                  fi
 
                   if ${pkgs.gnugrep}/bin/grep -q 'Password_PBKDF2=' "$config_file"; then
                     ${pkgs.gnused}/bin/sed -i "s|Password_PBKDF2=.*|Password_PBKDF2=$password_pbkdf2|" "$config_file"
                   else
+                    if ! ${pkgs.gnugrep}/bin/grep -Fq 'WebUI\\Username=' "$config_file"; then
+                      echo "Unable to locate WebUI\\Username in $config_file" >&2
+                      exit 1
+                    fi
+
                     ${pkgs.gnused}/bin/sed -i "/^WebUI\\\\Username=/a WebUI\\\\Password_PBKDF2=$password_pbkdf2" "$config_file"
 
                     if ! ${pkgs.gnugrep}/bin/grep -q 'Password_PBKDF2=' "$config_file"; then
