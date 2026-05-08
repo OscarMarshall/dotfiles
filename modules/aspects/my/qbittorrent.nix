@@ -1,6 +1,7 @@
 { inputs, my, ... }:
 let
   port = 8080;
+  crossSeedPort = 2468;
   namespace = "proton0";
   namespaceAddress = "192.168.15.1";
 in
@@ -33,6 +34,7 @@ in
               ''
                 PASSWORD="$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
                 salt_file="$(${pkgs.coreutils}/bin/mktemp)"
+                trap '${pkgs.coreutils}/bin/rm -f "$salt_file"' EXIT
                 ${pkgs.openssl}/bin/openssl rand 16 > "$salt_file"
                 salt_hex="$(${pkgs.coreutils}/bin/od -An -tx1 -v "$salt_file" | ${pkgs.coreutils}/bin/tr -d ' \n')"
 
@@ -41,7 +43,6 @@ in
                   -kdfopt pass:"$PASSWORD" \
                   -kdfopt hexsalt:"$salt_hex" \
                   -kdfopt iter:100000 PBKDF2 | ${pkgs.coreutils}/bin/base64 -w0)"
-                ${pkgs.coreutils}/bin/rm -f "$salt_file"
 
                 printf '@ByteArray(%s:%s)\n' "$salt_b64" "$digest_b64"
               '';
@@ -106,7 +107,7 @@ in
                 program = ''
                   ${pkgs.curl}/bin/curl -XPOST http://${
                     config.vpnNamespaces.${namespace}.bridgeAddress
-                  }:${toString config.services.cross-seed.settings.port}/api/webhook \
+                  }:${toString crossSeedPort}/api/webhook \
                     -H "X-Api-Key: $CROSS_SEED_API_KEY" \
                     -d "infoHash=%I" \
                     -d "includeSingleEpisodes=true"
