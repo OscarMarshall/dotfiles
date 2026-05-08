@@ -32,13 +32,16 @@ in
               }:
               ''
                 PASSWORD="$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
-                salt_plain="$(${pkgs.openssl}/bin/openssl rand -hex 16)"
+                salt_file="$(${pkgs.coreutils}/bin/mktemp)"
+                ${pkgs.openssl}/bin/openssl rand 16 > "$salt_file"
+                salt_hex="$(${pkgs.coreutils}/bin/od -An -tx1 -v "$salt_file" | ${pkgs.coreutils}/bin/tr -d ' \n')"
 
-                salt_b64="$(printf '%s' "$salt_plain" | ${pkgs.coreutils}/bin/base64 -w0)"
+                salt_b64="$(${pkgs.coreutils}/bin/base64 -w0 "$salt_file")"
                 digest_b64="$(${pkgs.openssl}/bin/openssl kdf -binary -keylen 64 -digest SHA512 \
                   -kdfopt pass:"$PASSWORD" \
-                  -kdfopt salt:"$salt_plain" \
+                  -kdfopt hexsalt:"$salt_hex" \
                   -kdfopt iter:100000 PBKDF2 | ${pkgs.coreutils}/bin/base64 -w0)"
+                ${pkgs.coreutils}/bin/rm -f "$salt_file"
 
                 printf '@ByteArray(%s:%s)\n' "$salt_b64" "$digest_b64"
               '';
