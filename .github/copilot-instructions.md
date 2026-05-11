@@ -48,7 +48,7 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
 
 ## Key Technologies
 
-- **Den**: Aspect-oriented configuration system built on flake-parts (https://vic.github.io/den)
+- **Den**: Aspect-oriented configuration system built on flake-parts (https://denful.github.io/den)
 - **Dendritic**: Template and tooling for Den-based flakes with flake-file integration
 - **flake-parts**: Modular flake framework for composable Nix configurations
 - **import-tree**: Automatic module discovery and importing
@@ -218,7 +218,7 @@ CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan)
 7. **Input Management**: Declare flake inputs close to their usage in module files, not centralized in one place.
 8. **Module Discovery**: Files in `modules/` are auto-imported via import-tree; no manual imports needed.
 9. **Parametric Aspects**: Use functions for configurable aspects (e.g., `qbittorrent { administrators = [...]; }`)
-10. **Den Documentation**: When working with aspects, refer to https://vic.github.io/den for patterns and examples.
+10. **Den Documentation**: When working with aspects, refer to https://denful.github.io/den for patterns and examples.
 
 ## Security Considerations
 
