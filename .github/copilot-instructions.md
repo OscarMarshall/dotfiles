@@ -34,8 +34,8 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
       - **`adelline/`**: adelline.nix
     - **`my/`**: Reusable aspects in the `my` namespace (~43 aspects)
       - Core: boot.nix, locale.nix, nix.nix, fonts.nix
-      - Services: nginx.nix, minecraft-servers.nix, plex.nix, prowlarr.nix, radarr.nix, sonarr.nix
-      - Containers: gluetun.nix, qbittorrent.nix, profilarr.nix, unpackerr.nix
+      - Services: nginx.nix, minecraft-servers.nix, plex.nix, prowlarr.nix, radarr.nix, sonarr.nix, unpackerr.nix
+      - Containers: gluetun.nix, qbittorrent.nix, profilarr.nix
       - Desktop: gnome.nix, pipewire.nix, steam.nix, discord.nix, ghostty.nix
       - Utilities: auto-upgrade.nix, auto-login.nix, host-flag.nix, routes.nix
       - Applications: emacs/, git.nix, gpg.nix, ssh-client.nix, ssh-server.nix
@@ -48,7 +48,7 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
 
 ## Key Technologies
 
-- **Den**: Aspect-oriented configuration system built on flake-parts (https://vic.github.io/den)
+- **Den**: Aspect-oriented configuration system built on flake-parts (https://denful.github.io/den)
 - **Dendritic**: Template and tooling for Den-based flakes with flake-file integration
 - **flake-parts**: Modular flake framework for composable Nix configurations
 - **import-tree**: Automatic module discovery and importing
@@ -164,6 +164,9 @@ the system type:
 
 ### Updating Dependencies
 
+- Dependabot handles GitHub Actions and Nix (`flake.lock`) updates.
+- Dependabot PRs are automatically set to auto-merge once required checks pass.
+- Renovate is kept only for Docker image updates referenced from Nix files.
 - **Update all inputs**: `nix flake update`
 - **Update specific input**: `nix flake update <input-name>`
 - **Regenerate flake.nix**: `nix run .#write-flake` (must be run manually after changing inputs in any module)
@@ -203,7 +206,8 @@ CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan)
 3. **State Version**: Never change `system.stateVersion` or `home.stateVersion` unless you understand the implications
    (see NixOS documentation).
 4. **Declarative Configuration**: All system configuration should be in Nix files; avoid imperative changes.
-5. **Flake Lock**: `flake.lock` pins dependency versions; update explicitly with `nix flake update`.
+5. **Flake Lock**: `flake.lock` pins dependency versions. Dependabot can update it automatically, or update manually
+   with `nix flake update`.
 6. **Aspect Organization**:
    - Put host-specific config in `modules/aspects/hosts/<hostname>/`
    - Put user-specific config in `modules/aspects/users/<username>/`
@@ -214,7 +218,7 @@ CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan)
 7. **Input Management**: Declare flake inputs close to their usage in module files, not centralized in one place.
 8. **Module Discovery**: Files in `modules/` are auto-imported via import-tree; no manual imports needed.
 9. **Parametric Aspects**: Use functions for configurable aspects (e.g., `qbittorrent { administrators = [...]; }`)
-10. **Den Documentation**: When working with aspects, refer to https://vic.github.io/den for patterns and examples.
+10. **Den Documentation**: When working with aspects, refer to https://denful.github.io/den for patterns and examples.
 
 ## Security Considerations
 
@@ -308,8 +312,8 @@ Organized by category:
 
 - **Core**: boot, locale, nix, fonts
 - **Networking**: networkmanager, nginx
-- **Services**: minecraft-servers, plex, prowlarr, radarr, sonarr, autobrr, cross-seed, homepage
-- **Containers**: gluetun, qbittorrent, profilarr, unpackerr
+- **Services**: minecraft-servers, plex, prowlarr, radarr, sonarr, unpackerr, autobrr, cross-seed, homepage
+- **Containers**: gluetun, qbittorrent, profilarr
 - **Desktop**: gnome, pipewire, steam, discord, ghostty, zen-browser, prusa-slicer, xfce-desktop
 - **Development**: emacs, git, gpg, ssh-client, ssh-server
 - **Infrastructure**: zfs, samba, lm-sensors, secrets, auto-upgrade, auto-login

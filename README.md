@@ -1,7 +1,7 @@
 # NixOS/Darwin Configuration with Den
 
 This repository contains my personal system configurations for multiple machines using Nix, managed through the
-[Den](https://vic.github.io/den) aspect-oriented configuration framework.
+[Den](https://denful.github.io/den) aspect-oriented configuration framework.
 
 ## Systems
 
@@ -115,7 +115,7 @@ Use an aspect function signature (`{ host, lib, ... }:`) when you need context-a
 
 ### Services
 
-- **Media**: Plex, Radarr, Sonarr, Prowlarr, Autobrr, Cross-seed
+- **Media**: Plex, Radarr, Sonarr, Prowlarr, Unpackerr, Autobrr, Cross-seed
 - **Downloads**: qBittorrent (via Gluetun VPN)
 - **Gaming**: Minecraft servers
 - **Infrastructure**: Nginx reverse proxy with Let's Encrypt, Samba file sharing, ZFS storage
@@ -178,6 +178,12 @@ Each host that consumes rekeyed secrets must declare `age.rekey.hostPubkey` in i
 
 ## Updating
 
+GitHub automation:
+
+- Dependabot handles GitHub Actions and Nix (`flake.lock`) updates.
+- Dependabot PRs are automatically set to auto-merge once required checks pass.
+- Renovate is kept only for Docker image updates referenced from Nix files.
+
 ### Update All Dependencies
 
 ```console
@@ -228,8 +234,8 @@ nix run .#write-flake
 
 ## Documentation
 
-- [Den Documentation](https://vic.github.io/den) - Aspect system patterns and usage
-- [Dendritic Template](https://github.com/vic/den/tree/main/templates/dendritic) - Template this repo is based on
+- [Den Documentation](https://denful.github.io/den) - Aspect system patterns and usage
+- [Dendritic Template](https://github.com/denful/den/tree/main/templates/dendritic) - Template this repo is based on
 - [NixOS Manual](https://nixos.org/manual/nixos/stable/) - NixOS configuration reference
 - [Home Manager Manual](https://nix-community.github.io/home-manager/) - Home Manager options
 - [nix-darwin Manual](https://daiderd.com/nix-darwin/manual/index.html) - macOS system configuration
