@@ -1,7 +1,7 @@
 # NixOS/Darwin Configuration with Den
 
 This repository contains my personal system configurations for multiple machines using Nix, managed through the
-[Den](https://vic.github.io/den) aspect-oriented configuration framework.
+[Den](https://denful.github.io/den) aspect-oriented configuration framework.
 
 ## Systems
 
@@ -234,8 +234,8 @@ nix run .#write-flake
 
 ## Documentation
 
-- [Den Documentation](https://vic.github.io/den) - Aspect system patterns and usage
-- [Dendritic Template](https://github.com/vic/den/tree/main/templates/dendritic) - Template this repo is based on
+- [Den Documentation](https://denful.github.io/den) - Aspect system patterns and usage
+- [Dendritic Template](https://github.com/denful/den/tree/main/templates/dendritic) - Template this repo is based on
 - [NixOS Manual](https://nixos.org/manual/nixos/stable/) - NixOS configuration reference
 - [Home Manager Manual](https://nix-community.github.io/home-manager/) - Home Manager options
 - [nix-darwin Manual](https://daiderd.com/nix-darwin/manual/index.html) - macOS system configuration
