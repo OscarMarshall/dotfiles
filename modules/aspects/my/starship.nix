@@ -1,4 +1,4 @@
-{ self, ... }:
+{ lib, self, ... }:
 let
   isDirty = self ? dirtyRev;
   # Extract the base commit SHA: self.rev when clean, or strip the "-dirty" suffix
@@ -10,11 +10,22 @@ let
       builtins.substring 0 40 self.dirtyRev
     else
       null;
+  githubAccessTokenSecretPath = [
+    "age"
+    "secrets"
+    "github-access-token"
+    "path"
+  ];
 in
 {
   my.starship = {
     homeManager =
-      { pkgs, ... }:
+      {
+        config,
+        osConfig ? { },
+        pkgs,
+        ...
+      }:
       {
         programs.starship = {
           enable = true;
@@ -31,9 +42,25 @@ in
             command =
               let
                 dirtyPart = if isDirty then ''symbols="''${symbols}!"'' else "";
+                tokenPath =
+                  let
+                    osTokenPath = lib.attrByPath githubAccessTokenSecretPath null osConfig;
+                  in
+                  if osTokenPath != null then osTokenPath else lib.attrByPath githubAccessTokenSecretPath "" config;
                 apiPart =
                   if rev != null then
                     ''
+                      github_token=""
+                      if [ -n "${tokenPath}" ] && [ -r "${tokenPath}" ]; then
+                        github_token="$(${pkgs.coreutils}/bin/cat "${tokenPath}" 2>/dev/null || true)"
+                      fi
+
+                      if [ -n "$github_token" ]; then
+                        auth_args=(-H "Authorization: token $github_token")
+                      else
+                        auth_args=()
+                      fi
+
                       # Compare our pinned revision against main on GitHub to determine
                       # whether we are behind, diverged, or up-to-date.  Results are
                       # cached in ~/.cache/starship/ with a 60-minute TTL so that we
@@ -51,6 +78,7 @@ in
                             result=$(
                               ${pkgs.curl}/bin/curl -sf \
                                 --connect-timeout 2 --max-time 3 \
+                                ''${auth_args[@]} \
                                 "https://api.github.com/repos/OscarMarshall/dotfiles/compare/${rev}...main" |
                                 ${pkgs.jq}/bin/jq -r '.status // empty' 2>/dev/null || true
                             )
