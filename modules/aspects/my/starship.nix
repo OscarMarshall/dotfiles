@@ -46,10 +46,7 @@ in
                   let
                     osTokenPath = lib.attrByPath githubAccessTokenSecretPath null osConfig;
                   in
-                  if osTokenPath != null then
-                    osTokenPath
-                  else
-                    lib.attrByPath githubAccessTokenSecretPath "" config;
+                  if osTokenPath != null then osTokenPath else lib.attrByPath githubAccessTokenSecretPath "" config;
                 apiPart =
                   if rev != null then
                     ''
