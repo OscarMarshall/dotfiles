@@ -1,18 +1,16 @@
 {
   my.gnome = {
-    homeManager =
-      { config, ... }:
-      {
-        # Keep gtk4 theme in sync with gtk3 to silence the warning about the
-        # default changing from config.gtk.theme to null in Home Manager 26.05.
-        gtk.gtk4.theme = config.gtk.theme;
+    homeManager = {
+      # Adopt the Home Manager 26.05 default: gtk4 apps use their own theme
+      # rather than inheriting the gtk3 theme.
+      gtk.gtk4.theme = null;
 
-        qt.platformTheme.name = "adwaita";
+      qt.platformTheme.name = "adwaita";
 
-        # Stylix qt theming only supports qtct, not gnome; disable it and let
-        # the adwaita platform theme handle qt styling on GNOME.
-        stylix.targets.qt.enable = false;
-      };
+      # Stylix qt theming only supports qtct, not gnome; disable it and let
+      # the adwaita platform theme handle qt styling on GNOME.
+      stylix.targets.qt.enable = false;
+    };
 
     nixos =
       { pkgs, ... }:

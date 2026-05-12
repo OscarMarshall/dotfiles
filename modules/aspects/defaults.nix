@@ -69,43 +69,41 @@ let
     };
 in
 {
-  den = {
-    schema = {
-      user = {
-        classes = [ "homeManager" ];
+  den.schema = {
+    user = {
+      classes = [ "homeManager" ];
 
-        includes = [
-          hmPlatforms
+      includes = [
+        hmPlatforms
 
-          # ${user}.provides.${host} and ${host}.provides.${user}
-          den._.mutual-provider
+        # ${user}.provides.${host} and ${host}.provides.${user}
+        den._.mutual-provider
 
-          my.starship
+        my.starship
 
-          # Automatically create the user on host.
-          den._.define-user
-        ];
-      };
+        # Automatically create the user on host.
+        den._.define-user
+      ];
+    };
 
-      host = {
-        includes = [
-          secrets
-          nixosSecrets
+    host = {
+      includes = [
+        secrets
+        nixosSecrets
 
-          my.fonts
-          my.nix
-          my.secrets
-          my.stylix
+        my.fonts
+        my.nix
+        my.secrets
+        my.stylix
 
-          # Automatically set hostname.
-          den._.hostname
+        # Automatically set hostname.
+        den._.hostname
 
-          # Disable booting when running on CI on all NixOS hosts.
-          (if config ? _module.args.CI then my.ci-no-boot else { })
-        ];
+        # Disable booting when running on CI on all NixOS hosts.
+        (if config ? _module.args.CI then my.ci-no-boot else { })
+      ];
 
-        os.system.configurationRevision = self.rev or self.dirtyRev or null;
-      };
+      os.system.configurationRevision = self.rev or self.dirtyRev or null;
     };
   };
 }
