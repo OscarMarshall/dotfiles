@@ -71,8 +71,6 @@ in
 {
   den.schema = {
     host = {
-      darwin.programs.man.generateCaches = false;
-
       includes = [
         secrets
         nixosSecrets
@@ -89,12 +87,12 @@ in
         (if config ? _module.args.CI then my.ci-no-boot else { })
       ];
 
+      darwin.programs.man.generateCaches = false;
+
       os.system.configurationRevision = self.rev or self.dirtyRev or null;
     };
 
     user = {
-      classes = [ "homeManager" ];
-
       includes = [
         hmPlatforms
 
@@ -106,6 +104,8 @@ in
         # Automatically create the user on host.
         den._.define-user
       ];
+
+      classes = [ "homeManager" ];
     };
   };
 }
