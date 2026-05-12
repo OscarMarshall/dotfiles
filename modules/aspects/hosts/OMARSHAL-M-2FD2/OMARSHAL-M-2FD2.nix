@@ -20,10 +20,6 @@
         # You can update Home Manager without changing this value. See the Home Manager release notes for a list of
         # state version changes in each release.
         home.stateVersion = "26.05";
-
-        # On macOS, man is provided by the OS and programs.man.package is null,
-        # so generateCaches has no effect; disable it to silence the warning.
-        programs.man.generateCaches = false;
       };
     };
   };

@@ -70,23 +70,9 @@ let
 in
 {
   den.schema = {
-    user = {
-      classes = [ "homeManager" ];
-
-      includes = [
-        hmPlatforms
-
-        # ${user}.provides.${host} and ${host}.provides.${user}
-        den._.mutual-provider
-
-        my.starship
-
-        # Automatically create the user on host.
-        den._.define-user
-      ];
-    };
-
     host = {
+      darwin.programs.man.generateCaches = false;
+
       includes = [
         secrets
         nixosSecrets
@@ -104,6 +90,22 @@ in
       ];
 
       os.system.configurationRevision = self.rev or self.dirtyRev or null;
+    };
+
+    user = {
+      classes = [ "homeManager" ];
+
+      includes = [
+        hmPlatforms
+
+        # ${user}.provides.${host} and ${host}.provides.${user}
+        den._.mutual-provider
+
+        my.starship
+
+        # Automatically create the user on host.
+        den._.define-user
+      ];
     };
   };
 }
