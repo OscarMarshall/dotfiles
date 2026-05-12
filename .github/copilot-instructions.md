@@ -236,6 +236,8 @@ CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan)
 
 - **Aspect definition**:
   `den.aspects.<name> = { includes = [...]; os = {...}; nixos = {...}; darwin = {...}; homeManager = {...}; }`
+- **Attr set ordering**: In den aspect attr sets, `includes` always comes first, followed by all other keys in
+  alphabetical order.
 - **`os` class**: Use `os = {...}` for config that applies to both NixOS and Darwin (avoids duplication)
 - **`user.description`**: Set `user.description = "Full Name"` in user aspects instead of repeating in
   `os`/`nixos`/`darwin` user configs
