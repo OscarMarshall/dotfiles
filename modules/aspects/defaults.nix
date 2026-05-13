@@ -72,6 +72,10 @@ in
   den = {
     default = {
       includes = [
+        hmPlatforms
+        secrets
+        nixosSecrets
+
         my.fonts
         my.nix
         my.secrets
@@ -99,11 +103,6 @@ in
 
     schema = {
       host = {
-        includes = [
-          secrets
-          nixosSecrets
-        ];
-
         options = {
           graphical = lib.mkEnableOption "Whether the host should include graphical packages";
           work = lib.mkEnableOption "Whether the host is a work machine";
@@ -115,11 +114,7 @@ in
         };
       };
   
-      user = {
-        includes = [ hmPlatforms ];
-  
-        classes = [ "homeManager" ];
-      };
+      user.classes = [ "homeManager" ];
     };
   };
 }
