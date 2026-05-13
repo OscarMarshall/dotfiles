@@ -13,5 +13,9 @@
     imports = [ (inputs.zen-browser.homeModules.twilight or { }) ];
 
     programs.zen-browser.enable = true;
+
+    # Stylix zen-browser theming requires profile names to be declared; since
+    # profiles are managed outside of Nix, disable the stylix target instead.
+    stylix.targets.zen-browser.enable = false;
   };
 }
