@@ -113,7 +113,7 @@ in
           work = lib.mkDefault false;
         };
       };
-  
+
       user.classes = [ "homeManager" ];
     };
   };
