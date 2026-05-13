@@ -69,12 +69,9 @@ let
     };
 in
 {
-  den.schema = {
-    host = {
+  den = {
+    defaults = {
       includes = [
-        secrets
-        nixosSecrets
-
         my.fonts
         my.nix
         my.secrets
@@ -85,16 +82,6 @@ in
 
         # Disable booting when running on CI on all NixOS hosts.
         (if config ? _module.args.CI then my.ci-no-boot else { })
-      ];
-
-      darwin.programs.man.generateCaches = false;
-
-      os.system.configurationRevision = self.rev or self.dirtyRev or null;
-    };
-
-    user = {
-      includes = [
-        hmPlatforms
 
         # ${user}.provides.${host} and ${host}.provides.${user}
         den._.mutual-provider
@@ -105,7 +92,34 @@ in
         den._.define-user
       ];
 
-      classes = [ "homeManager" ];
+      os.system.configurationRevision = self.rev or self.dirtyRev or null;
+
+      darwin.programs.man.generateCaches = false;
+    };
+
+    schema = {
+      host = {
+        includes = [
+          secrets
+          nixosSecrets
+        ];
+
+        options = {
+          graphical = lib.mkEnableOption "Whether the host should include graphical packages";
+          work = lib.mkEnableOption "Whether the host is a work machine";
+        };
+
+        config = {
+          graphical = lib.mkDefault false;
+          work = lib.mkDefault false;
+        };
+      };
+  
+      user = {
+        includes = [ hmPlatforms ];
+  
+        classes = [ "homeManager" ];
+      };
     };
   };
 }
