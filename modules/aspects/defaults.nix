@@ -70,7 +70,7 @@ let
 in
 {
   den = {
-    defaults = {
+    default = {
       includes = [
         my.fonts
         my.nix
