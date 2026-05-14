@@ -28,6 +28,7 @@ let
             with pkgs;
             lib.optionals (host.graphical or false) [
               inkscape
+              mkvtoolnix
               prismlauncher
             ];
         };
