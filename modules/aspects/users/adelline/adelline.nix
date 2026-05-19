@@ -3,17 +3,15 @@
   den.aspects.adelline = {
     user.description = "Adelline Marshall";
 
-    includes = with my; [
+    includes = [
       den._.primary-user
       (den._.user-shell "fish")
-      (den._.unfree [
-        "google-chrome"
-        "zoom"
-      ])
-      discord
-      ghostty
-      steam
-      zen-browser
+      my.discord
+      my.chrome
+      my.ghostty
+      my.steam
+      my.zoom
+      my.zen-browser
       (
         { user, ... }:
         {
@@ -35,12 +33,10 @@
         };
 
         home.packages = with pkgs; [
-          google-chrome
           inkscape
           krita
           prismlauncher
           rnote
-          zoom-us
         ];
 
         programs = {
