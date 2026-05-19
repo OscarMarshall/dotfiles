@@ -3,10 +3,10 @@
   my.zoom = {
     includes = [ (den._.unfree [ "zoom" ]) ];
 
-    hmLinux =
-      { pkgs, ... }:
+    homeManager =
+      { lib, pkgs, ... }:
       {
-        home.packages = [ pkgs.zoom-us ];
+        home.packages = lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.zoom-us ];
       };
   };
 }
