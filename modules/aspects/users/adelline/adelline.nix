@@ -1,8 +1,6 @@
 { den, my, ... }:
 {
   den.aspects.adelline = {
-    user.description = "Adelline Marshall";
-
     includes = [
       den._.primary-user
       (den._.user-shell "fish")
@@ -20,6 +18,8 @@
         }
       )
     ];
+
+    user.description = "Adelline Marshall";
 
     homeManager =
       { pkgs, ... }:
