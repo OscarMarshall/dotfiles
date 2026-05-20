@@ -4,9 +4,9 @@
     includes = [ (den._.unfree [ "google-chrome" ]) ];
 
     homeManager =
-      { lib, pkgs, ... }:
+      { pkgs, ... }:
       {
-        home.packages = lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.google-chrome ];
+        home.packages = [ pkgs.google-chrome ];
       };
   };
 }
