@@ -74,6 +74,7 @@ let
     den._.mutual-provider
 
     my.starship
+    my.secrets
     my.stylix
 
     # Automatically create the user on host / standalone home.
