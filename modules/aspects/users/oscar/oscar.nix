@@ -29,6 +29,7 @@ let
             lib.optionals (host.graphical or false) [
               inkscape
               mkvtoolnix
+              mpv
               prismlauncher
             ];
         };
