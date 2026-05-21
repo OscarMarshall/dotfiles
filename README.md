@@ -8,6 +8,8 @@ This repository contains my personal system configurations for multiple machines
 - **harmony** (x86_64-linux): Home server running media services, Minecraft servers, and infrastructure
 - **melaan** (x86_64-linux): Framework laptop with GNOME desktop
 - **OMARSHAL-M-2FD2** (aarch64-darwin): MacBook with development environment
+- **omarshal@dev203.meraki.com** (x86_64-linux): Standalone Home Manager config reusing the `oscar` aspect for a work
+  machine
 
 ## Quick Start
 
@@ -35,6 +37,12 @@ sudo nixos-rebuild switch --flake .#<hostname>
 
 ```console
 darwin-rebuild switch --flake .#OMARSHAL-M-2FD2
+```
+
+**Standalone Home Manager (omarshal@dev203.meraki.com):**
+
+```console
+home-manager switch --flake .#"omarshal@dev203.meraki.com"
 ```
 
 ### Validate Configuration

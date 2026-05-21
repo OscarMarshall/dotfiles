@@ -6,33 +6,40 @@
 }:
 let
   name = "Oscar Marshall";
-  graphicalAspect =
-    { host, ... }:
-    {
-      includes =
-        with my;
-        lib.optionals (host.graphical or false) [
-          (catppuccin { })
-          discord
-          doc-browser
-          ghostty
-          orca-slicer
-          prusa-slicer
-          steam
-          zen-browser
-        ];
-      homeManager =
-        { pkgs, ... }:
-        {
-          home.packages =
-            with pkgs;
-            lib.optionals (host.graphical or false) [
-              inkscape
-              mkvtoolnix
-              prismlauncher
-            ];
-        };
-    };
+  contextAttrs =
+    context:
+    if (context ? host) && context.host != null then
+      context.host
+    else if (context ? home) && context.home != null then
+      context.home
+    else
+      context;
+  contextFlag = context: flag: (contextAttrs context).${flag} or false;
+  graphicalAspect = context: {
+    includes =
+      with my;
+      lib.optionals (contextFlag context "graphical") [
+        (catppuccin { })
+        discord
+        doc-browser
+        ghostty
+        orca-slicer
+        prusa-slicer
+        steam
+        zen-browser
+      ];
+    homeManager =
+      { pkgs, ... }:
+      {
+        home.packages =
+          with pkgs;
+          lib.optionals (contextFlag context "graphical") [
+            inkscape
+            mkvtoolnix
+            prismlauncher
+          ];
+      };
+  };
   userAspect =
     { user, ... }:
     {
@@ -67,6 +74,20 @@ in
       userAspect
     ];
 
+    provides."dev203.meraki.com" =
+      context:
+      lib.mkIf
+        (
+          (context.hostName or null) == "dev203.meraki.com"
+          || ((context ? home) && context.home != null && context.home.hostName == "dev203.meraki.com")
+        )
+        {
+          homeManager.home = {
+            sessionVariables.PATH = "$HOME/.nix-profile/bin:$PATH";
+            stateVersion = "26.05";
+          };
+        };
+
     user.description = name;
 
     nixosSecrets =
@@ -100,7 +121,7 @@ in
     ];
 
     homeManager =
-      { pkgs, ... }:
+      args@{ pkgs, ... }:
       {
         home = {
           packages = with pkgs; [
@@ -109,13 +130,16 @@ in
             ripgrep
             rsync
           ];
+          sessionVariables.PATH = lib.mkDefault "$HOME/.nix-profile/bin:$PATH";
+          stateVersion = lib.mkDefault "26.05";
         };
 
         programs = {
           fish.enable = true;
           fzf.enable = true;
         };
-
+      }
+      // lib.optionalAttrs (args ? osConfig) {
         stylix.fonts = {
           monospace = {
             package = pkgs.nerd-fonts.fira-code;

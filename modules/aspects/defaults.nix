@@ -67,10 +67,22 @@ let
           inherit (config.age) secrets;
         };
     };
+  sharedUserHomeIncludes = [
+    hmPlatforms
+
+    # ${user}.provides.${host} and ${host}.provides.${user}
+    den._.mutual-provider
+
+    my.starship
+
+    # Automatically create the user on host / standalone home.
+    den._.define-user
+  ];
 in
 {
   den = {
     schema.user.classes = [ "homeManager" ];
+    schema.home.includes = sharedUserHomeIncludes;
 
     ctx = {
       host = {
@@ -93,17 +105,7 @@ in
         os.system.configurationRevision = self.rev or self.dirtyRev or null;
       };
 
-      user.includes = [
-        hmPlatforms
-
-        # ${user}.provides.${host} and ${host}.provides.${user}
-        den._.mutual-provider
-
-        my.starship
-
-        # Automatically create the user on host.
-        den._.define-user
-      ];
+      user.includes = sharedUserHomeIncludes;
     };
   };
 }

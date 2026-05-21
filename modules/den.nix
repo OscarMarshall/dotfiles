@@ -16,4 +16,9 @@
       oscar = { };
     };
   };
+
+  den.homes.x86_64-linux."omarshal@dev203.meraki.com" = {
+    name = "oscar";
+    work = true;
+  };
 }
