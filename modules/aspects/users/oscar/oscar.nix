@@ -6,40 +6,18 @@
 }:
 let
   name = "Oscar Marshall";
-  contextAttrs =
-    context:
-    if (context ? host) && context.host != null then
-      context.host
-    else if (context ? home) && context.home != null then
-      context.home
+  scopeFromArgs =
+    {
+      host ? null,
+      home ? null,
+      ...
+    }@args:
+    if host != null then
+      host
+    else if home != null then
+      home
     else
-      context;
-  contextFlag = context: flag: (contextAttrs context).${flag} or false;
-  graphicalAspect = context: {
-    includes =
-      with my;
-      lib.optionals (contextFlag context "graphical") [
-        (catppuccin { })
-        discord
-        doc-browser
-        ghostty
-        orca-slicer
-        prusa-slicer
-        steam
-        zen-browser
-      ];
-    homeManager =
-      { pkgs, ... }:
-      {
-        home.packages =
-          with pkgs;
-          lib.optionals (contextFlag context "graphical") [
-            inkscape
-            mkvtoolnix
-            prismlauncher
-          ];
-      };
-  };
+      args;
   userAspect =
     { user, ... }:
     {
@@ -70,23 +48,53 @@ in
       my.nix-index
       my.proton-pass
       my.ssh-client
-      graphicalAspect
       userAspect
+      (
+        args:
+        let
+          scope = scopeFromArgs args;
+        in
+        {
+          includes =
+            with my;
+            lib.optionals (scope.graphical or false) [
+              (catppuccin { })
+              discord
+              doc-browser
+              ghostty
+              orca-slicer
+              prusa-slicer
+              steam
+              zen-browser
+            ];
+          homeManager =
+            { pkgs, ... }:
+            {
+              home.packages =
+                with pkgs;
+                lib.optionals (scope.graphical or false) [
+                  inkscape
+                  mkvtoolnix
+                  prismlauncher
+                ];
+            };
+        }
+      )
     ];
 
-    provides."dev203.meraki.com" =
-      context:
-      lib.mkIf
-        (
-          (context.hostName or null) == "dev203.meraki.com"
-          || ((context ? home) && context.home != null && context.home.hostName == "dev203.meraki.com")
-        )
+    provides."dev203.meraki.com" = {
+      includes = builtins.attrValues den.aspects.oscar.provides.work.provides;
+
+      homeManager =
+        { pkgs, ... }:
         {
-          homeManager.home = {
+          home = {
+            packages = [ pkgs.codex ];
             sessionVariables.PATH = "$HOME/.nix-profile/bin:$PATH";
             stateVersion = "26.05";
           };
         };
+    };
 
     user.description = name;
 
@@ -121,7 +129,7 @@ in
     ];
 
     homeManager =
-      args@{ pkgs, ... }:
+      { pkgs, ... }:
       {
         home = {
           packages = with pkgs; [
@@ -130,16 +138,13 @@ in
             ripgrep
             rsync
           ];
-          sessionVariables.PATH = lib.mkDefault "$HOME/.nix-profile/bin:$PATH";
-          stateVersion = lib.mkDefault "26.05";
         };
 
         programs = {
           fish.enable = true;
           fzf.enable = true;
         };
-      }
-      // lib.optionalAttrs (args ? osConfig) {
+
         stylix.fonts = {
           monospace = {
             package = pkgs.nerd-fonts.fira-code;

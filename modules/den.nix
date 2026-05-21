@@ -1,3 +1,4 @@
+{ den, ... }:
 {
   den.hosts.aarch64-darwin.OMARSHAL-M-2FD2 = {
     graphical = true;
@@ -18,7 +19,7 @@
   };
 
   den.homes.x86_64-linux."omarshal@dev203.meraki.com" = {
-    name = "oscar";
+    aspect = den.aspects.oscar;
     work = true;
   };
 }

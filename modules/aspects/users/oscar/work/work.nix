@@ -5,36 +5,34 @@
   ...
 }:
 let
-  contextAttrs =
-    context:
-    if (context ? host) && context.host != null then
-      context.host
-    else if (context ? home) && context.home != null then
-      context.home
-    else if
-      (context ? system)
-      && (context ? userName)
-      && (context ? hostName)
-      && context.hostName != null
-      && builtins.hasAttr context.system den.homes
-      && builtins.hasAttr "${context.userName}@${context.hostName}" den.homes.${context.system}
-    then
-      den.homes.${context.system}."${context.userName}@${context.hostName}"
+  scopeFromArgs =
+    {
+      host ? null,
+      home ? null,
+      ...
+    }@args:
+    if host != null then
+      host
+    else if home != null then
+      home
     else
-      { };
-  contextFlag = context: flag: (contextAttrs context).${flag} or false;
+      args;
 in
 {
-  den.aspects.oscar.provides.work = context: {
-    includes = lib.optionals (contextFlag context "work") (
-      builtins.attrValues den.aspects.oscar.provides.work.provides
-      ++ (lib.optional (contextFlag context "graphical") my.slack)
-    );
+  den.aspects.oscar.provides.work =
+    args:
+    let
+      scope = scopeFromArgs args;
+    in
+    {
+      includes = lib.optionals (scope.work or false) (
+        builtins.attrValues den.aspects.oscar.provides.work.provides ++ (lib.optional (scope.graphical or false) my.slack)
+      );
 
-    homeManager =
-      { pkgs, ... }:
-      {
-        home.packages = lib.optional (contextFlag context "work") pkgs.codex;
-      };
-  };
+      homeManager =
+        { pkgs, ... }:
+        {
+          home.packages = lib.optional (scope.work or false) pkgs.codex;
+        };
+    };
 }
