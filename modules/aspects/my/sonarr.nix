@@ -12,7 +12,7 @@
         { secrets, ... }:
         {
           sonarr-api-key = {
-            generator.script = "alnum";
+            generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 16 | tr 'A-F' 'a-f'";
             intermediary = true;
           };
           "sonarr.env".generator = {
