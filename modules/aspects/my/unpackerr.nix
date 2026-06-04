@@ -27,13 +27,6 @@
         ...
       }:
       {
-        users.users.unpackerr = {
-          isSystemUser = true;
-          group = "unpackerr";
-          extraGroups = [ "qbittorrent" ];
-        };
-        users.groups.unpackerr = { };
-
         systemd.services.unpackerr = {
           description = "Unpackerr daemon";
           after = [ "network-online.target" ];
@@ -41,8 +34,8 @@
           wantedBy = [ "multi-user.target" ];
           serviceConfig = {
             Type = "simple";
-            User = "unpackerr";
-            Group = "unpackerr";
+            User = "qbittorrent";
+            Group = "qbittorrent";
             EnvironmentFile = config.age.secrets."unpackerr.env".path;
             Environment = [
               "UN_SONARR_0_URL=https://sonarr.harmony.silverlight-nex.us"
