@@ -74,7 +74,6 @@ let
     den._.mutual-provider
 
     my.starship
-    my.secrets
     my.stylix
 
     # Automatically create the user on host / standalone home.
@@ -83,10 +82,8 @@ let
 in
 {
   den = {
-    schema.user.classes = [ "homeManager" ];
-    schema.home.includes = sharedUserHomeIncludes;
-
-    ctx = {
+    schema = {
+      home.includes = sharedUserHomeIncludes ++ [ my.secrets ];
       host = {
         includes = [
           secrets
@@ -106,8 +103,11 @@ in
 
         os.system.configurationRevision = self.rev or self.dirtyRev or null;
       };
+      user = {
+        includes = sharedUserHomeIncludes;
 
-      user.includes = sharedUserHomeIncludes;
+        classes = [ "homeManager" ];
+      };
     };
   };
 }
