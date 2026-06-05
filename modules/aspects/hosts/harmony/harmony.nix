@@ -5,6 +5,7 @@
       (auto-upgrade { allowReboot = true; })
       autobrr
       boot
+      bookshelf
       (cachyos-kernel { variant = "server-lto"; })
       cross-seed
       gluetun
@@ -31,6 +32,7 @@
         "yarg-charts"
       ])
       (sonarr { administrators = [ "oscar" ]; })
+      storyteller
       ssh-server
       unpackerr
       (zfs [ "metalminds" ])
