@@ -74,7 +74,7 @@ let
     den._.mutual-provider
 
     my.starship
-    my.stylix
+    my.secrets
 
     # Automatically create the user on host / standalone home.
     den._.define-user
@@ -83,7 +83,7 @@ in
 {
   den = {
     schema = {
-      home.includes = sharedUserHomeIncludes ++ [ my.secrets ];
+      home.includes = sharedUserHomeIncludes ++ [ my.stylix ];
       host = {
         includes = [
           secrets

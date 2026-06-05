@@ -33,7 +33,8 @@ let
 in
 {
   den.aspects.oscar = {
-    includes = builtins.attrValues den.aspects.oscar.provides ++ [
+    includes = [
+      den.aspects.oscar.provides.work
       den._.primary-user
       (den._.user-shell "fish")
       my.bat
