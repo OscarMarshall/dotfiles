@@ -82,7 +82,10 @@ in
 {
   den = {
     schema = {
-      home.includes = sharedUserHomeIncludes ++ [ my.secrets my.stylix ];
+      home.includes = sharedUserHomeIncludes ++ [
+        my.secrets
+        my.stylix
+      ];
       host = {
         includes = [
           secrets
