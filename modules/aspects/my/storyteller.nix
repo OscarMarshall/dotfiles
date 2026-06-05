@@ -10,7 +10,10 @@
       secrets =
         { secrets, ... }:
         {
-          storyteller-secret-key.generator.script = "alnum";
+          storyteller-secret-key = {
+            generator.script = "alnum";
+            intermediary = true;
+          };
           "storyteller.env".generator = {
             dependencies = { inherit (secrets) storyteller-secret-key; };
             script =
@@ -32,7 +35,7 @@
         { config, ... }:
         {
           virtualisation.oci-containers.containers.storyteller = {
-            image = "registry.gitlab.com/storyteller-platform/storyteller:latest";
+            image = "registry.gitlab.com/storyteller-platform/storyteller:latest@sha256:a1ea07892fc3fb5c22fe6ef3fbba7daff5aa25835c90e01b080a6e596c3ce8b2";
             ports =
               let
                 port' = toString port;
