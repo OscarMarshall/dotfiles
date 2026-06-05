@@ -75,6 +75,7 @@ in
                 lib.optionals (scope.graphical or false) [
                   inkscape
                   mkvtoolnix
+                  mpv
                   prismlauncher
                 ];
             };

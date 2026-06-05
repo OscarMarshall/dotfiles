@@ -73,6 +73,10 @@
 (add-hook 'prog-mode-hook (lambda ()
                             (setq prettify-symbols-alist nil
                                   subword-mode 1)))
+(setenv "SSH_AUTH_SOCK"
+        (concat (if (featurep :system 'macos) (string-trim (shell-command-to-string "getconf DARWIN_USER_TEMP_DIR"))
+                  (getenv "XDG_RUNTIME_DIR"))
+                "/proton-pass-agent"))
 
 ;;; Doom
 
