@@ -51,7 +51,17 @@ in
             (inputs.agenix-rekey.homeManagerModules.default or { })
           ];
 
-          age.rekey = rekey host pkgs;
+          age = {
+            rekey =
+              (rekey host pkgs)
+              // (
+                if host.name == "OMARSHAL-M-2FD2" then
+                  { hostKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOn+wO9sZ8GoCRrg1BOkBK7/dPUojEdEaWoq2lHFYp9K"; }
+                else
+                  { }
+              );
+            identityPaths = [ "~/.ssh/id_ed25519" ];
+          };
         };
 
       nixos =
