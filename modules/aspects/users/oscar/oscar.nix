@@ -30,6 +30,19 @@ let
           };
         };
     };
+  dev203Provider = {
+    includes = builtins.attrValues den.aspects.oscar.provides.work.provides;
+
+    homeManager =
+      { pkgs, ... }:
+      {
+        home = {
+          packages = [ pkgs.codex ];
+          sessionVariables.PATH = "$HOME/.nix-profile/bin:$PATH";
+          stateVersion = "26.05";
+        };
+      };
+  };
 in
 {
   den.aspects.oscar = {
@@ -84,19 +97,8 @@ in
       )
     ];
 
-    provides."dev203.meraki.com" = {
-      includes = builtins.attrValues den.aspects.oscar.provides.work.provides;
-
-      homeManager =
-        { pkgs, ... }:
-        {
-          home = {
-            packages = [ pkgs.codex ];
-            sessionVariables.PATH = "$HOME/.nix-profile/bin:$PATH";
-            stateVersion = "26.05";
-          };
-        };
-    };
+    provides."dev203.meraki.com" = dev203Provider;
+    provides."omarshal@dev203.meraki.com" = dev203Provider;
 
     user.description = name;
 
