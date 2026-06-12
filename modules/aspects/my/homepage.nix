@@ -59,9 +59,21 @@ in
             {
               "Media" = [
                 {
+                  "Bookshelf" = {
+                    href = "https://bookshelf.harmony.silverlight-nex.us";
+                    description = "Book and audiobook manager";
+                  };
+                }
+                {
                   "Plex" = {
                     href = "https://plex.harmony.silverlight-nex.us";
                     description = "Media server";
+                  };
+                }
+                {
+                  "Storyteller" = {
+                    href = "https://storyteller.harmony.silverlight-nex.us";
+                    description = "Read-aloud book alignment";
                   };
                 }
               ];
