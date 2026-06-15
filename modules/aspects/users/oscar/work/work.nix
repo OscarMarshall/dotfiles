@@ -12,6 +12,8 @@
         builtins.attrValues den.aspects.oscar.provides.work.provides ++ (lib.optional (host.graphical or false) my.slack)
       );
 
+      darwin.homebrew.casks = lib.optionals ((host.work or false) && (host.graphical or false)) [ "codex-app" ];
+
       homeManager =
         { pkgs, ... }:
         {
