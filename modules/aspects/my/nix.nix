@@ -8,6 +8,7 @@
           intermediary = true;
         };
 
+        nix-access-tokens.mode = "0444";
         nix-access-tokens.generator = {
           dependencies = { inherit (secrets) github-access-token; };
           script =
