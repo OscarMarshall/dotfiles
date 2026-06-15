@@ -18,6 +18,11 @@
     };
   };
 
+  den.hosts.x86_64-linux."dev203.meraki.com" = {
+    work = true;
+    users.omarshal = { };
+  };
+
   den.homes.x86_64-linux."omarshal@dev203.meraki.com" = {
     aspect = den.aspects.oscar;
     work = true;

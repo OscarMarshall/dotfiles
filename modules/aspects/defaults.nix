@@ -1,5 +1,4 @@
 {
-  config,
   den,
   lib,
   my,
@@ -28,7 +27,11 @@ let
         };
     };
   secrets =
-    { aspect-chain, ... }:
+    {
+      aspect-chain,
+      home ? null,
+      ...
+    }:
     den._.forward {
       each = [
         "nixos"
@@ -42,6 +45,7 @@ let
         "secrets"
       ];
       fromAspect = _: lib.head aspect-chain;
+      fromCtx = _: lib.optionalAttrs (home != null) { inherit home; };
       adaptArgs =
         { config, ... }:
         {
@@ -67,48 +71,39 @@ let
           inherit (config.age) secrets;
         };
     };
-  sharedUserHomeIncludes = [
-    hmPlatforms
-
-    # ${user}.provides.${host} and ${host}.provides.${user}
-    den._.mutual-provider
-
-    my.starship
-
-    # Automatically create the user on host / standalone home.
-    den._.define-user
-  ];
 in
 {
   den = {
+    default.includes = [
+      hmPlatforms
+
+      den.batteries.define-user
+      den.batteries.hostname
+
+      my.secrets
+      my.stylix
+    ];
+
     schema = {
-      home.includes = sharedUserHomeIncludes ++ [
-        my.secrets
-        my.stylix
+      home.includes = [
+        secrets
+        my.nix
+        my.starship
       ];
       host = {
         includes = [
-          secrets
           nixosSecrets
-
+          secrets
           my.fonts
           my.nix
-          my.secrets
-          my.stylix
-
-          # Automatically set hostname.
-          den._.hostname
-
-          # Disable booting when running on CI on all NixOS hosts.
-          (if config ? _module.args.CI then my.ci-no-boot else { })
         ];
 
         os.system.configurationRevision = self.rev or self.dirtyRev or null;
       };
       user = {
-        includes = sharedUserHomeIncludes;
+        includes = [ my.starship ];
 
-        classes = [ "homeManager" ];
+        classes = lib.mkDefault [ "homeManager" ];
       };
     };
   };

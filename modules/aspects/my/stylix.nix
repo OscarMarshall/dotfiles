@@ -7,7 +7,7 @@
 
   my.stylix = {
     darwin.imports = [ (inputs.stylix.darwinModules.stylix or { }) ];
-    homeManager.imports = [ (inputs.stylix.homeModules.stylix or inputs.stylix.homeManagerModules.stylix or { }) ];
+    homeManager.imports = [ (inputs.stylix.homeModules.stylix or { }) ];
     nixos.imports = [ (inputs.stylix.nixosModules.stylix or { }) ];
 
     os =
