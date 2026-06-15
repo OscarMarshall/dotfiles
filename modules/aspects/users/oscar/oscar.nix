@@ -115,6 +115,7 @@ in
         programs = {
           fish.enable = true;
           fzf.enable = true;
+          gh.enable = true;
         };
 
         stylix.fonts = {
