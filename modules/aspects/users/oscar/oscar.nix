@@ -115,7 +115,10 @@ in
         programs = {
           fish.enable = true;
           fzf.enable = true;
-          gh.enable = true;
+          gh = {
+            enable = true;
+            settings.git_protocol = "ssh";
+          };
         };
 
         stylix.fonts = {
