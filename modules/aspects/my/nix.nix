@@ -8,6 +8,8 @@
           intermediary = true;
         };
 
+        # World-readable: nix fetches via the client process, not the daemon,
+        # so all users need to read this for authenticated GitHub API access.
         nix-access-tokens.mode = "0444";
         nix-access-tokens.generator = {
           dependencies = { inherit (secrets) github-access-token; };
