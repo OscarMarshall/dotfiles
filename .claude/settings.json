@@ -1,0 +1,10 @@
+{
+  "allowedTools": [
+    "Bash(find /nix/store*)",
+    "Bash(grep * /nix/store*)",
+    "Bash(nix build*)",
+    "Bash(nix eval*)",
+    "Bash(nix flake*)",
+    "Read(/nix/store/*)"
+  ]
+}
