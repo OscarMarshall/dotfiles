@@ -70,31 +70,22 @@ let
 in
 {
   den = {
-    schema.user.classes = [ "homeManager" ];
-
-    ctx = {
-      host = {
-        includes = [
-          secrets
-          nixosSecrets
-
-          my.fonts
-          my.nix
-          my.secrets
-          my.stylix
-
-          # Automatically set hostname.
-          den._.hostname
-
-          # Disable booting when running on CI on all NixOS hosts.
-          (if config ? _module.args.CI then my.ci-no-boot else { })
-        ];
-
-        os.system.configurationRevision = self.rev or self.dirtyRev or null;
-      };
-
-      user.includes = [
+    default = {
+      includes = [
         hmPlatforms
+        secrets
+        nixosSecrets
+
+        my.fonts
+        my.nix
+        my.secrets
+        my.stylix
+
+        # Automatically set hostname.
+        den._.hostname
+
+        # Disable booting when running on CI on all NixOS hosts.
+        (if config ? _module.args.CI then my.ci-no-boot else { })
 
         # ${user}.provides.${host} and ${host}.provides.${user}
         den._.mutual-provider
@@ -104,6 +95,26 @@ in
         # Automatically create the user on host.
         den._.define-user
       ];
+
+      os.system.configurationRevision = self.rev or self.dirtyRev or null;
+
+      darwin.programs.man.generateCaches = false;
+    };
+
+    schema = {
+      host = {
+        options = {
+          graphical = lib.mkEnableOption "Whether the host should include graphical packages";
+          work = lib.mkEnableOption "Whether the host is a work machine";
+        };
+
+        config = {
+          graphical = lib.mkDefault false;
+          work = lib.mkDefault false;
+        };
+      };
+
+      user.classes = [ "homeManager" ];
     };
   };
 }
