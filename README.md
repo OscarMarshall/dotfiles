@@ -62,7 +62,7 @@ into composable aspects:
 
 - **`modules/aspects/hosts/`**: Host-specific configurations (one aspect per host)
 - **`modules/aspects/users/`**: User-specific configurations (one aspect per user)
-- **`modules/aspects/my/`**: Reusable service and feature aspects (~43 total)
+- **`modules/aspects/my/`**: Reusable service and feature aspects (~55 total)
 - **`modules/aspects/defaults.nix`**: Default includes applied to all configurations
 
 ### Configuration Classes
