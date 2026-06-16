@@ -129,6 +129,12 @@ in
 
           programs = {
             fish.enable = true;
+            ssh.matchBlocks."github-personal" = {
+              hostname = "github.com";
+              user = "git";
+              identityFile = "${./id_ed25519_personal.pub}";
+              identitiesOnly = true;
+            };
             fzf.enable = true;
             gh = {
               enable = true;
