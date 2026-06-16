@@ -103,6 +103,14 @@ in
 
         # Automatically create the user on host.
         den._.define-user
+
+        # Mirror the host's stateVersion into Home Manager so they stay in sync.
+        # Darwin hosts override this explicitly since darwin-nix uses integer versioning.
+        {
+          homeManager = { osConfig, lib, ... }: {
+            home.stateVersion = lib.mkDefault osConfig.system.stateVersion;
+          };
+        }
       ];
     };
   };
