@@ -25,6 +25,12 @@ in
       { lib, ... }:
       {
         programs.ssh.matchBlocks = {
+          "github-meraki" = {
+            hostname = "github.com";
+            user = "git";
+            identityFile = "${./id_ed25519_meraki.pub}";
+            identitiesOnly = true;
+          };
           "*.meraki.com ${aliases}" = {
             addKeysToAgent = "yes";
             forwardAgent = true;
