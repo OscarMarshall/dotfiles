@@ -18,6 +18,11 @@
         { pkgs, ... }:
         {
           home.packages = lib.optional (host.work or false) pkgs.codex;
+
+          services.proton-pass-agent.extraArgs = lib.optionals (!(host.work or false)) [
+            "--vault-name"
+            "Personal"
+          ];
         };
     };
 }
