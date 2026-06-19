@@ -4,22 +4,39 @@
   my,
   ...
 }:
+let
+  scopeFromArgs =
+    {
+      host ? null,
+      home ? null,
+      ...
+    }@args:
+    if host != null then
+      host
+    else if home != null then
+      home
+    else
+      args;
+in
 {
   den.aspects.oscar.provides.work =
-    { host, ... }:
+    args:
+    let
+      scope = scopeFromArgs args;
+    in
     {
-      includes = lib.optionals (host.work or false) (
-        builtins.attrValues den.aspects.oscar.provides.work.provides ++ (lib.optional (host.graphical or false) my.slack)
+      includes = lib.optionals (scope.work or false) (
+        builtins.attrValues den.aspects.oscar.provides.work.provides ++ (lib.optional (scope.graphical or false) my.slack)
       );
 
-      darwin.homebrew.casks = lib.optionals ((host.work or false) && (host.graphical or false)) [ "codex-app" ];
+      darwin.homebrew.casks = lib.optionals ((scope.work or false) && (scope.graphical or false)) [ "codex-app" ];
 
       homeManager =
         { pkgs, ... }:
         {
-          home.packages = lib.optional (host.work or false) pkgs.codex;
+          home.packages = lib.optional (scope.work or false) pkgs.codex;
 
-          services.proton-pass-agent.extraArgs = lib.optionals (!(host.work or false)) [
+          services.proton-pass-agent.extraArgs = lib.optionals (!(scope.work or false)) [
             "--vault-name"
             "Personal"
           ];
