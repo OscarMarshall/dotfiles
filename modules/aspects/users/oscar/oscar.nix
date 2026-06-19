@@ -6,34 +6,6 @@
 }:
 let
   name = "Oscar Marshall";
-  graphicalAspect =
-    { host, ... }:
-    {
-      includes =
-        with my;
-        lib.optionals (host.graphical or false) [
-          (catppuccin { })
-          discord
-          doc-browser
-          ghostty
-          orca-slicer
-          prusa-slicer
-          steam
-          zen-browser
-        ];
-      homeManager =
-        { pkgs, ... }:
-        {
-          home.packages =
-            with pkgs;
-            lib.optionals (host.graphical or false) [
-              inkscape
-              mkvtoolnix
-              mpv
-              prismlauncher
-            ];
-        };
-    };
   userAspect =
     { user, ... }:
     {
@@ -48,95 +20,138 @@ let
     };
 in
 {
-  den.aspects.oscar = {
-    includes = builtins.attrValues den.aspects.oscar.provides ++ [
-      den._.primary-user
-      (den._.user-shell "fish")
-      my.bat
-      my.direnv
-      my.emacs
-      (my.git {
-        inherit name;
-        email = "3111765+OscarMarshall@users.noreply.github.com";
-      })
-      my.gpg
-      my.nh
-      my.nix-index
-      my.proton-pass
-      my.ssh-client
-      graphicalAspect
-      userAspect
-    ];
+  den.aspects.oscar =
+    {
+      host ? null,
+      home ? null,
+      ...
+    }:
+    let
+      scope =
+        if host != null then
+          host
+        else if home != null then
+          home
+        else
+          { };
+    in
+    {
+      includes = [
+        den.aspects.oscar.provides.work
+        den._.primary-user
+        (den._.user-shell "fish")
+        my.bat
+        my.direnv
+        my.emacs
+        (my.git {
+          inherit name;
+          email = "3111765+OscarMarshall@users.noreply.github.com";
+        })
+        my.gpg
+        my.nh
+        my.nix-index
+        my.proton-pass
+        my.ssh-client
+        userAspect
+      ]
+      ++ lib.optionals (scope.graphical or false) (
+        with my;
+        [
+          (catppuccin { })
+          discord
+          doc-browser
+          ghostty
+          orca-slicer
+          prusa-slicer
+          steam
+          zen-browser
+        ]
+      );
 
-    user.description = name;
-
-    nixosSecrets =
-      { secrets, ... }:
-      {
-        oscar-password = {
-          rekeyFile = ../../../../secrets/oscar-password.age;
-          intermediary = true;
-        };
-
-        oscar-hashed-password.generator = {
-          dependencies = { inherit (secrets) oscar-password; };
-          script =
-            {
-              decrypt,
-              deps,
-              lib,
-              pkgs,
-              ...
-            }:
-            ''
-              ${pkgs.mkpasswd}/bin/mkpasswd "$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
-            '';
-        };
-      };
-
-    darwin.homebrew.casks = [
-      "arc"
-      "domzilla-caffeine"
-      "proton-mail"
-    ];
-
-    homeManager =
-      { pkgs, ... }:
-      {
-        home = {
-          packages = with pkgs; [
-            fd
-            gnupg
-            ripgrep
-            rsync
-          ];
-        };
-
-        programs = {
-          fish.enable = true;
-          ssh.matchBlocks."github-personal" = {
-            hostname = "github.com";
-            user = "git";
-            identityFile = "${./id_ed25519_personal.pub}";
-            identitiesOnly = true;
-          };
-          fzf.enable = true;
-          gh = {
-            enable = true;
-            settings.git_protocol = "ssh";
-          };
-        };
-
-        stylix.fonts = {
-          monospace = {
-            package = pkgs.nerd-fonts.fira-code;
-            name = "FiraCode Nerd Font Mono";
-          };
-          sansSerif = {
-            package = pkgs.fira;
-            name = "Fira Sans";
+      provides."dev203.meraki.com" = {
+        homeManager = {
+          home = {
+            sessionVariables.PATH = "$HOME/.nix-profile/bin:$PATH";
+            stateVersion = "26.05";
           };
         };
       };
-  };
+
+      user.description = name;
+
+      nixosSecrets =
+        { secrets, ... }:
+        {
+          oscar-password = {
+            rekeyFile = ../../../../secrets/oscar-password.age;
+            intermediary = true;
+          };
+
+          oscar-hashed-password.generator = {
+            dependencies = { inherit (secrets) oscar-password; };
+            script =
+              {
+                decrypt,
+                deps,
+                lib,
+                pkgs,
+                ...
+              }:
+              ''
+                ${pkgs.mkpasswd}/bin/mkpasswd "$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
+              '';
+          };
+        };
+
+      darwin.homebrew.casks = [
+        "arc"
+        "domzilla-caffeine"
+        "proton-mail"
+      ];
+
+      homeManager =
+        { pkgs, ... }:
+        {
+          home.packages =
+            with pkgs;
+            [
+              fd
+              gnupg
+              ripgrep
+              rsync
+            ]
+            ++ lib.optionals (scope.graphical or false) [
+              inkscape
+              mkvtoolnix
+              mpv
+              prismlauncher
+            ];
+
+          programs = {
+            fish.enable = true;
+            ssh.matchBlocks."github-personal" = {
+              hostname = "github.com";
+              user = "git";
+              identityFile = "${./id_ed25519_personal.pub}";
+              identitiesOnly = true;
+            };
+            fzf.enable = true;
+            gh = {
+              enable = true;
+              settings.git_protocol = "ssh";
+            };
+          };
+
+          stylix.fonts = {
+            monospace = {
+              package = pkgs.nerd-fonts.fira-code;
+              name = "FiraCode Nerd Font Mono";
+            };
+            sansSerif = {
+              package = pkgs.fira;
+              name = "Fira Sans";
+            };
+          };
+        };
+    };
 }
