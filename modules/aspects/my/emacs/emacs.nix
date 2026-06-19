@@ -70,35 +70,40 @@
       services.emacs.enable = true;
     };
 
-    hmLinux = { pkgs, ... }: { programs.doom-emacs.emacs = pkgs.emacs-pgtk; };
-
-    hmDarwin = { pkgs, ... }: {
-      programs.doom-emacs.emacs =
-        with pkgs;
-        emacs-pgtk.overrideAttrs (old: {
-          patches = (old.patches or [ ]) ++ [
-            # fix-window-role
-            (fetchpatch {
-              url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/a18d28c5044c98c81971679be819c0a1afb38a5f/patches/emacs-28/fix-window-role.patch";
-              sha256 = "sha256-+z/KfsBm1lvZTZNiMbxzXQGRTjkCFO4QPlEK35upjsE=";
-            })
-            # system-appearance
-            (fetchpatch {
-              url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/a18d28c5044c98c81971679be819c0a1afb38a5f/patches/emacs-30/system-appearance.patch";
-              sha256 = "sha256-3QLq91AQ6E921/W9nfDjdOUWR8YVsqBAT/W9c1woqAw=";
-            })
-            # round-undecorated-frame
-            (fetchpatch {
-              url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/a18d28c5044c98c81971679be819c0a1afb38a5f/patches/emacs-30/round-undecorated-frame.patch";
-              sha256 = "sha256-uYIxNTyfbprx5mCqMNFVrBcLeo+8e21qmBE3lpcnd+4=";
-            })
-            # fix-macos-tahoe-scrolling
-            (fetchpatch {
-              url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/a18d28c5044c98c81971679be819c0a1afb38a5f/patches/emacs-30/fix-macos-tahoe-scrolling.patch";
-              sha256 = "sha256-598LbU3Oa2TLOIltr6cMsuOolPtbJY3yBVUCAmE/SVA=";
-            })
-          ];
-        });
-    };
+    hmDarwin =
+      { pkgs, ... }:
+      {
+        programs.doom-emacs.emacs =
+          with pkgs;
+          emacs-pgtk.overrideAttrs (old: {
+            patches = (old.patches or [ ]) ++ [
+              # fix-window-role
+              (fetchpatch {
+                url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/d60d824b3d622f423c822b487a567805a195ac91/patches/emacs-28/fix-window-role.patch";
+                sha256 = "sha256-+z/KfsBm1lvZTZNiMbxzXQGRTjkCFO4QPlEK35upjsE=";
+              })
+              # system-appearance
+              (fetchpatch {
+                url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/d60d824b3d622f423c822b487a567805a195ac91/patches/emacs-30/system-appearance.patch";
+                sha256 = "sha256-3QLq91AQ6E921/W9nfDjdOUWR8YVsqBAT/W9c1woqAw=";
+              })
+              # round-undecorated-frame
+              (fetchpatch {
+                url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/d60d824b3d622f423c822b487a567805a195ac91/patches/emacs-30/round-undecorated-frame.patch";
+                sha256 = "sha256-uYIxNTyfbprx5mCqMNFVrBcLeo+8e21qmBE3lpcnd+4=";
+              })
+              # fix-macos-tahoe-scrolling
+              (fetchpatch {
+                url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/d60d824b3d622f423c822b487a567805a195ac91/patches/emacs-30/fix-macos-tahoe-scrolling.patch";
+                sha256 = "sha256-598LbU3Oa2TLOIltr6cMsuOolPtbJY3yBVUCAmE/SVA=";
+              })
+              # fix-ns-x-colors
+              (fetchpatch {
+                url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/d60d824b3d622f423c822b487a567805a195ac91/patches/emacs-30/fix-ns-x-colors.patch";
+                sha256 = "sha256-oe3DFgEXwp0cZJl+ufWqTonaeWSliikTRsVDNbcy4Yw=";
+              })
+            ];
+          });
+      };
   };
 }
