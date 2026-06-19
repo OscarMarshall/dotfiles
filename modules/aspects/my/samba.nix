@@ -1,5 +1,4 @@
-{ lib, ... }:
-{
+{ lib, ... }: {
   my.samba = pool: shares: {
     nixos = {
       services = {

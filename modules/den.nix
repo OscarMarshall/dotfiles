@@ -1,5 +1,4 @@
-{ den, ... }:
-{
+{ den, ... }: {
   den.hosts.aarch64-darwin.OMARSHAL-M-2FD2 = {
     graphical = true;
     work = true;

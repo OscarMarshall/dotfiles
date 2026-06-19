@@ -1,23 +1,21 @@
 {
   my.unpackerr = {
-    secrets =
-      { secrets, ... }:
-      {
-        "unpackerr.env".generator = {
-          dependencies = { inherit (secrets) radarr-api-key sonarr-api-key; };
-          script =
-            {
-              lib,
-              decrypt,
-              deps,
-              ...
-            }:
-            ''
-              printf 'UN_RADARR_0_API_KEY="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps."radarr-api-key".file})"
-              printf 'UN_SONARR_0_API_KEY="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps."sonarr-api-key".file})"
-            '';
-        };
+    secrets = { secrets, ... }: {
+      "unpackerr.env".generator = {
+        dependencies = { inherit (secrets) radarr-api-key sonarr-api-key; };
+        script =
+          {
+            lib,
+            decrypt,
+            deps,
+            ...
+          }:
+          ''
+            printf 'UN_RADARR_0_API_KEY="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps."radarr-api-key".file})"
+            printf 'UN_SONARR_0_API_KEY="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps."sonarr-api-key".file})"
+          '';
       };
+    };
 
     nixos =
       {

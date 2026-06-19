@@ -1,5 +1,4 @@
-{ den, ... }:
-{
+{ den, ... }: {
   my.steam = {
     includes = [
       (den._.unfree [

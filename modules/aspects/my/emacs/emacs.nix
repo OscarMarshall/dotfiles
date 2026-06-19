@@ -12,101 +12,93 @@
   my.emacs = {
     includes = [ (den._.unfree [ "aspell-dict-en-science" ]) ];
 
-    homeManager =
-      { pkgs, ... }:
-      {
-        imports = [ (inputs.nix-doom-emacs-unstraightened.homeModule or { }) ];
+    homeManager = { pkgs, ... }: {
+      imports = [ (inputs.nix-doom-emacs-unstraightened.homeModule or { }) ];
 
-        home.sessionVariables.EDITOR = "emacs -nw";
+      home.sessionVariables.EDITOR = "emacs -nw";
 
-        programs.doom-emacs = {
-          enable = true;
-          doomDir = ./doom;
-          experimentalFetchTree = true;
-          extraBinPackages = with pkgs; [
-            coreutils
-            fd
-            git
-            ripgrep
+      programs.doom-emacs = {
+        enable = true;
+        doomDir = ./doom;
+        experimentalFetchTree = true;
+        extraBinPackages = with pkgs; [
+          coreutils
+          fd
+          git
+          ripgrep
 
-            (aspellWithDicts (dicts: [
-              dicts.en
-              dicts.en-computers
-              dicts.en-science
-            ]))
-            babashka
-            bash-language-server
-            clj-kondo
-            cljfmt
-            clojure
-            clojure-lsp
-            cmake
-            editorconfig-core-c
-            eslint
-            gnupg
-            metals
-            multimarkdown
+          (aspellWithDicts (dicts: [
+            dicts.en
+            dicts.en-computers
+            dicts.en-science
+          ]))
+          babashka
+          bash-language-server
+          clj-kondo
+          cljfmt
+          clojure
+          clojure-lsp
+          cmake
+          editorconfig-core-c
+          eslint
+          gnupg
+          metals
+          multimarkdown
 
-            lix
-            nixd
-            nixfmt
+          lix
+          nixd
+          nixfmt
 
-            js-beautify
-            nodejs
-            pinentry-emacs
-            prettier
-            ruby-lsp
-            rubyPackages.solargraph
-            scalafmt
-            shellcheck
-            shfmt
-            stylelint
-            typescript
-            typescript-language-server
-            vscode-langservers-extracted
-            yaml-language-server
+          js-beautify
+          nodejs
+          pinentry-emacs
+          prettier
+          ruby-lsp
+          rubyPackages.solargraph
+          scalafmt
+          shellcheck
+          shfmt
+          stylelint
+          typescript
+          typescript-language-server
+          vscode-langservers-extracted
+          yaml-language-server
+        ];
+        extraPackages = epkgs: [ epkgs.treesit-grammars.with-all-grammars ];
+      };
+
+      services.emacs.enable = true;
+    };
+
+    hmLinux = { pkgs, ... }: { programs.doom-emacs.emacs = pkgs.emacs-pgtk; };
+
+    hmDarwin = { pkgs, ... }: {
+      programs.doom-emacs.emacs =
+        with pkgs;
+        emacs-pgtk.overrideAttrs (old: {
+          patches = (old.patches or [ ]) ++ [
+            # fix-window-role
+            (fetchpatch {
+              url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/a18d28c5044c98c81971679be819c0a1afb38a5f/patches/emacs-28/fix-window-role.patch";
+              sha256 = "sha256-+z/KfsBm1lvZTZNiMbxzXQGRTjkCFO4QPlEK35upjsE=";
+            })
+            # system-appearance
+            (fetchpatch {
+              url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/a18d28c5044c98c81971679be819c0a1afb38a5f/patches/emacs-30/system-appearance.patch";
+              sha256 = "sha256-3QLq91AQ6E921/W9nfDjdOUWR8YVsqBAT/W9c1woqAw=";
+            })
+            # round-undecorated-frame
+            (fetchpatch {
+              url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/a18d28c5044c98c81971679be819c0a1afb38a5f/patches/emacs-30/round-undecorated-frame.patch";
+              sha256 = "sha256-uYIxNTyfbprx5mCqMNFVrBcLeo+8e21qmBE3lpcnd+4=";
+            })
+            # fix-macos-tahoe-scrolling
+            (fetchpatch {
+              url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/a18d28c5044c98c81971679be819c0a1afb38a5f/patches/emacs-30/fix-macos-tahoe-scrolling.patch";
+              sha256 = "sha256-598LbU3Oa2TLOIltr6cMsuOolPtbJY3yBVUCAmE/SVA=";
+            })
           ];
-          extraPackages = epkgs: [ epkgs.treesit-grammars.with-all-grammars ];
-        };
-
-        services.emacs.enable = true;
-      };
-
-    hmLinux =
-      { pkgs, ... }:
-      {
-        programs.doom-emacs.emacs = pkgs.emacs-pgtk;
-      };
-
-    hmDarwin =
-      { pkgs, ... }:
-      {
-        programs.doom-emacs.emacs =
-          with pkgs;
-          emacs-pgtk.overrideAttrs (old: {
-            patches = (old.patches or [ ]) ++ [
-              # fix-window-role
-              (fetchpatch {
-                url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/a18d28c5044c98c81971679be819c0a1afb38a5f/patches/emacs-28/fix-window-role.patch";
-                sha256 = "sha256-+z/KfsBm1lvZTZNiMbxzXQGRTjkCFO4QPlEK35upjsE=";
-              })
-              # system-appearance
-              (fetchpatch {
-                url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/a18d28c5044c98c81971679be819c0a1afb38a5f/patches/emacs-30/system-appearance.patch";
-                sha256 = "sha256-3QLq91AQ6E921/W9nfDjdOUWR8YVsqBAT/W9c1woqAw=";
-              })
-              # round-undecorated-frame
-              (fetchpatch {
-                url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/a18d28c5044c98c81971679be819c0a1afb38a5f/patches/emacs-30/round-undecorated-frame.patch";
-                sha256 = "sha256-uYIxNTyfbprx5mCqMNFVrBcLeo+8e21qmBE3lpcnd+4=";
-              })
-              # fix-macos-tahoe-scrolling
-              (fetchpatch {
-                url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/a18d28c5044c98c81971679be819c0a1afb38a5f/patches/emacs-30/fix-macos-tahoe-scrolling.patch";
-                sha256 = "sha256-598LbU3Oa2TLOIltr6cMsuOolPtbJY3yBVUCAmE/SVA=";
-              })
-            ];
-          });
-      };
+        });
+    };
   };
 }

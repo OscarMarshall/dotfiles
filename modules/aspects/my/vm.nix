@@ -1,5 +1,4 @@
-{ my, ... }:
-{
+{ my, ... }: {
   my.vm.provides = {
     gui.includes = [
       my.vm

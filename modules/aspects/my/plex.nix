@@ -1,5 +1,4 @@
-{ den, ... }:
-{
+{ den, ... }: {
   my.plex = {
     includes = [ (den._.unfree [ "plexmediaserver" ]) ];
 

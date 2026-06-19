@@ -1,5 +1,4 @@
-{ inputs, ... }:
-{
+{ inputs, ... }: {
   flake-file.inputs.stylix = {
     url = "github:nix-community/stylix";
     inputs.nixpkgs.follows = "nixpkgs";
@@ -10,13 +9,11 @@
     homeManager = { home, ... }: builtins.seq home { imports = [ (inputs.stylix.homeModules.stylix or { }) ]; };
     nixos.imports = [ (inputs.stylix.nixosModules.stylix or { }) ];
 
-    os =
-      { pkgs, ... }:
-      {
-        stylix = {
-          enable = true;
-          base16Scheme = "${pkgs.base16-schemes}/share/themes/catppuccin-mocha.yaml";
-        };
+    os = { pkgs, ... }: {
+      stylix = {
+        enable = true;
+        base16Scheme = "${pkgs.base16-schemes}/share/themes/catppuccin-mocha.yaml";
       };
+    };
   };
 }

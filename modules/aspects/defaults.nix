@@ -20,11 +20,7 @@ let
       intoPath = _: [ ];
       fromAspect = _: lib.head aspect-chain;
       guard = { pkgs, ... }: platform: lib.mkIf pkgs.stdenv."is${platform}";
-      adaptArgs =
-        { config, ... }:
-        {
-          osConfig = config;
-        };
+      adaptArgs = { config, ... }: { osConfig = config; };
     };
   secrets =
     {
@@ -46,12 +42,10 @@ let
       ];
       fromAspect = _: lib.head aspect-chain;
       fromCtx = _: lib.optionalAttrs (home != null) { inherit home; };
-      adaptArgs =
-        { config, ... }:
-        {
-          inherit config;
-          inherit (config.age) secrets;
-        };
+      adaptArgs = { config, ... }: {
+        inherit config;
+        inherit (config.age) secrets;
+      };
     };
   nixosSecrets =
     { aspect-chain, ... }:
@@ -64,12 +58,10 @@ let
         "secrets"
       ];
       fromAspect = _: lib.head aspect-chain;
-      adaptArgs =
-        { config, ... }:
-        {
-          inherit config;
-          inherit (config.age) secrets;
-        };
+      adaptArgs = { config, ... }: {
+        inherit config;
+        inherit (config.age) secrets;
+      };
     };
 in
 {

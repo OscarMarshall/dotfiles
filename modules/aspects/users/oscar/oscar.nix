@@ -6,18 +6,14 @@
 }:
 let
   name = "Oscar Marshall";
-  userAspect =
-    { user, ... }:
-    {
-      nixos =
-        { config, ... }:
-        {
-          users.users.${user.userName} = {
-            openssh.authorizedKeys.keys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGt95coA4j19+fPxpOLRfIFb7AvAXdSmf1MyOPibmhe/" ];
-            hashedPasswordFile = toString config.age.secrets.oscar-hashed-password.file;
-          };
-        };
+  userAspect = { user, ... }: {
+    nixos = { config, ... }: {
+      users.users.${user.userName} = {
+        openssh.authorizedKeys.keys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGt95coA4j19+fPxpOLRfIFb7AvAXdSmf1MyOPibmhe/" ];
+        hashedPasswordFile = toString config.age.secrets.oscar-hashed-password.file;
+      };
     };
+  };
 in
 {
   den.aspects.oscar =
@@ -79,29 +75,27 @@ in
 
       user.description = name;
 
-      nixosSecrets =
-        { secrets, ... }:
-        {
-          oscar-password = {
-            rekeyFile = ../../../../secrets/oscar-password.age;
-            intermediary = true;
-          };
-
-          oscar-hashed-password.generator = {
-            dependencies = { inherit (secrets) oscar-password; };
-            script =
-              {
-                decrypt,
-                deps,
-                lib,
-                pkgs,
-                ...
-              }:
-              ''
-                ${pkgs.mkpasswd}/bin/mkpasswd "$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
-              '';
-          };
+      nixosSecrets = { secrets, ... }: {
+        oscar-password = {
+          rekeyFile = ../../../../secrets/oscar-password.age;
+          intermediary = true;
         };
+
+        oscar-hashed-password.generator = {
+          dependencies = { inherit (secrets) oscar-password; };
+          script =
+            {
+              decrypt,
+              deps,
+              lib,
+              pkgs,
+              ...
+            }:
+            ''
+              ${pkgs.mkpasswd}/bin/mkpasswd "$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
+            '';
+        };
+      };
 
       darwin.homebrew.casks = [
         "arc"
@@ -109,49 +103,47 @@ in
         "proton-mail"
       ];
 
-      homeManager =
-        { pkgs, ... }:
-        {
-          home.packages =
-            with pkgs;
-            [
-              fd
-              gnupg
-              ripgrep
-              rsync
-            ]
-            ++ lib.optionals (scope.graphical or false) [
-              inkscape
-              mkvtoolnix
-              mpv
-              prismlauncher
-            ];
+      homeManager = { pkgs, ... }: {
+        home.packages =
+          with pkgs;
+          [
+            fd
+            gnupg
+            ripgrep
+            rsync
+          ]
+          ++ lib.optionals (scope.graphical or false) [
+            inkscape
+            mkvtoolnix
+            mpv
+            prismlauncher
+          ];
 
-          programs = {
-            fish.enable = true;
-            ssh.matchBlocks."github-personal" = {
-              hostname = "github.com";
-              user = "git";
-              identityFile = "${./id_ed25519_personal.pub}";
-              identitiesOnly = true;
-            };
-            fzf.enable = true;
-            gh = {
-              enable = true;
-              settings.git_protocol = "ssh";
-            };
+        programs = {
+          fish.enable = true;
+          ssh.matchBlocks."github-personal" = {
+            hostname = "github.com";
+            user = "git";
+            identityFile = "${./id_ed25519_personal.pub}";
+            identitiesOnly = true;
           };
-
-          stylix.fonts = {
-            monospace = {
-              package = pkgs.nerd-fonts.fira-code;
-              name = "FiraCode Nerd Font Mono";
-            };
-            sansSerif = {
-              package = pkgs.fira;
-              name = "Fira Sans";
-            };
+          fzf.enable = true;
+          gh = {
+            enable = true;
+            settings.git_protocol = "ssh";
           };
         };
+
+        stylix.fonts = {
+          monospace = {
+            package = pkgs.nerd-fonts.fira-code;
+            name = "FiraCode Nerd Font Mono";
+          };
+          sansSerif = {
+            package = pkgs.fira;
+            name = "Fira Sans";
+          };
+        };
+      };
     };
 }

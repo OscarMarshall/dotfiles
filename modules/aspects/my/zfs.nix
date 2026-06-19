@@ -1,5 +1,4 @@
-{ lib, ... }:
-{
+{ lib, ... }: {
   my.zfs = pools: {
     nixos =
       { pkgs, ... }:

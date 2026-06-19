@@ -1,5 +1,4 @@
-{ my, ... }:
-{
+{ my, ... }: {
   my.autobrr =
     let
       port = 7474;
@@ -9,18 +8,16 @@
 
       secrets.autobrr-session-secret.generator.script = "alnum";
 
-      nixos =
-        { config, ... }:
-        {
-          services.autobrr = {
-            enable = true;
-            secretFile = config.age.secrets.autobrr-session-secret.path;
-            settings = {
-              inherit port;
-              checkForUpdates = true;
-              host = "127.0.0.1";
-            };
+      nixos = { config, ... }: {
+        services.autobrr = {
+          enable = true;
+          secretFile = config.age.secrets.autobrr-session-secret.path;
+          settings = {
+            inherit port;
+            checkForUpdates = true;
+            host = "127.0.0.1";
           };
         };
+      };
     };
 }

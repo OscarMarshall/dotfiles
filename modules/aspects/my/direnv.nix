@@ -7,13 +7,11 @@
       };
     };
 
-    hmDarwin =
-      { pkgs, ... }:
-      {
-        programs.direnv.package = pkgs.direnv.overrideAttrs (_: {
-          doCheck = false;
-          nativeCheckInputs = [ ];
-        });
-      };
+    hmDarwin = { pkgs, ... }: {
+      programs.direnv.package = pkgs.direnv.overrideAttrs (_: {
+        doCheck = false;
+        nativeCheckInputs = [ ];
+      });
+    };
   };
 }
