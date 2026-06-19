@@ -8,6 +8,8 @@ services, and user environments using Nix flakes, Den/Dendritic, and Home Manage
 - **OMARSHAL-M-2FD2**: MacBook (aarch64-darwin) with development environment
 - **harmony**: Home server (x86_64-linux) with media services, Minecraft servers, and more
 - **melaan**: Framework laptop (x86_64-linux) running GNOME desktop
+- **omarshal@dev203.meraki.com**: Standalone Home Manager config (x86_64-linux) using the `oscar` aspect on a work
+  machine
 
 ## Repository Structure
 
@@ -114,10 +116,11 @@ Example: `den.aspects.oscar.provides.harmony` could contain Oscar's harmony-spec
 
 ### Host Flags
 
-Use direct host-flag checks in aspect code:
+Use direct context flag checks in aspect code (hosted users or standalone homes):
 
-- `lib.optionals (host.graphical or false) [ ... ]` for graphical-only packages/aspects
-- `lib.mkIf (host.work or false) { ... }` for work-only settings
+- `lib.optionals (scope.graphical or false) [ ... ]` for graphical-only packages/aspects
+- `lib.mkIf (scope.work or false) { ... }` for work-only settings
+- Resolve `scope` from host/home context (e.g. `scope = if host != null then host else home`)
 
 ## Important Services
 
@@ -269,8 +272,8 @@ CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan)
   - User groups (if requiring special permissions)
   - Secrets (if needed)
 - **Container aspects**: Docker containers defined with `virtualisation.oci-containers.containers.<name>`
-- **Desktop aspects**: Gate graphical config with direct checks like `host.graphical or false`
-- **Work aspects**: Gate work config with direct checks like `host.work or false`
+- **Desktop aspects**: Gate graphical config with checks derived from host/home context
+- **Work aspects**: Gate work config with checks derived from host/home context
 
 ### Module Structure
 

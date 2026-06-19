@@ -5,7 +5,7 @@
       (auto-upgrade { allowReboot = true; })
       autobrr
       boot
-      (cachyos-kernel { variant = "server-lto"; })
+      (cachyos-kernel { variant = "server"; })
       cross-seed
       gluetun
       homepage
