@@ -1,5 +1,4 @@
-{ my, ... }:
-{
+{ my, ... }: {
   den.aspects.OMARSHAL-M-2FD2 = {
     includes = with my; [ homebrew ];
 

@@ -63,26 +63,22 @@ in
         // lib.optionalAttrs (entityName != null) { age.rekey = rekey entityName pkgs; };
     }
     // lib.optionalAttrs isHostEntity {
-      darwin =
-        { pkgs, ... }:
-        {
-          imports = [
-            (inputs.ragenix.darwinModules.default or { })
-            (inputs.agenix-rekey.darwinModules.default or { })
-          ];
+      darwin = { pkgs, ... }: {
+        imports = [
+          (inputs.ragenix.darwinModules.default or { })
+          (inputs.agenix-rekey.darwinModules.default or { })
+        ];
 
-          age.rekey = rekey host.name pkgs;
-        };
+        age.rekey = rekey host.name pkgs;
+      };
 
-      nixos =
-        { pkgs, ... }:
-        {
-          imports = [
-            (inputs.ragenix.nixosModules.default or { })
-            (inputs.agenix-rekey.nixosModules.default or { })
-          ];
+      nixos = { pkgs, ... }: {
+        imports = [
+          (inputs.ragenix.nixosModules.default or { })
+          (inputs.agenix-rekey.nixosModules.default or { })
+        ];
 
-          age.rekey = rekey host.name pkgs;
-        };
+        age.rekey = rekey host.name pkgs;
+      };
     };
 }

@@ -1,10 +1,6 @@
 let
   installer = variant: {
-    nixos =
-      { modulesPath, ... }:
-      {
-        imports = [ (modulesPath + "/installer/cd-dvd/installation-cd-${variant}.nix") ];
-      };
+    nixos = { modulesPath, ... }: { imports = [ (modulesPath + "/installer/cd-dvd/installation-cd-${variant}.nix") ]; };
   };
 in
 {

@@ -2,11 +2,7 @@
 
 {
   my.prusa-slicer = {
-    hmLinux =
-      { pkgs, ... }:
-      {
-        home.packages = [ pkgs.prusa-slicer ];
-      };
+    hmLinux = { pkgs, ... }: { home.packages = [ pkgs.prusa-slicer ]; };
 
     darwin.homebrew.casks = [ "prusaslicer" ];
   };

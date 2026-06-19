@@ -8,10 +8,6 @@
       };
     };
 
-    hmDarwin =
-      { pkgs, ... }:
-      {
-        programs.ghostty.package = pkgs.ghostty-bin;
-      };
+    hmDarwin = { pkgs, ... }: { programs.ghostty.package = pkgs.ghostty-bin; };
   };
 }

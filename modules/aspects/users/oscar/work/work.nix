@@ -31,15 +31,13 @@ in
 
       darwin.homebrew.casks = lib.optionals ((scope.work or false) && (scope.graphical or false)) [ "codex-app" ];
 
-      homeManager =
-        { pkgs, ... }:
-        {
-          home.packages = lib.optional (scope.work or false) pkgs.codex;
+      homeManager = { pkgs, ... }: {
+        home.packages = lib.optional (scope.work or false) pkgs.codex;
 
-          services.proton-pass-agent.extraArgs = lib.optionals (!(scope.work or false)) [
-            "--vault-name"
-            "Personal"
-          ];
-        };
+        services.proton-pass-agent.extraArgs = lib.optionals (!(scope.work or false)) [
+          "--vault-name"
+          "Personal"
+        ];
+      };
     };
 }

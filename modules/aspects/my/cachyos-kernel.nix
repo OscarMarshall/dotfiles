@@ -21,8 +21,7 @@
 #
 # After adding this aspect, run: nix run .#write-flake
 #
-{ inputs, ... }:
-{
+{ inputs, ... }: {
   # Don't follow any sub-inputs since that'll invalidate the cache
   flake-file.inputs.nix-cachyos-kernel.url = "github:xddxdd/nix-cachyos-kernel/release";
 

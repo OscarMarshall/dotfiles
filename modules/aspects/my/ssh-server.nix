@@ -1,14 +1,12 @@
 {
-  my.ssh-server.nixos =
-    { pkgs, ... }:
-    {
-      environment.systemPackages = with pkgs; [ ghostty.terminfo ];
+  my.ssh-server.nixos = { pkgs, ... }: {
+    environment.systemPackages = with pkgs; [ ghostty.terminfo ];
 
-      programs.tmux.enable = true;
+    programs.tmux.enable = true;
 
-      services.openssh = {
-        enable = true;
-        openFirewall = true;
-      };
+    services.openssh = {
+      enable = true;
+      openFirewall = true;
     };
+  };
 }

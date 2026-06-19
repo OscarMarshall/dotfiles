@@ -1,5 +1,4 @@
-{ my, ... }:
-{
+{ my, ... }: {
   den.aspects.harmony = {
     includes = with my; [
       (auto-upgrade { allowReboot = true; })
