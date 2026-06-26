@@ -105,6 +105,11 @@ in
       ];
 
       homeManager = { pkgs, ... }: {
+        # age uses this key when rekeying home-manager-level secrets. At
+        # activation time, age decrypts via the Proton Pass SSH agent
+        # (SSH_AUTH_SOCK) without needing a private key file on disk.
+        age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGt95coA4j19+fPxpOLRfIFb7AvAXdSmf1MyOPibmhe/";
+
         home.packages =
           with pkgs;
           [
