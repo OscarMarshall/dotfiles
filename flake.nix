@@ -12,6 +12,10 @@
       url = "github:zhichaoh/catppuccin-wallpapers";
       flake = false;
     };
+    claude-code-nix = {
+      url = "github:sadjow/claude-code-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     darwin = {
       url = "github:nix-darwin/nix-darwin";
       inputs.nixpkgs.follows = "nixpkgs";
