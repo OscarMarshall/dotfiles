@@ -58,6 +58,7 @@ in
           discord
           doc-browser
           ghostty
+          logseq
           orca-slicer
           prusa-slicer
           steam
