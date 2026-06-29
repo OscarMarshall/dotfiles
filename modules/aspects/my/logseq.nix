@@ -6,7 +6,16 @@
     inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  my.logseq.homeManager = { pkgs, ... }: {
-    home.packages = [ inputs.nix-logseq-git-flake.packages.${pkgs.system}.logseq ];
+  my.logseq = {
+    homeManager = { pkgs, ... }: {
+      home.packages = [ inputs.nix-logseq-git-flake.packages.${pkgs.system}.logseq ];
+    };
+
+    os = { ... }: {
+      nix.settings = {
+        extra-substituters = [ "https://nix-logseq-git-flake.cachix.org" ];
+        extra-trusted-public-keys = [ "nix-logseq-git-flake.cachix.org-1:DSBNW07PSRyCvS926tpIWahb53OIydwwZhsP6LhJNZo=" ];
+      };
+    };
   };
 }
