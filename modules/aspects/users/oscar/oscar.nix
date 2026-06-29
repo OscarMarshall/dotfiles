@@ -49,6 +49,7 @@ in
         my.nix-index
         my.proton-pass
         my.ssh-client
+        (my.logseq { })
         userAspect
       ]
       ++ lib.optionals (scope.graphical or false) (
@@ -58,7 +59,6 @@ in
           discord
           doc-browser
           ghostty
-          logseq
           orca-slicer
           prusa-slicer
           steam
