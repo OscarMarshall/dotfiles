@@ -88,12 +88,12 @@
             # round-undecorated-frame
             (fetchpatch {
               url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/d60d824b3d622f423c822b487a567805a195ac91/patches/emacs-30/round-undecorated-frame.patch";
-              sha256 = "sha256-uYIxNTyfbprx5mCqMNFVrBcLeo+8e21qmBE3lpcnd+4=";
+              sha256 = "sha256-fesZ0H3LO6T2AiRV8ASozKxZBpvVzwLEcLDy6rctR6c=";
             })
             # fix-macos-tahoe-scrolling
             (fetchpatch {
               url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/d60d824b3d622f423c822b487a567805a195ac91/patches/emacs-30/fix-macos-tahoe-scrolling.patch";
-              sha256 = "sha256-598LbU3Oa2TLOIltr6cMsuOolPtbJY3yBVUCAmE/SVA=";
+              sha256 = "sha256-Hf9oZ5ImBnxTLa6yS02UDzBEgJEGAwNq/svJ3S35uKw=";
             })
             # fix-ns-x-colors
             (fetchpatch {
