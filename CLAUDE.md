@@ -56,35 +56,35 @@ This repo uses **Den**, an aspect-oriented configuration framework built on flak
 
 Each aspect can provide configuration through named classes:
 
-| Class | Target |
-|---|---|
-| `os` | Both NixOS and Darwin (avoids duplication) |
-| `nixos` | NixOS only |
-| `darwin` | macOS (nix-darwin) only |
-| `homeManager` | Home Manager (cross-platform) |
+| Class                  | Target                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------ |
+| `os`                   | Both NixOS and Darwin (avoids duplication)                                     |
+| `nixos`                | NixOS only                                                                     |
+| `darwin`               | macOS (nix-darwin) only                                                        |
+| `homeManager`          | Home Manager (cross-platform)                                                  |
 | `hmLinux` / `hmDarwin` | Platform-specific Home Manager, forwarded into `homeManager` by `defaults.nix` |
-| `secrets` | Forwarded to `age.secrets` on all platforms |
-| `nixosSecrets` | Forwarded only to NixOS `age.secrets` (e.g. hashed passwords) |
+| `secrets`              | Forwarded to `age.secrets` on all platforms                                    |
+| `nixosSecrets`         | Forwarded only to NixOS `age.secrets` (e.g. hashed passwords)                  |
 
 ### Module Layout
 
 - **`modules/aspects/my/`** — Reusable service/feature aspects (the `my` namespace). These are the building blocks.
 - **`modules/aspects/hosts/<hostname>/`** — Host-specific aspects that compose `my.*` aspects via `includes`.
 - **`modules/aspects/users/<username>/`** — User-specific aspects.
-- **`modules/aspects/defaults.nix`** — Applied to all configurations: forwards `hmLinux`/`hmDarwin` → `homeManager`,
-  and `secrets` → `age.secrets` on all platforms.
+- **`modules/aspects/defaults.nix`** — Applied to all configurations: forwards `hmLinux`/`hmDarwin` → `homeManager`, and
+  `secrets` → `age.secrets` on all platforms.
 - **`modules/den.nix`** — Declares all hosts and their users; also defines the schema defaults (what every host/user
   gets automatically).
 - **`modules/inputs.nix`** — Base flake inputs (nixpkgs, home-manager, darwin, etc.).
 
 ### Hosts
 
-| Hostname | Arch | Type |
-|---|---|---|
-| `harmony` | x86_64-linux | NixOS home server (media, Minecraft, infra) |
-| `melaan` | x86_64-linux | NixOS Framework laptop with GNOME |
-| `OMARSHAL-M-2FD2` | aarch64-darwin | MacBook (nix-darwin) |
-| `omarshal@dev203.meraki.com` | x86_64-linux | Standalone Home Manager (work machine) |
+| Hostname                     | Arch           | Type                                        |
+| ---------------------------- | -------------- | ------------------------------------------- |
+| `harmony`                    | x86_64-linux   | NixOS home server (media, Minecraft, infra) |
+| `melaan`                     | x86_64-linux   | NixOS Framework laptop with GNOME           |
+| `OMARSHAL-M-2FD2`            | aarch64-darwin | MacBook (nix-darwin)                        |
+| `omarshal@dev203.meraki.com` | x86_64-linux   | Standalone Home Manager (work machine)      |
 
 ### Adding a New Service Aspect
 
@@ -104,8 +104,8 @@ Use `{ host, lib, ... }:` as the aspect function signature when you need conditi
 
 ## Secrets
 
-Secrets use [ragenix](https://github.com/yaxitech/ragenix) + [agenix-rekey](https://github.com/oddlama/agenix-rekey).
-A YubiKey is the master identity; rekeyed secrets live in `secrets/rekeyed/<hostname>/`.
+Secrets use [ragenix](https://github.com/yaxitech/ragenix) + [agenix-rekey](https://github.com/oddlama/agenix-rekey). A
+YubiKey is the master identity; rekeyed secrets live in `secrets/rekeyed/<hostname>/`.
 
 The dev shell (activated automatically via `.envrc`/direnv) provides the `agenix` CLI. Operations requiring the YubiKey
 must be run by a human:
@@ -116,8 +116,8 @@ agenix generate && git add secrets/generated/  # generate template secrets
 agenix rekey -a && git add secrets/rekeyed/*/  # rekey for all hosts
 ```
 
-In aspect code, use the `secrets` class (not `age.secrets` directly) — `defaults.nix` forwards it to the right place
-on every platform. Use `nixosSecrets` only when a secret must be excluded from Darwin/Home Manager.
+In aspect code, use the `secrets` class (not `age.secrets` directly) — `defaults.nix` forwards it to the right place on
+every platform. Use `nixosSecrets` only when a secret must be excluded from Darwin/Home Manager.
 
 ## Formatting
 
