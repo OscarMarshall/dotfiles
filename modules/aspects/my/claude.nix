@@ -4,8 +4,10 @@
     inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  my.claude-code = {
+  my.claude = {
     includes = [ (den._.unfree [ "claude-code" ]) ];
+
+    darwin.homebrew.casks = [ "claude" ];
 
     homeManager = { config, pkgs, ... }: {
       # Declared here (not in a top-level secrets block) so it lands in the

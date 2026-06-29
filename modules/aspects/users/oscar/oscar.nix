@@ -37,7 +37,7 @@ in
         den._.primary-user
         (den._.user-shell "fish")
         my.bat
-        my.claude-code
+        my.claude
         my.direnv
         my.emacs
         (my.git {
