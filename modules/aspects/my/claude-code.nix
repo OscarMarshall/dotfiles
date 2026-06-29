@@ -27,7 +27,10 @@
         package = inputs.claude-code-nix.packages.${pkgs.system}.claude-code;
 
         settings = {
+          agentPushNotifEnabled = true;
           autoUpdaterStatus = "disabled";
+          enableWorkflows = true;
+          inputNeededNotifEnabled = true;
           permissions = {
             allow = [
               "Bash(git:*)"
