@@ -4,6 +4,10 @@
     work = true;
 
     users.oscar.userName = "omarshal";
+
+    logseq.graphs = [
+      { name = "personal"; }
+    ];
   };
 
   den.hosts.x86_64-linux.harmony.users.oscar = { };

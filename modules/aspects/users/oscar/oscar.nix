@@ -32,6 +32,8 @@ in
           { };
     in
     {
+      logseq-graphs = scope.logseq.graphs or [ ];
+
       includes = [
         den.aspects.oscar.provides.work
         den._.primary-user
