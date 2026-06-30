@@ -78,9 +78,10 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           extraPullNames: nix-community
           # cachix 1.11.1 crashes when it traverses unreadable symlinks inside
-          # nix-doom-emacs-unstraightened store paths. Pin to 1.10.1 which handles
-          # such errors gracefully.
-          installCommand: nix profile install "github:cachix/cachix/v1.10.1#cachix"
+          # nix-doom-emacs-unstraightened store paths. Pin to nixpkgs commit
+          # acde43339d72 (Nov 2025, cachix 1.9.1) which handles such errors
+          # gracefully instead of crashing.
+          installCommand: nix-env --quiet -j8 -iA nixpkgs.cachix -f https://github.com/NixOS/nixpkgs/archive/acde43339d727890337fe174b16a9bd0027e96fc.tar.gz
 
       - run: nix flake metadata
 
