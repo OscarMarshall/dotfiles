@@ -32,7 +32,7 @@ in
           { };
     in
     {
-      logseq-graphs = scope.logseq.graphs or [ ];
+      logseq-graphs = [ { name = "Personal"; } ];
 
       includes = [
         den.aspects.oscar.provides.work
