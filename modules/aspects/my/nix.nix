@@ -80,7 +80,7 @@ in
         { nix.optimise.automatic = true; }
       ];
 
-    flake = { substituters, lib, ... }: {
+    flake = { substituters, ... }: {
       flake.nixConfig = {
         extra-substituters = lib.unique (map (s: s.substituter) substituters);
         extra-trusted-public-keys = lib.unique (map (s: s.publicKey) substituters);
