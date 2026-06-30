@@ -30,6 +30,17 @@
       variant ? "latest-lto",
     }:
     {
+      substituters = [
+        {
+          substituter = "https://attic.xuyh0120.win/lantian";
+          publicKey = "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=";
+        }
+        {
+          substituter = "https://cache.xinux.uz";
+          publicKey = "cache.xinux.uz:BXCrtqejFjWzWEB9YuGB7X2MV4ttBur1N8BkwQRdH+0=";
+        }
+      ];
+
       nixos =
         {
           config,
@@ -38,17 +49,6 @@
           ...
         }:
         {
-          nix.settings = {
-            extra-substituters = [
-              "https://attic.xuyh0120.win/lantian"
-              "https://cache.xinux.uz"
-            ];
-            extra-trusted-public-keys = [
-              "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc="
-              "cache.xinux.uz:BXCrtqejFjWzWEB9YuGB7X2MV4ttBur1N8BkwQRdH+0="
-            ];
-          };
-
           nixpkgs.overlays = [
             # Use the exact kernel versions as defined in nix-cachyos-kernel repo.
             # Guarantees binary cache availability.
