@@ -41,8 +41,9 @@
           cliExe = "${inputs.nix-logseq-git-flake.packages.${pkgs.system}.logseq-cli}/bin/logseq-cli";
           serverStart =
             graph:
-            "${cliExe} server start --graph ${graph.name}" + (if graph ? rootDir then " --root-dir ${graph.rootDir}" else "");
-          serverStop = graph: "${cliExe} server stop --graph ${graph.name}";
+            "${cliExe} server start --graph ${lib.escapeShellArg graph.name}"
+            + (if graph ? rootDir then " --root-dir ${lib.escapeShellArg graph.rootDir}" else "");
+          serverStop = graph: "${cliExe} server stop --graph ${lib.escapeShellArg graph.name}";
         in
         lib.mkIf (logseq-graphs != [ ]) {
           systemd.user.services = lib.listToAttrs (
@@ -73,7 +74,8 @@
           cliExe = "${inputs.nix-logseq-git-flake.packages.${pkgs.system}.logseq-cli}/bin/logseq-cli";
           serverStart =
             graph:
-            "${cliExe} server start --graph ${graph.name}" + (if graph ? rootDir then " --root-dir ${graph.rootDir}" else "");
+            "${cliExe} server start --graph ${lib.escapeShellArg graph.name}"
+            + (if graph ? rootDir then " --root-dir ${lib.escapeShellArg graph.rootDir}" else "");
         in
         lib.mkIf (logseq-graphs != [ ]) {
           launchd.agents = lib.listToAttrs (
