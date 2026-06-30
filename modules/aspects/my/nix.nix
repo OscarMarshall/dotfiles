@@ -87,10 +87,10 @@
         };
       };
 
-    flake = { substituters, ... }: {
+    flake = { substituters, lib, ... }: {
       flake.nixConfig = {
-        extra-substituters = map (s: s.substituter) substituters;
-        extra-trusted-public-keys = map (s: s.publicKey) substituters;
+        extra-substituters = lib.unique (map (s: s.substituter) substituters);
+        extra-trusted-public-keys = lib.unique (map (s: s.publicKey) substituters);
       };
     };
   };

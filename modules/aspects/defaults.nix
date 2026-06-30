@@ -6,6 +6,8 @@
   ...
 }:
 let
+  inherit (den.lib.policy) pipe;
+  exposeSubstituters = pipe.from "substituters" [ pipe.expose ];
   hmPlatforms =
     { aspect-chain, ... }:
     den._.forward {
@@ -93,6 +95,7 @@ in
           secrets
           my.fonts
           my.nix
+          exposeSubstituters
         ];
 
         os.system.configurationRevision = self.rev or self.dirtyRev or null;
