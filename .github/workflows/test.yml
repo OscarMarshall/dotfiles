@@ -77,6 +77,10 @@ jobs:
           name: oscarmarshall
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           extraPullNames: nix-community
+          # Daemon mode (default) crashes with exit code 3 on unreadable symlinks inside
+          # nix-doom-emacs-unstraightened store paths (cachix 1.11.1 regression). Disabling
+          # daemon mode avoids the symlink walker; push still happens post-build.
+          useDaemon: false
 
       - run: nix flake metadata
 
