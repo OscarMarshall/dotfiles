@@ -11,12 +11,16 @@
   };
 
   my.logseq =
-    { cli-only ? false, ... }:
+    {
+      cli-only ? false,
+      ...
+    }:
     {
       homeManager = { pkgs, lib, ... }: {
-        home.packages =
-          [ inputs.nix-logseq-git-flake.packages.${pkgs.system}.logseq-cli ]
-          ++ lib.optional (!cli-only) inputs.nix-logseq-git-flake.packages.${pkgs.system}.logseq;
+        home.packages = [
+          inputs.nix-logseq-git-flake.packages.${pkgs.system}.logseq-cli
+        ]
+        ++ lib.optional (!cli-only) inputs.nix-logseq-git-flake.packages.${pkgs.system}.logseq;
       };
 
       os = { ... }: {
@@ -27,12 +31,17 @@
       };
 
       hmLinux =
-        { pkgs, lib, logseq-graphs, ... }:
+        {
+          pkgs,
+          lib,
+          logseq-graphs,
+          ...
+        }:
         let
           cliExe = "${inputs.nix-logseq-git-flake.packages.${pkgs.system}.logseq-cli}/bin/logseq-cli";
-          serverStart = graph:
-            "${cliExe} server start --graph ${graph.name}"
-            + (if graph ? rootDir then " --root-dir ${graph.rootDir}" else "");
+          serverStart =
+            graph:
+            "${cliExe} server start --graph ${graph.name}" + (if graph ? rootDir then " --root-dir ${graph.rootDir}" else "");
           serverStop = graph: "${cliExe} server stop --graph ${graph.name}";
         in
         lib.mkIf (logseq-graphs != [ ]) {
@@ -54,12 +63,17 @@
         };
 
       hmDarwin =
-        { pkgs, lib, logseq-graphs, ... }:
+        {
+          pkgs,
+          lib,
+          logseq-graphs,
+          ...
+        }:
         let
           cliExe = "${inputs.nix-logseq-git-flake.packages.${pkgs.system}.logseq-cli}/bin/logseq-cli";
-          serverStart = graph:
-            "${cliExe} server start --graph ${graph.name}"
-            + (if graph ? rootDir then " --root-dir ${graph.rootDir}" else "");
+          serverStart =
+            graph:
+            "${cliExe} server start --graph ${graph.name}" + (if graph ? rootDir then " --root-dir ${graph.rootDir}" else "");
         in
         lib.mkIf (logseq-graphs != [ ]) {
           launchd.agents = lib.listToAttrs (
@@ -69,7 +83,11 @@
                 enable = true;
                 config = {
                   Label = "com.logseq.graph.${graph.name}";
-                  ProgramArguments = [ "/bin/sh" "-c" "exec ${serverStart graph}" ];
+                  ProgramArguments = [
+                    "/bin/sh"
+                    "-c"
+                    "exec ${serverStart graph}"
+                  ];
                   RunAtLoad = true;
                   KeepAlive.Crashed = true;
                   ThrottleInterval = 30;
