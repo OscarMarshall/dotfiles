@@ -76,7 +76,12 @@ in
       my.stylix
     ];
 
+    quirks.substituters = {
+      description = "Binary cache substituter declarations";
+    };
+
     schema = {
+      flake.includes = [ my.nix ];
       home.includes = [
         secrets
         my.nix
