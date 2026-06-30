@@ -79,7 +79,13 @@ in
     ];
 
     quirks.substituters = {
-      description = "Binary cache substituter declarations";
+      description = ''
+        Binary cache substituter declarations. Each value should be an
+        attrset (or list of attrsets) of the form:
+          { substituter = "https://..."; publicKey = "<name>:<key>"; }
+        Collected values populate nix.settings.extra-substituters /
+        extra-trusted-public-keys and flake.nixConfig for bootstrap.
+      '';
     };
 
     schema = {

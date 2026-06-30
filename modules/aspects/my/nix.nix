@@ -1,4 +1,33 @@
-{ lib, ... }: {
+{ lib, ... }:
+let
+  mkNixConfig =
+    {
+      substituters,
+      config,
+      pkgs,
+    }:
+    {
+      nix = {
+        extraOptions = ''
+          !include ${config.age.secrets.nix-access-tokens.path}
+        '';
+        gc = {
+          automatic = true;
+          options = "--delete-older-than 7d";
+        };
+        package = pkgs.lixPackageSets.stable.lix;
+        settings = {
+          experimental-features = [
+            "nix-command"
+            "flakes"
+          ];
+          extra-substituters = map (s: s.substituter) substituters;
+          extra-trusted-public-keys = map (s: s.publicKey) substituters;
+        };
+      };
+    };
+in
+{
   my.nix = {
     substituters = [
       {
@@ -37,26 +66,7 @@
         pkgs,
         ...
       }:
-      {
-        nix = {
-          extraOptions = ''
-            !include ${config.age.secrets.nix-access-tokens.path}
-          '';
-          gc = {
-            automatic = true;
-            options = "--delete-older-than 7d";
-          };
-          package = pkgs.lixPackageSets.stable.lix;
-          settings = {
-            experimental-features = [
-              "nix-command"
-              "flakes"
-            ];
-            extra-substituters = map (s: s.substituter) substituters;
-            extra-trusted-public-keys = map (s: s.publicKey) substituters;
-          };
-        };
-      };
+      mkNixConfig { inherit substituters config pkgs; };
 
     os =
       {
@@ -65,27 +75,10 @@
         pkgs,
         ...
       }:
-      {
-        nix = {
-          extraOptions = ''
-            !include ${config.age.secrets.nix-access-tokens.path}
-          '';
-          gc = {
-            automatic = true;
-            options = "--delete-older-than 7d";
-          };
-          package = pkgs.lixPackageSets.stable.lix;
-          settings = {
-            experimental-features = [
-              "nix-command"
-              "flakes"
-            ];
-            extra-substituters = map (s: s.substituter) substituters;
-            extra-trusted-public-keys = map (s: s.publicKey) substituters;
-          };
-          optimise.automatic = true;
-        };
-      };
+      lib.mkMerge [
+        (mkNixConfig { inherit substituters config pkgs; })
+        { nix.optimise.automatic = true; }
+      ];
 
     flake = { substituters, lib, ... }: {
       flake.nixConfig = {
