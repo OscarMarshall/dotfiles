@@ -49,6 +49,7 @@ in
         my.nix-index
         my.proton-pass
         my.ssh-client
+        (my.logseq { cli-only = !(scope.graphical or false); })
         userAspect
       ]
       ++ lib.optionals (scope.graphical or false) (
