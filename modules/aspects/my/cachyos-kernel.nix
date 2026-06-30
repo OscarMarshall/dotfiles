@@ -30,10 +30,16 @@
       variant ? "latest-lto",
     }:
     {
-      substituters = {
-        substituter = "https://attic.xuyh0120.win/lantian";
-        publicKey = "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=";
-      };
+      substituters = [
+        {
+          substituter = "https://attic.xuyh0120.win/lantian";
+          publicKey = "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=";
+        }
+        {
+          substituter = "https://cache.xinux.uz";
+          publicKey = "cache.xinux.uz:BXCrtqejFjWzWEB9YuGB7X2MV4ttBur1N8BkwQRdH+0=";
+        }
+      ];
 
       nixos =
         {
