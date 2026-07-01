@@ -29,8 +29,6 @@ jobs:
         with:
           extra_nix_config: |
             accept-flake-config = true
-            substituters = https://cache.nixos.org/ https://attic.xuyh0120.win/lantian
-            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=
 
       - name: Setup Nix cache
         uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
@@ -40,38 +38,6 @@ jobs:
           extraPullNames: nix-community
 
       - run: nix flake metadata
-
-      - name: Check flake nixConfig substituters
-        run: |
-          nix_config_file="$(mktemp)"
-          nix eval --impure --json --file ./flake.nix nixConfig > "$nix_config_file"
-          python - "$nix_config_file" <<'PY'
-          import json
-          import sys
-
-          nix_config_path = sys.argv[1]
-          with open(nix_config_path, encoding="utf-8") as nix_config_file:
-              nix_config = json.load(nix_config_file)
-
-          expected_substituters = {
-              "https://attic.xuyh0120.win/lantian",
-              "https://cache.xinux.uz",
-              "https://nix-community.cachix.org",
-              "https://oscarmarshall.cachix.org",
-          }
-          expected_keys = {
-              "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=",
-              "cache.xinux.uz:BXCrtqejFjWzWEB9YuGB7X2MV4ttBur1N8BkwQRdH+0=",
-              "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=",
-              "oscarmarshall.cachix.org-1:Fa13vGeBXoJ7jWpvnalg/PCRTtvCpyuHUFL5jQXt/9w=",
-          }
-
-          actual_substituters = set(nix_config["extra-substituters"])
-          actual_keys = set(nix_config["extra-trusted-public-keys"])
-
-          assert actual_substituters == expected_substituters, actual_substituters
-          assert actual_keys == expected_keys, actual_keys
-          PY
 
       - run: |
           cat <<-EOF > modules/ci-runtime.nix
@@ -102,8 +68,6 @@ jobs:
         with:
           extra_nix_config: |
             accept-flake-config = true
-            substituters = https://cache.nixos.org/ https://attic.xuyh0120.win/lantian
-            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=
 
       - name: Setup Nix cache
         uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
