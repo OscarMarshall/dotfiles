@@ -79,10 +79,10 @@ jobs:
           # with owner/group-only permissions (an upstream
           # nix-doom-emacs-unstraightened bug: its build script fully
           # replaces stdenv's phases, so the usual fixup never runs), and
-          # macOS enforces symlink permission bits unlike Linux, so pushing
-          # it fails with EACCES. Exclude it from pushes; it's cheap to
-          # rebuild and doesn't need to be cached.
-          pushFilter: "-doom-profile$"
+          # macOS enforces symlink permission bits unlike Linux. cachix-
+          # action's pushFilter can't reliably exclude closure members from
+          # daemon-mode pushes, so keep Darwin CI read-only for now.
+          skipPush: true
 
       - run: nix flake metadata
 
