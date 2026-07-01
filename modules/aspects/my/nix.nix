@@ -1,5 +1,15 @@
 { lib, ... }:
 let
+  substituters = [
+    {
+      substituter = "https://nix-community.cachix.org";
+      publicKey = "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=";
+    }
+    {
+      substituter = "https://oscarmarshall.cachix.org";
+      publicKey = "oscarmarshall.cachix.org-1:Fa13vGeBXoJ7jWpvnalg/PCRTtvCpyuHUFL5jQXt/9w=";
+    }
+  ];
   mkNixConfig =
     {
       substituters,
@@ -28,17 +38,13 @@ let
     };
 in
 {
+  flake-file.nixConfig = {
+    extra-substituters = map (s: s.substituter) substituters;
+    extra-trusted-public-keys = map (s: s.publicKey) substituters;
+  };
+
   my.nix = {
-    substituters = [
-      {
-        substituter = "https://nix-community.cachix.org";
-        publicKey = "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=";
-      }
-      {
-        substituter = "https://oscarmarshall.cachix.org";
-        publicKey = "oscarmarshall.cachix.org-1:Fa13vGeBXoJ7jWpvnalg/PCRTtvCpyuHUFL5jQXt/9w=";
-      }
-    ];
+    inherit substituters;
 
     secrets = { secrets, ... }: {
       nix-github-access-token = {
