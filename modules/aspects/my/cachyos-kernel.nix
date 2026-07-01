@@ -47,8 +47,6 @@ in
       variant ? "latest-lto",
     }:
     {
-      inherit substituters;
-
       nixos =
         {
           config,

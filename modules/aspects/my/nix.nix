@@ -14,39 +14,32 @@ let
     extra-substituters = map (s: s.substituter) ss;
     extra-trusted-public-keys = map (s: s.publicKey) ss;
   };
-  mkNixConfig =
-    {
-      substituters,
-      config,
-      pkgs,
-    }:
-    {
-      nix = {
-        extraOptions = ''
-          !include ${config.age.secrets.nix-access-tokens.path}
-        '';
-        gc = {
-          automatic = true;
-          options = "--delete-older-than 7d";
-        };
-        package = pkgs.lixPackageSets.stable.lix;
-        settings = {
-          experimental-features = [
-            "nix-command"
-            "flakes"
-          ];
-        }
-        // toNixConfig substituters;
+  flakeFileNixConfig = config.flake-file.nixConfig;
+  mkNixConfig = { config, pkgs }: {
+    nix = {
+      extraOptions = ''
+        !include ${config.age.secrets.nix-access-tokens.path}
+      '';
+      gc = {
+        automatic = true;
+        options = "--delete-older-than 7d";
       };
+      package = pkgs.lixPackageSets.stable.lix;
+      settings = {
+        experimental-features = [
+          "nix-command"
+          "flakes"
+        ];
+      }
+      // flakeFileNixConfig;
     };
+  };
 in
 {
   flake-file.nixConfig = toNixConfig substituters;
-  flake.nixConfig = config.flake-file.nixConfig;
+  flake.nixConfig = flakeFileNixConfig;
 
   my.nix = {
-    inherit substituters;
-
     secrets = { secrets, ... }: {
       nix-github-access-token = {
         rekeyFile = ../../../secrets/nix-github-access-token.age;
@@ -66,24 +59,12 @@ in
       };
     };
 
-    homeManager =
-      {
-        substituters,
-        config,
-        pkgs,
-        ...
-      }:
-      mkNixConfig { inherit substituters config pkgs; };
+    homeManager = { config, pkgs, ... }: mkNixConfig { inherit config pkgs; };
 
     os =
-      {
-        substituters,
-        config,
-        pkgs,
-        ...
-      }:
+      { config, pkgs, ... }:
       lib.mkMerge [
-        (mkNixConfig { inherit substituters config pkgs; })
+        (mkNixConfig { inherit config pkgs; })
         { nix.optimise.automatic = true; }
       ];
   };

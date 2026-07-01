@@ -6,8 +6,6 @@
   ...
 }:
 let
-  inherit (den.lib.policy) pipe;
-  exposeSubstituters = pipe.from "substituters" [ pipe.expose ];
   hmPlatforms =
     { aspect-chain, ... }:
     den._.forward {
@@ -78,22 +76,11 @@ in
       my.stylix
     ];
 
-    quirks.substituters = {
-      description = ''
-        Binary cache substituter declarations. Each value should be an
-        attrset (or list of attrsets) of the form:
-          { substituter = "https://..."; publicKey = "<name>:<key>"; }
-        Collected values populate nix.settings.extra-substituters /
-        extra-trusted-public-keys and flake.nixConfig for bootstrap.
-      '';
-    };
-
     schema = {
       home.includes = [
         secrets
         my.nix
         my.starship
-        exposeSubstituters
       ];
       host = {
         includes = [
@@ -101,7 +88,6 @@ in
           secrets
           my.fonts
           my.nix
-          exposeSubstituters
         ];
 
         os.system.configurationRevision = self.rev or self.dirtyRev or null;
