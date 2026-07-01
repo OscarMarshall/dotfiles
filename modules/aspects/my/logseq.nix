@@ -28,7 +28,7 @@
             ]
             ++ lib.optional (!cli-only) inputs.nix-logseq-git-flake.packages.${pkgs.system}.logseq;
           }
-          (lib.mkIf (graphs != [ ] && pkgs.stdenv.isLinux) {
+          (lib.mkIf (pkgs.stdenv.isLinux) {
             systemd.user.services = lib.listToAttrs (
               map (graph: {
                 name = "logseq-graph-${graph.name}";
@@ -45,7 +45,7 @@
               }) graphs
             );
           })
-          (lib.mkIf (graphs != [ ] && pkgs.stdenv.isDarwin) {
+          (lib.mkIf (pkgs.stdenv.isDarwin) {
             launchd.agents = lib.listToAttrs (
               map (graph: {
                 name = "logseq-graph-${graph.name}";
@@ -69,12 +69,5 @@
             );
           })
         ];
-
-      substituters = [
-        {
-          substituter = "https://nix-logseq-git-flake.cachix.org";
-          publicKey = "nix-logseq-git-flake.cachix.org-1:DSBNW07PSRyCvS926tpIWahb53OIydwwZhsP6LhJNZo=";
-        }
-      ];
     };
 }
