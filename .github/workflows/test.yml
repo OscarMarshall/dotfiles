@@ -38,12 +38,12 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           extraPullNames: nix-community
 
-      - run: nix flake metadata
+      - run: nix flake metadata --accept-flake-config
 
       - name: Check flake nixConfig substituters
         run: |
           metadata_file="$(mktemp)"
-          nix flake metadata --json > "$metadata_file"
+          nix flake metadata --accept-flake-config --json > "$metadata_file"
           python - "$metadata_file" <<'PY'
           import json
           import sys
@@ -111,7 +111,7 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           extraPullNames: nix-community
 
-      - run: nix flake metadata
+      - run: nix flake metadata --accept-flake-config
 
       - run: |
           cat <<-EOF > modules/ci-runtime.nix
