@@ -75,14 +75,13 @@ jobs:
           name: oscarmarshall
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           extraPullNames: nix-community
-          # doom-profile's 00-unstraightened-init.load.el symlink is built
-          # with owner/group-only permissions (an upstream
-          # nix-doom-emacs-unstraightened bug: its build script fully
-          # replaces stdenv's phases, so the usual fixup never runs), and
-          # macOS enforces symlink permission bits unlike Linux, so pushing
-          # it fails with EACCES. Exclude it from pushes; it's cheap to
-          # rebuild and doesn't need to be cached.
-          pushFilter: "-doom-profile$"
+          # cachix 1.11.1 crashes when it traverses unreadable symlinks inside
+          # nix-doom-emacs-unstraightened store paths. Pin to nixpkgs commit
+          # acde43339d72 (Nov 2025, cachix 1.9.1) which handles such errors
+          # gracefully instead of crashing.
+          installCommand:
+            nix-env --quiet -j8 -iA cachix -f
+            https://github.com/NixOS/nixpkgs/archive/acde43339d727890337fe174b16a9bd0027e96fc.tar.gz
 
       - run: nix flake metadata
 
