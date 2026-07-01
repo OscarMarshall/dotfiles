@@ -1,45 +1,40 @@
-{ lib, ... }:
+{ lib, config, ... }:
 let
-  mkNixConfig =
-    {
-      substituters,
-      config,
-      pkgs,
-    }:
-    {
-      nix = {
-        extraOptions = ''
-          !include ${config.age.secrets.nix-access-tokens.path}
-        '';
-        gc = {
-          automatic = true;
-          options = "--delete-older-than 7d";
-        };
-        package = pkgs.lixPackageSets.stable.lix;
-        settings = {
-          experimental-features = [
-            "nix-command"
-            "flakes"
-          ];
-          extra-substituters = map (s: s.substituter) substituters;
-          extra-trusted-public-keys = map (s: s.publicKey) substituters;
-        };
+  flakeFileNixConfig = config.flake-file.nixConfig;
+  mkNixConfig = { config, pkgs }: {
+    nix = {
+      extraOptions = ''
+        !include ${config.age.secrets.nix-access-tokens.path}
+      '';
+      gc = {
+        automatic = true;
+        options = "--delete-older-than 7d";
       };
+      package = pkgs.lixPackageSets.stable.lix;
+      settings = {
+        experimental-features = [
+          "nix-command"
+          "flakes"
+        ];
+      }
+      // flakeFileNixConfig;
     };
+  };
 in
 {
-  my.nix = {
-    substituters = [
-      {
-        substituter = "https://nix-community.cachix.org";
-        publicKey = "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=";
-      }
-      {
-        substituter = "https://oscarmarshall.cachix.org";
-        publicKey = "oscarmarshall.cachix.org-1:Fa13vGeBXoJ7jWpvnalg/PCRTtvCpyuHUFL5jQXt/9w=";
-      }
+  flake-file.nixConfig = {
+    extra-substituters = [
+      "https://nix-community.cachix.org"
+      "https://oscarmarshall.cachix.org"
     ];
+    extra-trusted-public-keys = [
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+      "oscarmarshall.cachix.org-1:Fa13vGeBXoJ7jWpvnalg/PCRTtvCpyuHUFL5jQXt/9w="
+    ];
+  };
+  flake.nixConfig = flakeFileNixConfig;
 
+  my.nix = {
     secrets = { secrets, ... }: {
       nix-github-access-token = {
         rekeyFile = ../../../secrets/nix-github-access-token.age;
@@ -59,32 +54,13 @@ in
       };
     };
 
-    homeManager =
-      {
-        substituters,
-        config,
-        pkgs,
-        ...
-      }:
-      mkNixConfig { inherit substituters config pkgs; };
+    homeManager = { config, pkgs, ... }: mkNixConfig { inherit config pkgs; };
 
     os =
-      {
-        substituters,
-        config,
-        pkgs,
-        ...
-      }:
+      { config, pkgs, ... }:
       lib.mkMerge [
-        (mkNixConfig { inherit substituters config pkgs; })
+        (mkNixConfig { inherit config pkgs; })
         { nix.optimise.automatic = true; }
       ];
-
-    flake = { substituters, ... }: {
-      flake.nixConfig = {
-        extra-substituters = lib.unique (map (s: s.substituter) substituters);
-        extra-trusted-public-keys = lib.unique (map (s: s.publicKey) substituters);
-      };
-    };
   };
 }
