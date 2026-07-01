@@ -32,6 +32,8 @@ in
           { };
     in
     {
+      logseq-graphs = [ { name = "Personal"; } ];
+
       includes = [
         den.aspects.oscar.provides.work
         den._.primary-user
@@ -45,14 +47,11 @@ in
           email = "3111765+OscarMarshall@users.noreply.github.com";
         })
         my.gpg
-        (my.logseq {
-          cli-only = !(scope.graphical or false);
-          graphs = [ { name = "Personal"; } ];
-        })
         my.nh
         my.nix-index
         my.proton-pass
         my.ssh-client
+        (my.logseq { cli-only = !(scope.graphical or false); })
         userAspect
       ]
       ++ lib.optionals (scope.graphical or false) (
