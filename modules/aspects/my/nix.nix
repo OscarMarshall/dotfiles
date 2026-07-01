@@ -1,19 +1,5 @@
 { lib, config, ... }:
 let
-  substituters = [
-    {
-      substituter = "https://nix-community.cachix.org";
-      publicKey = "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=";
-    }
-    {
-      substituter = "https://oscarmarshall.cachix.org";
-      publicKey = "oscarmarshall.cachix.org-1:Fa13vGeBXoJ7jWpvnalg/PCRTtvCpyuHUFL5jQXt/9w=";
-    }
-  ];
-  toNixConfig = ss: {
-    extra-substituters = map (s: s.substituter) ss;
-    extra-trusted-public-keys = map (s: s.publicKey) ss;
-  };
   flakeFileNixConfig = config.flake-file.nixConfig;
   mkNixConfig = { config, pkgs }: {
     nix = {
@@ -36,7 +22,16 @@ let
   };
 in
 {
-  flake-file.nixConfig = toNixConfig substituters;
+  flake-file.nixConfig = {
+    extra-substituters = [
+      "https://nix-community.cachix.org"
+      "https://oscarmarshall.cachix.org"
+    ];
+    extra-trusted-public-keys = [
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+      "oscarmarshall.cachix.org-1:Fa13vGeBXoJ7jWpvnalg/PCRTtvCpyuHUFL5jQXt/9w="
+    ];
+  };
   flake.nixConfig = flakeFileNixConfig;
 
   my.nix = {
