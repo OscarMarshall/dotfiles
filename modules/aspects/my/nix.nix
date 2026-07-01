@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ lib, config, ... }:
 let
   substituters = [
     {
@@ -42,6 +42,7 @@ let
 in
 {
   flake-file.nixConfig = toNixConfig substituters;
+  flake.nixConfig = config.flake-file.nixConfig;
 
   my.nix = {
     inherit substituters;
@@ -85,7 +86,5 @@ in
         (mkNixConfig { inherit substituters config pkgs; })
         { nix.optimise.automatic = true; }
       ];
-
-    flake = { substituters, ... }: { flake.nixConfig = lib.mapAttrs (_: lib.unique) (toNixConfig substituters); };
   };
 }

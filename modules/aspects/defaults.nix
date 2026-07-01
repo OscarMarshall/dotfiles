@@ -89,11 +89,6 @@ in
     };
 
     schema = {
-      flake.includes = [
-        my.nix
-        exposeSubstituters
-      ];
-      flake-system.includes = [ exposeSubstituters ];
       home.includes = [
         secrets
         my.nix
