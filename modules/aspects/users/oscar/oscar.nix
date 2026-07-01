@@ -75,6 +75,14 @@ in
             stateVersion = "26.05";
           };
         };
+
+        # See the comment on provides.oscar in OMARSHAL-M-2FD2.nix for why these sentinels are needed:
+        # this home entity's re-walked spawn scope doesn't re-run my.logseq's own includes, so hmLinux
+        # is absent at compile time without this and the forward falls through to resolveSourceFallback.
+        hmLinux = { };
+        hmDarwin = { };
+        hmAarch64 = { };
+        hm64bit = { };
       };
 
       user.description = name;
