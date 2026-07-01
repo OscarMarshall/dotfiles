@@ -26,10 +26,6 @@ jobs:
 
       - name: Install Nix
         uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
-        with:
-          extra_nix_config: |
-            substituters = https://cache.nixos.org/ https://attic.xuyh0120.win/lantian
-            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=
 
       - name: Setup Nix cache
         uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
@@ -48,13 +44,13 @@ jobs:
           EOF
 
       - name: Build harmony
-        run: nix build .#nixosConfigurations.harmony.config.system.build.toplevel
+        run: nix build --accept-flake-config .#nixosConfigurations.harmony.config.system.build.toplevel
 
       - name: Build melaan
-        run: nix build .#nixosConfigurations.melaan.config.system.build.toplevel
+        run: nix build --accept-flake-config .#nixosConfigurations.melaan.config.system.build.toplevel
 
       - name: Build omarshal@dev203.meraki.com
-        run: nix build '.#homeConfigurations."omarshal@dev203.meraki.com".activationPackage'
+        run: nix build --accept-flake-config '.#homeConfigurations."omarshal@dev203.meraki.com".activationPackage'
 
   build-darwin:
     name: Build Darwin hosts
@@ -66,10 +62,6 @@ jobs:
 
       - name: Install Nix
         uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
-        with:
-          extra_nix_config: |
-            substituters = https://cache.nixos.org/ https://attic.xuyh0120.win/lantian
-            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=
 
       - name: Setup Nix cache
         uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
@@ -88,4 +80,4 @@ jobs:
           EOF
 
       - name: Build OMARSHAL-M-2FD2
-        run: nix build .#darwinConfigurations.OMARSHAL-M-2FD2.config.system.build.toplevel
+        run: nix build --accept-flake-config .#darwinConfigurations.OMARSHAL-M-2FD2.config.system.build.toplevel

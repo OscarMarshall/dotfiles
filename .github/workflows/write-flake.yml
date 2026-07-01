@@ -32,18 +32,6 @@ jobs:
         run: |
           nix run .#write-flake
 
-          if ! git diff --quiet; then
-            nix flake update
-            iterations=0
-            while true; do
-              flake_before=$(cat flake.nix)
-              nix run .#write-flake
-              [ "$(cat flake.nix)" = "$flake_before" ] && break
-              iterations=$((iterations + 1))
-              [ "$iterations" -ge 10 ] && echo "write-flake did not converge" >&2 && exit 1
-            done
-          fi
-
       - name: Commit and push changes
         run: |
           git config --global user.name 'github-actions[bot]'
