@@ -10,6 +10,10 @@ let
       publicKey = "oscarmarshall.cachix.org-1:Fa13vGeBXoJ7jWpvnalg/PCRTtvCpyuHUFL5jQXt/9w=";
     }
   ];
+  toNixConfig = ss: {
+    extra-substituters = map (s: s.substituter) ss;
+    extra-trusted-public-keys = map (s: s.publicKey) ss;
+  };
   mkNixConfig =
     {
       substituters,
@@ -31,17 +35,13 @@ let
             "nix-command"
             "flakes"
           ];
-          extra-substituters = map (s: s.substituter) substituters;
-          extra-trusted-public-keys = map (s: s.publicKey) substituters;
-        };
+        }
+        // toNixConfig substituters;
       };
     };
 in
 {
-  flake-file.nixConfig = {
-    extra-substituters = map (s: s.substituter) substituters;
-    extra-trusted-public-keys = map (s: s.publicKey) substituters;
-  };
+  flake-file.nixConfig = toNixConfig substituters;
 
   my.nix = {
     inherit substituters;
@@ -86,11 +86,6 @@ in
         { nix.optimise.automatic = true; }
       ];
 
-    flake = { substituters, ... }: {
-      flake.nixConfig = {
-        extra-substituters = lib.unique (map (s: s.substituter) substituters);
-        extra-trusted-public-keys = lib.unique (map (s: s.publicKey) substituters);
-      };
-    };
+    flake = { substituters, ... }: { flake.nixConfig = lib.mapAttrs (_: lib.unique) (toNixConfig substituters); };
   };
 }
