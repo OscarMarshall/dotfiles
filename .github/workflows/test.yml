@@ -54,10 +54,14 @@ jobs:
           nix_config = metadata["nixConfig"]
 
           expected_substituters = {
+              "https://attic.xuyh0120.win/lantian",
+              "https://cache.xinux.uz",
               "https://nix-community.cachix.org",
               "https://oscarmarshall.cachix.org",
           }
           expected_keys = {
+              "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=",
+              "cache.xinux.uz:BXCrtqejFjWzWEB9YuGB7X2MV4ttBur1N8BkwQRdH+0=",
               "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=",
               "oscarmarshall.cachix.org-1:Fa13vGeBXoJ7jWpvnalg/PCRTtvCpyuHUFL5jQXt/9w=",
           }
