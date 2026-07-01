@@ -81,7 +81,8 @@ jobs:
           # replaces stdenv's phases, so the usual fixup never runs), and
           # macOS enforces symlink permission bits unlike Linux. cachix-
           # action's pushFilter can't reliably exclude closure members from
-          # daemon-mode pushes, so keep Darwin CI read-only for now.
+          # daemon-mode pushes, so disable the automatic post-build push and
+          # push the slow patched Emacs package explicitly after the build.
           skipPush: true
 
       - run: nix flake metadata
@@ -95,3 +96,10 @@ jobs:
 
       - name: Build OMARSHAL-M-2FD2
         run: nix build .#darwinConfigurations.OMARSHAL-M-2FD2.config.system.build.toplevel
+
+      - name: Push patched Emacs to Cachix
+        env:
+          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        run: |
+          emacs_path="$(nix build '.#darwinConfigurations.OMARSHAL-M-2FD2.config.home-manager.users.oscar.programs.doom-emacs.emacs' --no-link --print-out-paths)"
+          cachix push oscarmarshall "$emacs_path"
