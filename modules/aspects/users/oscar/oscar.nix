@@ -32,6 +32,8 @@ in
           { };
     in
     {
+      logseq-graphs = [ { name = "Personal"; } ];
+
       includes = [
         den.aspects.oscar.provides.work
         den._.primary-user
@@ -49,6 +51,7 @@ in
         my.nix-index
         my.proton-pass
         my.ssh-client
+        (my.logseq { cli-only = !(scope.graphical or false); })
         userAspect
       ]
       ++ lib.optionals (scope.graphical or false) (
@@ -72,6 +75,14 @@ in
             stateVersion = "26.05";
           };
         };
+
+        # See the comment on provides.oscar in OMARSHAL-M-2FD2.nix for why these sentinels are needed:
+        # this home entity's re-walked spawn scope doesn't re-run my.logseq's own includes, so hmLinux
+        # is absent at compile time without this and the forward falls through to resolveSourceFallback.
+        hmLinux = { };
+        hmDarwin = { };
+        hmAarch64 = { };
+        hm64bit = { };
       };
 
       user.description = name;
