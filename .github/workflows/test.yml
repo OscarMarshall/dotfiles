@@ -40,6 +40,35 @@ jobs:
 
       - run: nix flake metadata
 
+      - name: Check flake nixConfig substituters
+        run: |
+          metadata_file="$(mktemp)"
+          nix flake metadata --json > "$metadata_file"
+          python - "$metadata_file" <<'PY'
+          import json
+          import sys
+
+          metadata_path = sys.argv[1]
+          with open(metadata_path, encoding="utf-8") as metadata_file:
+              metadata = json.load(metadata_file)
+          nix_config = metadata["nixConfig"]
+
+          expected_substituters = {
+              "https://nix-community.cachix.org",
+              "https://oscarmarshall.cachix.org",
+          }
+          expected_keys = {
+              "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=",
+              "oscarmarshall.cachix.org-1:Fa13vGeBXoJ7jWpvnalg/PCRTtvCpyuHUFL5jQXt/9w=",
+          }
+
+          actual_substituters = set(nix_config["extra-substituters"])
+          actual_keys = set(nix_config["extra-trusted-public-keys"])
+
+          assert actual_substituters == expected_substituters, actual_substituters
+          assert actual_keys == expected_keys, actual_keys
+          PY
+
       - run: |
           cat <<-EOF > modules/ci-runtime.nix
           {

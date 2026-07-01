@@ -89,7 +89,10 @@ in
     };
 
     schema = {
-      flake.includes = [ my.nix ];
+      flake.includes = [
+        my.nix
+        exposeSubstituters
+      ];
       home.includes = [
         secrets
         my.nix
