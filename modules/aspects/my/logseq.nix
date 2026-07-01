@@ -1,14 +1,16 @@
-{ inputs, ... }:
-
-{
-  den.quirks.logseq-graphs = {
-    description = "Logseq graph server definitions, each { name [, rootDir] }";
+{ inputs, ... }: {
+  flake-file = {
+    inputs.nix-logseq-git-flake = {
+      url = "github:Bad3r/nix-logseq-git-flake";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    nixConfig = {
+      extra-substituters = [ "https://nix-logseq-git-flake.cachix.org" ];
+      extra-trusted-public-keys = [ "nix-logseq-git-flake.cachix.org-1:DSBNW07PSRyCvS926tpIWahb53OIydwwZhsP6LhJNZo=" ];
+    };
   };
 
-  flake-file.inputs.nix-logseq-git-flake = {
-    url = "github:Bad3r/nix-logseq-git-flake";
-    inputs.nixpkgs.follows = "nixpkgs";
-  };
+  den.quirks.logseq-graphs.description = "Logseq graph server definitions, each { name [, rootDir] }";
 
   my.logseq =
     {
@@ -21,13 +23,6 @@
           inputs.nix-logseq-git-flake.packages.${pkgs.system}.logseq-cli
         ]
         ++ lib.optional (!cli-only) inputs.nix-logseq-git-flake.packages.${pkgs.system}.logseq;
-      };
-
-      os = { ... }: {
-        nix.settings = {
-          extra-substituters = [ "https://nix-logseq-git-flake.cachix.org" ];
-          extra-trusted-public-keys = [ "nix-logseq-git-flake.cachix.org-1:DSBNW07PSRyCvS926tpIWahb53OIydwwZhsP6LhJNZo=" ];
-        };
       };
 
       hmLinux =
