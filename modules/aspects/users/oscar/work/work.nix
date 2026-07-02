@@ -29,8 +29,6 @@ in
         builtins.attrValues den.aspects.oscar.provides.work.provides ++ (lib.optional (scope.graphical or false) my.slack)
       );
 
-      logseq-graphs = lib.optional (scope.work or false) { name = "Meraki"; };
-
       darwin.homebrew.casks = lib.optionals ((scope.work or false) && (scope.graphical or false)) [ "codex-app" ];
 
       homeManager = { pkgs, ... }: {
