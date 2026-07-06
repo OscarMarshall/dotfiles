@@ -60,6 +60,7 @@ in
           doc-browser
           ghostty
           orca-slicer
+          programmer-dvorak
           prusa-slicer
           steam
           zen-browser
