@@ -41,16 +41,18 @@ in
         intermediary = true;
       };
 
-      # World-readable: nix fetches via the client process, not the daemon,
-      # so all users need to read this for authenticated GitHub API access.
-      nix-access-tokens.mode = "0444";
-      nix-access-tokens.generator = {
-        dependencies = { inherit (secrets) nix-github-access-token; };
-        script = { decrypt, deps, ... }: ''
-          printf 'access-tokens = github.com=%s\n' "$(
-            ${decrypt} ${lib.escapeShellArg deps.nix-github-access-token.file}
-          )"
-        '';
+      nix-access-tokens = {
+        # World-readable: nix fetches via the client process, not the daemon,
+        # so all users need to read this for authenticated GitHub API access.
+        mode = "0444";
+        generator = {
+          dependencies = { inherit (secrets) nix-github-access-token; };
+          script = { decrypt, deps, ... }: ''
+            printf 'access-tokens = github.com=%s\n' "$(
+              ${decrypt} ${lib.escapeShellArg deps.nix-github-access-token.file}
+            )"
+          '';
+        };
       };
     };
 
