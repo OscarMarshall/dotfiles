@@ -71,7 +71,7 @@
     # version changes in each release.
     provides.oscar = {
       homeManager.home.stateVersion = "25.05";
-      # See the comment in OMARSHAL-M-2FD2.nix for why these sentinels are needed.
+      # See the comment in Oscars-MacBook-Pro.nix for why these sentinels are needed.
       hmLinux = { };
       hmDarwin = { };
       hmAarch64 = { };

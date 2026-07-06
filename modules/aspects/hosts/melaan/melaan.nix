@@ -54,7 +54,7 @@
     # version changes in each release.
     provides =
       let
-        # See the comment in OMARSHAL-M-2FD2.nix for why these sentinels are needed.
+        # See the comment in Oscars-MacBook-Pro.nix for why these sentinels are needed.
         hmSentinels = {
           hmLinux = { };
           hmDarwin = { };
