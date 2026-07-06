@@ -1,19 +1,23 @@
 { den, ... }: {
-  den.hosts.aarch64-darwin.Oscars-MacBook-Pro = {
-    graphical = true;
-    work = true;
+  den.hosts = {
+    aarch64-darwin.Oscars-MacBook-Pro = {
+      graphical = true;
+      work = true;
 
-    users.oscar = { };
-  };
+      users.oscar = { };
+    };
 
-  den.hosts.x86_64-linux.harmony.users.oscar = { };
+    x86_64-linux = {
+      harmony.users.oscar = { };
 
-  den.hosts.x86_64-linux.melaan = {
-    graphical = true;
+      melaan = {
+        graphical = true;
 
-    users = {
-      adelline = { };
-      oscar = { };
+        users = {
+          adelline = { };
+          oscar = { };
+        };
+      };
     };
   };
 
