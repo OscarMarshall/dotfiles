@@ -1,6 +1,6 @@
 { den, ... }: {
   den.hosts = {
-    aarch64-darwin."Oscars-MacBook-Pro.local" = {
+    aarch64-darwin.Oscars-MacBook-Pro = {
       graphical = true;
       work = true;
 

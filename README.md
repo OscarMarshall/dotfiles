@@ -7,7 +7,7 @@ This repository contains my personal system configurations for multiple machines
 
 - **harmony** (x86_64-linux): Home server running media services, Minecraft servers, and infrastructure
 - **melaan** (x86_64-linux): Framework laptop with GNOME desktop
-- **OMARSHAL-M-2FD2** (aarch64-darwin): MacBook with development environment
+- **Oscars-MacBook-Pro** (aarch64-darwin): MacBook with development environment
 - **omarshal@dev203.meraki.com** (x86_64-linux): Standalone Home Manager config reusing the `oscar` aspect for a work
   machine
 
@@ -33,10 +33,10 @@ cd dotfiles
 sudo nixos-rebuild switch --flake .#<hostname>
 ```
 
-**macOS systems (OMARSHAL-M-2FD2):**
+**macOS systems (Oscars-MacBook-Pro):**
 
 ```console
-darwin-rebuild switch --flake .#OMARSHAL-M-2FD2
+darwin-rebuild switch --flake .#Oscars-MacBook-Pro
 ```
 
 **Standalone Home Manager (omarshal@dev203.meraki.com):**
@@ -52,7 +52,7 @@ home-manager switch --flake .#"omarshal@dev203.meraki.com"
 # Use platform-specific builds instead:
 nix build .#nixosConfigurations.harmony.config.system.build.toplevel
 nix build .#nixosConfigurations.melaan.config.system.build.toplevel
-nix build .#darwinConfigurations.OMARSHAL-M-2FD2.config.system.build.toplevel
+nix build .#darwinConfigurations.Oscars-MacBook-Pro.config.system.build.toplevel
 
 # Show available outputs
 nix flake show
@@ -131,7 +131,7 @@ Use an aspect function signature (`{ host, lib, ... }:`) when you need context-a
 ### Desktop
 
 - **GNOME** on melaan (Wayland, via NixOS)
-- **macOS desktop**: Fonts, Homebrew-based applications, and Nix-managed development environment on OMARSHAL-M-2FD2
+- **macOS desktop**: Fonts, Homebrew-based applications, and Nix-managed development environment on Oscars-MacBook-Pro
 - **Applications**: Emacs, Ghostty terminal, Zen Browser, Discord, Steam, Krita, PrusaSlicer
 - **Framework laptop** support via nixos-hardware
 
@@ -166,16 +166,19 @@ git add secrets/generated/
 
 # Rekey all secrets for all hosts and commit (human only — requires YubiKey)
 agenix rekey -a
-git add secrets/rekeyed/harmony/
-git add secrets/rekeyed/melaan/
+git add -A secrets/rekeyed/
 ```
 
 ### Secrets Architecture
 
 - **Primitive secrets** (`secrets/*.age`): encrypted to the YubiKey master identity. Add `intermediary = true` only if
   the secret is exclusively consumed by generators.
-- **Template secrets**: generated from primitives by `agenix generate` into `secrets/generated/`, then rekeyed per host
-  via `agenix rekey -a` into `secrets/rekeyed/<hostname>/`.
+- **Template secrets**: generated from primitives by `agenix generate` into `secrets/generated/`, then rekeyed via
+  `agenix rekey -a` into `secrets/rekeyed/<hostname>/` for the host's OS-level secrets, and
+  `secrets/rekeyed/<hostname>-home-<username>/` for a user's embedded Home Manager secrets. These are kept as separate
+  directories (rather than sharing one) because `agenix rekey`'s local storage mode deletes any file in a directory it
+  doesn't recognize as one of that node's own secrets — sharing a directory between the OS and Home Manager nodes would
+  cause each to delete the other's secrets as "orphans".
 - **`secrets` class**: use in host/user/service aspects to declare secrets — preferred over setting `age.secrets`
   directly. Forwarded to `age.secrets` on all platforms (NixOS, Darwin, Home Manager) by `defaults.nix`.
 - **`nixosSecrets` class**: used in user/host aspects for NixOS-only secrets (e.g. hashed passwords). Forwarded only to

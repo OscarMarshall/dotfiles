@@ -75,7 +75,7 @@ in
           };
         };
 
-        # See the comment on provides.oscar in OMARSHAL-M-2FD2.nix for why these sentinels are needed:
+        # See the comment on provides.oscar in Oscars-MacBook-Pro.nix for why these sentinels are needed:
         # this home entity's re-walked spawn scope doesn't re-run the user aspect's own includes, so
         # hmLinux is absent at compile time without this and the forward falls through to resolveSourceFallback.
         hmLinux = { };

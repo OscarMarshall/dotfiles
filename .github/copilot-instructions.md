@@ -5,7 +5,7 @@ services, and user environments using Nix flakes, Den/Dendritic, and Home Manage
 
 ## Systems
 
-- **OMARSHAL-M-2FD2**: MacBook (aarch64-darwin) with development environment
+- **Oscars-MacBook-Pro**: MacBook (aarch64-darwin) with development environment
 - **harmony**: Home server (x86_64-linux) with media services, Minecraft servers, and more
 - **melaan**: Framework laptop (x86_64-linux) running GNOME desktop
 - **omarshal@dev203.meraki.com**: Standalone Home Manager config (x86_64-linux) using the `oscar` aspect on a work
@@ -30,7 +30,7 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
     - **`hosts/`**: Host-specific aspects (one directory per host)
       - **`harmony/`**: harmony.nix, hardware-configuration.nix
       - **`melaan/`**: melaan.nix, hardware-configuration.nix
-      - **`OMARSHAL-M-2FD2/`**: OMARSHAL-M-2FD2.nix
+      - **`Oscars-MacBook-Pro/`**: Oscars-MacBook-Pro.nix
     - **`users/`**: User-specific aspects (one directory per user)
       - **`oscar/`**: oscar.nix, work/ (work-specific config)
       - **`adelline/`**: adelline.nix
@@ -45,8 +45,10 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
       - Darwin: homebrew.nix
       - VM: vm.nix, vm-bootable.nix, ci-no-boot.nix
 - **`secrets/`**: Directory containing ragenix/agenix-rekey-encrypted secrets (`.age` files). Primitive secrets are
-  encrypted to the YubiKey master identity. Do not expose plaintext. Rekeyed host secrets live in
-  `secrets/rekeyed/<hostname>/`. Generated (template) secrets live in `secrets/generated/`.
+  encrypted to the YubiKey master identity. Do not expose plaintext. Rekeyed OS-level host secrets live in
+  `secrets/rekeyed/<hostname>/`; a user's embedded Home Manager secrets live in the separate sibling directory
+  `secrets/rekeyed/<hostname>-home-<username>/` (kept separate so agenix-rekey's per-node orphan cleanup doesn't delete
+  the other node's secrets). Generated (template) secrets live in `secrets/generated/`.
 
 ## Key Technologies
 
@@ -142,7 +144,7 @@ The **melaan** laptop (x86_64-linux) includes:
 - **Framework-specific**: Hardware support via nixos-hardware
 - **Users**: Oscar and Adelline
 
-The **OMARSHAL-M-2FD2** MacBook (aarch64-darwin) includes:
+The **Oscars-MacBook-Pro** MacBook (aarch64-darwin) includes:
 
 - **Homebrew**: Package manager with automatic updates and cleanup
 - **Development**: Emacs, Git, GPG, SSH
@@ -159,11 +161,11 @@ the system type:
 2. **Building configuration**: `nixos-rebuild build --flake .#<system>`
 3. **Switching configuration**: `sudo nixos-rebuild switch --flake .#<system>`
 
-### Darwin Systems (OMARSHAL-M-2FD2)
+### Darwin Systems (Oscars-MacBook-Pro)
 
-1. **Testing configuration**: `darwin-rebuild check --flake .#OMARSHAL-M-2FD2`
-2. **Building configuration**: `darwin-rebuild build --flake .#OMARSHAL-M-2FD2`
-3. **Switching configuration**: `darwin-rebuild switch --flake .#OMARSHAL-M-2FD2`
+1. **Testing configuration**: `darwin-rebuild check --flake .#Oscars-MacBook-Pro`
+2. **Building configuration**: `darwin-rebuild build --flake .#Oscars-MacBook-Pro`
+3. **Switching configuration**: `darwin-rebuild switch --flake .#Oscars-MacBook-Pro`
 
 ### Updating Dependencies
 
@@ -192,7 +194,7 @@ Note: Build/switch commands typically require appropriate permissions and are ru
 - **Formatting**: `nix fmt` formats Nix code (configured via treefmt-nix)
 
 CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan) on Ubuntu, Darwin hosts
-(OMARSHAL-M-2FD2) on macOS.
+(Oscars-MacBook-Pro) on macOS.
 
 ## Best Practices
 
@@ -202,10 +204,13 @@ CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan)
    secrets live in `secrets/*.age` (encrypted to YubiKey). Mark a primitive secret with `intermediary = true` only if it
    is exclusively consumed by generators (never referenced directly by services). Template/composite secrets are
    generated with `agenix generate` (human-only) and rekeyed per host with `agenix rekey -a` (human-only). Rekeyed
-   outputs live in `secrets/rekeyed/<hostname>/`. Never commit plaintext secrets or edit `.age` files directly. Use the
-   `secrets` class (not `age.secrets` directly) to declare secrets in aspects — it routes to `age.secrets` on all
-   platforms. Use `nixosSecrets` only when the secret must be excluded from Darwin/Home Manager (e.g. hashed login
-   passwords). Each host that uses secrets must set `age.rekey.hostPubkey` in its host aspect.
+   outputs live in `secrets/rekeyed/<hostname>/` for OS-level secrets, and in the separate sibling directory
+   `secrets/rekeyed/<hostname>-home-<username>/` for a user's embedded Home Manager secrets — kept separate so
+   agenix-rekey's per-node orphan cleanup (in local storage mode) doesn't delete the other node's secrets. Never commit
+   plaintext secrets or edit `.age` files directly. Use the `secrets` class (not `age.secrets` directly) to declare
+   secrets in aspects — it routes to `age.secrets` on all platforms. Use `nixosSecrets` only when the secret must be
+   excluded from Darwin/Home Manager (e.g. hashed login passwords). Each host that uses secrets must set
+   `age.rekey.hostPubkey` in its host aspect.
 3. **State Version**: Never change `system.stateVersion` or `home.stateVersion` unless you understand the implications
    (see NixOS documentation).
 4. **Declarative Configuration**: All system configuration should be in Nix files; avoid imperative changes.
@@ -263,8 +268,9 @@ CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan)
 - **Secret declarations**: Use the `secrets` class (not `age.secrets` directly) in aspects. Example:
   `secrets.my-secret.rekeyFile = ../../../secrets/my-secret.age;` Use `nixosSecrets` only for secrets that must be
   excluded from Darwin/Home Manager.
-- **Rekeyed secret references**: The rekeyed copy in `secrets/rekeyed/<hostname>/` is auto-generated by
-  `agenix rekey -a` (human-only).
+- **Rekeyed secret references**: The rekeyed copy in `secrets/rekeyed/<hostname>/` (OS-level) or
+  `secrets/rekeyed/<hostname>-home-<username>/` (embedded Home Manager) is auto-generated by `agenix rekey -a`
+  (human-only).
 - **Service aspects**: Each service aspect defines its own:
   - NixOS service configuration
   - Firewall rules (if network-exposed)
@@ -291,7 +297,7 @@ The configuration uses Den aspects organized into three main categories:
 
 - **harmony** (x86_64-linux): Server configuration with media services, Minecraft, nginx, ZFS, etc.
 - **melaan** (x86_64-linux): Desktop laptop with GNOME, Framework hardware support, multiple users
-- **OMARSHAL-M-2FD2** (aarch64-darwin): MacBook with homebrew, work configuration
+- **Oscars-MacBook-Pro** (aarch64-darwin): MacBook with homebrew, work configuration
 - Each host aspect:
   - Includes relevant `my.*` aspects for services and features
   - Defines host-specific NixOS/Darwin configuration
@@ -341,7 +347,7 @@ Each `my.*` aspect is a self-contained module that can be included by hosts or u
 - Cannot execute `nixos-rebuild`, `darwin-rebuild`, or `home-manager` commands (requires target system access)
 - Cannot test actual service functionality (no runtime environment)
 - Cannot decrypt or modify ragenix secrets
-- Cannot access the actual systems (harmony, melaan, OMARSHAL-M-2FD2)
+- Cannot access the actual systems (harmony, melaan, Oscars-MacBook-Pro)
 - Focus on configuration file correctness, Den aspect patterns, and NixOS/Darwin best practices
 - When making changes to flake inputs in modules, regenerate flake.nix with `nix run .#write-flake`
 
@@ -412,7 +418,7 @@ agenix edit secrets/<name>.age
 
 ```bash
 agenix rekey -a
-git add secrets/rekeyed/<hostname>/
+git add -A secrets/rekeyed/
 ```
 
 Each host that consumes rekeyed secrets must declare `age.rekey.hostPubkey` in its host aspect.

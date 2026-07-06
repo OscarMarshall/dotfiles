@@ -85,5 +85,5 @@ jobs:
           }
           EOF
 
-      - name: Build Oscars-MacBook-Pro.local
-        run: nix build '.#darwinConfigurations."Oscars-MacBook-Pro.local".config.system.build.toplevel'
+      - name: Build Oscars-MacBook-Pro
+        run: nix build .#darwinConfigurations.Oscars-MacBook-Pro.config.system.build.toplevel
