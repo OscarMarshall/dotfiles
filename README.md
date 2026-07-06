@@ -167,7 +167,7 @@ git add secrets/generated/
 
 # Rekey all secrets for all hosts and commit (human only — requires YubiKey)
 agenix rekey -a
-git add secrets/rekeyed/*/
+git add -A secrets/rekeyed/
 ```
 
 ### Secrets Architecture

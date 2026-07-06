@@ -418,7 +418,7 @@ agenix edit secrets/<name>.age
 
 ```bash
 agenix rekey -a
-git add secrets/rekeyed/*/
+git add -A secrets/rekeyed/
 ```
 
 Each host that consumes rekeyed secrets must declare `age.rekey.hostPubkey` in its host aspect.
