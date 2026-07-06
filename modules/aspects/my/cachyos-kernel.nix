@@ -22,17 +22,20 @@
 # After adding this aspect, run: nix run .#write-flake
 #
 { inputs, ... }: {
-  # Don't follow any sub-inputs since that'll invalidate the cache
-  flake-file.inputs.nix-cachyos-kernel.url = "github:xddxdd/nix-cachyos-kernel/release";
-  flake-file.nixConfig = {
-    extra-substituters = [
-      "https://attic.xuyh0120.win/lantian"
-      "https://cache.xinux.uz"
-    ];
-    extra-trusted-public-keys = [
-      "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc="
-      "cache.xinux.uz:BXCrtqejFjWzWEB9YuGB7X2MV4ttBur1N8BkwQRdH+0="
-    ];
+  flake-file = {
+    # Don't follow any sub-inputs since that'll invalidate the cache
+    inputs.nix-cachyos-kernel.url = "github:xddxdd/nix-cachyos-kernel/release";
+
+    nixConfig = {
+      extra-substituters = [
+        "https://attic.xuyh0120.win/lantian"
+        "https://cache.xinux.uz"
+      ];
+      extra-trusted-public-keys = [
+        "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc="
+        "cache.xinux.uz:BXCrtqejFjWzWEB9YuGB7X2MV4ttBur1N8BkwQRdH+0="
+      ];
+    };
   };
 
   my.cachyos-kernel =

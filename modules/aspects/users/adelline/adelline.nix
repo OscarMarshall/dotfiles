@@ -18,12 +18,9 @@
     user.description = "Adelline Marshall";
 
     homeManager = { pkgs, ... }: {
-      dconf = {
-        enable = true;
-        settings = {
-          "org/gnome/desktop/screensaver".lock-enabled = false;
-          "org/gnome/settings-daemon/plugins/power".power-button-action = "nothing";
-        };
+      dconf.settings = {
+        "org/gnome/desktop/screensaver".lock-enabled = false;
+        "org/gnome/settings-daemon/plugins/power".power-button-action = "nothing";
       };
 
       home.packages = with pkgs; [
