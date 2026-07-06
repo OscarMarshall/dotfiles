@@ -26,4 +26,6 @@
       displayManager.gdm.enable = true;
     };
   };
+
+  my.gnome.hmLinux.dconf.enable = true;
 }
