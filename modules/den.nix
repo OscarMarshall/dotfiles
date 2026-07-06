@@ -1,10 +1,10 @@
 { den, ... }: {
   den.hosts = {
-    aarch64-darwin.OMARSHAL-M-2FD2 = {
+    aarch64-darwin."Oscars-MacBook-Pro.local" = {
       graphical = true;
       work = true;
 
-      users.oscar.userName = "omarshal";
+      users.oscar = { };
     };
 
     x86_64-linux = {
