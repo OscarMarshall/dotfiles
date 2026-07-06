@@ -1,14 +1,14 @@
 { my, ... }: {
-  den.aspects.OMARSHAL-M-2FD2 = {
+  den.aspects."Oscars-MacBook-Pro.local" = {
     includes = with my; [ homebrew ];
 
     darwin = {
-      age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAa8OO2Jgwvuz7J9LyceUlvlEk7GYkRJGnLaIzzYQCDQ";
+      age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJYml5zuvVCI6yKyiCz9Jx5wv9S4OrzZRltqzEH1NQdC";
 
       # Used for backwards compatibility, please read the changelog before changing.
       #
       # $ darwin-rebuild changelog
-      system.stateVersion = 5;
+      system.stateVersion = 7;
     };
 
     provides.oscar = {
@@ -18,7 +18,7 @@
         #
         # You can update Home Manager without changing this value. See the Home Manager release notes for a list of
         # state version changes in each release.
-        home.stateVersion = "26.05";
+        home.stateVersion = "26.11";
       };
 
       # Den's allHomeNodes spawn re-walks the host aspect without the user's own includes, so none of the

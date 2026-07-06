@@ -50,6 +50,14 @@ in
           null;
       # Only set OS-level rekey from the host entity itself, not from user entities.
       isHostEntity = user == null && host != null;
+      # A user embedded under a host (e.g. oscar's home-manager profile on a host) is a separate
+      # agenix-rekey node from that host's own OS-level node. `agenix rekey`'s local storage mode deletes
+      # any file in a node's `localStorageDir` that isn't one of that node's own secrets, to clean up
+      # orphans. If the OS-level and embedded-user nodes shared a directory (both keyed by `host.name`),
+      # whichever node ran last on a given `agenix rekey -a` pass would delete the other's exclusively-owned
+      # secrets as "orphans". Giving the embedded user a separate sibling directory keeps each node's
+      # cleanup pass scoped to only its own files.
+      homeManagerEntityName = if host != null && user != null then "${host.name}-home-${user.userName}" else entityName;
     in
     {
       homeManager =
@@ -60,7 +68,7 @@ in
             (inputs.agenix-rekey.homeManagerModules.default or { })
           ];
         }
-        // lib.optionalAttrs (entityName != null) { age.rekey = rekey entityName pkgs; };
+        // lib.optionalAttrs (homeManagerEntityName != null) { age.rekey = rekey homeManagerEntityName pkgs; };
     }
     // lib.optionalAttrs isHostEntity {
       darwin = { pkgs, ... }: {
