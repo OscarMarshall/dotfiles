@@ -26,7 +26,7 @@ in
         "github-meraki" = {
           HostName = "github.com";
           User = "git";
-          IdentityFile = "~/.ssh/id_ed25519_meraki";
+          IdentityFile = "${./id_ed25519_meraki.pub}";
           IdentitiesOnly = true;
         };
         "*.meraki.com ${aliases}" = {
