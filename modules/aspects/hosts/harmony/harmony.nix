@@ -3,6 +3,8 @@
     includes = with my; [
       (auto-upgrade { allowReboot = true; })
       autobrr
+      (bookshelf-audiobooks { administrators = [ "oscar" ]; })
+      (bookshelf-ebooks { administrators = [ "oscar" ]; })
       boot
       (cachyos-kernel { variant = "server"; })
       cross-seed
@@ -31,6 +33,7 @@
       ])
       (sonarr { administrators = [ "oscar" ]; })
       ssh-server
+      storyteller
       unpackerr
       (zfs [ "metalminds" ])
     ];
