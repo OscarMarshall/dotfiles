@@ -52,20 +52,17 @@ in
         (my.logseq { cli-only = !(scope.graphical or false); })
         userAspect
       ]
-      ++ lib.optionals (scope.graphical or false) (
-        with my;
-        [
-          (catppuccin { })
-          discord
-          doc-browser
-          ghostty
-          orca-slicer
-          programmer-dvorak
-          prusa-slicer
-          steam
-          zen-browser
-        ]
-      );
+      ++ lib.optionals (scope.graphical or false) [
+        (my.catppuccin { })
+        my.discord
+        my.doc-browser
+        my.ghostty
+        my.orca-slicer
+        my.programmer-dvorak
+        my.prusa-slicer
+        my.steam
+        den.aspects.oscar.provides.zen-browser
+      ];
 
       provides."dev203.meraki.com" = {
         homeManager = {
