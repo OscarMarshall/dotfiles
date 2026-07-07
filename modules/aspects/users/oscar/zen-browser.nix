@@ -1,3 +1,6 @@
+let
+  profileName = "default";
+in
 {
   den.aspects.oscar.provides.zen-browser.homeManager = {
     programs.zen-browser = {
@@ -19,7 +22,7 @@
           "@testpilot-containers" = mkExtension "multi-account-containers";
         };
 
-      profiles.default.settings = {
+      profiles.${profileName}.settings = {
         "zen.view.compact.enable-at-startup" = true;
         "zen.workspaces.force-container-workspace" = true;
         "zen.workspaces.continue-where-left-off" = true;
@@ -31,6 +34,6 @@
 
     # Required for theming to apply: the module system can't both detect
     # declared zen-browser profile names and use them, so it's repeated here.
-    stylix.targets.zen-browser.profileNames = [ "default" ];
+    stylix.targets.zen-browser.profileNames = [ profileName ];
   };
 }
