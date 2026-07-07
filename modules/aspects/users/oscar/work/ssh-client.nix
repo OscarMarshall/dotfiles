@@ -22,30 +22,30 @@ in
 {
   den.aspects.oscar.provides.work.provides.ssh-client = {
     homeManager = { lib, ... }: {
-      programs.ssh.matchBlocks = {
+      programs.ssh.settings = {
         "github-meraki" = {
-          hostname = "github.com";
-          user = "git";
-          identityFile = "${./id_ed25519_meraki.pub}";
-          identitiesOnly = true;
+          HostName = "github.com";
+          User = "git";
+          IdentityFile = "${./id_ed25519_meraki.pub}";
+          IdentitiesOnly = true;
         };
         "*.meraki.com ${aliases}" = {
-          addKeysToAgent = "yes";
-          forwardAgent = true;
-          identityFile = "~/.ssh/id_ed25519_meraki";
-          serverAliveInterval = 240;
+          AddKeysToAgent = "yes";
+          ForwardAgent = true;
+          IdentityFile = "~/.ssh/id_ed25519_meraki";
+          ServerAliveInterval = 240;
         };
-        "dev" = lib.hm.dag.entryBefore [ "meraki.com aliases" ] { hostname = "dev203.meraki.com"; };
+        "dev" = lib.hm.dag.entryBefore [ "meraki.com aliases" ] { HostName = "dev203.meraki.com"; };
         "meraki.com aliases" = lib.hm.dag.entryBefore [ "*.meraki.com" "n*.meraki.com" ] {
-          host = "!*.meraki.com ${aliases}";
-          hostname = "%h.meraki.com";
+          header = "Host !*.meraki.com ${aliases}";
+          HostName = "%h.meraki.com";
         };
         "n*.meraki.com ${shard-alias}" = {
-          proxyJump = builtins.head jump-host-aliases;
-          extraOptions.HostKeyAlgorithms = "+ssh-rsa";
+          ProxyJump = builtins.head jump-host-aliases;
+          HostKeyAlgorithms = "+ssh-rsa";
         };
       };
     };
-    hmDarwin.programs.ssh.matchBlocks."*.meraki.com ${aliases}".extraOptions.UseKeychain = "yes";
+    hmDarwin.programs.ssh.settings."*.meraki.com ${aliases}".UseKeychain = "yes";
   };
 }
