@@ -1,5 +1,13 @@
 {
   my.programmer-dvorak = {
+    # macOS caches the list of installed keyboard layouts (com.apple.IntlDataCache.le*) and only
+    # rescans it at boot, so a newly (un)installed .bundle won't show up in System Settings ->
+    # Keyboard -> Input Sources until the cache is cleared and the machine is rebooted.
+    darwin.system.activationScripts.postActivation.text = ''
+      rm -f /System/Library/Caches/com.apple.IntlDataCache.le*
+      rm -f /private/var/folders/*/*/C/com.apple.IntlDataCache.le*
+    '';
+
     # macOS ships plain Dvorak but not Programmer Dvorak, so the layout is fetched from
     # https://www.kaufmann.no/roland/dvorak/ (the same author as xkeyboard-config's "dvp" variant)
     # and installed per-user rather than system-wide, so it never becomes the default for other
