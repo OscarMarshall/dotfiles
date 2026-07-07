@@ -6,6 +6,10 @@ in
     programs.zen-browser = {
       darwinDefaultsId = "app.zen-browser.zen";
 
+      # No-op on Darwin (it only wires up xdg.mimeApps); already the actual
+      # default browser here via macOS's LaunchServices, set outside Nix.
+      setAsDefaultBrowser = true;
+
       policies = {
         # Updates come from `nix flake update` + rebuild; the browser's own
         # updater can't write into the read-only /nix/store install anyway.
