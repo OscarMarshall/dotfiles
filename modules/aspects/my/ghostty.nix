@@ -5,6 +5,7 @@
       settings = {
         keybind = [ "global:super+Backquote=toggle_quick_terminal" ];
         macos-option-as-alt = true;
+        auto-update = "off";
       };
     };
 
