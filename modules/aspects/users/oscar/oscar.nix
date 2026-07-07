@@ -40,6 +40,7 @@ in
         my.claude
         my.direnv
         my.emacs
+        my.fish
         (my.git {
           inherit name;
           email = "3111765+OscarMarshall@users.noreply.github.com";
@@ -137,7 +138,6 @@ in
           ];
 
         programs = {
-          fish.enable = true;
           ssh.settings."github-personal" = {
             HostName = "github.com";
             User = "git";
