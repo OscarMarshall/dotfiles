@@ -183,7 +183,13 @@ stdenv.mkDerivation (finalAttrs: {
     app=$out/lib/storyteller/applications/web
     mkdir -p "$app"
 
-    # Next.js standalone output already contains a trimmed node_modules + server.js.
+    # next.config.js sets `outputFileTracingRoot` to the monorepo root (three levels up from
+    # applications/web/next.config.js), so the standalone output mirrors the full monorepo-relative
+    # path: server.js lands at .../standalone/applications/web/server.js (i.e. under $app, not at
+    # the root we copy into), while traced/hoisted node_modules lands at .../standalone/node_modules
+    # (the root, NOT under $app). Both match this project's own Dockerfile exactly (WORKDIR
+    # /app/.next/standalone/applications/web; SQLITE_NATIVE_BINDING under
+    # /app/.next/standalone/node_modules, one level above that WORKDIR).
     cp -r applications/web/.next/standalone/. $out/lib/storyteller/
 
     cp -r applications/web/public "$app/public"
@@ -235,7 +241,7 @@ stdenv.mkDerivation (finalAttrs: {
       --set STORYTELLER_WORKER worker.mjs \
       --set STORYTELLER_FILE_WRITE_WORKER fileWriteWorker.mjs \
       --set ERROR_ALIGN_NATIVE_BINDING "$app/work-dist/@storyteller-platform/align/" \
-      --set SQLITE_NATIVE_BINDING "$app/node_modules/better-sqlite3/build/Release/better_sqlite3.node" \
+      --set SQLITE_NATIVE_BINDING "$out/lib/storyteller/node_modules/better-sqlite3/build/Release/better_sqlite3.node" \
       --prefix PATH : ${lib.makeBinPath [ readium ]}
 
     runHook postInstall

@@ -63,7 +63,7 @@ in
           environment = {
             HOME = homeDir;
             PORT = port';
-            HOSTNAME = "0.0.0.0";
+            HOSTNAME = "127.0.0.1";
             STORYTELLER_DATA_DIR = dataDir;
             READIUM_PORT = toString readiumPort;
             ENABLE_WEB_READER = "true";
