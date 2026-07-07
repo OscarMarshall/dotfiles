@@ -108,11 +108,15 @@ in
         };
       };
 
-      darwin.homebrew.casks = [
-        "arc"
-        "domzilla-caffeine"
-        "proton-mail"
-      ];
+      darwin = {
+        users.knownUsers = [ "oscar" ];
+        users.users.oscar.uid = 501;
+        homebrew.casks = [
+          "arc"
+          "domzilla-caffeine"
+          "proton-mail"
+        ];
+      };
 
       homeManager = { pkgs, ... }: {
         # age uses this key when rekeying home-manager-level secrets. At
