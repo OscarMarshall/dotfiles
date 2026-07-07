@@ -64,6 +64,7 @@ in
           prusa-slicer
           steam
           zen-browser
+          den.aspects.oscar.provides.zen-browser
         ]
       );
 
