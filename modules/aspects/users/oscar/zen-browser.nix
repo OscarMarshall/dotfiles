@@ -6,21 +6,40 @@ in
     programs.zen-browser = {
       darwinDefaultsId = "app.zen-browser.zen";
 
-      policies.ExtensionSettings =
-        let
-          mkExtension = slug: {
-            install_url = "https://addons.mozilla.org/firefox/downloads/latest/${slug}/latest.xpi";
-            installation_mode = "force_installed";
-          };
-        in
-        {
-          "78272b6fa58f4a1abaac99321d503a20@proton.me" = mkExtension "proton-pass";
-          "firefox@tampermonkey.net" = mkExtension "tampermonkey";
-          "jid1-MnnxcxisBPnSXQ@jetpack" = mkExtension "privacy-badger17";
-          "addon@darkreader.org" = mkExtension "darkreader";
-          "uBlock0@raymondhill.net" = mkExtension "ublock-origin";
-          "@testpilot-containers" = mkExtension "multi-account-containers";
+      policies = {
+        # Updates come from `nix flake update` + rebuild; the browser's own
+        # updater can't write into the read-only /nix/store install anyway.
+        DisableAppUpdate = true;
+        DisableTelemetry = true;
+        DisableFirefoxStudies = true;
+        DisableFeedbackCommands = true;
+        DontCheckDefaultBrowser = true;
+        NoDefaultBookmarks = true;
+        DisablePocket = true;
+        OfferToSaveLogins = false;
+        EnableTrackingProtection = {
+          Value = true;
+          Locked = true;
+          Cryptomining = true;
+          Fingerprinting = true;
         };
+
+        ExtensionSettings =
+          let
+            mkExtension = slug: {
+              install_url = "https://addons.mozilla.org/firefox/downloads/latest/${slug}/latest.xpi";
+              installation_mode = "force_installed";
+            };
+          in
+          {
+            "78272b6fa58f4a1abaac99321d503a20@proton.me" = mkExtension "proton-pass";
+            "firefox@tampermonkey.net" = mkExtension "tampermonkey";
+            "jid1-MnnxcxisBPnSXQ@jetpack" = mkExtension "privacy-badger17";
+            "addon@darkreader.org" = mkExtension "darkreader";
+            "uBlock0@raymondhill.net" = mkExtension "ublock-origin";
+            "@testpilot-containers" = mkExtension "multi-account-containers";
+          };
+      };
 
       profiles.${profileName}.settings = {
         "zen.view.compact.enable-at-startup" = true;
