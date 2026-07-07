@@ -19,6 +19,10 @@
         # You can update Home Manager without changing this value. See the Home Manager release notes for a list of
         # state version changes in each release.
         home.stateVersion = "26.11";
+
+        # fish defaults this to true for apropos completion, but it has no effect since
+        # programs.man.package is null on Darwin (macOS's own man is used instead).
+        programs.man.generateCaches = false;
       };
 
       # Den's allHomeNodes spawn re-walks the host aspect without the user's own includes, so none of the

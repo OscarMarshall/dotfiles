@@ -138,11 +138,11 @@ in
 
         programs = {
           fish.enable = true;
-          ssh.matchBlocks."github-personal" = {
-            hostname = "github.com";
-            user = "git";
-            identityFile = "${./id_ed25519_personal.pub}";
-            identitiesOnly = true;
+          ssh.settings."github-personal" = {
+            HostName = "github.com";
+            User = "git";
+            IdentityFile = "${./id_ed25519_personal.pub}";
+            IdentitiesOnly = true;
           };
           fzf.enable = true;
           gh = {
