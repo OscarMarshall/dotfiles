@@ -141,7 +141,7 @@ in
           ssh.settings."github-personal" = {
             HostName = "github.com";
             User = "git";
-            IdentityFile = "${./id_ed25519_personal.pub}";
+            IdentityFile = "~/.ssh/id_ed25519_personal";
             IdentitiesOnly = true;
           };
           fzf.enable = true;
