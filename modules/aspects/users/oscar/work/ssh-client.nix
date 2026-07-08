@@ -32,7 +32,6 @@ in
         "*.meraki.com ${aliases}" = {
           AddKeysToAgent = "yes";
           ForwardAgent = true;
-          IdentityFile = "~/.ssh/id_ed25519_meraki";
           ServerAliveInterval = 240;
         };
         "dev" = lib.hm.dag.entryBefore [ "meraki.com aliases" ] { HostName = "dev203.meraki.com"; };
