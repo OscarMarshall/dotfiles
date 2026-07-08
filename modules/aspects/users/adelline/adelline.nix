@@ -5,6 +5,7 @@
       (den._.user-shell "fish")
       my.discord
       my.chrome
+      my.fish
       my.ghostty
       my.steam
       my.zoom
@@ -33,7 +34,6 @@
 
       programs = {
         direnv.enable = true;
-        fish.enable = true;
         git.enable = true;
       };
     };

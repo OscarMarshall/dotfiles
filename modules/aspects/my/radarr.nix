@@ -1,10 +1,27 @@
-{ lib, my, ... }:
+{ lib, ... }:
 let
+  url = "radarr.harmony.silverlight-nex.us";
   port = 7878;
 in
 {
   my.radarr = { administrators }: {
-    includes = with my; [ (nginx._.virtual-host "radarr.harmony.silverlight-nex.us" port) ];
+    virtual-host = {
+      name = "radarr";
+      inherit url port;
+    };
+
+    homepage-entry = {
+      group = "Arr Stack";
+      label = "Radarr";
+      description = "Movie organizer/manager";
+      href = "https://${url}";
+      widget = {
+        type = "radarr";
+        url = "https://${url}";
+        key = "{{HOMEPAGE_VAR_RADARR_API_KEY}}";
+        enableQueue = true;
+      };
+    };
 
     secrets = { secrets, ... }: {
       radarr-api-key = {

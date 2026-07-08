@@ -1,10 +1,14 @@
-{ my, ... }: {
+{
   my.autobrr =
     let
       port = 7474;
     in
     {
-      includes = [ (my.nginx._.virtual-host "autobrr.harmony.silverlight-nex.us" port) ];
+      virtual-host = {
+        name = "autobrr";
+        url = "autobrr.harmony.silverlight-nex.us";
+        inherit port;
+      };
 
       secrets.autobrr-session-secret.generator.script = "alnum";
 

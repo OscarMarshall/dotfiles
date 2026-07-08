@@ -63,6 +63,11 @@ in
       # Required for theming to apply: the module system can't both detect
       # declared zen-browser profile names and use them, so it's repeated here.
       stylix.targets.zen-browser.profileNames = [ profileName ];
+
+      # Zen already follows the system light/dark appearance on its own, which
+      # conflicts with Stylix's injected (single-flavor) userChrome/userContent
+      # CSS. Disable the CSS injection and let Zen handle its own theming.
+      stylix.targets.zen-browser.enableCss = false;
     };
   };
 }

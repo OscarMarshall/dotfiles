@@ -1,10 +1,26 @@
-{ my, ... }: {
+{
   my.prowlarr =
     let
+      url = "prowlarr.harmony.silverlight-nex.us";
       port = 9696;
     in
     {
-      includes = with my; [ (nginx._.virtual-host "prowlarr.harmony.silverlight-nex.us" port) ];
+      virtual-host = {
+        name = "prowlarr";
+        inherit url port;
+      };
+
+      homepage-entry = {
+        group = "Arr Stack";
+        label = "Prowlarr";
+        description = "Indexer manager/proxy";
+        href = "https://${url}";
+        widget = {
+          type = "prowlarr";
+          url = "https://${url}";
+          key = "{{HOMEPAGE_VAR_PROWLARR_API_KEY}}";
+        };
+      };
 
       secrets = { secrets, ... }: {
         prowlarr-api-key = {

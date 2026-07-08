@@ -18,9 +18,9 @@
     {
       homeManager = { pkgs, lib, ... }: {
         home.packages = [
-          inputs.nix-logseq-git-flake.packages.${pkgs.system}.logseq-cli
+          inputs.nix-logseq-git-flake.packages.${pkgs.stdenv.hostPlatform.system}.logseq-cli
         ]
-        ++ lib.optional (!cli-only) inputs.nix-logseq-git-flake.packages.${pkgs.system}.logseq;
+        ++ lib.optional (!cli-only) inputs.nix-logseq-git-flake.packages.${pkgs.stdenv.hostPlatform.system}.logseq;
       };
     };
 }

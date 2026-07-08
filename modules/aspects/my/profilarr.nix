@@ -1,10 +1,21 @@
-{ my, ... }: {
+{
   my.profilarr =
     let
+      url = "profilarr.harmony.silverlight-nex.us";
       port = 6868;
     in
     {
-      includes = with my; [ (nginx._.virtual-host "profilarr.harmony.silverlight-nex.us" port) ];
+      virtual-host = {
+        name = "profilarr";
+        inherit url port;
+      };
+
+      homepage-entry = {
+        group = "Arr Stack";
+        label = "Profilarr";
+        description = "Radarr/Sonarr custom format manager";
+        href = "https://${url}";
+      };
 
       nixos = { config, ... }: {
         virtualisation.oci-containers.containers.profilarr = {

@@ -60,6 +60,7 @@
     nix-doom-emacs-unstraightened = {
       url = "github:marienz/nix-doom-emacs-unstraightened";
       inputs = {
+        doomdir.follows = "nixpkgs";
         nixpkgs.follows = "nixpkgs";
         systems.follows = "systems";
       };
