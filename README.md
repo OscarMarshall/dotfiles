@@ -7,7 +7,7 @@ This repository contains my personal system configurations for multiple machines
 
 - **harmony** (x86_64-linux): Home server running media services, Minecraft servers, and infrastructure
 - **melaan** (x86_64-linux): Framework laptop with GNOME desktop
-- **Oscars-MacBook-Pro** (aarch64-darwin): MacBook with development environment
+- **OMARSHAL-M-T2QF** (aarch64-darwin): MacBook with development environment
 - **omarshal@dev203.meraki.com** (x86_64-linux): Standalone Home Manager config reusing the `oscar` aspect for a work
   machine
 
@@ -33,10 +33,10 @@ cd dotfiles
 sudo nixos-rebuild switch --flake .#<hostname>
 ```
 
-**macOS systems (Oscars-MacBook-Pro):**
+**macOS systems (OMARSHAL-M-T2QF):**
 
 ```console
-darwin-rebuild switch --flake .#Oscars-MacBook-Pro
+darwin-rebuild switch --flake .#OMARSHAL-M-T2QF
 ```
 
 **Standalone Home Manager (omarshal@dev203.meraki.com):**
@@ -52,7 +52,7 @@ home-manager switch --flake .#"omarshal@dev203.meraki.com"
 # Use platform-specific builds instead:
 nix build .#nixosConfigurations.harmony.config.system.build.toplevel
 nix build .#nixosConfigurations.melaan.config.system.build.toplevel
-nix build .#darwinConfigurations.Oscars-MacBook-Pro.config.system.build.toplevel
+nix build .#darwinConfigurations.OMARSHAL-M-T2QF.config.system.build.toplevel
 
 # Show available outputs
 nix flake show
@@ -131,7 +131,7 @@ Use an aspect function signature (`{ host, lib, ... }:`) when you need context-a
 ### Desktop
 
 - **GNOME** on melaan (Wayland, via NixOS)
-- **macOS desktop**: Fonts, Homebrew-based applications, and Nix-managed development environment on Oscars-MacBook-Pro
+- **macOS desktop**: Fonts, Homebrew-based applications, and Nix-managed development environment on OMARSHAL-M-T2QF
 - **Applications**: Emacs, Ghostty terminal, Zen Browser, Discord, Steam, Krita, PrusaSlicer
 - **Framework laptop** support via nixos-hardware
 

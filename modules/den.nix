@@ -1,6 +1,6 @@
 { den, ... }: {
   den.hosts = {
-    aarch64-darwin.Oscars-MacBook-Pro = {
+    aarch64-darwin.OMARSHAL-M-T2QF = {
       graphical = true;
       work = true;
 

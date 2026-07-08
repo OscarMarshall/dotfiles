@@ -85,5 +85,5 @@ jobs:
           }
           EOF
 
-      - name: Build Oscars-MacBook-Pro
-        run: nix build .#darwinConfigurations.Oscars-MacBook-Pro.config.system.build.toplevel
+      - name: Build OMARSHAL-M-T2QF
+        run: nix build .#darwinConfigurations.OMARSHAL-M-T2QF.config.system.build.toplevel
