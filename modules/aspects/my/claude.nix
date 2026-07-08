@@ -26,7 +26,7 @@
 
       programs.claude-code = {
         enable = true;
-        package = inputs.claude-code-nix.packages.${pkgs.system}.claude-code;
+        package = inputs.claude-code-nix.packages.${pkgs.stdenv.hostPlatform.system}.claude-code;
 
         settings = {
           agentPushNotifEnabled = true;
