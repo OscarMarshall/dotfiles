@@ -33,6 +33,7 @@ in
           AddKeysToAgent = "yes";
           ForwardAgent = true;
           ServerAliveInterval = 240;
+          User = "omarshal";
         };
         "dev" = lib.hm.dag.entryBefore [ "meraki.com aliases" ] { HostName = "dev203.meraki.com"; };
         "meraki.com aliases" = lib.hm.dag.entryBefore [ "*.meraki.com" "n*.meraki.com" ] {
