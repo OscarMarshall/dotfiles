@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 sudo nixos-rebuild switch --flake .#<hostname>
 
 # macOS
-darwin-rebuild switch --flake .#Oscars-MacBook-Pro
+darwin-rebuild switch --flake .#OMARSHAL-M-T2QF
 
 # Standalone Home Manager
 home-manager switch --flake .#"omarshal@dev203.meraki.com"
@@ -22,7 +22,7 @@ home-manager switch --flake .#"omarshal@dev203.meraki.com"
 ```bash
 nix build .#nixosConfigurations.harmony.config.system.build.toplevel
 nix build .#nixosConfigurations.melaan.config.system.build.toplevel
-nix build .#darwinConfigurations.Oscars-MacBook-Pro.config.system.build.toplevel
+nix build .#darwinConfigurations.OMARSHAL-M-T2QF.config.system.build.toplevel
 ```
 
 ### Format
@@ -83,7 +83,7 @@ Each aspect can provide configuration through named classes:
 | ---------------------------- | -------------- | ------------------------------------------- |
 | `harmony`                    | x86_64-linux   | NixOS home server (media, Minecraft, infra) |
 | `melaan`                     | x86_64-linux   | NixOS Framework laptop with GNOME           |
-| `Oscars-MacBook-Pro`         | aarch64-darwin | MacBook (nix-darwin)                        |
+| `OMARSHAL-M-T2QF`            | aarch64-darwin | MacBook (nix-darwin)                        |
 | `omarshal@dev203.meraki.com` | x86_64-linux   | Standalone Home Manager (work machine)      |
 
 ### Adding a New Service Aspect

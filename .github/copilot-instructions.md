@@ -5,7 +5,7 @@ services, and user environments using Nix flakes, Den/Dendritic, and Home Manage
 
 ## Systems
 
-- **Oscars-MacBook-Pro**: MacBook (aarch64-darwin) with development environment
+- **OMARSHAL-M-T2QF**: MacBook (aarch64-darwin) with development environment
 - **harmony**: Home server (x86_64-linux) with media services, Minecraft servers, and more
 - **melaan**: Framework laptop (x86_64-linux) running GNOME desktop
 - **omarshal@dev203.meraki.com**: Standalone Home Manager config (x86_64-linux) using the `oscar` aspect on a work
@@ -30,7 +30,7 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
     - **`hosts/`**: Host-specific aspects (one directory per host)
       - **`harmony/`**: harmony.nix, hardware-configuration.nix
       - **`melaan/`**: melaan.nix, hardware-configuration.nix
-      - **`Oscars-MacBook-Pro/`**: Oscars-MacBook-Pro.nix
+      - **`OMARSHAL-M-T2QF/`**: OMARSHAL-M-T2QF.nix
     - **`users/`**: User-specific aspects (one directory per user)
       - **`oscar/`**: oscar.nix, work/ (work-specific config)
       - **`adelline/`**: adelline.nix
@@ -144,7 +144,7 @@ The **melaan** laptop (x86_64-linux) includes:
 - **Framework-specific**: Hardware support via nixos-hardware
 - **Users**: Oscar and Adelline
 
-The **Oscars-MacBook-Pro** MacBook (aarch64-darwin) includes:
+The **OMARSHAL-M-T2QF** MacBook (aarch64-darwin) includes:
 
 - **Homebrew**: Package manager with automatic updates and cleanup
 - **Development**: Emacs, Git, GPG, SSH
@@ -161,11 +161,11 @@ the system type:
 2. **Building configuration**: `nixos-rebuild build --flake .#<system>`
 3. **Switching configuration**: `sudo nixos-rebuild switch --flake .#<system>`
 
-### Darwin Systems (Oscars-MacBook-Pro)
+### Darwin Systems (OMARSHAL-M-T2QF)
 
-1. **Testing configuration**: `darwin-rebuild check --flake .#Oscars-MacBook-Pro`
-2. **Building configuration**: `darwin-rebuild build --flake .#Oscars-MacBook-Pro`
-3. **Switching configuration**: `darwin-rebuild switch --flake .#Oscars-MacBook-Pro`
+1. **Testing configuration**: `darwin-rebuild check --flake .#OMARSHAL-M-T2QF`
+2. **Building configuration**: `darwin-rebuild build --flake .#OMARSHAL-M-T2QF`
+3. **Switching configuration**: `darwin-rebuild switch --flake .#OMARSHAL-M-T2QF`
 
 ### Updating Dependencies
 
@@ -194,7 +194,7 @@ Note: Build/switch commands typically require appropriate permissions and are ru
 - **Formatting**: `nix fmt` formats Nix code (configured via treefmt-nix)
 
 CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan) on Ubuntu, Darwin hosts
-(Oscars-MacBook-Pro) on macOS.
+(OMARSHAL-M-T2QF) on macOS.
 
 ## Best Practices
 
@@ -297,7 +297,7 @@ The configuration uses Den aspects organized into three main categories:
 
 - **harmony** (x86_64-linux): Server configuration with media services, Minecraft, nginx, ZFS, etc.
 - **melaan** (x86_64-linux): Desktop laptop with GNOME, Framework hardware support, multiple users
-- **Oscars-MacBook-Pro** (aarch64-darwin): MacBook with homebrew, work configuration
+- **OMARSHAL-M-T2QF** (aarch64-darwin): MacBook with homebrew, work configuration
 - Each host aspect:
   - Includes relevant `my.*` aspects for services and features
   - Defines host-specific NixOS/Darwin configuration
@@ -347,7 +347,7 @@ Each `my.*` aspect is a self-contained module that can be included by hosts or u
 - Cannot execute `nixos-rebuild`, `darwin-rebuild`, or `home-manager` commands (requires target system access)
 - Cannot test actual service functionality (no runtime environment)
 - Cannot decrypt or modify ragenix secrets
-- Cannot access the actual systems (harmony, melaan, Oscars-MacBook-Pro)
+- Cannot access the actual systems (harmony, melaan, OMARSHAL-M-T2QF)
 - Focus on configuration file correctness, Den aspect patterns, and NixOS/Darwin best practices
 - When making changes to flake inputs in modules, regenerate flake.nix with `nix run .#write-flake`
 
