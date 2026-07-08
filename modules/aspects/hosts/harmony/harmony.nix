@@ -2,12 +2,14 @@
   den.aspects.harmony = {
     includes = with my; [
       (auto-upgrade { allowReboot = true; })
+      authentik
       autobrr
       boot
       (cachyos-kernel { variant = "server"; })
       cross-seed
       gluetun
       homepage
+      (immich { administrators = [ "oscar" ]; })
       lm-sensors
       locale
       (minecraft-servers { administrators = [ "oscar" ]; })
