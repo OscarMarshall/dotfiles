@@ -6,10 +6,6 @@ let
       extraOptions = ''
         !include ${config.age.secrets.nix-access-tokens.path}
       '';
-      gc = {
-        automatic = true;
-        options = "--delete-older-than 7d";
-      };
       package = pkgs.lixPackageSets.stable.lix;
       settings = {
         experimental-features = [
@@ -62,7 +58,13 @@ in
       { config, pkgs, ... }:
       lib.mkMerge [
         (mkNixConfig { inherit config pkgs; })
-        { nix.optimise.automatic = true; }
+        {
+          nix.gc = {
+            automatic = true;
+            options = "--delete-older-than 7d";
+          };
+          nix.optimise.automatic = true;
+        }
       ];
   };
 }
