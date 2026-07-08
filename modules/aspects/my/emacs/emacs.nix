@@ -6,6 +6,11 @@
     inputs = {
       nixpkgs.follows = "nixpkgs";
       systems.follows = "systems";
+      # Unused: we set `doomDir` explicitly below instead of relying on this
+      # input's default. Left unfollowed, it resolves to a mutable relative
+      # `path` input inside nix-doom-emacs-unstraightened, which Lix refuses
+      # to write into our (immutable, git-committed) flake.lock.
+      doomdir.follows = "nixpkgs";
     };
   };
 
