@@ -1,5 +1,5 @@
-{ my, ... }:
 let
+  url = "storyteller.harmony.silverlight-nex.us";
   port = 8001;
   port' = toString port;
   readiumPort = 9000;
@@ -9,7 +9,17 @@ let
 in
 {
   my.storyteller = {
-    includes = with my; [ (nginx._.virtual-host "storyteller.harmony.silverlight-nex.us" port) ];
+    virtual-host = {
+      name = "storyteller";
+      inherit url port;
+    };
+
+    homepage-entry = {
+      group = "Media";
+      label = "Storyteller";
+      description = "Read-aloud book alignment";
+      href = "https://${url}";
+    };
 
     secrets.storyteller-secret-key.generator.script = "alnum";
 

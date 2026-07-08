@@ -1,4 +1,4 @@
-{ den, my, ... }:
+{ den, ... }:
 let
   # Bookshelf's upstream nixpkgs module (`services.readarr`) is a singleton option — it can't be enabled twice with
   # different settings in one host config. Den has the same constraint one level up: two `includes` entries for the
@@ -16,7 +16,12 @@ let
   # way: the module only auto-creates a user when `cfg.user == "readarr"` (its default), which isn't true here since
   # each instance needs its own dedicated user, so those stay hand-declared below exactly as before.
   mkBookshelfInstance =
-    { instance, port }:
+    {
+      instance,
+      label,
+      description,
+      port,
+    }:
     { administrators }:
     let
       user = "bookshelf-${instance}";
@@ -29,13 +34,25 @@ let
       # .NET 6 is EOL, so both the SDK (needed to build Bookshelf from source) and the ASP.NET Core
       # runtime it's wrapped with are flagged as insecure by nixpkgs' vulnerability roundup; Nix
       # refuses to even evaluate them otherwise. Bookshelf hasn't moved off net6.0 upstream.
-      includes = with my; [
-        (nginx._.virtual-host hostName port)
+      includes = [
         (den._.insecure [
           "dotnet-sdk-6.0.428"
           "aspnetcore-runtime-6.0.36"
         ])
       ];
+
+      virtual-host = {
+        name = user;
+        url = hostName;
+        inherit port;
+      };
+
+      homepage-entry = {
+        group = "Media";
+        label = "Bookshelf (${label})";
+        inherit description;
+        href = "https://${hostName}";
+      };
 
       secrets = { secrets, ... }: {
         ${apiKeySecret} = {
@@ -152,10 +169,14 @@ in
 {
   my.bookshelf-audiobooks = mkBookshelfInstance {
     instance = "audiobooks";
+    label = "Audiobooks";
+    description = "Audiobook manager";
     port = 8788;
   };
   my.bookshelf-ebooks = mkBookshelfInstance {
     instance = "ebooks";
+    label = "Ebooks";
+    description = "Ebook manager";
     port = 8787;
   };
 }
