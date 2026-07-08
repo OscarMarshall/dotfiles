@@ -261,20 +261,6 @@
         "type": "github"
       }
     },
-    "doomdir": {
-      "flake": false,
-      "locked": {
-        "path": "doomdir",
-        "type": "path"
-      },
-      "original": {
-        "path": "doomdir",
-        "type": "path"
-      },
-      "parent": [
-        "nix-doom-emacs-unstraightened"
-      ]
-    },
     "doomemacs": {
       "flake": false,
       "locked": {
@@ -806,7 +792,9 @@
     },
     "nix-doom-emacs-unstraightened": {
       "inputs": {
-        "doomdir": "doomdir",
+        "doomdir": [
+          "nixpkgs"
+        ],
         "doomemacs": "doomemacs",
         "doomemacs-modules": "doomemacs-modules",
         "emacs-overlay": "emacs-overlay",
