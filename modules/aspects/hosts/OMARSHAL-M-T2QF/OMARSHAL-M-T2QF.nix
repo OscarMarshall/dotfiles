@@ -1,5 +1,5 @@
 { my, ... }: {
-  den.aspects.Oscars-MacBook-Pro = {
+  den.aspects.OMARSHAL-M-T2QF = {
     includes = with my; [ homebrew ];
 
     darwin = {
