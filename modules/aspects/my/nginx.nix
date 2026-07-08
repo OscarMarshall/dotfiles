@@ -1,13 +1,8 @@
 {
+  den.quirks.virtual-host.description = "Reverse-proxied virtual hosts served by nginx";
+
   my.nginx = {
-    provides.virtual-host = url: port: {
-      nixos.services.nginx.virtualHosts.${url} = {
-        forceSSL = true;
-        enableACME = true;
-        locations."/".proxyPass = "http://127.0.0.1:${toString port}/";
-      };
-    };
-    nixos = {
+    nixos = { virtual-host, lib, ... }: {
       security.acme = {
         acceptTerms = true;
         defaults.email = "letsencrypt@alias.oscarmarshall.com";
@@ -24,6 +19,17 @@
 
         # Only allow PFS-enabled ciphers with AES256
         sslCiphers = "AES256+EECDH:AES256+EDH:!aNULL";
+
+        virtualHosts = lib.listToAttrs (
+          map (
+            host:
+            lib.nameValuePair host.url {
+              forceSSL = true;
+              enableACME = true;
+              locations."/".proxyPass = "http://127.0.0.1:${toString host.port}/";
+            }
+          ) virtual-host
+        );
 
         appendHttpConfig = ''
           # Add HSTS header with preloading to HTTPS requests.

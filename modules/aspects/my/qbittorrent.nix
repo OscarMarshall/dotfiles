@@ -1,11 +1,15 @@
-{ lib, my, ... }:
+{ lib, ... }:
 let
   port = 8080;
   port' = toString port;
 in
 {
   my.qbittorrent = { administrators }: {
-    includes = with my; [ (nginx._.virtual-host "qbittorrent.harmony.silverlight-nex.us" port) ];
+    virtual-host = {
+      name = "qbittorrent";
+      url = "qbittorrent.harmony.silverlight-nex.us";
+      inherit port;
+    };
 
     secrets = { secrets, ... }: {
       "qbittorrent.env".generator = {

@@ -1,10 +1,27 @@
-{ lib, my, ... }: {
+{ lib, ... }: {
   my.sonarr =
     let
+      url = "sonarr.harmony.silverlight-nex.us";
       port = 8989;
     in
     { administrators }: {
-      includes = with my; [ (nginx._.virtual-host "sonarr.harmony.silverlight-nex.us" port) ];
+      virtual-host = {
+        name = "sonarr";
+        inherit url port;
+      };
+
+      homepage-entry = {
+        group = "Arr Stack";
+        label = "Sonarr";
+        description = "Show organizer/manager";
+        href = "https://${url}";
+        widget = {
+          type = "sonarr";
+          url = "https://${url}";
+          key = "{{HOMEPAGE_VAR_SONARR_API_KEY}}";
+          enableQueue = true;
+        };
+      };
 
       secrets = { secrets, ... }: {
         sonarr-api-key = {

@@ -1,11 +1,16 @@
-{ my, ... }:
 let
   port = 8082;
   port' = toString port;
 in
 {
+  den.quirks.homepage-entry.description = "Homepage dashboard service entries";
+
   my.homepage = {
-    includes = with my; [ (nginx._.virtual-host "harmony.silverlight-nex.us" port) ];
+    virtual-host = {
+      name = "homepage";
+      url = "harmony.silverlight-nex.us";
+      inherit port;
+    };
 
     secrets = { secrets, ... }: {
       "homepage-dashboard.env".generator = {
@@ -31,98 +36,64 @@ in
       };
     };
 
-    nixos = { config, ... }: {
-      services.homepage-dashboard = {
-        enable = true;
-        environmentFile = config.age.secrets."homepage-dashboard.env".path;
-        allowedHosts = "localhost:${port'},127.0.0.1:${port'},harmony.silverlight-nex.us";
-        widgets = [
-          {
-            glances = {
-              url = "http://127.0.0.1:${toString config.services.glances.port}";
-              version = 4;
-              cputemp = true;
-              uptime = true;
-              disk = [
-                "/"
-                "/metalminds"
-              ];
-              expanded = true;
-            };
+    nixos =
+      {
+        config,
+        virtual-host,
+        homepage-entry,
+        lib,
+        ...
+      }:
+      let
+        hosts = lib.listToAttrs (map (host: lib.nameValuePair host.name host) virtual-host);
+        urlFor = name: "https://${hosts.${name}.url}";
+
+        groups = lib.unique (map (entry: entry.group) homepage-entry);
+        entryToService = entry: {
+          ${entry.label} = {
+            inherit (entry) href description;
           }
-        ];
-        services = [
-          {
-            "Media" = [
-              {
-                "Plex" = {
-                  href = "https://plex.harmony.silverlight-nex.us";
-                  description = "Media server";
-                };
-              }
-            ];
-          }
-          {
-            "Arr Stack" = [
-              {
-                "Radarr" = {
-                  href = "https://radarr.harmony.silverlight-nex.us";
-                  description = "Movie organizer/manager";
-                  widget = {
-                    type = "radarr";
-                    url = "https://radarr.harmony.silverlight-nex.us";
-                    key = "{{HOMEPAGE_VAR_RADARR_API_KEY}}";
-                    enableQueue = true;
-                  };
-                };
-              }
-              {
-                "Sonarr" = {
-                  href = "https://sonarr.harmony.silverlight-nex.us";
-                  description = "Show organizer/manager";
-                  widget = {
-                    type = "sonarr";
-                    url = "https://sonarr.harmony.silverlight-nex.us";
-                    key = "{{HOMEPAGE_VAR_SONARR_API_KEY}}";
-                    enableQueue = true;
-                  };
-                };
-              }
-              {
-                "Prowlarr" = {
-                  href = "https://prowlarr.harmony.silverlight-nex.us";
-                  description = "Indexer manager/proxy";
-                  widget = {
-                    type = "prowlarr";
-                    url = "https://prowlarr.harmony.silverlight-nex.us";
-                    key = "{{HOMEPAGE_VAR_PROWLARR_API_KEY}}";
-                  };
-                };
-              }
-              {
-                "Profilarr" = {
-                  href = "https://profilarr.harmony.silverlight-nex.us";
-                  description = "Radarr/Sonarr custom format manager";
-                };
-              }
-            ];
-          }
-        ];
-        bookmarks = [
-          {
-            "Servers" = [
-              {
-                "Harmony" = [
-                  {
-                    abbr = "HA";
-                    href = "https://harmony.silverlight-nex.us";
-                  }
+          // lib.optionalAttrs (entry ? widget) { inherit (entry) widget; };
+        };
+      in
+      {
+        services.homepage-dashboard = {
+          enable = true;
+          environmentFile = config.age.secrets."homepage-dashboard.env".path;
+          allowedHosts = "localhost:${port'},127.0.0.1:${port'},${hosts.homepage.url}";
+          widgets = [
+            {
+              glances = {
+                url = "http://127.0.0.1:${toString config.services.glances.port}";
+                version = 4;
+                cputemp = true;
+                uptime = true;
+                disk = [
+                  "/"
+                  "/metalminds"
                 ];
-              }
-            ];
-          }
-        ];
+                expanded = true;
+              };
+            }
+          ];
+          services = map (group: {
+            ${group} = map entryToService (lib.filter (entry: entry.group == group) homepage-entry);
+          }) groups;
+          bookmarks = [
+            {
+              "Servers" = [
+                {
+                  "Harmony" = [
+                    {
+                      abbr = "HA";
+                      href = urlFor "homepage";
+                    }
+                  ];
+                }
+              ];
+            }
+          ];
+        };
       };
-    };
   };
 }
