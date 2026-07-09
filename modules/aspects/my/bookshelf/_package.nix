@@ -49,6 +49,18 @@ buildDotnetModule (finalAttrs: {
   # sourced from those feeds. Mirroring the config file at the repo root fixes source discovery for both tools.
   postPatch = ''
     cp src/NuGet.config NuGet.config
+
+    # src/Directory.Build.props sets <AssemblyVersion>10.0.0.*</AssemblyVersion> (a wildcard,
+    # replaced with a real version by build.sh's UpdateVersionNumber() when $READARRVERSION is set
+    # in upstream's own CI -- we don't have an equivalent). It also conditionally sets
+    # <Deterministic>False</Deterministic> whenever the version ends in "*", precisely to allow
+    # that. But buildDotnetModule's dotnetBuildHook unconditionally passes
+    # -p:ContinuousIntegrationBuild=true -p:Deterministic=true on the MSBuild command line, which
+    # (command-line properties always win over Directory.Build.props) overrides that fallback
+    # regardless, and csc then rejects the wildcard version under deterministic compilation with
+    # CS8357. Pin it to a fixed version instead of patching around buildDotnetModule.
+    substituteInPlace src/Directory.Build.props \
+      --replace-fail '<AssemblyVersion>10.0.0.*</AssemblyVersion>' '<AssemblyVersion>10.0.0.0</AssemblyVersion>'
   '';
 
   # Only build the console/posix entry point (`Readarr.Console.csproj`, which is what gets built for non-Windows
