@@ -14,6 +14,17 @@
         # forward-auth. Matches the address authentik-nix's own nginx integration proxies to.
         authentikOutpost = "https://127.0.0.1:9443";
         authentikHost = config.services.authentik.nginx.host;
+
+        # nginx only inherits a parent context's `add_header` directives into a location that
+        # doesn't declare any of its own. Forward-auth locations below need `add_header
+        # Set-Cookie` to propagate Authentik's session cookie, which would otherwise silently
+        # drop the site-wide security headers from `appendHttpConfig` for those locations.
+        securityHeaders = ''
+          add_header Strict-Transport-Security $hsts_header;
+          add_header 'Referrer-Policy' 'origin-when-cross-origin';
+          add_header X-Frame-Options DENY;
+          add_header X-Content-Type-Options nosniff;
+        '';
       in
       {
         security.acme = {
@@ -48,6 +59,7 @@
 
                       auth_request_set $auth_cookie $upstream_http_set_cookie;
                       add_header Set-Cookie $auth_cookie;
+                      ${securityHeaders}
 
                       auth_request_set $authentik_username $upstream_http_x_authentik_username;
                       auth_request_set $authentik_groups $upstream_http_x_authentik_groups;
@@ -68,6 +80,7 @@
                     extraConfig = ''
                       internal;
                       add_header Set-Cookie $auth_cookie;
+                      ${securityHeaders}
                       return 302 "https://${authentikHost}/outpost.goauthentik.io/start?rd=$scheme://$http_host$request_uri";
                     '';
                   };
@@ -77,6 +90,7 @@
                       proxy_set_header Host $host;
                       proxy_set_header X-Original-URL $scheme://$http_host$request_uri;
                       add_header Set-Cookie $auth_cookie;
+                      ${securityHeaders}
                       auth_request_set $auth_cookie $upstream_http_set_cookie;
                       proxy_pass_request_body off;
                       proxy_set_header Content-Length "";
