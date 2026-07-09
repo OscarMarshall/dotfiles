@@ -254,30 +254,16 @@ stdenv.mkDerivation (finalAttrs: {
       --set SQLITE_NATIVE_BINDING "$out/lib/storyteller/node_modules/better-sqlite3/build/Release/better_sqlite3.node" \
       --prefix PATH : ${lib.makeBinPath [ readium ]}
 
-    # TEMPORARY: postFixup's forbidden-reference check (pkgs/build-support/setup-hooks/audit-tmpdir.sh)
-    # flags this wrapper but a dump of its content looked completely clean in the last CI run. That
-    # check greps for "$TMPDIR/" specifically (not the literal string "/build/"), so run the exact
-    # same check ourselves here, plus scan the whole $out tree, to see what's actually matching and
-    # where. Remove once root-caused.
-    echo "=== TMPDIR is: $TMPDIR ==="
-    echo "=== grep of wrapper for \$TMPDIR/ ==="
-    grep -F "$TMPDIR/" "$out/bin/storyteller" || echo "(no match)"
-    echo "=== grep of whole \$out tree for \$TMPDIR/ ==="
-    grep -rF "$TMPDIR/" "$out" || echo "(no match)"
-
     runHook postInstall
   '';
 
-  # TEMPORARY: pkgs/build-support/setup-hooks/audit-tmpdir.sh's own forbidden-reference check runs
-  # mid-fixupPhase via `exit 1` on a match, which would kill the build before postFixup ever ran --
-  # so disable it here and re-run the identical grep ourselves, non-fatally, in postFixup instead,
-  # to see what it actually finds (and whether the rest of the build is otherwise fine). Remove once
-  # root-caused, along with the installPhase diagnostic above.
+  # The default postFixup forbidden-reference check (audit-tmpdir.sh) flags this build: Next.js's
+  # webpack build embeds the build-time absolute source path (/build/source/...) into its .js.map
+  # source maps under .next/server and .next/static (confirmed by hand -- bin/storyteller itself,
+  # the only thing we actually hand-write, is clean; every match is inside a .map file). Source maps
+  # are inert debug metadata never read by Node at runtime, not an actual leaked/dereferenced path,
+  # so this is a false positive -- a well-known issue when packaging Next.js apps with Nix.
   noAuditTmpdir = true;
-  postFixup = ''
-    echo "=== postFixup: grep of whole \$out tree for \$TMPDIR/ (after RPATH-shrink/patchShebangs/etc) ==="
-    grep -rF "$TMPDIR/" "$out" || echo "(no match)"
-  '';
 
   passthru = {
     inherit

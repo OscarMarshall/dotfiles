@@ -47,9 +47,7 @@ jobs:
           EOF
 
       - name: Build harmony
-        # -L: temporary, for debugging a Storyteller build failure that only reproduces on this
-        # runner and gets truncated to the last 25 lines otherwise. Revert once root-caused.
-        run: nix build -L .#nixosConfigurations.harmony.config.system.build.toplevel
+        run: nix build .#nixosConfigurations.harmony.config.system.build.toplevel
 
       - name: Build melaan
         run: nix build .#nixosConfigurations.melaan.config.system.build.toplevel
