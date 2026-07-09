@@ -325,11 +325,6 @@
     "hash": "sha256-NJsIvWJwrVrQndhHDpXf7eS1Gr/+2ua9nkW5ivWQyFY="
   },
   {
-    "pname": "Microsoft.NETCore.App.Host.linux-x64",
-    "version": "6.0.36",
-    "hash": "sha256-VFRDzx7LJuvI5yzKdGmw/31NYVbwHWPKQvueQt5xc10="
-  },
-  {
     "pname": "Microsoft.NETCore.App.Host.osx-x64",
     "version": "6.0.36",
     "hash": "sha256-FrRny9EI6HKCKQbu6mcLj5w4ooSRrODD4Vj2ZMGnMd4="
