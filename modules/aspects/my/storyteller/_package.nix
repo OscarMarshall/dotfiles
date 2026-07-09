@@ -254,6 +254,14 @@ stdenv.mkDerivation (finalAttrs: {
       --set SQLITE_NATIVE_BINDING "$out/lib/storyteller/node_modules/better-sqlite3/build/Release/better_sqlite3.node" \
       --prefix PATH : ${lib.makeBinPath [ readium ]}
 
+    # TEMPORARY: postFixup's forbidden-reference check flags this wrapper without saying which
+    # line -- dump the actual generated content so the next CI run's -L log shows it directly.
+    # Remove once root-caused.
+    echo "=== wrapper script content ==="
+    cat $out/bin/storyteller
+    echo "=== wrapped target content ==="
+    cat $out/bin/.storyteller-wrapped
+
     runHook postInstall
   '';
 
