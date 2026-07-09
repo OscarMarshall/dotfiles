@@ -164,6 +164,12 @@ stdenv.mkDerivation (finalAttrs: {
   env = {
     NODE_ENV = "production";
     NEXT_TELEMETRY_DISABLED = "1";
+    # sharp auto-detects the system libvips (present in buildInputs, needed by other native
+    # addons) via pkg-config and prefers building itself from source against it over using its
+    # own prebuilt binary -- which then needs node-gyp, not resolvable as a yarn script in this
+    # monorepo ("Usage Error: Couldn't find a script name "node-gyp" in the top-level"). Force it
+    # to use the prebuilt instead.
+    SHARP_IGNORE_GLOBAL_LIBVIPS = "1";
   };
 
   buildPhase = ''
