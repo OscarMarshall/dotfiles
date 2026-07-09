@@ -8,6 +8,7 @@
       (cachyos-kernel { variant = "server"; })
       cross-seed
       gluetun
+      healthchecks
       homepage
       (immich { administrators = [ "oscar" ]; })
       lm-sensors
