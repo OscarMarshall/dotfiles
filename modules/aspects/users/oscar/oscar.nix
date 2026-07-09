@@ -13,6 +13,7 @@ let
         hashedPasswordFile = toString config.age.secrets.oscar-hashed-password.file;
       };
     };
+    os.nix.settings.trusted-users = [ user.userName ];
   };
 in
 {
