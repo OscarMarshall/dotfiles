@@ -57,6 +57,12 @@ buildDotnetModule (finalAttrs: {
   # project's dependency graph never pulls in the Windows-only projects (the WinForms tray app, the Windows service
   # helpers) that would otherwise need a Windows desktop workload to build.
   projectFile = "src/NzbDrone.Console/Readarr.Console.csproj";
+  # If regenerating this from `passthru.fetch-deps`: drop the "Microsoft.AspNetCore.App.Runtime.linux-x64"
+  # and "Microsoft.NETCore.App.Runtime.linux-x64" entries it produces. Those runtime packs are already
+  # bundled in dotnet-sdk/dotnet-runtime below (dotnet-sdk.targetPackages.linux-x64), which
+  # buildDotnetModule's configureNuget phase links into the NuGet fallback folder regardless of
+  # nugetDeps; having them in both places makes it try to symlink the same path twice and fail with
+  # "ln: failed to create symbolic link ...: File exists".
   nugetDeps = ./_deps.json;
   runtimeId = "linux-x64";
 
