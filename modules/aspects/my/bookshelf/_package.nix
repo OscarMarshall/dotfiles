@@ -79,6 +79,14 @@ buildDotnetModule (finalAttrs: {
   # link ...: File exists" (hit this twice across two of these packages before checking the full set).
   nugetDeps = ./_deps.json;
   runtimeId = "linux-x64";
+  # Readarr.Console.csproj declares <TargetFrameworks>net6.0</TargetFrameworks> (plural) even
+  # though there's only one -- MSBuild's cross-targeting logic activates on the property name
+  # alone, so `dotnet publish` refuses to guess and fails with NETSDK1129 without an explicit
+  # framework.
+  dotnetInstallFlags = [
+    "--framework"
+    "net6.0"
+  ];
 
   dotnet-sdk = dotnetCorePackages.sdk_6_0;
   dotnet-runtime = dotnetCorePackages.aspnetcore_6_0;
