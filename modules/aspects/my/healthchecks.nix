@@ -6,6 +6,7 @@ in
   my.healthchecks = {
     virtual-host = {
       name = "netdata";
+      protected = true;
       inherit url port;
     };
 
