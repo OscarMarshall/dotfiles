@@ -95,9 +95,13 @@ let
     installPhase = ''
       runHook preInstall
 
-      mkdir -p $out/bin
-      tar -xzf $src -C $out/bin ./readium
-      chmod +x $out/bin/readium
+      # Extract the whole archive rather than naming ./readium as the member to extract: the
+      # tarball actually stores the entry as a bare "readium" (no leading ./), and at least one
+      # tar implementation encountered in CI treats that as a non-match against "./readium" and
+      # fails with "Not found in archive" instead of just extracting everything.
+      mkdir -p $out/bin extracted
+      tar -xzf $src -C extracted
+      install -Dm755 extracted/readium $out/bin/readium
 
       runHook postInstall
     '';
