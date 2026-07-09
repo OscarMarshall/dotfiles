@@ -13,6 +13,11 @@ let
         hashedPasswordFile = toString config.age.secrets.oscar-hashed-password.file;
       };
     };
+    # nixos/modules/config/nix.nix and nix-darwin's equivalent both set
+    # `nix.settings.trusted-users = [ "root" ]` as a real config-level definition
+    # (not just an mkOption default), and trusted-users is a listOf — definitions
+    # concatenate rather than override, so root can't be dropped by adding to this list.
+    os.nix.settings.trusted-users = [ user.userName ];
   };
 in
 {
