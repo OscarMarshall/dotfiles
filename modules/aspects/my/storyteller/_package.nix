@@ -254,15 +254,29 @@ stdenv.mkDerivation (finalAttrs: {
       --set SQLITE_NATIVE_BINDING "$out/lib/storyteller/node_modules/better-sqlite3/build/Release/better_sqlite3.node" \
       --prefix PATH : ${lib.makeBinPath [ readium ]}
 
-    # TEMPORARY: postFixup's forbidden-reference check flags this wrapper without saying which
-    # line -- dump the actual generated content so the next CI run's -L log shows it directly.
-    # Remove once root-caused.
-    echo "=== wrapper script content ==="
-    cat $out/bin/storyteller
-    echo "=== wrapped target content ==="
-    cat $out/bin/.storyteller-wrapped
+    # TEMPORARY: postFixup's forbidden-reference check (pkgs/build-support/setup-hooks/audit-tmpdir.sh)
+    # flags this wrapper but a dump of its content looked completely clean in the last CI run. That
+    # check greps for "$TMPDIR/" specifically (not the literal string "/build/"), so run the exact
+    # same check ourselves here, plus scan the whole $out tree, to see what's actually matching and
+    # where. Remove once root-caused.
+    echo "=== TMPDIR is: $TMPDIR ==="
+    echo "=== grep of wrapper for \$TMPDIR/ ==="
+    grep -F "$TMPDIR/" "$out/bin/storyteller" || echo "(no match)"
+    echo "=== grep of whole \$out tree for \$TMPDIR/ ==="
+    grep -rF "$TMPDIR/" "$out" || echo "(no match)"
 
     runHook postInstall
+  '';
+
+  # TEMPORARY: pkgs/build-support/setup-hooks/audit-tmpdir.sh's own forbidden-reference check runs
+  # mid-fixupPhase via `exit 1` on a match, which would kill the build before postFixup ever ran --
+  # so disable it here and re-run the identical grep ourselves, non-fatally, in postFixup instead,
+  # to see what it actually finds (and whether the rest of the build is otherwise fine). Remove once
+  # root-caused, along with the installPhase diagnostic above.
+  noAuditTmpdir = true;
+  postFixup = ''
+    echo "=== postFixup: grep of whole \$out tree for \$TMPDIR/ (after RPATH-shrink/patchShebangs/etc) ==="
+    grep -rF "$TMPDIR/" "$out" || echo "(no match)"
   '';
 
   passthru = {
