@@ -1,7 +1,9 @@
 { lib, ... }: {
+  den.quirks.dataset.description = "ZFS datasets required by aspects, optionally shared via Samba";
+
   my.zfs = pools: {
     nixos =
-      { pkgs, ... }:
+      { dataset, pkgs, ... }:
       let
         # Use the default ZFS package for compatibility checking to avoid infinite recursion
         # We can't use config.boot.zfs.package here because it depends on kernelPackages which we're trying to determine
@@ -37,6 +39,19 @@
           autoSnapshot.enable = true;
           trim.enable = true;
         };
+
+        # Datasets are only ever created if missing, never renamed or reconfigured - changing a
+        # dataset's name or properties later leaves the old dataset behind untouched.
+        system.activationScripts.zfsDatasets = lib.concatMapStrings (
+          d:
+          let
+            name = "${d.pool}/${d.name}";
+          in
+          ''
+            ${pkgs.zfs}/bin/zfs list -H -o name ${lib.escapeShellArg name} >/dev/null 2>&1 \
+              || ${pkgs.zfs}/bin/zfs create -p ${lib.escapeShellArg name}
+          ''
+        ) dataset;
       };
   };
 }

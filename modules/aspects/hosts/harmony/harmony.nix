@@ -7,6 +7,27 @@
       boot
       (cachyos-kernel { variant = "server"; })
       cross-seed
+      {
+        dataset =
+          map
+            (name: {
+              pool = "metalminds";
+              inherit name;
+              samba = true;
+              guestAccess = true;
+            })
+            [
+              "backups"
+              "documents"
+              "minecraft-worlds"
+              "movies"
+              "music"
+              "pictures"
+              "shows"
+              "torrents"
+              "yarg-charts"
+            ];
+      }
       gluetun
       homepage
       (immich { administrators = [ "oscar" ]; })
@@ -20,17 +41,7 @@
       prowlarr
       (qbittorrent { administrators = [ "oscar" ]; })
       (radarr { administrators = [ "oscar" ]; })
-      (samba "/metalminds" [
-        "backups"
-        "documents"
-        "minecraft-worlds"
-        "movies"
-        "music"
-        "pictures"
-        "shows"
-        "torrents"
-        "yarg-charts"
-      ])
+      samba
       (sonarr { administrators = [ "oscar" ]; })
       ssh-server
       unpackerr

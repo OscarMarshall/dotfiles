@@ -5,6 +5,11 @@
       port = 6868;
     in
     {
+      dataset = {
+        pool = "metalminds";
+        name = "profilarr";
+      };
+
       virtual-host = {
         name = "profilarr";
         inherit url port;
