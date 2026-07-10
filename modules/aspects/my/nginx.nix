@@ -13,7 +13,17 @@
         # Address of Authentik's embedded outpost, used to gate `protected` virtual hosts behind
         # forward-auth. Matches the address authentik-nix's own nginx integration proxies to.
         authentikOutpost = "https://127.0.0.1:9443";
-        authentikHost = config.services.authentik.nginx.host;
+        # Looked up rather than referenced directly, since `my.authentik` (and thus the
+        # `services.authentik.*` options) may not be included on every host that uses `my.nginx`.
+        # Only forced — and only throws — when a `protected` virtual host actually needs it.
+        authentikHost =
+          let
+            host = lib.attrByPath [ "services" "authentik" "nginx" "host" ] null config;
+          in
+          if host != null then
+            host
+          else
+            throw "my.nginx: a `protected` virtual host requires my.authentik (or another module setting services.authentik.nginx.host) to be included on this host";
 
         # nginx only inherits a parent context's `add_header` directives into a location that
         # doesn't declare any of its own. Forward-auth locations below need `add_header
