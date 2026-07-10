@@ -25,6 +25,10 @@
       url = "github:oddlama/agenix-rekey";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    authentik-nix = {
+      url = "github:nix-community/authentik-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     bookshelf = {
       url = "github:pennydreadful/bookshelf/develop";
       flake = false;

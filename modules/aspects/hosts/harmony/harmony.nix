@@ -2,6 +2,7 @@
   den.aspects.harmony = {
     includes = with my; [
       (auto-upgrade { allowReboot = true; })
+      authentik
       autobrr
       (bookshelf-audiobooks { administrators = [ "oscar" ]; })
       (bookshelf-ebooks { administrators = [ "oscar" ]; })
@@ -10,6 +11,7 @@
       cross-seed
       gluetun
       homepage
+      (immich { administrators = [ "oscar" ]; })
       lm-sensors
       locale
       (minecraft-servers { administrators = [ "oscar" ]; })
