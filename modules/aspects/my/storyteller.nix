@@ -1,3 +1,4 @@
+{ inputs, ... }:
 let
   url = "storyteller.harmony.silverlight-nex.us";
   port = 8001;
@@ -8,6 +9,15 @@ let
   ghostStoryDir = "${homeDir}/.local/share/ghost-story";
 in
 {
+  # Tracks the pinned WHISPER_CPP_VERSION/whisperVariant that storyteller/_package.nix's
+  # whisperCppVersion/whisperVariant must also match (see the doc comment on its whisperCppTarball
+  # parameter) -- bump all three together when updating.
+  flake-file.inputs.storyteller-whisper-cpp = {
+    url = "https://gitlab.com/api/v4/projects/67994333/packages/generic/whisper-cpp/1.8.3-st.2/whisper-cpp-linux-x64-cpu.tar.gz";
+    type = "tarball";
+    flake = false;
+  };
+
   my.storyteller = {
     virtual-host = {
       name = "storyteller";
@@ -31,7 +41,7 @@ in
         ...
       }:
       let
-        storyteller = pkgs.callPackage ./storyteller/_package.nix { };
+        storyteller = pkgs.callPackage ./storyteller/_package.nix { whisperCppTarball = inputs.storyteller-whisper-cpp; };
       in
       {
         users.users.storyteller = {

@@ -12,6 +12,13 @@
   openssl,
   sqlite,
   vips,
+  # Sourced from the `storyteller-whisper-cpp` flake input (declared in ../storyteller.nix)
+  # instead of fetched here, so it gets picked up by this repo's automated flake-input-bump bot.
+  # A "tarball"-typed flake input is pre-extracted, unlike `fetchurl`, so this is already a
+  # directory (containing bin/) by the time it reaches us. Its URL bakes in whisperCppVersion and
+  # whisperVariant below -- bump all three together, kept in sync with whatever
+  # libraries/ghost-story/src/constants.ts expects at the pinned storyteller `src` rev.
+  whisperCppTarball,
 }:
 
 let
@@ -33,14 +40,11 @@ let
   # Prebuilt whisper.cpp binary tarball + GGML model, published by the Storyteller project
   # itself to GitLab's generic/ml_models package registries (see
   # libraries/ghost-story/src/cli/config.ts's getBinaryDownloadUrl/getModelDownloadUrl). These
-  # are fetched here as plain FODs instead of at runtime, so the service never needs network
-  # access to become functional. Placed at the exact paths ghost-story's FileSystem utilities
-  # expect (getWhisperBaseDir/getModelDir, both under $HOME/.local/share/ghost-story) via the
-  # storyteller.nix systemd unit's systemd.tmpfiles "C" rules.
-  whisperCppTarball = fetchurl {
-    url = "https://gitlab.com/api/v4/projects/67994333/packages/generic/whisper-cpp/${whisperCppVersion}/whisper-cpp-${whisperVariant}.tar.gz";
-    hash = "sha256-659JXuIdRbprUZxr1tLQjmFsLs5IvMRpWQGBBwV+da0=";
-  };
+  # are fetched here as plain FODs (the tarball via the flake input above; the model below)
+  # instead of at runtime, so the service never needs network access to become functional. Placed
+  # at the exact paths ghost-story's FileSystem utilities expect (getWhisperBaseDir/getModelDir,
+  # both under $HOME/.local/share/ghost-story) via the storyteller.nix systemd unit's
+  # systemd.tmpfiles "C" rules.
 
   # whisper.cpp's own binaries (whisper-cli et al.) are ordinary dynamically-linked ELF
   # executables built for a generic glibc Linux, not NixOS -- they need their ELF interpreter
@@ -49,16 +53,21 @@ let
     pname = "whisper-cpp-storyteller";
     version = whisperCppVersion;
 
+    # Already an extracted directory (see the whisperCppTarball parameter's doc comment above) --
+    # and since the tarball's sole top-level entry was itself a "bin" directory, Nix's tarball
+    # fetcher strips that one wrapping directory (same rule as fetchTarball: a single top-level
+    # directory's contents get hoisted up), so $src's contents are what used to be bin/*, not a
+    # directory containing a bin/ subdirectory.
     src = whisperCppTarball;
-    sourceRoot = ".";
+    dontUnpack = true;
 
     nativeBuildInputs = [ autoPatchelfHook ];
     buildInputs = [ stdenv.cc.cc.lib ];
 
     installPhase = ''
       runHook preInstall
-      mkdir -p $out
-      cp -r bin $out/
+      mkdir -p $out/bin
+      cp -r $src/. $out/bin/
       runHook postInstall
     '';
 

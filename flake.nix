@@ -106,6 +106,11 @@
         nixpkgs.follows = "nixpkgs";
       };
     };
+    storyteller-whisper-cpp = {
+      type = "tarball";
+      url = "https://gitlab.com/api/v4/projects/67994333/packages/generic/whisper-cpp/1.8.3-st.2/whisper-cpp-linux-x64-cpu.tar.gz";
+      flake = false;
+    };
     stylix = {
       url = "github:nix-community/stylix";
       inputs.nixpkgs.follows = "nixpkgs";
