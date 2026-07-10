@@ -21,6 +21,7 @@
       (qbittorrent { administrators = [ "oscar" ]; })
       (radarr { administrators = [ "oscar" ]; })
       samba
+      satisfactory-server
       (sonarr { administrators = [ "oscar" ]; })
       ssh-server
       unpackerr

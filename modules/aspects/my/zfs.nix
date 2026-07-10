@@ -40,6 +40,10 @@
           trim.enable = true;
         };
 
+        # New child datasets inherit their parent pool's properties, so `options` should only be used to
+        # deviate from those, not to restate them. As of 2026-07-10, metalminds (harmony's data pool) has
+        # compression=on (lz4), atime=off, and recordsize=128K - all sane defaults for most workloads.
+        #
         # Datasets are only ever created if missing, never renamed or reconfigured - changing a
         # dataset's name, options, or other properties later leaves the old dataset behind untouched.
         system.activationScripts.zfsDatasets = lib.concatMapStrings (
