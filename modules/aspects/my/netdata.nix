@@ -10,6 +10,20 @@ in
       inherit url port;
     };
 
+    homepage-entry = {
+      group = "Infra";
+      label = "Netdata";
+      description = "System monitoring & alerts";
+      href = "https://${url}";
+      widget = {
+        type = "netdata";
+        # Hit Netdata directly rather than through nginx, since the public URL sits behind
+        # Authentik forward-auth and would just redirect Homepage's server-side fetch to a login
+        # page.
+        url = "http://127.0.0.1:${toString port}";
+      };
+    };
+
     secrets = { secrets, ... }: {
       discord-webhook-url = {
         rekeyFile = ../../../secrets/discord-webhook-url.age;
