@@ -20,7 +20,7 @@ let
       virtual-host = { inherit name url port; };
 
       homepage-entry = {
-        group = "Media";
+        group = "Arr Stack";
         inherit description;
         label = "Bookshelf (${label})";
         href = "https://${url}";
