@@ -29,10 +29,6 @@
       url = "github:nix-community/authentik-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    bookshelf = {
-      url = "github:pennydreadful/bookshelf/develop";
-      flake = false;
-    };
     catppuccin-wallpapers = {
       url = "github:zhichaoh/catppuccin-wallpapers";
       flake = false;

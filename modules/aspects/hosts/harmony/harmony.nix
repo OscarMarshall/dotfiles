@@ -4,8 +4,8 @@
       (auto-upgrade { allowReboot = true; })
       authentik
       autobrr
-      (bookshelf-audiobooks { administrators = [ "oscar" ]; })
-      (bookshelf-ebooks { administrators = [ "oscar" ]; })
+      bookshelf-audiobooks
+      bookshelf-ebooks
       boot
       (cachyos-kernel { variant = "server"; })
       cross-seed
