@@ -13,6 +13,7 @@
       lm-sensors
       locale
       (minecraft-servers { administrators = [ "oscar" ]; })
+      netdata
       networkmanager
       nginx
       plex
