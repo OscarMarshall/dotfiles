@@ -57,75 +57,79 @@
           virtualHosts = lib.listToAttrs (
             map (
               host:
-              lib.nameValuePair host.url {
-                forceSSL = true;
-                enableACME = true;
-                # appendHttpConfig's proxy_cookie_path rewrite appends its own secure/HttpOnly/
-                # SameSite flags to every Set-Cookie header, even ones a backend already set its
-                # own correct flags on. That produces a Set-Cookie with duplicated attributes,
-                # which browsers can silently refuse to store — breaking login for any backend
-                # that manages its own cookie security (e.g. Immich). Opt out per host via
-                # `preserveCookieFlags = true;` on the `virtual-host` record.
-                extraConfig = lib.optionalString (host.preserveCookieFlags or false) ''
-                  proxy_cookie_path / /;
-                '';
-                locations = {
-                  "/" = {
-                    proxyPass = "http://127.0.0.1:${toString host.port}/";
-                    # recommendedProxySettings clears the Connection header (`proxy_set_header
-                    # Connection "";`), which breaks WebSocket upgrades. Backends that use them
-                    # (e.g. Immich's real-time updates) opt in via `websockets = true;` on their
-                    # `virtual-host` record — nginx's standard websocket idiom (see
-                    # https://nginx.org/en/docs/http/websocket.html), which sends `Connection:
-                    # close` instead of keep-alive for non-Upgrade requests on that host. Fine
-                    # here: upstream is always 127.0.0.1, so the lost keep-alive just costs an
-                    # extra loopback handshake, not a real round trip.
-                    proxyWebsockets = host.websockets or false;
-                    extraConfig = lib.optionalString (host.protected or false) ''
-                      auth_request /outpost.goauthentik.io/auth/nginx;
-                      error_page 401 = @goauthentik_proxy_signin;
-
-                      auth_request_set $auth_cookie $upstream_http_set_cookie;
-                      add_header Set-Cookie $auth_cookie;
-                      ${securityHeaders}
-
-                      auth_request_set $authentik_username $upstream_http_x_authentik_username;
-                      auth_request_set $authentik_groups $upstream_http_x_authentik_groups;
-                      auth_request_set $authentik_email $upstream_http_x_authentik_email;
-                      auth_request_set $authentik_name $upstream_http_x_authentik_name;
-                      auth_request_set $authentik_uid $upstream_http_x_authentik_uid;
-
-                      proxy_set_header X-authentik-username $authentik_username;
-                      proxy_set_header X-authentik-groups $authentik_groups;
-                      proxy_set_header X-authentik-email $authentik_email;
-                      proxy_set_header X-authentik-name $authentik_name;
-                      proxy_set_header X-authentik-uid $authentik_uid;
-                    '';
-                  };
+              lib.nameValuePair host.url (
+                {
+                  forceSSL = true;
+                  enableACME = true;
+                  # appendHttpConfig's proxy_cookie_path rewrite appends its own secure/HttpOnly/
+                  # SameSite flags to every Set-Cookie header, even ones a backend already set its
+                  # own correct flags on. That produces a Set-Cookie with duplicated attributes,
+                  # which browsers can silently refuse to store — breaking login for any backend
+                  # that manages its own cookie security (e.g. Immich). Opt out per host via
+                  # `preserveCookieFlags = true;` on the `virtual-host` record.
+                  extraConfig = lib.optionalString (host.preserveCookieFlags or false) ''
+                    proxy_cookie_path / /;
+                  '';
                 }
-                // lib.optionalAttrs (host.protected or false) {
-                  "@goauthentik_proxy_signin" = {
-                    extraConfig = ''
-                      internal;
-                      add_header Set-Cookie $auth_cookie;
-                      ${securityHeaders}
-                      return 302 "https://${authentikHost}/outpost.goauthentik.io/start?rd=$scheme://$http_host$request_uri";
-                    '';
-                  };
-                  "/outpost.goauthentik.io" = {
-                    proxyPass = "${authentikOutpost}/outpost.goauthentik.io";
-                    extraConfig = ''
-                      proxy_set_header Host $host;
-                      proxy_set_header X-Original-URL $scheme://$http_host$request_uri;
-                      add_header Set-Cookie $auth_cookie;
-                      ${securityHeaders}
-                      auth_request_set $auth_cookie $upstream_http_set_cookie;
-                      proxy_pass_request_body off;
-                      proxy_set_header Content-Length "";
-                    '';
-                  };
-                };
-              }
+                // lib.optionalAttrs (host ? port) {
+                  locations = {
+                    "/" = {
+                      proxyPass = "http://127.0.0.1:${toString host.port}/";
+                      # recommendedProxySettings clears the Connection header (`proxy_set_header
+                      # Connection "";`), which breaks WebSocket upgrades. Backends that use them
+                      # (e.g. Immich's real-time updates) opt in via `websockets = true;` on their
+                      # `virtual-host` record — nginx's standard websocket idiom (see
+                      # https://nginx.org/en/docs/http/websocket.html), which sends `Connection:
+                      # close` instead of keep-alive for non-Upgrade requests on that host. Fine
+                      # here: upstream is always 127.0.0.1, so the lost keep-alive just costs an
+                      # extra loopback handshake, not a real round trip.
+                      proxyWebsockets = host.websockets or false;
+                      extraConfig = lib.optionalString (host.protected or false) ''
+                        auth_request /outpost.goauthentik.io/auth/nginx;
+                        error_page 401 = @goauthentik_proxy_signin;
+
+                        auth_request_set $auth_cookie $upstream_http_set_cookie;
+                        add_header Set-Cookie $auth_cookie;
+                        ${securityHeaders}
+
+                        auth_request_set $authentik_username $upstream_http_x_authentik_username;
+                        auth_request_set $authentik_groups $upstream_http_x_authentik_groups;
+                        auth_request_set $authentik_email $upstream_http_x_authentik_email;
+                        auth_request_set $authentik_name $upstream_http_x_authentik_name;
+                        auth_request_set $authentik_uid $upstream_http_x_authentik_uid;
+
+                        proxy_set_header X-authentik-username $authentik_username;
+                        proxy_set_header X-authentik-groups $authentik_groups;
+                        proxy_set_header X-authentik-email $authentik_email;
+                        proxy_set_header X-authentik-name $authentik_name;
+                        proxy_set_header X-authentik-uid $authentik_uid;
+                      '';
+                    };
+                  }
+                  // lib.optionalAttrs (host.protected or false) {
+                    "@goauthentik_proxy_signin" = {
+                      extraConfig = ''
+                        internal;
+                        add_header Set-Cookie $auth_cookie;
+                        ${securityHeaders}
+                        return 302 "https://${authentikHost}/outpost.goauthentik.io/start?rd=$scheme://$http_host$request_uri";
+                      '';
+                    };
+                    "/outpost.goauthentik.io" = {
+                      proxyPass = "${authentikOutpost}/outpost.goauthentik.io";
+                      extraConfig = ''
+                        proxy_set_header Host $host;
+                        proxy_set_header X-Original-URL $scheme://$http_host$request_uri;
+                        add_header Set-Cookie $auth_cookie;
+                        ${securityHeaders}
+                        auth_request_set $auth_cookie $upstream_http_set_cookie;
+                        proxy_pass_request_body off;
+                        proxy_set_header Content-Length "";
+                      '';
+                    };
+                  }
+                }
+              )
             ) virtual-host
           );
 
