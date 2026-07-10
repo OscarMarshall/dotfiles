@@ -1385,7 +1385,6 @@
         "nixos-hardware": "nixos-hardware",
         "nixpkgs": "nixpkgs_2",
         "ragenix": "ragenix",
-        "storyteller-whisper-cpp": "storyteller-whisper-cpp",
         "stylix": "stylix",
         "systems": "systems_7",
         "treefmt-nix": "treefmt-nix_2",
@@ -1411,19 +1410,6 @@
         "owner": "oxalica",
         "repo": "rust-overlay",
         "type": "github"
-      }
-    },
-    "storyteller-whisper-cpp": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1774954880,
-        "narHash": "sha256-JGa6qdaNKwiz60QBkRzg3koAFJyN9Z7N0Xh6ThevtfU=",
-        "type": "tarball",
-        "url": "https://gitlab.com/api/v4/projects/67994333/packages/generic/whisper-cpp/1.8.3-st.2/whisper-cpp-linux-x64-cpu.tar.gz"
-      },
-      "original": {
-        "type": "tarball",
-        "url": "https://gitlab.com/api/v4/projects/67994333/packages/generic/whisper-cpp/1.8.3-st.2/whisper-cpp-linux-x64-cpu.tar.gz"
       }
     },
     "stylix": {
