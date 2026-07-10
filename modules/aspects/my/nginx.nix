@@ -127,7 +127,7 @@
                         proxy_set_header Content-Length "";
                       '';
                     };
-                  }
+                  };
                 }
               )
             ) virtual-host
