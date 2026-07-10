@@ -3,7 +3,7 @@ let
   port = 19999;
 in
 {
-  my.healthchecks = {
+  my.netdata = {
     virtual-host = {
       name = "netdata";
       protected = true;

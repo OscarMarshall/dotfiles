@@ -8,12 +8,12 @@
       (cachyos-kernel { variant = "server"; })
       cross-seed
       gluetun
-      healthchecks
       homepage
       (immich { administrators = [ "oscar" ]; })
       lm-sensors
       locale
       (minecraft-servers { administrators = [ "oscar" ]; })
+      netdata
       networkmanager
       nginx
       plex
