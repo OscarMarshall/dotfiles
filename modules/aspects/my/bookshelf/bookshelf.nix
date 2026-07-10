@@ -1,4 +1,4 @@
-{ den, ... }:
+{ den, inputs, ... }:
 let
   # Bookshelf's upstream nixpkgs module (`services.readarr`) is a singleton option — it can't be enabled twice with
   # different settings in one host config. Den has the same constraint one level up: two `includes` entries for the
@@ -101,7 +101,7 @@ let
                 {
                   services.readarr = {
                     enable = true;
-                    package = pkgs.callPackage ./_package.nix { };
+                    package = pkgs.callPackage ./_package.nix { src = inputs.bookshelf; };
                     inherit dataDir;
                     user = user;
                     group = user;
@@ -167,6 +167,11 @@ let
     };
 in
 {
+  flake-file.inputs.bookshelf = {
+    url = "github:pennydreadful/bookshelf/develop";
+    flake = false;
+  };
+
   my.bookshelf-audiobooks = mkBookshelfInstance {
     instance = "audiobooks";
     label = "Audiobooks";

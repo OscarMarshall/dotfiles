@@ -121,6 +121,23 @@
         "type": "github"
       }
     },
+    "bookshelf": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1770235222,
+        "narHash": "sha256-dHQLZVFKvOz7BD6C7qxmlns0eDgLD/+K6CLMWF1f+cQ=",
+        "owner": "pennydreadful",
+        "repo": "bookshelf",
+        "rev": "c21c4134fdb710481ed69db05bf943b0acdbbf60",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pennydreadful",
+        "ref": "develop",
+        "repo": "bookshelf",
+        "type": "github"
+      }
+    },
     "cachyos-kernel": {
       "flake": false,
       "locked": {
@@ -1183,6 +1200,7 @@
     "root": {
       "inputs": {
         "agenix-rekey": "agenix-rekey",
+        "bookshelf": "bookshelf",
         "catppuccin-wallpapers": "catppuccin-wallpapers",
         "claude-code-nix": "claude-code-nix",
         "darwin": "darwin",

@@ -2,7 +2,6 @@
   lib,
   buildDotnetModule,
   dotnetCorePackages,
-  fetchFromGitHub,
   fetchYarnDeps,
   yarnConfigHook,
   nodejs,
@@ -12,6 +11,7 @@
   openssl,
   sqlite,
   zlib,
+  src,
 }:
 
 buildDotnetModule (finalAttrs: {
@@ -21,13 +21,10 @@ buildDotnetModule (finalAttrs: {
   # Bookshelf (https://github.com/pennydreadful/bookshelf) is a near-unmodified fork of Readarr: same C#/.NET 6
   # codebase, namespace still `NzbDrone`, binary still literally named `Readarr`. There are no upstream GitHub
   # releases, so unlike nixpkgs' own `readarr` package (which fetches a prebuilt release tarball), this builds from
-  # source.
-  src = fetchFromGitHub {
-    owner = "pennydreadful";
-    repo = "bookshelf";
-    rev = "c21c4134fdb710481ed69db05bf943b0acdbbf60"; # develop branch
-    hash = "sha256-dHQLZVFKvOz7BD6C7qxmlns0eDgLD/+K6CLMWF1f+cQ=";
-  };
+  # source. `src` is passed in from the `bookshelf` flake input (tracking the `develop` branch, since there are no
+  # tags) rather than fetched here, so the automated dependency-bump bot that already updates this repo's other
+  # flake inputs picks it up too, instead of it sitting on a manually-pinned rev forever.
+  inherit src;
 
   # The Servarr-standard TypeScript/webpack frontend uses Yarn 1 (classic), pinned via the `volta` field in
   # package.json (node 20.11.1, yarn 1.22.19).
