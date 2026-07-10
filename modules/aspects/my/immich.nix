@@ -29,7 +29,7 @@ in
       services.immich = {
         enable = true;
         inherit port;
-        mediaLocation = "/metalminds/immich";
+        mediaLocation = "/metalminds/pictures";
         settings.oauth = {
           enabled = true;
           issuerUrl = "https://auth.harmony.silverlight-nex.us/application/o/immich/";

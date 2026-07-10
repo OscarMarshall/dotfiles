@@ -1,7 +1,9 @@
 { lib, ... }: {
+  den.quirks.dataset.description = "ZFS datasets required by aspects, optionally shared via Samba";
+
   my.zfs = pools: {
     nixos =
-      { pkgs, ... }:
+      { dataset, pkgs, ... }:
       let
         # Use the default ZFS package for compatibility checking to avoid infinite recursion
         # We can't use config.boot.zfs.package here because it depends on kernelPackages which we're trying to determine
@@ -37,6 +39,28 @@
           autoSnapshot.enable = true;
           trim.enable = true;
         };
+
+        # Datasets are only ever created if missing, never renamed or reconfigured - changing a
+        # dataset's name, options, or other properties later leaves the old dataset behind untouched.
+        system.activationScripts.zfsDatasets = lib.concatMapStrings (
+          d:
+          let
+            name = "${d.pool}/${d.name}";
+            mountpoint = "/${name}";
+            options = lib.concatStrings (
+              lib.mapAttrsToList (property: value: " -o ${lib.escapeShellArg "${property}=${value}"}") (d.options or { })
+            );
+          in
+          ''
+            if ! ${pkgs.zfs}/bin/zfs list -H -o name ${lib.escapeShellArg name} >/dev/null 2>&1; then
+              if [ -d ${lib.escapeShellArg mountpoint} ] && [ -n "$(ls -A ${lib.escapeShellArg mountpoint})" ]; then
+                echo "zfs dataset ${lib.escapeShellArg name} is missing, but ${lib.escapeShellArg mountpoint} already exists and is non-empty - move its contents aside, then re-run the activation" >&2
+                exit 1
+              fi
+              ${pkgs.zfs}/bin/zfs create -p${options} ${lib.escapeShellArg name}
+            fi
+          ''
+        ) dataset;
       };
   };
 }
