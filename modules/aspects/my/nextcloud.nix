@@ -81,6 +81,9 @@ in
           else
             UPDATE_FLAG=""
           fi
+          # user_oidc:provider has no file/stdin input for the secret, so it's briefly visible
+          # via /proc/<pid>/cmdline to other local users while this oneshot runs. Accepted here
+          # since harmony has no untrusted local users; revisit if occ ever grows a safer input.
           nextcloud-occ user_oidc:provider "authentik" $UPDATE_FLAG \
             --clientid="nextcloud" \
             --clientsecret="$CLIENT_SECRET" \

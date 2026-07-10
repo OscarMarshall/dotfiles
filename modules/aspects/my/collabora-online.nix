@@ -1,7 +1,6 @@
 let
   url = "collabora.harmony.silverlight-nex.us";
   port = 9980;
-  nextcloudUrl = "nextcloud.harmony.silverlight-nex.us"; # keep in sync with nextcloud.nix
 in
 {
   my.collabora-online = {
@@ -21,7 +20,9 @@ in
         "net.listen" = "loopback";
         "ssl.enable" = false; # nginx terminates TLS
         server_name = url;
-        storage.wopi.host = [ "https://${nextcloudUrl}" ];
+        # No explicit WOPI host allowlist: coolwsd.xml's storage.wopi.alias_groups defaults to
+        # mode="first", which trusts whichever host connects first. That's fine since Nextcloud
+        # is the only WOPI client here; there's no plain storage.wopi.host key in the real schema.
       };
     };
   };
