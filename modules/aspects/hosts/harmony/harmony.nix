@@ -7,27 +7,6 @@
       boot
       (cachyos-kernel { variant = "server"; })
       cross-seed
-      {
-        dataset =
-          map
-            (name: {
-              pool = "metalminds";
-              inherit name;
-              samba = true;
-              guestAccess = true;
-            })
-            [
-              "backups"
-              "documents"
-              "minecraft-worlds"
-              "movies"
-              "music"
-              "pictures"
-              "shows"
-              "torrents"
-              "yarg-charts"
-            ];
-      }
       gluetun
       homepage
       (immich { administrators = [ "oscar" ]; })
@@ -47,6 +26,26 @@
       unpackerr
       (zfs [ "metalminds" ])
     ];
+
+    dataset =
+      map
+        (name: {
+          pool = "metalminds";
+          inherit name;
+          samba = true;
+          guestAccess = true;
+        })
+        [
+          "backups"
+          "documents"
+          "minecraft-worlds"
+          "movies"
+          "music"
+          "pictures"
+          "shows"
+          "torrents"
+          "yarg-charts"
+        ];
 
     nixos = {
       age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMkM5uNY0rMy2QMG6IptlxgVl4sQWoeSSNmUp7/f2z1B";

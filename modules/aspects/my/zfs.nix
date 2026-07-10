@@ -46,10 +46,16 @@
           d:
           let
             name = "${d.pool}/${d.name}";
+            mountpoint = "/${name}";
           in
           ''
-            ${pkgs.zfs}/bin/zfs list -H -o name ${lib.escapeShellArg name} >/dev/null 2>&1 \
-              || ${pkgs.zfs}/bin/zfs create -p ${lib.escapeShellArg name}
+            if ! ${pkgs.zfs}/bin/zfs list -H -o name ${lib.escapeShellArg name} >/dev/null 2>&1; then
+              if [ -d ${lib.escapeShellArg mountpoint} ] && [ -n "$(ls -A ${lib.escapeShellArg mountpoint})" ]; then
+                echo "zfs dataset ${lib.escapeShellArg name} is missing, but ${lib.escapeShellArg mountpoint} already exists and is non-empty - move its contents aside, then re-run the activation" >&2
+                exit 1
+              fi
+              ${pkgs.zfs}/bin/zfs create -p ${lib.escapeShellArg name}
+            fi
           ''
         ) dataset;
       };
