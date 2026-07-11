@@ -66,7 +66,11 @@
                     # recommendedProxySettings clears the Connection header (`proxy_set_header
                     # Connection "";`), which breaks WebSocket upgrades. Backends that use them
                     # (e.g. Immich's real-time updates) opt in via `websockets = true;` on their
-                    # `virtual-host` record.
+                    # `virtual-host` record — nginx's standard websocket idiom (see
+                    # https://nginx.org/en/docs/http/websocket.html), which sends `Connection:
+                    # close` instead of keep-alive for non-Upgrade requests on that host. Fine
+                    # here: upstream is always 127.0.0.1, so the lost keep-alive just costs an
+                    # extra loopback handshake, not a real round trip.
                     proxyWebsockets = host.websockets or false;
                     extraConfig = lib.optionalString (host.protected or false) ''
                       auth_request /outpost.goauthentik.io/auth/nginx;
