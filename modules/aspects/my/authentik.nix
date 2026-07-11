@@ -49,6 +49,14 @@ in
           host = url;
         };
       };
+
+      # nginx.nix forces `HttpOnly` onto every proxied cookie, but Authentik's frontend needs to
+      # read its CSRF cookie via JavaScript (it echoes the value back as the X-Authentik-Csrf
+      # header). With HttpOnly forced on, that read fails and Authentik rejects the empty token
+      # with "CSRF token ... incorrect length". Reset the cookie rewrite for this vhost only.
+      services.nginx.virtualHosts.${url}.extraConfig = ''
+        proxy_cookie_path / /;
+      '';
     };
   };
 }
