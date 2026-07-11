@@ -50,7 +50,7 @@
         # This host also runs full system activation inside the initrd (before switch-root), where no
         # pool is imported yet - `/etc/initrd-release` only exists there (per systemd's initrd
         # interface: https://systemd.io/INITRD_INTERFACE/), so skip entirely in that context. Datasets
-        # are only ever needed at `nixos-rebuild switch` time, when the pool is already imported.
+        # are only ever created at `nixos-rebuild switch` time, when the pool is already imported.
         system.activationScripts.zfsDatasets = ''
           if [ ! -e /etc/initrd-release ]; then
             ${lib.concatMapStrings (
