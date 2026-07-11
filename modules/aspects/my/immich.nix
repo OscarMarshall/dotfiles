@@ -8,6 +8,9 @@ in
     virtual-host = {
       name = "immich";
       inherit url port;
+      # Immich's frontend opens a WebSocket right after login for real-time updates (job
+      # progress, live sync); without this the connection silently fails and the UI hangs.
+      websockets = true;
     };
 
     homepage-entry = {

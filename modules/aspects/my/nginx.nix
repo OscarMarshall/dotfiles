@@ -64,10 +64,10 @@
                   "/" = {
                     proxyPass = "http://127.0.0.1:${toString host.port}/";
                     # recommendedProxySettings clears the Connection header (`proxy_set_header
-                    # Connection "";`), which breaks WebSocket upgrades for any backend that uses
-                    # them (e.g. Immich's real-time updates). This re-enables upgrade support for
-                    # every proxied service; a no-op for backends that never send Upgrade requests.
-                    proxyWebsockets = true;
+                    # Connection "";`), which breaks WebSocket upgrades. Backends that use them
+                    # (e.g. Immich's real-time updates) opt in via `websockets = true;` on their
+                    # `virtual-host` record.
+                    proxyWebsockets = host.websockets or false;
                     extraConfig = lib.optionalString (host.protected or false) ''
                       auth_request /outpost.goauthentik.io/auth/nginx;
                       error_page 401 = @goauthentik_proxy_signin;
