@@ -53,6 +53,11 @@
       age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMkM5uNY0rMy2QMG6IptlxgVl4sQWoeSSNmUp7/f2z1B";
       networking.hostId = "7dab76c0";
 
+      # The router doesn't support NAT hairpinning, so services on harmony calling other services
+      # on harmony via their public hostname (e.g. Immich's backend fetching Authentik's OIDC
+      # discovery document) hang instead of routing out and back in. Resolve locally instead.
+      networking.hosts."127.0.0.1" = [ "auth.harmony.silverlight-nex.us" ];
+
       services = {
         apcupsd.enable = true;
         glances.enable = true;
