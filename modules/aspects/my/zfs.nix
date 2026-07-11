@@ -46,25 +46,36 @@
         #
         # Datasets are only ever created if missing, never renamed or reconfigured - changing a
         # dataset's name, options, or other properties later leaves the old dataset behind untouched.
-        system.activationScripts.zfsDatasets = lib.concatMapStrings (
-          d:
-          let
-            name = "${d.pool}/${d.name}";
-            mountpoint = "/${name}";
-            options = lib.concatStrings (
-              lib.mapAttrsToList (property: value: " -o ${lib.escapeShellArg "${property}=${value}"}") (d.options or { })
-            );
-          in
-          ''
-            if ! ${pkgs.zfs}/bin/zfs list -H -o name ${lib.escapeShellArg name} >/dev/null 2>&1; then
-              if [ -d ${lib.escapeShellArg mountpoint} ] && [ -n "$(ls -A ${lib.escapeShellArg mountpoint})" ]; then
-                echo "zfs dataset ${lib.escapeShellArg name} is missing, but ${lib.escapeShellArg mountpoint} already exists and is non-empty - move its contents aside, then re-run the activation" >&2
-                exit 1
-              fi
-              ${pkgs.zfs}/bin/zfs create -p${options} ${lib.escapeShellArg name}
-            fi
-          ''
-        ) dataset;
+        #
+        # This host also runs full system activation inside the initrd (before switch-root), where no
+        # pool is imported yet - `/etc/initrd-release` only exists there (per systemd's initrd
+        # interface: https://systemd.io/INITRD_INTERFACE/), so skip entirely in that context. Datasets
+        # are only ever needed at `nixos-rebuild switch` time, when the pool is already imported.
+        system.activationScripts.zfsDatasets = ''
+          if [ ! -e /etc/initrd-release ]; then
+            ${lib.concatMapStrings (
+              d:
+              let
+                name = "${d.pool}/${d.name}";
+                mountpoint = "/${name}";
+                options = lib.concatStrings (
+                  lib.mapAttrsToList (
+                    property: value: " -o ${lib.escapeShellArg "${property}=${value}"}"
+                  ) (d.options or { })
+                );
+              in
+              ''
+                if ! ${pkgs.zfs}/bin/zfs list -H -o name ${lib.escapeShellArg name} >/dev/null 2>&1; then
+                  if [ -d ${lib.escapeShellArg mountpoint} ] && [ -n "$(ls -A ${lib.escapeShellArg mountpoint})" ]; then
+                    echo "zfs dataset ${lib.escapeShellArg name} is missing, but ${lib.escapeShellArg mountpoint} already exists and is non-empty - move its contents aside, then re-run the activation" >&2
+                    exit 1
+                  fi
+                  ${pkgs.zfs}/bin/zfs create -p${options} ${lib.escapeShellArg name}
+                fi
+              ''
+            ) dataset}
+          fi
+        '';
       };
   };
 }
