@@ -63,6 +63,11 @@
                 locations = {
                   "/" = {
                     proxyPass = "http://127.0.0.1:${toString host.port}/";
+                    # recommendedProxySettings clears the Connection header (`proxy_set_header
+                    # Connection "";`), which breaks WebSocket upgrades for any backend that uses
+                    # them (e.g. Immich's real-time updates). This re-enables upgrade support for
+                    # every proxied service; a no-op for backends that never send Upgrade requests.
+                    proxyWebsockets = true;
                     extraConfig = lib.optionalString (host.protected or false) ''
                       auth_request /outpost.goauthentik.io/auth/nginx;
                       error_page 401 = @goauthentik_proxy_signin;
