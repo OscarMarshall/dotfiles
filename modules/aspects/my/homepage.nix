@@ -59,7 +59,7 @@ in
       {
         services.homepage-dashboard = {
           enable = true;
-          environmentFile = config.age.secrets."homepage-dashboard.env".path;
+          environmentFiles = [ config.age.secrets."homepage-dashboard.env".path ];
           allowedHosts = "localhost:${port'},127.0.0.1:${port'},${hosts.homepage.url}";
           widgets = [
             {
