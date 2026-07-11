@@ -9,7 +9,7 @@
           # Without a limit, every generation's kernel+initrd accumulates on the EFI System
           # Partition until it fills up, at which point a new generation's files can be written
           # incompletely and fail to boot with "Switch root target contains no usable init".
-          configurationLimit = 10;
+          configurationLimit = lib.mkDefault 10;
         };
         efi.canTouchEfiVariables = true;
       };
