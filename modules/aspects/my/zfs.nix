@@ -59,9 +59,7 @@
                 name = "${d.pool}/${d.name}";
                 mountpoint = "/${name}";
                 options = lib.concatStrings (
-                  lib.mapAttrsToList (
-                    property: value: " -o ${lib.escapeShellArg "${property}=${value}"}"
-                  ) (d.options or { })
+                  lib.mapAttrsToList (property: value: " -o ${lib.escapeShellArg "${property}=${value}"}") (d.options or { })
                 );
               in
               ''
