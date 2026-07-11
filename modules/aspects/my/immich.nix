@@ -28,6 +28,7 @@ in
 
       services.immich = {
         enable = true;
+        host = "127.0.0.1";
         inherit port;
         mediaLocation = "/metalminds/pictures";
         settings.oauth = {
