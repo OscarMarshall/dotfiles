@@ -60,6 +60,15 @@
               lib.nameValuePair host.url {
                 forceSSL = true;
                 enableACME = true;
+                # appendHttpConfig's proxy_cookie_path rewrite appends its own secure/HttpOnly/
+                # SameSite flags to every Set-Cookie header, even ones a backend already set its
+                # own correct flags on. That produces a Set-Cookie with duplicated attributes,
+                # which browsers can silently refuse to store — breaking login for any backend
+                # that manages its own cookie security (e.g. Immich). Opt out per host via
+                # `preserveCookieFlags = true;` on the `virtual-host` record.
+                extraConfig = lib.optionalString (host.preserveCookieFlags or false) ''
+                  proxy_cookie_path / /;
+                '';
                 locations = {
                   "/" = {
                     proxyPass = "http://127.0.0.1:${toString host.port}/";
