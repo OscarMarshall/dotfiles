@@ -23,6 +23,7 @@
       (radarr { administrators = [ "oscar" ]; })
       samba
       satisfactory-server
+      seerr
       (sonarr { administrators = [ "oscar" ]; })
       ssh-server
       unpackerr
