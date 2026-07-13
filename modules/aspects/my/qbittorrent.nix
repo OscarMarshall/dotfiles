@@ -8,6 +8,7 @@ in
     virtual-host = {
       name = "qbittorrent";
       url = "qbittorrent.harmony.silverlight-nex.us";
+      protected = true;
       inherit port;
     };
 

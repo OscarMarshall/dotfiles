@@ -9,6 +9,7 @@ in
     virtual-host = {
       name = "homepage";
       url = "harmony.silverlight-nex.us";
+      protected = true;
       inherit port;
     };
 

@@ -12,6 +12,7 @@
 
       virtual-host = {
         name = "profilarr";
+        protected = true;
         inherit url port;
       };
 
