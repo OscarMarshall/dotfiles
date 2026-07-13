@@ -1,8 +1,7 @@
 {
   my.fonts.os = { pkgs, ... }: {
     fonts.packages = with pkgs; [
-      fira-code
-      nerd-fonts.fira-code
+      maple-mono.NF
       nerd-fonts.symbols-only
     ];
   };
