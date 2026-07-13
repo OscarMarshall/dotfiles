@@ -17,7 +17,10 @@ let
       url = "${name}.harmony.silverlight-nex.us";
     in
     {
-      virtual-host = { inherit name url port; };
+      virtual-host = {
+        inherit name url port;
+        protected = true;
+      };
 
       homepage-entry = {
         group = "Arr Stack";
@@ -40,6 +43,11 @@ let
             in
             [ "127.0.0.1:${port'}:${port'}" ];
           volumes = [ "/metalminds/${name}:/config" ];
+          # Bookshelf only reaches this vhost via nginx over loopback (its port isn't opened in
+          # the firewall), so every request it sees is "local" -- this drops Bookshelf's own login
+          # screen (it's a Readarr fork and shares Readarr's `<APPNAME>__AUTH__REQUIRED` setting)
+          # in favor of the Authentik forward-auth gate in front of it, rather than stacking both.
+          environment.READARR__AUTH__REQUIRED = "DisabledForLocalAddresses";
         };
       };
     };

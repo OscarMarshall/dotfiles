@@ -8,6 +8,7 @@
       virtual-host = {
         name = "storyteller";
         inherit url port;
+        protected = true;
       };
 
       homepage-entry = {
