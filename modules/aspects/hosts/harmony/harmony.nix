@@ -4,6 +4,8 @@
       (auto-upgrade { allowReboot = true; })
       authentik
       autobrr
+      bookshelf-audiobooks
+      bookshelf-ebooks
       boot
       (cachyos-kernel { variant = "server"; })
       collabora-online
@@ -28,6 +30,7 @@
       seerr
       (sonarr { administrators = [ "oscar" ]; })
       ssh-server
+      storyteller
       unpackerr
       (zfs [ "metalminds" ])
     ];
