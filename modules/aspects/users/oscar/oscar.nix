@@ -158,12 +158,12 @@ in
 
         stylix.fonts = {
           monospace = {
-            package = pkgs.nerd-fonts.fira-code;
-            name = "FiraCode Nerd Font Mono";
+            package = pkgs.maple-mono.NF;
+            name = "Maple Mono NF";
           };
           sansSerif = {
-            package = pkgs.fira;
-            name = "Fira Sans";
+            package = pkgs.inter;
+            name = "Inter";
           };
         };
       };
