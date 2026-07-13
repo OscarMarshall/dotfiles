@@ -8,6 +8,14 @@ in
     virtual-host = {
       name = "immich";
       inherit url port;
+      # Immich's frontend opens a WebSocket right after login for real-time updates (job
+      # progress, live sync); without this the connection silently fails and the UI hangs.
+      websockets = true;
+      # Immich sets its own secure/HttpOnly/SameSite flags on its session cookie. Without this,
+      # nginx's blanket cookie rewrite appends a second, duplicate set of those flags, producing
+      # a malformed Set-Cookie the browser silently refuses to store — login succeeds server-side
+      # but the session never sticks, so the UI hangs forever waiting for one that never arrives.
+      preserveCookieFlags = true;
     };
 
     homepage-entry = {
@@ -28,8 +36,9 @@ in
 
       services.immich = {
         enable = true;
+        host = "127.0.0.1";
         inherit port;
-        mediaLocation = "/metalminds/immich";
+        mediaLocation = "/metalminds/pictures";
         settings.oauth = {
           enabled = true;
           issuerUrl = "https://auth.harmony.silverlight-nex.us/application/o/immich/";

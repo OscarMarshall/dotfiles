@@ -8,6 +8,7 @@
       bookshelf-ebooks
       boot
       (cachyos-kernel { variant = "server"; })
+      collabora-online
       cross-seed
       gluetun
       homepage
@@ -15,30 +16,44 @@
       lm-sensors
       locale
       (minecraft-servers { administrators = [ "oscar" ]; })
+      netdata
       networkmanager
+      nextcloud
       nginx
       plex
       profilarr
       prowlarr
       (qbittorrent { administrators = [ "oscar" ]; })
       (radarr { administrators = [ "oscar" ]; })
-      (samba "/metalminds" [
-        "backups"
-        "documents"
-        "minecraft-worlds"
-        "movies"
-        "music"
-        "pictures"
-        "shows"
-        "torrents"
-        "yarg-charts"
-      ])
+      samba
+      satisfactory-server
+      seerr
       (sonarr { administrators = [ "oscar" ]; })
       ssh-server
       storyteller
       unpackerr
       (zfs [ "metalminds" ])
     ];
+
+    dataset =
+      map
+        (name: {
+          pool = "metalminds";
+          inherit name;
+          samba = true;
+          guestAccess = true;
+        })
+        [
+          "backups"
+          "documents"
+          "minecraft-worlds"
+          "movies"
+          "music"
+          "pictures"
+          "shows"
+          "torrents"
+          "yarg-charts"
+        ];
 
     nixos = {
       age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMkM5uNY0rMy2QMG6IptlxgVl4sQWoeSSNmUp7/f2z1B";

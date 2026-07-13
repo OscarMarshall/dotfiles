@@ -7,6 +7,7 @@
       virtual-host = {
         name = "autobrr";
         url = "autobrr.harmony.silverlight-nex.us";
+        protected = true;
         inherit port;
       };
 
