@@ -6,6 +6,7 @@
       autobrr
       boot
       (cachyos-kernel { variant = "server"; })
+      collabora-online
       cross-seed
       gluetun
       homepage
@@ -15,6 +16,7 @@
       (minecraft-servers { administrators = [ "oscar" ]; })
       netdata
       networkmanager
+      nextcloud
       nginx
       plex
       profilarr
