@@ -78,7 +78,7 @@ in
                       # main is ahead of our revision: newer commits are available.
                       ahead) symbols="''${symbols}⇣" ;;
                       # our revision is not reachable from main.
-                      behind | diverged) symbols="''${symbols}" ;;
+                      behind | diverged) symbols="''${symbols}" ;;
                     esac
                   ''
                 else
@@ -89,7 +89,7 @@ in
               ${apiPart}
               ${dirtyPart}
               if [ -n "$symbols" ]; then
-                echo "$symbols"
+                echo "$symbols"
               fi
             '';
         };
