@@ -36,6 +36,7 @@
       (sonarr { administrators = [ "oscar" ]; })
       ssh-server
       storyteller
+      tautulli
       unpackerr
       (zfs [ "metalminds" ])
     ];
