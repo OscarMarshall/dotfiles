@@ -77,10 +77,11 @@ in
             jq -n \
               --argjson existing "$existing" \
               --arg secret "$client_secret" \
-              '$existing * {
+              '(($existing.oidc.providers // []) | map(select(.slug != "authentik"))) as $others
+              | $existing * {
                 main: { oidcLogin: true },
                 oidc: {
-                  providers: [{
+                  providers: ($others + [{
                     slug: "authentik",
                     name: "Authentik",
                     issuerUrl: "https://${authentikUrl}/application/o/seerr/",
@@ -88,7 +89,7 @@ in
                     clientSecret: $secret,
                     scopes: "openid profile email",
                     newUserLogin: true
-                  }]
+                  }])
                 }
               }' >"$settings.tmp"
             mv "$settings.tmp" "$settings"
