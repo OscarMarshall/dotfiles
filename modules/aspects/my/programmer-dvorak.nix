@@ -33,14 +33,19 @@
         # macOS caches the list of installed keyboard layouts (com.apple.IntlDataCache.le*) and
         # only rescans it at boot, so a newly (un)installed .bundle won't show up in System
         # Settings -> Keyboard -> Input Sources until the cache is cleared and the machine is
-        # rebooted.
+        # rebooted. Only clear it (and touch the installed bundle at all) when the bundle
+        # actually changed, so unrelated `darwin-rebuild switch` runs are true no-ops. The new
+        # bundle is staged at a sibling path first and swapped in with `mv` so the installed
+        # bundle is never left half-written if the copy is interrupted.
         system.activationScripts.postActivation.text = ''
-          rm -f /System/Library/Caches/com.apple.IntlDataCache.le*
-          rm -f /private/var/folders/*/*/C/com.apple.IntlDataCache.le*
-
           if ! diff -rq "${bundle}/Library/Keyboard Layouts/Programmer Dvorak.bundle" "/Library/Keyboard Layouts/Programmer Dvorak.bundle" >/dev/null 2>&1; then
+            rm -f /System/Library/Caches/com.apple.IntlDataCache.le*
+            rm -f /private/var/folders/*/*/C/com.apple.IntlDataCache.le*
+
+            rm -rf "/Library/Keyboard Layouts/Programmer Dvorak.bundle.new"
+            cp -R "${bundle}/Library/Keyboard Layouts/Programmer Dvorak.bundle" "/Library/Keyboard Layouts/Programmer Dvorak.bundle.new"
             rm -rf "/Library/Keyboard Layouts/Programmer Dvorak.bundle"
-            cp -R "${bundle}/Library/Keyboard Layouts/Programmer Dvorak.bundle" "/Library/Keyboard Layouts/Programmer Dvorak.bundle"
+            mv "/Library/Keyboard Layouts/Programmer Dvorak.bundle.new" "/Library/Keyboard Layouts/Programmer Dvorak.bundle"
           fi
         '';
       };
