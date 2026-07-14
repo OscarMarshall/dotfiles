@@ -46,7 +46,6 @@
         [
           "backups"
           "documents"
-          "minecraft-worlds"
           "movies"
           "music"
           "pictures"
