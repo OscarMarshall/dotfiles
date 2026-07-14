@@ -1,27 +1,29 @@
 let
-  url = "tautulli.harmony.silverlight-nex.us";
   port = 8181;
 in
 {
-  my.tautulli = {
-    virtual-host = {
-      name = "tautulli";
-      protected = true;
-      inherit url port;
-    };
+  my.tautulli =
+    {
+      global ? false,
+    }:
+    { host, ... }: {
+      virtual-host = {
+        name = "tautulli";
+        host = host.name;
+        protected = true;
+        inherit port global;
+        homepage = {
+          group = "Media";
+          label = "Tautulli";
+          description = "Plex monitoring & stats";
+        };
+      };
 
-    homepage-entry = {
-      group = "Media";
-      label = "Tautulli";
-      description = "Plex monitoring & stats";
-      href = "https://${url}";
-    };
-
-    nixos = {
-      services.tautulli = {
-        enable = true;
-        inherit port;
+      nixos = {
+        services.tautulli = {
+          enable = true;
+          inherit port;
+        };
       };
     };
-  };
 }
