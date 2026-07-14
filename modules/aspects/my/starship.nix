@@ -13,87 +13,109 @@ let
 in
 {
   my.starship = {
-    homeManager = { config, pkgs, ... }: {
-      programs.starship = {
-        enable = true;
-        presets = [ "nerd-font-symbols" ];
-        settings.custom.nix-config = {
-          description = "Shows the current nix config status";
-          shell = [ "${pkgs.bash}/bin/bash" ];
-          style = "bold blue";
-          ignore_timeout = true;
-          when = true;
-          # Accumulate all applicable indicators into $symbols.
-          # Both the dirty marker and the branch-status marker may appear
-          # at the same time (e.g. uncommitted changes on a non-main rev).
-          command =
-            let
-              dirtyPart = if isDirty then ''symbols="''${symbols}!"'' else "";
-              # Reuse the token already provisioned for the Claude GitHub MCP
-              # server (modules/aspects/my/claude.nix) instead of provisioning
-              # a second GitHub PAT just for this rate-limit workaround.
-              tokenPath = config.age.secrets.github-mcp-server-github-access-token.path or null;
-              apiPart =
-                if rev != null then
-                  ''
-                    # Compare our pinned revision against main on GitHub to determine
-                    # whether we are behind, diverged, or up-to-date.  Results are
-                    # cached in ~/.cache/starship/ with a 60-minute TTL so that we
-                    # do not hit the GitHub API on every prompt render.
-                    cache_dir="''${XDG_CACHE_HOME:-$HOME/.cache}/starship"
-                    cache_file="$cache_dir/nix-config-${rev}"
+    homeManager =
+      {
+        config,
+        osConfig ? { },
+        pkgs,
+        ...
+      }:
+      {
+        programs.starship = {
+          enable = true;
+          presets = [ "nerd-font-symbols" ];
+          settings.custom.nix-config = {
+            description = "Shows the current nix config status";
+            shell = [ "${pkgs.bash}/bin/bash" ];
+            style = "bold blue";
+            ignore_timeout = true;
+            when = true;
+            # Accumulate all applicable indicators into $symbols.
+            # Both the dirty marker and the branch-status marker may appear
+            # at the same time (e.g. uncommitted changes on a non-main rev).
+            command =
+              let
+                dirtyPart = if isDirty then ''symbols="''${symbols}!"'' else "";
+                # Reuse the token already provisioned for authenticated Nix
+                # flake fetches (modules/aspects/my/nix.nix) instead of
+                # provisioning a second GitHub PAT just for this rate-limit
+                # workaround. The file holds a nix.conf `access-tokens` line,
+                # not a bare token, so it needs to be parsed out below.
+                #
+                # On host-embedded users (melaan/harmony/the MacBook), my.nix's
+                # secret lives in the system (osConfig), not this home-manager
+                # config; on a standalone home (dev203) it lives in this config
+                # directly and osConfig is empty. Check both.
+                accessTokensPath =
+                  let
+                    osPath = osConfig.age.secrets.nix-access-tokens.path or null;
+                  in
+                  if osPath != null then osPath else config.age.secrets.nix-access-tokens.path or null;
+                apiPart =
+                  if rev != null then
+                    ''
+                      # Compare our pinned revision against main on GitHub to determine
+                      # whether we are behind, diverged, or up-to-date.  Results are
+                      # cached in ~/.cache/starship/ with a 60-minute TTL so that we
+                      # do not hit the GitHub API on every prompt render.
+                      cache_dir="''${XDG_CACHE_HOME:-$HOME/.cache}/starship"
+                      cache_file="$cache_dir/nix-config-${rev}"
 
-                    if [ -f "$cache_file" ] && [ -z "$(${pkgs.findutils}/bin/find "$cache_file" -mmin +60 2>/dev/null)" ]; then
-                      status=$(cat "$cache_file")
-                    else
-                      github_token=${
-                        if tokenPath != null then ''"$(${pkgs.coreutils}/bin/cat ${tokenPath} 2>/dev/null || true)"'' else ''""''
-                      }
-                      status=$(
-                        retries=2
-                        delay=0.5
-                        while [ "$retries" -ge 0 ]; do
-                          result=$(
-                            ${pkgs.curl}/bin/curl -sf \
-                              --connect-timeout 2 --max-time 3 \
-                              ''${github_token:+-H "Authorization: token $github_token"} \
-                              "https://api.github.com/repos/OscarMarshall/dotfiles/compare/${rev}...main" |
-                              ${pkgs.jq}/bin/jq -r '.status // empty' 2>/dev/null || true
-                          )
-                          if [ -n "$result" ]; then
-                            printf '%s' "$result"
-                            break
-                          fi
-                          retries=$((retries - 1))
-                          sleep "$delay"
-                        done
-                      )
-                      if [ -n "$status" ]; then
-                        mkdir -p "$cache_dir"
-                        printf '%s' "$status" > "$cache_file"
+                      if [ -f "$cache_file" ] && [ -z "$(${pkgs.findutils}/bin/find "$cache_file" -mmin +60 2>/dev/null)" ]; then
+                        status=$(cat "$cache_file")
+                      else
+                        ${
+                          if accessTokensPath != null then
+                            ''access_token_line="$(${pkgs.coreutils}/bin/cat ${accessTokensPath} 2>/dev/null || true)"''
+                          else
+                            ''access_token_line=""''
+                        }
+                        github_token="''${access_token_line#*github.com=}"
+                        status=$(
+                          retries=2
+                          delay=0.5
+                          while [ "$retries" -ge 0 ]; do
+                            result=$(
+                              ${pkgs.curl}/bin/curl -sf \
+                                --connect-timeout 2 --max-time 3 \
+                                ''${github_token:+-H "Authorization: token $github_token"} \
+                                "https://api.github.com/repos/OscarMarshall/dotfiles/compare/${rev}...main" |
+                                ${pkgs.jq}/bin/jq -r '.status // empty' 2>/dev/null || true
+                            )
+                            if [ -n "$result" ]; then
+                              printf '%s' "$result"
+                              break
+                            fi
+                            retries=$((retries - 1))
+                            sleep "$delay"
+                          done
+                        )
+                        if [ -n "$status" ]; then
+                          mkdir -p "$cache_dir"
+                          printf '%s' "$status" > "$cache_file"
+                        fi
                       fi
-                    fi
 
-                    case "$status" in
-                      # main is ahead of our revision: newer commits are available.
-                      ahead) symbols="''${symbols}⇣" ;;
-                      # our revision is not reachable from main.
-                      behind | diverged) symbols="''${symbols}" ;;
-                    esac
-                  ''
-                else
-                  "";
-            in
-            ''
-              symbols=""
-              ${apiPart}
-              ${dirtyPart}
-              if [ -n "$symbols" ]; then
-                echo "$symbols"
-              fi
-            '';
+                      case "$status" in
+                        # main is ahead of our revision: newer commits are available.
+                        ahead) symbols="''${symbols}⇣" ;;
+                        # our revision is not reachable from main.
+                        behind | diverged) symbols="''${symbols}" ;;
+                      esac
+                    ''
+                  else
+                    "";
+              in
+              ''
+                symbols=""
+                ${apiPart}
+                ${dirtyPart}
+                if [ -n "$symbols" ]; then
+                  echo "$symbols"
+                fi
+              '';
+          };
         };
       };
-    };
   };
 }
