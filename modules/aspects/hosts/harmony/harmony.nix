@@ -4,6 +4,8 @@
       (auto-upgrade { allowReboot = true; })
       (authentik { global = true; })
       (autobrr { })
+      bookshelf-audiobooks
+      bookshelf-ebooks
       boot
       (cachyos-kernel { variant = "server"; })
       (collabora-online { })
@@ -33,6 +35,7 @@
       (seerr { global = true; })
       (sonarr { administrators = [ "oscar" ]; })
       ssh-server
+      storyteller
       unpackerr
       (zfs [ "metalminds" ])
     ];
@@ -48,7 +51,6 @@
         [
           "backups"
           "documents"
-          "minecraft-worlds"
           "movies"
           "music"
           "pictures"

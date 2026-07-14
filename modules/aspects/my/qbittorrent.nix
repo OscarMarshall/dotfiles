@@ -13,6 +13,7 @@ in
       virtual-host = {
         name = "qbittorrent";
         host = host.name;
+        protected = true;
         inherit port global;
       };
 

@@ -130,6 +130,18 @@
                       '';
                     };
                   }
+                  // lib.optionalAttrs (vh.protected or false) (
+                    lib.listToAttrs (
+                      map (
+                        path:
+                        lib.nameValuePair "~ ${path}" {
+                          # No URI on proxyPass: regex locations can't auto-rewrite the matched path, so this
+                          # forwards the original path+query untouched, without the auth_request config below.
+                          proxyPass = "http://127.0.0.1:${toString vh.port}";
+                        }
+                      ) (vh.bypassAuthPaths or [ ])
+                    )
+                  )
                   // lib.optionalAttrs (vh.protected or false) {
                     "@goauthentik_proxy_signin" = {
                       extraConfig = ''

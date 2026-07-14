@@ -11,6 +11,7 @@
       virtual-host = {
         name = "autobrr";
         host = host.name;
+        protected = true;
         inherit port global;
       };
 

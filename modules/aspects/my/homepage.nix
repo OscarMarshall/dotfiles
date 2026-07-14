@@ -14,6 +14,7 @@ in
       # deliberately doesn't follow the `${name}.${host.name}.${domain}` pattern nginx.nix derives
       # for everything else.
       url = "${host.name}.${domain}";
+      protected = true;
       inherit port;
     };
 

@@ -16,6 +16,7 @@
       virtual-host = {
         name = "profilarr";
         host = host.name;
+        protected = true;
         inherit port global;
         homepage = {
           group = "Arr Stack";
