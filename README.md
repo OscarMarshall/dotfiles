@@ -123,7 +123,7 @@ Use an aspect function signature (`{ host, lib, ... }:`) when you need context-a
 
 ### Services
 
-- **Media**: Plex, Radarr, Sonarr, Prowlarr, Unpackerr, Autobrr, Cross-seed
+- **Media**: Plex, Tautulli, Radarr, Sonarr, Prowlarr, Unpackerr, Autobrr, Cross-seed
 - **Downloads**: qBittorrent (via Gluetun VPN)
 - **Gaming**: Minecraft servers
 - **Infrastructure**: Nginx reverse proxy with Let's Encrypt, Samba file sharing, ZFS storage
