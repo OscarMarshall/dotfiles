@@ -13,7 +13,7 @@ let
 in
 {
   my.starship = {
-    homeManager = { pkgs, ... }: {
+    homeManager = { config, pkgs, ... }: {
       programs.starship = {
         enable = true;
         presets = [ "nerd-font-symbols" ];
@@ -29,6 +29,10 @@ in
           command =
             let
               dirtyPart = if isDirty then ''symbols="''${symbols}!"'' else "";
+              # Reuse the token already provisioned for the Claude GitHub MCP
+              # server (modules/aspects/my/claude.nix) instead of provisioning
+              # a second GitHub PAT just for this rate-limit workaround.
+              tokenPath = config.age.secrets.github-mcp-server-github-access-token.path or null;
               apiPart =
                 if rev != null then
                   ''
@@ -42,6 +46,9 @@ in
                     if [ -f "$cache_file" ] && [ -z "$(${pkgs.findutils}/bin/find "$cache_file" -mmin +60 2>/dev/null)" ]; then
                       status=$(cat "$cache_file")
                     else
+                      github_token=${
+                        if tokenPath != null then ''"$(${pkgs.coreutils}/bin/cat ${tokenPath} 2>/dev/null || true)"'' else ''""''
+                      }
                       status=$(
                         retries=2
                         delay=0.5
@@ -49,6 +56,7 @@ in
                           result=$(
                             ${pkgs.curl}/bin/curl -sf \
                               --connect-timeout 2 --max-time 3 \
+                              ''${github_token:+-H "Authorization: token $github_token"} \
                               "https://api.github.com/repos/OscarMarshall/dotfiles/compare/${rev}...main" |
                               ${pkgs.jq}/bin/jq -r '.status // empty' 2>/dev/null || true
                           )
@@ -70,7 +78,7 @@ in
                       # main is ahead of our revision: newer commits are available.
                       ahead) symbols="''${symbols}⇣" ;;
                       # our revision is not reachable from main.
-                      behind | diverged) symbols="''${symbols}" ;;
+                      behind | diverged) symbols="''${symbols}" ;;
                     esac
                   ''
                 else
@@ -81,7 +89,7 @@ in
               ${apiPart}
               ${dirtyPart}
               if [ -n "$symbols" ]; then
-                echo "$symbols"
+                echo "$symbols"
               fi
             '';
         };
