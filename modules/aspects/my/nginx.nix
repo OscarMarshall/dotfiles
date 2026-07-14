@@ -1,15 +1,29 @@
 {
-  den.quirks.virtual-host.description = "Reverse-proxied virtual hosts served by nginx";
-
   my.nginx = {
+    port-forward = [
+      {
+        name = "http";
+        port = 80;
+        restrict-to-cloudflare = true;
+      }
+      {
+        name = "https";
+        port = 443;
+        restrict-to-cloudflare = true;
+      }
+    ];
+
     nixos =
       {
         virtual-host,
+        host,
         lib,
         config,
         ...
       }:
       let
+        domain = "silverlight-nex.us";
+
         # Address of Authentik's embedded outpost, used to gate `protected` virtual hosts behind
         # forward-auth. Matches the address authentik-nix's own nginx integration proxies to.
         authentikOutpost = "https://127.0.0.1:9443";
@@ -56,25 +70,35 @@
 
           virtualHosts = lib.listToAttrs (
             map (
-              host:
-              lib.nameValuePair host.url (
+              vh:
+              let
+                # Every service is namespaced under its host by default (immich.harmony.…), so
+                # multiple hosts can run the same service without colliding on one wildcard DNS
+                # entry. A service opts into also being reachable at the bare, host-agnostic name
+                # (immich.…) via `global = true;` on its `virtual-host` record — surfaced as an
+                # nginx `serverAlias`, which nixos's ACME integration automatically adds as a SAN
+                # on the same certificate.
+                url = vh.url or "${vh.name}.${host.name}.${domain}";
+              in
+              lib.nameValuePair url (
                 {
                   forceSSL = true;
                   enableACME = true;
+                  serverAliases = lib.optionals (vh.global or false) [ "${vh.name}.${domain}" ];
                   # appendHttpConfig's proxy_cookie_path rewrite appends its own secure/HttpOnly/
                   # SameSite flags to every Set-Cookie header, even ones a backend already set its
                   # own correct flags on. That produces a Set-Cookie with duplicated attributes,
                   # which browsers can silently refuse to store — breaking login for any backend
                   # that manages its own cookie security (e.g. Immich). Opt out per host via
                   # `preserveCookieFlags = true;` on the `virtual-host` record.
-                  extraConfig = lib.optionalString (host.preserveCookieFlags or false) ''
+                  extraConfig = lib.optionalString (vh.preserveCookieFlags or false) ''
                     proxy_cookie_path / /;
                   '';
                 }
-                // lib.optionalAttrs (host ? port) {
+                // lib.optionalAttrs (vh ? port) {
                   locations = {
                     "/" = {
-                      proxyPass = "http://127.0.0.1:${toString host.port}/";
+                      proxyPass = "http://127.0.0.1:${toString vh.port}/";
                       # recommendedProxySettings clears the Connection header (`proxy_set_header
                       # Connection "";`), which breaks WebSocket upgrades. Backends that use them
                       # (e.g. Immich's real-time updates) opt in via `websockets = true;` on their
@@ -83,8 +107,8 @@
                       # close` instead of keep-alive for non-Upgrade requests on that host. Fine
                       # here: upstream is always 127.0.0.1, so the lost keep-alive just costs an
                       # extra loopback handshake, not a real round trip.
-                      proxyWebsockets = host.websockets or false;
-                      extraConfig = lib.optionalString (host.protected or false) ''
+                      proxyWebsockets = vh.websockets or false;
+                      extraConfig = lib.optionalString (vh.protected or false) ''
                         auth_request /outpost.goauthentik.io/auth/nginx;
                         error_page 401 = @goauthentik_proxy_signin;
 
@@ -106,7 +130,7 @@
                       '';
                     };
                   }
-                  // lib.optionalAttrs (host.protected or false) {
+                  // lib.optionalAttrs (vh.protected or false) {
                     "@goauthentik_proxy_signin" = {
                       extraConfig = ''
                         internal;

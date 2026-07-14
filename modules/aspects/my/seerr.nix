@@ -1,24 +1,26 @@
 let
-  url = "seerr.harmony.silverlight-nex.us";
   port = 5055;
 in
 {
-  my.seerr = {
-    virtual-host = {
-      name = "seerr";
-      inherit url port;
-    };
+  my.seerr =
+    {
+      global ? false,
+    }:
+    { host, ... }: {
+      virtual-host = {
+        name = "seerr";
+        host = host.name;
+        inherit port global;
+        homepage = {
+          group = "Media";
+          label = "Seerr";
+          description = "Media requests";
+        };
+      };
 
-    homepage-entry = {
-      group = "Media";
-      label = "Seerr";
-      description = "Media requests";
-      href = "https://${url}";
+      nixos.services.seerr = {
+        enable = true;
+        inherit port;
+      };
     };
-
-    nixos.services.seerr = {
-      enable = true;
-      inherit port;
-    };
-  };
 }

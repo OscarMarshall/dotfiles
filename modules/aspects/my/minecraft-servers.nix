@@ -14,124 +14,119 @@
     };
   };
 
-  my.minecraft-servers = { administrators }: {
-    includes = [
-      (den._.unfree [
-        "minecraft-server"
-        "neoforge"
-      ])
-    ];
+  # `worlds` is an attrset keyed by world name:
+  #   <name> = {
+  #     port = <int>;        # game port - drives both serverProperties.server-port and DNS below
+  #     server = pkgs: {...}; # the rest of services.minecraft-servers.servers.<name> (package,
+  #                           # remaining serverProperties, symlinks, etc.) - a function since
+  #                           # `pkgs` isn't available yet at the aspect's own call site (see
+  #                           # harmony.nix), only once `nixos` is resolved.
+  #   };
+  # `port` is kept separate (rather than read out of `server`) so DNS generation below never needs
+  # a real `pkgs` at all.
+  my.minecraft-servers =
+    {
+      worlds,
+      administrators ? [ ],
+    }:
+    { host, ... }:
+    let
+      domain = "silverlight-nex.us";
+    in
+    {
+      includes = [
+        (den._.unfree [
+          "minecraft-server"
+          "neoforge"
+        ])
+      ];
 
-    secrets = { secrets, ... }: {
-      "minecraft-servers.env".generator = {
-        dependencies = { inherit (secrets) oscar-password; };
-        script =
-          {
-            lib,
-            decrypt,
-            deps,
-            ...
-          }:
-          ''
-            printf 'RCON_PASSWORD="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
-          '';
-      };
-    };
-
-    nixos = { config, pkgs, ... }: {
-      imports = [ (inputs.nix-minecraft.nixosModules.minecraft-servers or { }) ];
-
-      nixpkgs.overlays = [ (inputs.nix-minecraft.overlay or { }) ];
-
-      services.minecraft-servers = {
-        enable = true;
-        openFirewall = true;
-        eula = true;
-        dataDir = "/metalminds/minecraft-worlds";
-        environmentFile = config.age.secrets."minecraft-servers.env".path;
-        servers = {
-          vanilla = {
-            enable = true;
-            package = pkgs.fabricServers.fabric-1_21_11;
-            serverProperties = {
-              server-port = 25568;
-              white-list = false;
-            };
-          };
-          chicken-house = {
-            enable = true;
-            package = pkgs.fabricServers.fabric-1_21_8;
-            serverProperties = {
-              server-port = 25566;
-              white-list = true;
-              enable-rcon = true;
-              "rcon.port" = 25576;
-              "rcon.password" = "@RCON_PASSWORD@";
-            };
-            symlinks = {
-              mods = pkgs.linkFarmFromDrvs "mods" (
-                builtins.attrValues {
-                  ArchitecturyAPI = pkgs.fetchurl {
-                    url = "https://cdn.modrinth.com/data/lhGA9TYQ/versions/XcJm5LH4/architectury-17.0.8-fabric.jar";
-                    sha256 = "sha256-tdBR+O/+j5R2+TdeEeSN+vuCF5FDW4/jaIaZADl/BdU=";
-                  };
-                  AutoWhitelist = pkgs.fetchurl {
-                    url = "https://cdn.modrinth.com/data/BMaqFQAd/versions/PIJ4HDyR/autowhitelist-1.2.4%2B1.21.6.jar";
-                    sha256 = "sha256-cYTNxZEGfyUVAkSeFk8Ci3FbcpJOmgeSXqE++NB9BYM=";
-                  };
-                  # Carpet = pkgs.fetchurl {
-                  #   url = "https://cdn.modrinth.com/data/TQTTVgYE/versions/xksYKkvF/fabric-carpet-1.20.2-1.4.121%2Bv231011.jar";
-                  #   sha256 = "sha256-qGprKkfOVzmNVH/nzOCRC569Q3w7GdxyD6PAoQtji+w=";
-                  # };
-                  ClothConfig = pkgs.fetchurl {
-                    url = "https://cdn.modrinth.com/data/9s6osm5g/versions/cz0b1j8R/cloth-config-19.0.147-fabric.jar";
-                    sha256 = "sha256-2KbcqdDa0f5EYio8agNIZBk045Q8jUJaJvESvObev6I=";
-                  };
-                  FabricAPI = pkgs.fetchurl {
-                    url = "https://cdn.modrinth.com/data/P7dR8mSH/versions/jjBL6OsN/fabric-api-0.132.0%2B1.21.8.jar";
-                    sha256 = "sha256-t2MBX17VRswnCzHspYKty6JkzWKJ5FFF2fU0jGD9olk=";
-                  };
-                  FabricLanguageKotlin = pkgs.fetchurl {
-                    url = "https://cdn.modrinth.com/data/Ha28R6CL/versions/mccDBWqV/fabric-language-kotlin-1.13.4%2Bkotlin.2.2.0.jar";
-                    sha256 = "sha256-KjxW/B3W6SKpvuNaTAukvA2Wd2Py6VL/SbdOw8ZB9Qs=";
-                  };
-                  FerriteCore = pkgs.fetchurl {
-                    url = "https://cdn.modrinth.com/data/uXXizFIs/versions/CtMpt7Jr/ferritecore-8.0.0-fabric.jar";
-                    sha256 = "sha256-K5C/AMKlgIw8U5cSpVaRGR+HFtW/pu76ujXpxMWijuo=";
-                  };
-                  Jade = pkgs.fetchurl {
-                    url = "https://cdn.modrinth.com/data/nvQzSEkH/versions/o3aatc5Q/Jade-1.21.8-Fabric-19.3.2.jar";
-                    sha256 = "sha256-RWjPJiGJqedV9kYagfaypBNCcYF8edVOJB776Y02J9A=";
-                  };
-                  Lithium = pkgs.fetchurl {
-                    url = "https://cdn.modrinth.com/data/gvQqBUqZ/versions/pDfTqezk/lithium-fabric-0.18.0%2Bmc1.21.8.jar";
-                    sha256 = "sha256-kBPy+N/t6v20OBddTHZvW0E95WLc0RlaUAIwxVFxeH4=";
-                  };
-                  RoughlyEnoughItems = pkgs.fetchurl {
-                    url = "https://cdn.modrinth.com/data/nfn13YXA/versions/hoEFy7aF/RoughlyEnoughItems-20.0.811-fabric.jar";
-                    sha256 = "sha256-e2t1DkKcRCCF+gdFsDwnOyQiTxzngF2DnrUqmfKwJTo=";
-                  };
-                }
-              );
-            };
-          };
-          create-think-bigger = {
-            enable = true;
-            package = pkgs.neoforgeServers.neoforge-1_21_1;
-            serverProperties = {
-              server-port = 25567;
-              white-list = true;
-              enable-rcon = true;
-              "rcon.port" = 25577;
-              "rcon.password" = "@RCON_PASSWORD@";
-            };
-          };
+      secrets = { secrets, ... }: {
+        "minecraft-servers.env".generator = {
+          dependencies = { inherit (secrets) oscar-password; };
+          script =
+            {
+              lib,
+              decrypt,
+              deps,
+              ...
+            }:
+            ''
+              printf 'RCON_PASSWORD="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
+            '';
         };
       };
 
-      users.users = lib.genAttrs administrators (user: {
-        extraGroups = [ "minecraft" ];
-      });
+      # One inbound rule per world, on its own game port (see modules/aspects/my/meraki.nix).
+      port-forward = lib.mapAttrsToList (name: world: {
+        name = "minecraft-${name}";
+        inherit (world) port;
+      }) worlds;
+
+      # A world at `<name>.minecraft.${domain}` (an A/CNAME record, same type/content as every
+      # other DNS record this host produces - see modules/aspects/my/dns.nix) plus a
+      # `_minecraft._tcp` SRV record pointing at that same hostname on its actual game port, so
+      # players can connect to `<name>.minecraft.${domain}` without specifying a port. No new
+      # quirk needed - unlike the HTTP services in dns.nix, nothing else (nginx, Homepage) needs to
+      # know about Minecraft worlds, so this aspect just contributes directly to the shared
+      # `terranix` class alongside dns.nix's own contribution (same host, same
+      # `host.cloudflare-zone-id` - see modules/den.nix). A plain attrset, not a function - see
+      # modules/terranix.nix for why that matters.
+      terranix = lib.optionalAttrs (host ? dns-record) {
+        resource.cloudflare_dns_record = lib.concatMapAttrs (name: world: {
+          "minecraft-${name}" = {
+            zone_id = host.cloudflare-zone-id;
+            name = "${name}.minecraft.${domain}";
+            inherit (host.dns-record) type content;
+            ttl = 1800;
+            proxied = false;
+          };
+          "minecraft-${name}-srv" = {
+            zone_id = host.cloudflare-zone-id;
+            name = "_minecraft._tcp.${name}.minecraft.${domain}";
+            type = "SRV";
+            ttl = 1800;
+            priority = 0;
+            data = {
+              priority = 0;
+              weight = 0;
+              inherit (world) port;
+              target = "${name}.minecraft.${domain}";
+              proto = "_tcp";
+              name = "${name}.minecraft.${domain}";
+            };
+          };
+        }) worlds;
+      };
+
+      nixos = { config, pkgs, ... }: {
+        imports = [ (inputs.nix-minecraft.nixosModules.minecraft-servers or { }) ];
+
+        nixpkgs.overlays = [ (inputs.nix-minecraft.overlay or { }) ];
+
+        services.minecraft-servers = {
+          enable = true;
+          openFirewall = true;
+          eula = true;
+          dataDir = "/metalminds/minecraft-worlds";
+          environmentFile = config.age.secrets."minecraft-servers.env".path;
+          servers = lib.mapAttrs (
+            _: world:
+            let
+              server = world.server pkgs;
+            in
+            server
+            // {
+              serverProperties = (server.serverProperties or { }) // {
+                server-port = world.port;
+              };
+            }
+          ) worlds;
+        };
+
+        users.users = lib.genAttrs administrators (user: {
+          extraGroups = [ "minecraft" ];
+        });
+      };
     };
-  };
 }

@@ -1,24 +1,25 @@
 {
   my.prowlarr =
+    {
+      global ? false,
+    }:
+    { host, ... }:
     let
-      url = "prowlarr.harmony.silverlight-nex.us";
       port = 9696;
     in
     {
       virtual-host = {
         name = "prowlarr";
-        inherit url port;
-      };
-
-      homepage-entry = {
-        group = "Arr Stack";
-        label = "Prowlarr";
-        description = "Indexer manager/proxy";
-        href = "https://${url}";
-        widget = {
-          type = "prowlarr";
-          url = "https://${url}";
-          key = "{{HOMEPAGE_VAR_PROWLARR_API_KEY}}";
+        host = host.name;
+        inherit port global;
+        homepage = {
+          group = "Arr Stack";
+          label = "Prowlarr";
+          description = "Indexer manager/proxy";
+          widget = {
+            type = "prowlarr";
+            apiKeySecret = "prowlarr-api-key";
+          };
         };
       };
 

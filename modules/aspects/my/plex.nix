@@ -1,29 +1,33 @@
-{ den, ... }:
-let
-  url = "plex.harmony.silverlight-nex.us";
-in
-{
-  my.plex = {
-    includes = [ (den._.unfree [ "plexmediaserver" ]) ];
+{ den, ... }: {
+  my.plex =
+    {
+      global ? false,
+    }:
+    { host, ... }: {
+      includes = [ (den._.unfree [ "plexmediaserver" ]) ];
 
-    virtual-host = {
-      name = "plex";
-      inherit url;
-      port = 32400;
-    };
+      virtual-host = {
+        name = "plex";
+        host = host.name;
+        port = 32400;
+        inherit global;
+        homepage = {
+          group = "Media";
+          label = "Plex";
+          description = "Media server";
+        };
+      };
 
-    homepage-entry = {
-      group = "Media";
-      label = "Plex";
-      description = "Media server";
-      href = "https://${url}";
-    };
+      port-forward = {
+        name = "plex";
+        port = 32400;
+      };
 
-    nixos = {
-      services.plex = {
-        enable = true;
-        openFirewall = true;
+      nixos = {
+        services.plex = {
+          enable = true;
+          openFirewall = true;
+        };
       };
     };
-  };
 }
