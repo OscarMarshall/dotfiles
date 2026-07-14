@@ -17,6 +17,11 @@ let
       url = "${name}.harmony.silverlight-nex.us";
     in
     {
+      dataset = {
+        pool = "metalminds";
+        inherit name;
+      };
+
       virtual-host = {
         inherit name url port;
         protected = true;

@@ -22,6 +22,13 @@
       ])
     ];
 
+    dataset = {
+      pool = "metalminds";
+      name = "minecraft-worlds";
+      samba = true;
+      guestAccess = true;
+    };
+
     secrets = { secrets, ... }: {
       "minecraft-servers.env".generator = {
         dependencies = { inherit (secrets) oscar-password; };
