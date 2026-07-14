@@ -4,8 +4,8 @@
       (auto-upgrade { allowReboot = true; })
       (authentik { global = true; })
       (autobrr { })
-      bookshelf-audiobooks
-      bookshelf-ebooks
+      (bookshelf-audiobooks { })
+      (bookshelf-ebooks { })
       boot
       (cachyos-kernel { variant = "server"; })
       (collabora-online { })
@@ -35,7 +35,7 @@
       (seerr { global = true; })
       (sonarr { administrators = [ "oscar" ]; })
       ssh-server
-      storyteller
+      (storyteller { })
       (tautulli { })
       unpackerr
       (zfs [ "metalminds" ])

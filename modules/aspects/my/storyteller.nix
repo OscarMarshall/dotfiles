@@ -1,7 +1,10 @@
 {
   my.storyteller =
+    {
+      global ? false,
+    }:
+    { host, ... }:
     let
-      url = "storyteller.harmony.silverlight-nex.us";
       port = 8001;
     in
     {
@@ -12,15 +15,14 @@
 
       virtual-host = {
         name = "storyteller";
-        inherit url port;
+        host = host.name;
         protected = true;
-      };
-
-      homepage-entry = {
-        group = "Media";
-        label = "Storyteller";
-        description = "Read-aloud book alignment";
-        href = "https://${url}";
+        inherit port global;
+        homepage = {
+          group = "Media";
+          label = "Storyteller";
+          description = "Read-aloud book alignment";
+        };
       };
 
       secrets = { secrets, ... }: {
