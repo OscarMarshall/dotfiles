@@ -12,9 +12,12 @@ let
       description,
       port,
     }:
+    {
+      global ? false,
+    }:
+    { host, ... }:
     let
       name = "bookshelf-${instance}";
-      url = "${name}.harmony.silverlight-nex.us";
     in
     {
       dataset = {
@@ -23,15 +26,14 @@ let
       };
 
       virtual-host = {
-        inherit name url port;
+        inherit name port global;
+        host = host.name;
         protected = true;
-      };
-
-      homepage-entry = {
-        group = "Arr Stack";
-        inherit description;
-        label = "Bookshelf (${label})";
-        href = "https://${url}";
+        homepage = {
+          group = "Arr Stack";
+          inherit description;
+          label = "Bookshelf (${label})";
+        };
       };
 
       nixos = {

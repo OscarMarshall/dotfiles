@@ -128,7 +128,7 @@ Use direct context flag checks in aspect code (hosted users or standalone homes)
 
 The **harmony** server (x86_64-linux) runs:
 
-- **Media Stack**: Plex, Radarr, Sonarr, Prowlarr, Autobrr, Cross-seed
+- **Media Stack**: Plex, Tautulli, Radarr, Sonarr, Prowlarr, Autobrr, Cross-seed
 - **Downloads**: qBittorrent in gluetun VPN container with port forwarding
 - **Minecraft**: Multiple servers via nix-minecraft
 - **Reverse Proxy**: nginx with Let's Encrypt SSL certificates
