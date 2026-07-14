@@ -1,12 +1,16 @@
 {
   my.prowlarr =
+    {
+      global ? false,
+    }:
+    { host, ... }:
     let
-      url = "prowlarr.harmony.silverlight-nex.us";
       port = 9696;
     in
     {
       virtual-host = {
         name = "prowlarr";
+        host = host.name;
         protected = true;
         # Prowlarr serves its own REST API under /api, and proxies per-indexer Torznab requests
         # under /<indexerId>/api; nginx.nix lets both through the Authentik forward-auth gate
@@ -16,20 +20,18 @@
           "^/api"
           "^/[0-9]+/api"
         ];
-        inherit url port;
-      };
-
-      homepage-entry = {
-        group = "Arr Stack";
-        label = "Prowlarr";
-        description = "Indexer manager/proxy";
-        href = "https://${url}";
-        widget = {
-          type = "prowlarr";
-          # Hit Prowlarr directly rather than through nginx/Authentik, since Homepage's server-side
-          # widget fetch has no browser session to pass the forward-auth gate.
-          url = "http://127.0.0.1:${toString port}";
-          key = "{{HOMEPAGE_VAR_PROWLARR_API_KEY}}";
+        inherit port global;
+        homepage = {
+          group = "Arr Stack";
+          label = "Prowlarr";
+          description = "Indexer manager/proxy";
+          widget = {
+            type = "prowlarr";
+            # Hit Prowlarr directly rather than through nginx/Authentik, since Homepage's
+            # server-side widget fetch has no browser session to pass the forward-auth gate.
+            url = "http://127.0.0.1:${toString port}";
+            apiKeySecret = "prowlarr-api-key";
+          };
         };
       };
 

@@ -1,33 +1,38 @@
-{ my, ... }: {
+{ den, my, ... }: {
   den.aspects.harmony = {
     includes = with my; [
       (auto-upgrade { allowReboot = true; })
-      authentik
-      autobrr
+      (authentik { global = true; })
+      (autobrr { })
       bookshelf-audiobooks
       bookshelf-ebooks
       boot
       (cachyos-kernel { variant = "server"; })
-      collabora-online
+      (collabora-online { })
       cross-seed
+      dns
       gluetun
       homepage
-      (immich { administrators = [ "oscar" ]; })
+      (immich {
+        administrators = [ "oscar" ];
+        global = true;
+      })
       lm-sensors
       locale
-      (minecraft-servers { administrators = [ "oscar" ]; })
-      netdata
+      meraki
+      (netdata { })
       networkmanager
-      nextcloud
+      (nextcloud { global = true; })
       nginx
-      plex
-      profilarr
-      prowlarr
+      den.aspects.oscar.provides.minecraft-servers
+      (plex { global = true; })
+      (profilarr { })
+      (prowlarr { })
       (qbittorrent { administrators = [ "oscar" ]; })
       (radarr { administrators = [ "oscar" ]; })
       samba
       satisfactory-server
-      seerr
+      (seerr { global = true; })
       (sonarr { administrators = [ "oscar" ]; })
       ssh-server
       storyteller

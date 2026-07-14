@@ -1,7 +1,10 @@
 {
   my.profilarr =
+    {
+      global ? false,
+    }:
+    { host, ... }:
     let
-      url = "profilarr.harmony.silverlight-nex.us";
       port = 6868;
     in
     {
@@ -12,15 +15,14 @@
 
       virtual-host = {
         name = "profilarr";
+        host = host.name;
         protected = true;
-        inherit url port;
-      };
-
-      homepage-entry = {
-        group = "Arr Stack";
-        label = "Profilarr";
-        description = "Radarr/Sonarr custom format manager";
-        href = "https://${url}";
+        inherit port global;
+        homepage = {
+          group = "Arr Stack";
+          label = "Profilarr";
+          description = "Radarr/Sonarr custom format manager";
+        };
       };
 
       nixos = { config, ... }: {

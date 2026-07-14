@@ -1,32 +1,35 @@
 { lib, ... }: {
   my.sonarr =
+    {
+      administrators,
+      global ? false,
+    }:
+    { host, ... }:
     let
-      url = "sonarr.harmony.silverlight-nex.us";
       port = 8989;
     in
-    { administrators }: {
+    {
       virtual-host = {
         name = "sonarr";
+        host = host.name;
         protected = true;
         # Sonarr serves its REST API under /api; nginx.nix lets that through the Authentik
         # forward-auth gate untouched since cross-seed/unpackerr call it directly with an API key,
         # machine-to-machine, with no browser session to carry an Authentik cookie.
         bypassAuthPaths = [ "^/api" ];
-        inherit url port;
-      };
-
-      homepage-entry = {
-        group = "Arr Stack";
-        label = "Sonarr";
-        description = "Show organizer/manager";
-        href = "https://${url}";
-        widget = {
-          type = "sonarr";
-          # Hit Sonarr directly rather than through nginx/Authentik, since Homepage's server-side
-          # widget fetch has no browser session to pass the forward-auth gate.
-          url = "http://127.0.0.1:${toString port}";
-          key = "{{HOMEPAGE_VAR_SONARR_API_KEY}}";
-          enableQueue = true;
+        inherit port global;
+        homepage = {
+          group = "Arr Stack";
+          label = "Sonarr";
+          description = "Show organizer/manager";
+          widget = {
+            type = "sonarr";
+            # Hit Sonarr directly rather than through nginx/Authentik, since Homepage's
+            # server-side widget fetch has no browser session to pass the forward-auth gate.
+            url = "http://127.0.0.1:${toString port}";
+            apiKeySecret = "sonarr-api-key";
+            enableQueue = true;
+          };
         };
       };
 

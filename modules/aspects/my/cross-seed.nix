@@ -1,10 +1,17 @@
 {
   my.cross-seed = {
-    secrets = { config, secrets, ... }: {
+    secrets = { secrets, ... }: {
       cross-seed-api-key = {
         generator.script = "alnum";
         intermediary = true;
       };
+      # webuiPort below is qbittorrent.nix's hardcoded `port` (8080) - kept as a literal rather
+      # than read from `config` because requesting `config` on this field (alongside `secrets`)
+      # makes Den attach a collision-validator module to the same evalModules pass that builds
+      # `age.secrets`, and that validator's `warnings` output collides with `age.secrets` being a
+      # flat `attrsOf submodule` (unlike terranix's allowlisted JSON schema, there's no shimming
+      # this away - see modules/terranix.nix). If qbittorrent's port ever changes, update it here
+      # too.
       "cross-seed.json".generator = {
         dependencies = {
           inherit (secrets)
@@ -36,7 +43,7 @@
               --arg radarrApiKey "$RADARR_API_KEY" \
               --arg sonarrApiKey "$SONARR_API_KEY" \
               --arg qbittorrentPassword "$QBITTORRENT_PASSWORD" \
-              --arg webuiPort "${toString config.virtualisation.oci-containers.containers.qbittorrent.environment.WEBUI_PORT}" \
+              --arg webuiPort "8080" \
               '{
                 apiKey: $apiKey,
                 torznab: [

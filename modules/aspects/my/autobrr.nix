@@ -1,14 +1,18 @@
 {
   my.autobrr =
+    {
+      global ? false,
+    }:
+    { host, ... }:
     let
       port = 7474;
     in
     {
       virtual-host = {
         name = "autobrr";
-        url = "autobrr.harmony.silverlight-nex.us";
+        host = host.name;
         protected = true;
-        inherit port;
+        inherit port global;
       };
 
       secrets.autobrr-session-secret.generator.script = "alnum";
