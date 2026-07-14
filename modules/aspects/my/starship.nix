@@ -39,18 +39,17 @@ in
                 # Reuse the token already provisioned for authenticated Nix
                 # flake fetches (modules/aspects/my/nix.nix) instead of
                 # provisioning a second GitHub PAT just for this rate-limit
-                # workaround. The file holds a nix.conf `access-tokens` line,
-                # not a bare token, so it needs to be parsed out below.
+                # workaround.
                 #
                 # On host-embedded users (melaan/harmony/the MacBook), my.nix's
                 # secret lives in the system (osConfig), not this home-manager
                 # config; on a standalone home (dev203) it lives in this config
                 # directly and osConfig is empty. Check both.
-                accessTokensPath =
+                tokenPath =
                   let
-                    osPath = osConfig.age.secrets.nix-access-tokens.path or null;
+                    osPath = osConfig.age.secrets.nix-github-access-token.path or null;
                   in
-                  if osPath != null then osPath else config.age.secrets.nix-access-tokens.path or null;
+                  if osPath != null then osPath else config.age.secrets.nix-github-access-token.path or null;
                 apiPart =
                   if rev != null then
                     ''
@@ -64,13 +63,9 @@ in
                       if [ -f "$cache_file" ] && [ -z "$(${pkgs.findutils}/bin/find "$cache_file" -mmin +60 2>/dev/null)" ]; then
                         status=$(cat "$cache_file")
                       else
-                        ${
-                          if accessTokensPath != null then
-                            ''access_token_line="$(${pkgs.coreutils}/bin/cat ${accessTokensPath} 2>/dev/null || true)"''
-                          else
-                            ''access_token_line=""''
+                        github_token=${
+                          if tokenPath != null then ''"$(${pkgs.coreutils}/bin/cat ${tokenPath} 2>/dev/null || true)"'' else ''""''
                         }
-                        github_token="''${access_token_line#*github.com=}"
                         status=$(
                           retries=2
                           delay=0.5

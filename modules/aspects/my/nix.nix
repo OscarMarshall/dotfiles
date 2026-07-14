@@ -34,7 +34,11 @@ in
     secrets = { secrets, ... }: {
       nix-github-access-token = {
         rekeyFile = ../../../secrets/nix-github-access-token.age;
-        intermediary = true;
+        # World-readable, same as nix-access-tokens below (which already
+        # exposes this same token in the clear): lets other consumers (e.g.
+        # Starship) read the bare token without nix.conf's `access-tokens =
+        # github.com=` wrapper.
+        mode = "0444";
       };
 
       nix-access-tokens = {
