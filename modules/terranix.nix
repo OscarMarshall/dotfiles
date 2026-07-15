@@ -95,7 +95,11 @@ let
               ...
             }:
             lib.concatMapStrings (name: ''
-              printf '${env-var-for name}="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps.${name}.file})"
+              # %q (not a plain "%s") shell-quotes the decrypted value before it lands in the
+              # generated env file - this file gets `source`d (see terraformWrapper.prefixText
+              # below), so an unescaped value containing `$`, backticks, `\`, or `"` would be
+              # reinterpreted by the shell instead of reproduced literally.
+              printf '${env-var-for name}=%q\n' "$(${decrypt} ${lib.escapeShellArg deps.${name}.file})"
             '') config.my.terraform-secrets;
         };
       };
