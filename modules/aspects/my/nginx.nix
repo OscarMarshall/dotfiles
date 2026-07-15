@@ -65,9 +65,6 @@
           recommendedProxySettings = true;
           recommendedTlsSettings = true;
 
-          # Only allow PFS-enabled ciphers with AES256
-          sslCiphers = "AES256+EECDH:AES256+EDH:!aNULL";
-
           virtualHosts = lib.listToAttrs (
             map (
               vh:
