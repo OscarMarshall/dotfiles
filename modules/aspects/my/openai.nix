@@ -18,7 +18,7 @@
     {
       includes = [ my.mcp-servers ] ++ lib.optional chatgpt (den._.unfree [ "chatgpt" ]);
 
-      homeManager = { pkgs, ... }: {
+      homeManager = { config, pkgs, ... }: {
         programs.codex = {
           enable = true;
           package = inputs.codex-cli-nix.packages.${pkgs.stdenv.hostPlatform.system}.codex;
@@ -29,17 +29,20 @@
             model_reasoning_effort = "medium";
             approvals_reviewer = "auto_review";
 
-            mcp_servers.outlook = {
-              command = "uv";
-              args = [
-                "--directory"
-                "/Users/oscar/co/outlook-mcp-server"
-                "run"
-                "outlook-mcp"
-              ];
-              env = {
-                OUTLOOK_MCP_CONFIG_DIR = "/Users/oscar/.config/outlook/mcp/sessions";
-                OUTLOOK_MCP_ENABLE_WRITE_TOOLS = "true";
+            # Only checked out on the Darwin work laptop.
+            mcp_servers = lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
+              outlook = {
+                command = "${pkgs.uv}/bin/uv";
+                args = [
+                  "--directory"
+                  "${config.home.homeDirectory}/co/outlook-mcp-server"
+                  "run"
+                  "outlook-mcp"
+                ];
+                env = {
+                  OUTLOOK_MCP_CONFIG_DIR = "${config.xdg.configHome}/outlook/mcp/sessions";
+                  OUTLOOK_MCP_ENABLE_WRITE_TOOLS = "true";
+                };
               };
             };
           };
