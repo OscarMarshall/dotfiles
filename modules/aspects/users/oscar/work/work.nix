@@ -35,9 +35,21 @@ in
         ++ [ (my.openai { chatgpt = scope.graphical or false; }) ]
       );
 
-      homeManager.services.proton-pass-agent.extraArgs = lib.optionals (!(scope.work or false)) [
-        "--vault-name"
-        "Personal"
-      ];
+      homeManager = { pkgs, ... }: {
+        programs.codex.settings.mcp_servers = lib.optionalAttrs (scope.work or false) {
+          grafana = {
+            command = "${pkgs.uv}/bin/uvx";
+            args = [
+              "mcp-grafana"
+              "--enabled-tools"
+              "search,datasources,dashboard,elasticsearch,runpanelquery"
+              "--disable-write"
+              "--log-level"
+              "info"
+            ];
+            startup_timeout_sec = 30;
+          };
+        };
+      };
     };
 }
