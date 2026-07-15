@@ -4,12 +4,10 @@
       {
         name = "http";
         port = 80;
-        restrict-to-cloudflare = true;
       }
       {
         name = "https";
         port = 443;
-        restrict-to-cloudflare = true;
       }
     ];
 
@@ -64,6 +62,13 @@
           recommendedOptimisation = true;
           recommendedProxySettings = true;
           recommendedTlsSettings = true;
+
+          # nginx's default bucket size can't fit our longest server_name once enough
+          # <service>.<host>.<domain> vhosts pile up (e.g. bookshelf-audiobooks.harmony.…, 47
+          # chars) - it then refuses to start at all ("could not build server_names_hash, you
+          # should increase server_names_hash_bucket_size"). 128 leaves headroom for future
+          # services without revisiting this.
+          serverNamesHashBucketSize = 128;
 
           virtualHosts = lib.listToAttrs (
             map (
