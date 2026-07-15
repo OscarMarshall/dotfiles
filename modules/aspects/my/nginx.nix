@@ -4,12 +4,10 @@
       {
         name = "http";
         port = 80;
-        restrict-to-cloudflare = true;
       }
       {
         name = "https";
         port = 443;
-        restrict-to-cloudflare = true;
       }
     ];
 

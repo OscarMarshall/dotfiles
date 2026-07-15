@@ -103,15 +103,14 @@
                 name = "${vh.name}.${domain}";
                 inherit (host.dns-record) type content;
                 ttl = 1800;
-                # Proxied through Cloudflare's edge (hides the origin IP, adds DDoS protection) -
-                # every one of these is served by nginx on 80/443, which is restricted to only
-                # accept connections from Cloudflare's IP ranges (see
-                # modules/aspects/my/meraki.nix's `restrict-to-cloudflare`), so real clients MUST
-                # come through the proxy. Requires the zone's SSL/TLS mode set to Full (strict) in
-                # the Cloudflare dashboard - nginx already terminates with a real ACME cert, so
-                # Cloudflare can validate the origin; Flexible mode would break it (HTTP to
-                # origin, which nginx's `forceSSL` rejects).
-                proxied = true;
+                # DNS-only (not proxied through Cloudflare's edge). Every service is namespaced
+                # two levels deep (`<service>.<host>.${domain}`), which Cloudflare's free
+                # Universal SSL certificate doesn't cover (it only spans the apex and one level of
+                # wildcard) - proxying these without Cloudflare's paid Advanced Certificate
+                # Manager add-on breaks TLS at the edge before nginx is ever reached. Clients
+                # connect straight through to nginx, which terminates with its own per-host ACME
+                # cert, so this doesn't need the zone's SSL/TLS mode set to anything in particular.
+                proxied = false;
               };
             }) globalHosts
           )
@@ -121,7 +120,7 @@
               name = "*.${host.name}.${domain}";
               inherit (host.dns-record) type content;
               ttl = 1800;
-              proxied = true;
+              proxied = false;
             };
           };
       };
