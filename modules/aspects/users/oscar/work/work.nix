@@ -5,16 +5,20 @@
   ...
 }:
 let
+  # `home` is checked before `host`: a standalone home named `user@undeclared-host`
+  # (e.g. dev203) gets a synthetic `host = { name = ...; }` from den purely so
+  # host-keyed cross-entity policies can match on `host.name` - it never carries
+  # `work`/`graphical`. The real attributes always live on `home` for those.
   scopeFromArgs =
     {
       host ? null,
       home ? null,
       ...
     }@args:
-    if host != null then
-      host
-    else if home != null then
+    if home != null then
       home
+    else if host != null then
+      host
     else
       args;
 in
@@ -26,18 +30,14 @@ in
     in
     {
       includes = lib.optionals (scope.work or false) (
-        builtins.attrValues den.aspects.oscar.provides.work.provides ++ (lib.optional (scope.graphical or false) my.slack)
+        builtins.attrValues den.aspects.oscar.provides.work.provides
+        ++ (lib.optional (scope.graphical or false) my.slack)
+        ++ [ (my.openai { chatgpt = scope.graphical or false; }) ]
       );
 
-      darwin.homebrew.casks = lib.optionals ((scope.work or false) && (scope.graphical or false)) [ "codex-app" ];
-
-      homeManager = { pkgs, ... }: {
-        home.packages = lib.optional (scope.work or false) pkgs.codex;
-
-        services.proton-pass-agent.extraArgs = lib.optionals (!(scope.work or false)) [
-          "--vault-name"
-          "Personal"
-        ];
-      };
+      homeManager.services.proton-pass-agent.extraArgs = lib.optionals (!(scope.work or false)) [
+        "--vault-name"
+        "Personal"
+      ];
     };
 }

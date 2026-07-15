@@ -1,21 +1,24 @@
-{ den, inputs, ... }: {
+{
+  den,
+  inputs,
+  my,
+  ...
+}:
+{
   flake-file.inputs.claude-code-nix = {
     url = "github:sadjow/claude-code-nix";
     inputs.nixpkgs.follows = "nixpkgs";
   };
 
   my.claude = {
-    includes = [ (den._.unfree [ "claude-code" ]) ];
+    includes = [
+      (den._.unfree [ "claude-code" ])
+      my.mcp-servers
+    ];
 
     darwin.homebrew.casks = [ "claude" ];
 
-    homeManager = { config, pkgs, ... }: {
-      # Declared here (not in a top-level secrets block) so it lands in the
-      # home-manager config's age.secrets, which is what config.age.secrets
-      # refers to inside homeManager modules. The secrets block in user-level
-      # aspects isn't forwarded to age.secrets per defaults.nix.
-      age.secrets.github-mcp-server-github-access-token.rekeyFile = ../../../secrets/github-mcp-server-github-access-token.age;
-
+    homeManager = { pkgs, ... }: {
       home.packages = with pkgs; [
         gh
         nodejs
@@ -27,6 +30,7 @@
       programs.claude-code = {
         enable = true;
         package = inputs.claude-code-nix.packages.${pkgs.stdenv.hostPlatform.system}.claude-code;
+        enableMcpIntegration = true;
 
         settings = {
           agentPushNotifEnabled = true;
@@ -38,29 +42,6 @@
               "Bash(git:*)"
               "Bash(nix:*)"
             ];
-          };
-        };
-
-        mcpServers = {
-          nixos = {
-            type = "stdio";
-            command = "${pkgs.mcp-nixos}/bin/mcp-nixos";
-          };
-
-          github = {
-            type = "stdio";
-            # MCP server configs are static JSON, so the token can't be
-            # referenced directly — a wrapper reads the agenix path at launch.
-            command = "${pkgs.writeShellScript "github-mcp-server-wrapper" ''
-              set -euo pipefail
-              export GITHUB_PERSONAL_ACCESS_TOKEN="$(cat ${config.age.secrets.github-mcp-server-github-access-token.path})"
-              exec ${pkgs.github-mcp-server}/bin/github-mcp-server stdio
-            ''}";
-          };
-
-          context7 = {
-            type = "stdio";
-            command = "${pkgs.context7-mcp}/bin/context7-mcp";
           };
         };
       };
