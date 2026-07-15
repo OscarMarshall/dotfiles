@@ -3,7 +3,7 @@
 
   my.zfs = pools: {
     nixos =
-      { dataset, pkgs, ... }:
+      { pkgs, ... }:
       let
         # Use the default ZFS package for compatibility checking to avoid infinite recursion
         # We can't use config.boot.zfs.package here because it depends on kernelPackages which we're trying to determine
@@ -39,41 +39,6 @@
           autoSnapshot.enable = true;
           trim.enable = true;
         };
-
-        # New child datasets inherit their parent pool's properties, so `options` should only be used to
-        # deviate from those, not to restate them. As of 2026-07-10, metalminds (harmony's data pool) has
-        # compression=on (lz4), atime=off, and recordsize=128K - all sane defaults for most workloads.
-        #
-        # Datasets are only ever created if missing, never renamed or reconfigured - changing a
-        # dataset's name, options, or other properties later leaves the old dataset behind untouched.
-        #
-        # This host also runs full system activation inside the initrd (before switch-root), where no
-        # pool is imported yet - `/etc/initrd-release` only exists there (per systemd's initrd
-        # interface: https://systemd.io/INITRD_INTERFACE/), so skip entirely in that context. Datasets
-        # are only ever created at `nixos-rebuild switch` time, when the pool is already imported.
-        system.activationScripts.zfsDatasets = ''
-          if [ ! -e /etc/initrd-release ]; then
-            ${lib.concatMapStrings (
-              d:
-              let
-                name = "${d.pool}/${d.name}";
-                mountpoint = "/${name}";
-                options = lib.concatStrings (
-                  lib.mapAttrsToList (property: value: " -o ${lib.escapeShellArg "${property}=${value}"}") (d.options or { })
-                );
-              in
-              ''
-                if ! ${pkgs.zfs}/bin/zfs list -H -o name ${lib.escapeShellArg name} >/dev/null 2>&1; then
-                  if [ -d ${lib.escapeShellArg mountpoint} ] && [ -n "$(ls -A ${lib.escapeShellArg mountpoint})" ]; then
-                    echo "zfs dataset ${lib.escapeShellArg name} is missing, but ${lib.escapeShellArg mountpoint} already exists and is non-empty - move its contents aside, then re-run the activation" >&2
-                    exit 1
-                  fi
-                  ${pkgs.zfs}/bin/zfs create -p${options} ${lib.escapeShellArg name}
-                fi
-              ''
-            ) dataset}
-          fi
-        '';
       };
   };
 }
