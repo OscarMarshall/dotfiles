@@ -103,13 +103,15 @@
                 name = "${vh.name}.${domain}";
                 inherit (host.dns-record) type content;
                 ttl = 1800;
-                # DNS-only (not proxied through Cloudflare's edge). Every service is namespaced
-                # two levels deep (`<service>.<host>.${domain}`), which Cloudflare's free
-                # Universal SSL certificate doesn't cover (it only spans the apex and one level of
-                # wildcard) - proxying these without Cloudflare's paid Advanced Certificate
-                # Manager add-on breaks TLS at the edge before nginx is ever reached. Clients
-                # connect straight through to nginx, which terminates with its own per-host ACME
-                # cert, so this doesn't need the zone's SSL/TLS mode set to anything in particular.
+                # DNS-only (not proxied through Cloudflare's edge). This one-level name is
+                # actually covered by Cloudflare's free Universal SSL cert, but the per-host
+                # wildcard below (`*.${host.name}.${domain}`) is namespaced two levels deep,
+                # which that cert doesn't cover (it only spans the apex and one level of
+                # wildcard) - proxying it without Cloudflare's paid Advanced Certificate Manager
+                # add-on breaks TLS at the edge before nginx is ever reached. Kept DNS-only here
+                # too for consistency, since real client traffic now arrives directly (nginx.nix's
+                # port-forward rules no longer restrict to Cloudflare's IPs) and nginx already
+                # terminates with its own per-host ACME cert.
                 proxied = false;
               };
             }) globalHosts
