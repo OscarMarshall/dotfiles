@@ -5,3 +5,13 @@
 
 # Pre-commit hooks auto-generated config
 /.pre-commit-config.yaml
+
+# Terraform (terranix - see modules/terranix.nix) working directories, e.g. /harmony-tf/.
+# terraform.tfstate and .terraform.lock.hcl ARE tracked (deliberately, so state persists in the
+# repo rather than living only on whichever machine last applied) - only the regenerable/ephemeral
+# parts are ignored: config.tf.json is a symlink into the Nix store (meaningless outside the
+# machine that built it), .terraform/ is the downloaded provider plugin cache, and
+# *.tfstate.backup is redundant with git history.
+/*-tf/.terraform/
+/*-tf/config.tf.json
+/*-tf/*.tfstate.backup
