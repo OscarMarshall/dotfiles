@@ -9,11 +9,10 @@
 #   nix build .#harmony-tf.config — inspect the generated config.tf.json
 #
 # The Cloudflare API token is never written into the generated config or into Terraform state -
-# the provider reads it from the CLOUDFLARE_API_TOKEN env var, produced by the generator below.
-# Run `agenix generate -a && agenix rekey -a` once to materialize it, then decrypt it into your
-# shell before running any of the above:
-#
-#   set -a; source <(agenix -d secrets/generated/cloudflare-api.env.age); set +a
+# the provider reads it from the CLOUDFLARE_API_TOKEN env var, contributed below via the
+# `terraform-secret` quirk (modules/terranix.nix) and collected into harmony's single
+# `secrets/generated/harmony-tf.env.age`, decrypted and sourced automatically by `nix run
+# .#harmony-tf*`. Run `agenix generate -a && agenix rekey -a` once to materialize it.
 #
 # One-time setup on Cloudflare's side: add silverlight-nex.us as a site (free plan), note its Zone
 # ID from the zone's Overview page (set as `host.cloudflare-zone-id` - see modules/den.nix; not a
@@ -21,12 +20,14 @@
 # a TF_VAR to set by hand), create an API token scoped to `Zone / DNS / Edit` for that zone, and
 # switch the domain's nameservers at Namecheap to the ones Cloudflare assigns.
 #
-# Every DNS record for a host - its wildcard (`*.<host>.<domain>`) and every canonicalized
-# service's global alias (`<name>.<domain>`) - points at the same place: `host.dns-record` (see
-# modules/den.nix), a plain `{ type; content; }`. One field on the host definition, applying to
-# every record that host produces; a host with no `dns-record` gets no DNS resources at all. This
-# also means no `TF_VAR_<host>_ipv4` to keep updated by hand - `content` is ordinary
-# version-controlled Nix, typically a CNAME to a router's dynamic-DNS hostname.
+# Every DNS record for a host - its own root/apex hostname (`<host>.<domain>` - homepage.nix's
+# root landing page lives here, deliberately not under the wildcard, see its own comment), its
+# wildcard (`*.<host>.<domain>`), and every canonicalized service's global alias (`<name>.<domain>`)
+# - points at the same place: `host.dns-record` (see modules/den.nix), a plain `{ type; content; }`.
+# One field on the host definition, applying to every record that host produces; a host with no
+# `dns-record` gets no DNS resources at all. This also means no `TF_VAR_<host>_ipv4` to keep
+# updated by hand - `content` is ordinary version-controlled Nix, typically a CNAME to a router's
+# dynamic-DNS hostname.
 #
 # Which services get a global alias comes from the `virtual-host` quirk (the same aggregated data
 # nginx.nix uses for `serverAliases`) - flip `global = true;` on a service's `virtual-host` entry
@@ -55,25 +56,14 @@
 # signature below.
 { config, ... }: {
   my.dns = { host, ... }: {
-    secrets = { secrets, ... }: {
+    secrets = {
       cloudflare-api-token = {
         rekeyFile = ../../../secrets/cloudflare-api-token.age;
         intermediary = true;
       };
-      "cloudflare-api.env".generator = {
-        dependencies = { inherit (secrets) cloudflare-api-token; };
-        script =
-          {
-            lib,
-            decrypt,
-            deps,
-            ...
-          }:
-          ''
-            printf 'CLOUDFLARE_API_TOKEN="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps.cloudflare-api-token.file})"
-          '';
-      };
     };
+
+    terraform-secret = "cloudflare-api-token";
 
     terranix =
       { virtual-host, lib, ... }:
@@ -120,6 +110,18 @@
             "${host.name}-wildcard" = {
               zone_id = host.cloudflare-zone-id;
               name = "*.${host.name}.${domain}";
+              inherit (host.dns-record) type content;
+              ttl = 1800;
+              proxied = false;
+            };
+
+            # The host's own root/apex hostname - NOT covered by the wildcard above (a wildcard
+            # only matches names with something before it, never its own apex), and homepage.nix's
+            # `url = "${host.name}.${domain}"` deliberately doesn't go through the `global`/
+            # `globalHosts` path above either (that would produce `homepage.${domain}`, not this).
+            "${host.name}-root" = {
+              zone_id = host.cloudflare-zone-id;
+              name = "${host.name}.${domain}";
               inherit (host.dns-record) type content;
               ttl = 1800;
               proxied = false;

@@ -17,7 +17,7 @@
         # so there's no TF_VAR_harmony_ipv4 to keep up to date by hand.
         dns-record = {
           type = "CNAME";
-          content = "home-dcgmhnhtnd.dynamic-m.com.";
+          content = "home-dcgmhnhtnd.dynamic-m.com";
         };
 
         # Cloudflare zone ID for silverlight-nex.us (zone's Overview page in the dashboard) - not

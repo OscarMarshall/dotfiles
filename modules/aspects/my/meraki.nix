@@ -8,12 +8,12 @@
 #   nix build .#harmony-tf.config — inspect the generated config.tf.json
 #
 # The Meraki Dashboard API key is never written into the generated config or into Terraform state -
-# the provider reads it from the MERAKI_DASHBOARD_API_KEY env var, produced by the generator below.
-# Run `agenix edit secrets/meraki-api-key.age` once to create it, then
-# `agenix generate -a && agenix rekey -a`, then decrypt it into your shell before running any of
-# the above (alongside the Cloudflare token - see dns.nix):
-#
-#   set -a; source <(agenix -d secrets/generated/meraki-api.env.age); set +a
+# the provider reads it from the MERAKI_DASHBOARD_API_KEY env var, contributed below via the
+# `terraform-secret` quirk (modules/terranix.nix) and collected, alongside the Cloudflare token
+# (see dns.nix), into harmony's single `secrets/generated/harmony-tf.env.age`, decrypted and
+# sourced automatically by `nix run .#harmony-tf*`. Run `agenix edit
+# secrets/meraki-dashboard-api-key.age` once to create it, then `agenix generate -a && agenix
+# rekey -a` to materialize it.
 #
 # One-time setup on Meraki's side: generate a Dashboard API key (Organization > Settings > Dashboard
 # API access), and find harmony's network ID (Network-wide > Settings, or via the Dashboard API),
@@ -63,25 +63,14 @@ let
 in
 {
   my.meraki = { host, ... }: {
-    secrets = { secrets, ... }: {
-      meraki-api-key = {
-        rekeyFile = ../../../secrets/meraki-api-key.age;
+    secrets = {
+      meraki-dashboard-api-key = {
+        rekeyFile = ../../../secrets/meraki-dashboard-api-key.age;
         intermediary = true;
       };
-      "meraki-api.env".generator = {
-        dependencies = { inherit (secrets) meraki-api-key; };
-        script =
-          {
-            lib,
-            decrypt,
-            deps,
-            ...
-          }:
-          ''
-            printf 'MERAKI_DASHBOARD_API_KEY="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps.meraki-api-key.file})"
-          '';
-      };
     };
+
+    terraform-secret = "meraki-dashboard-api-key";
 
     terranix =
       { port-forward, lib, ... }:
