@@ -28,11 +28,15 @@ in
       ...
     }:
     let
+      # `home` is checked before `host`: a standalone home named `user@undeclared-host`
+      # (e.g. dev203) gets a synthetic `host = { name = ...; }` from den purely so
+      # host-keyed cross-entity policies can match on `host.name` - it never carries
+      # `work`/`graphical`. The real attributes always live on `home` for those.
       scope =
-        if host != null then
-          host
-        else if home != null then
+        if home != null then
           home
+        else if host != null then
+          host
         else
           { };
     in
@@ -126,6 +130,11 @@ in
         # activation time, age decrypts via the Proton Pass SSH agent
         # (SSH_AUTH_SOCK) without needing a private key file on disk.
         age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGt95coA4j19+fPxpOLRfIFb7AvAXdSmf1MyOPibmhe/";
+
+        services.proton-pass-agent.extraArgs = [
+          "--vault-name"
+          "Personal"
+        ];
 
         home.packages =
           with pkgs;
