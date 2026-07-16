@@ -16,6 +16,7 @@ in
           group = "Media";
           label = "Tautulli";
           description = "Plex monitoring & stats";
+          icon = "tautulli.png";
         };
       };
 

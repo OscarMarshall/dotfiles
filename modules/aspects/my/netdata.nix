@@ -16,6 +16,7 @@ in
           group = "Infra";
           label = "Netdata";
           description = "System monitoring & alerts";
+          icon = "netdata.png";
           widget = {
             type = "netdata";
             # Hit Netdata directly rather than through nginx, since the public URL sits behind

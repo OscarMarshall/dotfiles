@@ -15,6 +15,7 @@
           group = "Media";
           label = "Plex";
           description = "Media server";
+          icon = "plex.png";
         };
       };
 

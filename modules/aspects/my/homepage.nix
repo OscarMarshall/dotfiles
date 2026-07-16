@@ -91,6 +91,7 @@ in
               inherit href;
               inherit (vh.homepage) description;
             }
+            // lib.optionalAttrs (vh.homepage ? icon) { inherit (vh.homepage) icon; }
             // lib.optionalAttrs (widget != null) {
               # Widgets default to the vhost's own href; services behind Authentik forward-auth
               # (e.g. Netdata) override `widget.url` to a direct, unauthenticated address instead.

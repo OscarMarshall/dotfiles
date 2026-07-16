@@ -22,6 +22,8 @@
           group = "Media";
           label = "Storyteller";
           description = "Read-aloud book alignment";
+          # No dashboard-icons entry for this app - generic MDI fallback instead.
+          icon = "mdi-book-music";
         };
       };
 

@@ -37,6 +37,7 @@ in
           group = "Media";
           label = "Nextcloud";
           description = "Files, calendar & office suite";
+          icon = "nextcloud.png";
         };
       };
 

@@ -24,12 +24,16 @@
 #   global              - (optional, bool) also serve at the bare `<name>.<domain>` alias (an
 #                         nginx `serverAlias`) and generate a `cloudflare_dns_record` for it.
 #   url                 - (optional) explicit override for the derived hostname.
-#   homepage            - (optional) `{ group; label; description; widget ? {...}; }` - contributes
-#                         a Homepage dashboard tile. `widget.api-key` (optional, bool) marks the
-#                         widget as needing an API key - homepage.nix finds the matching secret by
-#                         scanning for `settings.homepage = "<this name>";` on that same aspect's
-#                         `secrets` field (modules/aspects/my/homepage.nix), rather than this record
-#                         naming the secret directly.
+#   homepage            - (optional) `{ group; label; description; icon ? ...; widget ? {...}; }` -
+#                         contributes a Homepage dashboard tile. `icon` (optional) is a Homepage
+#                         icon reference (e.g. `"sonarr.png"` from the dashboard-icons library,
+#                         `"mdi-<name>"`, `"si-<name>"` - see
+#                         https://gethomepage.dev/configs/services/#icons). `widget.api-key`
+#                         (optional, bool) marks the widget as needing an API key - homepage.nix
+#                         finds the matching secret by scanning for `settings.homepage = "<this
+#                         name>";` on that same aspect's `secrets` field
+#                         (modules/aspects/my/homepage.nix), rather than this record naming the
+#                         secret directly.
 #   oidc                - (optional) `{ redirect-paths; client-secret; }` - requests a native
 #                         OAuth2/OIDC Provider + Application from Authentik, for a service that
 #                         handles its own OIDC login rather than sitting behind Authentik's

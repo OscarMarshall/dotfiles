@@ -279,6 +279,7 @@ in
           group = "Infra";
           label = "Authentik";
           description = "Single sign-on";
+          icon = "authentik.png";
         };
       };
 

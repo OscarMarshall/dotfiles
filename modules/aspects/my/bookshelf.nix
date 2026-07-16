@@ -33,6 +33,9 @@ let
           group = "Arr Stack";
           inherit description;
           label = "Bookshelf (${label})";
+          # No dashboard-icons entry for pennydreadful/bookshelf specifically (its "audiobookshelf"
+          # entry is a different, unrelated app) - generic MDI fallback instead.
+          icon = "mdi-bookshelf";
         };
       };
 
