@@ -229,9 +229,7 @@ in
                     slug = vh.name;
                     protocol_provider = "\${authentik_provider_proxy.${vh.name}.id}";
                   }
-                  // lib.optionalAttrs (vh.homepage.icon or null != null) {
-                    meta_icon = icon-url-of vh.homepage.icon;
-                  };
+                  // lib.optionalAttrs (vh.homepage.icon or null != null) { meta_icon = icon-url-of vh.homepage.icon; };
                 }) protected-hosts
               );
 
@@ -274,9 +272,7 @@ in
                     slug = vh.name;
                     protocol_provider = "\${authentik_provider_oauth2.${vh.name}-oidc.id}";
                   }
-                  // lib.optionalAttrs (vh.homepage.icon or null != null) {
-                    meta_icon = icon-url-of vh.homepage.icon;
-                  };
+                  // lib.optionalAttrs (vh.homepage.icon or null != null) { meta_icon = icon-url-of vh.homepage.icon; };
                 }) oidc-hosts
               );
             })
