@@ -296,13 +296,13 @@ in
                 sensitive = true;
               });
 
-              # `grant_types` and `property_mappings` below BOTH have to be spelled out, for the same
-              # underlying reason: authentik's API defaults them to empty and only its own admin UI
-              # pre-fills them, so a provider built through the API (like these) comes out inert
-              # unless we say so. `authentik_provider_proxy` above is immune to both and hides the
-              # problem - authentik's `ProxyProvider.set_oauth_defaults()` reassigns its own
-              # `grant_types` AND `property_mappings` server-side on every save - which is exactly
-              # why forward-auth worked while these OIDC providers didn't.
+              # `grant_types`, `property_mappings` and `signing_key` below ALL have to be spelled
+              # out, for the same underlying reason: authentik's API defaults them to empty and only
+              # its own admin UI pre-fills them, so a provider built through the API (like these)
+              # comes out inert unless we say so. `authentik_provider_proxy` above is immune and
+              # hides the problem - authentik's `ProxyProvider.set_oauth_defaults()` reassigns its
+              # own `grant_types`, `property_mappings` AND `signing_key` server-side on every save -
+              # which is exactly why forward-auth worked while these OIDC providers didn't.
               #
               # `grant_types`: the model is `ArrayField(..., default=list)` - an EMPTY list, not the
               # obvious `[authorization_code]`. authentik's authorize view rejects any flow whose
@@ -328,6 +328,26 @@ in
                 "goauthentik.io/providers/oauth2/scope-profile"
               ];
 
+              # `signing_key`: with none attached, authentik doesn't fall back to a default keypair -
+              # it signs id_tokens with the CLIENT SECRET under HS256 ("No Certificate at all,
+              # assume HS256", `OAuth2Provider.jwt_key`). Clients that actually verify the id_token
+              # expect an asymmetric alg and reject that; Immich, whose default `signingAlgorithm` is
+              # RS256, fails the login with "unexpected JWT alg received" and even names this exact
+              # cause in its own warning ("...or that you have specified a signing key in your OAuth
+              # provider"). This is the keypair authentik generates for itself on first start, and
+              # it's RSA (`CertificateBuilder.alg` is `PrivateKeyAlg.RSA`), so `jwt_key` reports
+              # RS256 - matching what these clients expect without further configuration.
+              #
+              # `fetch_certificate`/`fetch_key` OFF because both default ON, and `key_data` would
+              # pull authentik's PRIVATE KEY into the state file - which, for harmony, is committed
+              # to this public repo (see the header comment on encryption). Only `.id` is needed to
+              # reference the keypair, and that's returned regardless.
+              data.authentik_certificate_key_pair.signing = {
+                name = "authentik Self-signed Certificate";
+                fetch_certificate = false;
+                fetch_key = false;
+              };
+
               resource.authentik_provider_oauth2 = lib.listToAttrs (
                 map (vh: {
                   name = "${vh.name}-oidc";
@@ -340,6 +360,7 @@ in
                       "refresh_token"
                     ];
                     property_mappings = "\${data.authentik_property_mapping_provider_scope.oidc-defaults.ids}";
+                    signing_key = "\${data.authentik_certificate_key_pair.signing.id}";
                     allowed_redirect_uris = lib.concatMap (
                       hostname:
                       map (path: {
