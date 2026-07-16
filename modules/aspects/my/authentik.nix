@@ -119,6 +119,21 @@ in
           # `oidc` field comment for why both need a redirect URI registered, not just one.
           hostnames-of = vh: [ (hostname-of vh) ] ++ lib.optional (vh.global or false) "${vh.name}.${domain}";
 
+          # Reuses each service's own `homepage.icon` (homepage.nix) rather than picking Authentik
+          # icons separately, translating Homepage's shorthand syntax into the plain URL
+          # Authentik's `meta_icon` expects. Only the two forms actually in use are handled -
+          # dashboard-icons filenames as-is, "mdi-<name>" via jsdelivr's @mdi/svg CDN - so a future
+          # icon written in Homepage's other shorthands (`si-`, `sh-`, a bare URL) fails loudly
+          # here instead of silently landing on a broken image.
+          icon-url-of =
+            icon:
+            if lib.hasPrefix "mdi-" icon then
+              "https://cdn.jsdelivr.net/npm/@mdi/svg/svg/${lib.removePrefix "mdi-" icon}.svg"
+            else if lib.hasSuffix ".png" icon then
+              "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/${icon}"
+            else
+              throw "my.authentik: don't know how to turn homepage icon \"${icon}\" into a meta_icon URL";
+
           # Mirrors `env-var-for` (modules/terranix.nix) exactly - the `TF_VAR_` prefix a
           # `settings.terraform = "variable";` secret surfaces under is added programmatically
           # there, not baked into the secret's name, so the Terraform `variable` it populates is
@@ -213,6 +228,9 @@ in
                     name = vh.homepage.label or vh.name;
                     slug = vh.name;
                     protocol_provider = "\${authentik_provider_proxy.${vh.name}.id}";
+                  }
+                  // lib.optionalAttrs (vh.homepage.icon or null != null) {
+                    meta_icon = icon-url-of vh.homepage.icon;
                   };
                 }) protected-hosts
               );
@@ -255,6 +273,9 @@ in
                     name = vh.name;
                     slug = vh.name;
                     protocol_provider = "\${authentik_provider_oauth2.${vh.name}-oidc.id}";
+                  }
+                  // lib.optionalAttrs (vh.homepage.icon or null != null) {
+                    meta_icon = icon-url-of vh.homepage.icon;
                   };
                 }) oidc-hosts
               );
