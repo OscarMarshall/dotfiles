@@ -62,9 +62,27 @@ in
       # this mirrors that shape 1:1, and keeps each service's access policy independently
       # assignable later instead of all-or-nothing for the domain.
       #
-      # `data.authentik_outpost.embedded` looks up Authentik's own built-in outpost (created
-      # automatically, named "authentik Embedded Outpost") rather than managing it as a resource -
-      # recreating it would conflict with the instance that already exists out of the box.
+      # `resource.authentik_outpost.embedded` manages Authentik's own built-in outpost (created
+      # automatically, named "authentik Embedded Outpost") directly, IMPORTED rather than created -
+      # recreating it would conflict with the instance that already exists out of the box. One-time
+      # setup, once per Authentik instance (`nix develop .#<host>-tf`, with `AUTHENTIK_TOKEN`
+      # sourced same as any other apply):
+      #
+      #   uuid=$(curl -s -H "Authorization: Bearer $AUTHENTIK_TOKEN" \
+      #     "https://${url}/api/v3/outposts/instances/?search=embedded" | jq -r '.results[0].pk')
+      #   tofu import authentik_outpost.embedded "$uuid"
+      #
+      # This is `authentik_outpost_provider_attachment` deliberately AVOIDED, not merely an
+      # alternative - that resource's Create/Delete always `PATCH
+      # /api/v3/outposts/instances/{id}/` (its own `Update` is unimplemented; both its fields are
+      # `ForceNew`), and that PATCH 404/405s against the embedded outpost on multiple real Authentik
+      # versions (see goauthentik/terraform-provider-authentik#341) - a big enough footgun that
+      # every independent report in that issue converged on managing `authentik_outpost` directly
+      # instead, which is what this does. UNLIKE the per-service resources above,
+      # `protocol_providers` here is the outpost's ENTIRE provider list in one shot - the same
+      # "replaces everything" shape as `meraki_networks_appliance_firewall_port_forwarding_rules`
+      # (see meraki.nix) - so any provider attached to this outpost through the UI, outside the
+      # `protected` mechanism below, gets silently removed on the next apply.
       #
       # Social login (`authentik_source_oauth`/`authentik_source_plex` below) is a DIFFERENT thing
       # from the `protected` forward-auth above: it's an identity SOURCE (an extra "Log in with
@@ -149,8 +167,6 @@ in
               default-source-enrollment.slug = "default-source-enrollment";
             };
 
-            data.authentik_outpost.embedded.name = "authentik Embedded Outpost";
-
             variable.DISCORD_CLIENT_SECRET.sensitive = true;
             variable.PLEX_TOKEN.sensitive = true;
 
@@ -201,15 +217,10 @@ in
                 }) protected-hosts
               );
 
-              resource.authentik_outpost_provider_attachment = lib.listToAttrs (
-                map (vh: {
-                  name = vh.name;
-                  value = {
-                    outpost = "\${data.authentik_outpost.embedded.id}";
-                    protocol_provider = "\${authentik_provider_proxy.${vh.name}.id}";
-                  };
-                }) protected-hosts
-              );
+              resource.authentik_outpost.embedded = {
+                name = "authentik Embedded Outpost";
+                protocol_providers = map (vh: "\${authentik_provider_proxy.${vh.name}.id}") protected-hosts;
+              };
             })
             (lib.optionalAttrs (oidc-hosts != [ ]) {
               variable = lib.genAttrs (map (vh: tf-var-name-of vh.oidc.client-secret) oidc-hosts) (_: {
