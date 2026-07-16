@@ -146,37 +146,27 @@ let
       terraform.encryption = {
         key_provider.pbkdf2.main.passphrase = "\${var.OPEN_TOFU_STATE_PASSPHRASE}";
 
-        method = {
-          aes_gcm.main.keys = "\${key_provider.pbkdf2.main}";
-          # No real key_provider - exists only so `state.fallback` below has something to name.
-          # State written under this method is never produced going forward, only ever read.
-          unencrypted.migrate = { };
-        };
+        method.aes_gcm.main.keys = "\${key_provider.pbkdf2.main}";
 
-        # `method` (here and in `fallback` below) is a STATIC TRAVERSAL, not a computed value -
-        # HCL's JSON spec requires this as a plain string containing raw HCL syntax
-        # (`"method.aes_gcm.main"`), NOT a `"\${...}"` template - the latter parses as a template
-        # expression and fails validate ("A single static variable reference is required ... No
-        # ... template expressions ... allowed here"), even though `"\${...}"` is exactly right for
-        # genuinely computed values elsewhere in this block (`key_provider.pbkdf2.main.passphrase`,
-        # `aes_gcm.main.keys`).
-        state = {
-          method = "method.aes_gcm.main";
-          # Every `<host>-tf/terraform.tfstate` committed before this (e.g. harmony's, from #516)
-          # is still plaintext JSON - without a fallback, OpenTofu would try to decrypt that as
-          # ciphertext and fail outright on the very next `plan`/`apply`. Read-only: the moment
-          # anything applies, the state is rewritten through `method.aes_gcm.main` above and
-          # stays encrypted from then on.
-          #
-          # `fallback` is a nested BLOCK in OpenTofu's schema (`fallback { method = ...; }`), not
-          # a plain attribute like `method` above - a bare string here (rather than a JSON object)
-          # fails at apply time ("Incorrect JSON value type ... Either a JSON object or a JSON
-          # array is required, representing the contents of one or more \"fallback\" blocks"),
-          # even though it looks identical to `method`'s own assignment in HCL. JSON syntax needs
-          # the block's actual contents as an object, hence nesting one more level than `method`
-          # does.
-          fallback.method = "method.unencrypted.migrate";
-        };
+        # `method` is a STATIC TRAVERSAL, not a computed value - HCL's JSON spec requires this as
+        # a plain string containing raw HCL syntax (`"method.aes_gcm.main"`), NOT a `"\${...}"`
+        # template - the latter parses as a template expression and fails validate ("A single
+        # static variable reference is required ... No ... template expressions ... allowed
+        # here"), even though `"\${...}"` is exactly right for genuinely computed values elsewhere
+        # in this block (`key_provider.pbkdf2.main.passphrase`, `aes_gcm.main.keys`).
+        #
+        # No `fallback` (used to be `method.unencrypted.migrate`, a no-op key_provider that only
+        # existed to give a migration fallback something to name) - that was for reading every
+        # `<host>-tf/terraform.tfstate` committed before this feature landed (e.g. harmony's, from
+        # #516), which was still plaintext JSON. harmony's has since been migrated (confirmed: same
+        # lineage, same resources, now `encrypted_data`) and no other host has an existing state to
+        # migrate - a first-ever apply just starts encrypted. Removed rather than left in
+        # permanently: OpenTofu warns ("Unencrypted method configured ... security risk") on every
+        # plan/apply for as long as it's configured, which is only accurate while it's actually
+        # protecting a real migration. If a host ever needs it again (e.g. restoring a plaintext
+        # state from backup), re-add `method.unencrypted.migrate = { };` and
+        # `state.fallback.method = "method.unencrypted.migrate";` temporarily.
+        state.method = "method.aes_gcm.main";
       };
     };
   };
