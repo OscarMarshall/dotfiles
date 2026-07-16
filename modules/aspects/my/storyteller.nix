@@ -1,3 +1,6 @@
+let
+  domain = "silverlight-nex.us";
+in
 {
   my.storyteller =
     {
@@ -6,6 +9,15 @@
     { host, ... }:
     let
       port = 8001;
+
+      # Like authentik.nix's own `url` (and unlike every other service's `global`, which merely adds
+      # an ALIAS alongside the host-scoped name - see virtual-host.nix), `global` here SWITCHES the
+      # served hostname rather than adding to it. Storyteller pins its session cookie's `Domain` to
+      # whatever hostname `AUTH_URL` names (see `AUTH_URL` below), and
+      # `storyteller.${host.name}.${domain}` is NOT a subdomain of `storyteller.${domain}` - so a
+      # browser on the name AUTH_URL doesn't cover would reject the session cookie and silently loop
+      # back to the login page. One name has to be canonical; serving the other would just be a trap.
+      url = if global then "storyteller.${domain}" else "storyteller.${host.name}.${domain}";
     in
     {
       dataset = {
@@ -16,8 +28,22 @@
       virtual-host = {
         name = "storyteller";
         host = host.name;
-        protected = true;
-        inherit port global;
+        inherit port global url;
+        # Deliberately NOT `protected`: Storyteller does its own OIDC login against Authentik via
+        # the `oidc` field below, so forward-auth on top would mean logging in twice (once at the
+        # outpost, again at Storyteller's own login page) and would break its mobile/OPDS clients,
+        # which have no browser session to carry an Authentik cookie.
+        #
+        # Storyteller is an Auth.js (NextAuth) app mounted at `/api/v2/auth` (`basePath` in
+        # applications/web/src/auth/auth.ts), so its callback route is
+        # `${AUTH_URL}/callback/${provider-id}`. For a CUSTOM provider that id is derived from the
+        # provider's display name - lowercased, spaces to dashes, non-alphanumerics stripped
+        # (`customProviderId`, same file) - so the name MUST be entered as "Authentik" in
+        # Storyteller's settings for this registered URI to match.
+        oidc = {
+          redirect-paths = [ "/api/v2/auth/callback/authentik" ];
+          client-secret = "storyteller-oidc-client-secret";
+        };
         label = "Storyteller";
         # No dashboard-icons entry for this app - its own upstream logo instead.
         icon = "https://gitlab.com/storyteller-platform/storyteller/-/raw/main/applications/docs/static/img/Storyteller_Logo.png";
@@ -31,6 +57,17 @@
         storyteller-secret-key = {
           generator.script = "alnum";
           intermediary = true;
+        };
+        # `intermediary` (unlike immich/nextcloud/seerr's equivalents, which are NOT) - Storyteller
+        # keeps its OIDC provider config in its own settings DATABASE, entered through the settings
+        # UI, with no env-var or config-file equivalent to point at a decrypted secret. So nothing
+        # on the host ever reads this; it exists only to feed Authentik's side via a Terraform
+        # `variable` (modules/terranix.nix's two modes), and gets typed into Storyteller by hand -
+        # read it back with `agenix view secrets/generated/storyteller-oidc-client-secret.age`.
+        storyteller-oidc-client-secret = {
+          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
+          intermediary = true;
+          settings.terraform = "variable";
         };
         "storyteller.env".generator = {
           dependencies = { inherit (secrets) storyteller-secret-key; };
@@ -62,7 +99,13 @@
             in
             [ "127.0.0.1:${port'}:${port'}" ];
           volumes = [ "/metalminds/storyteller:/data" ];
-          environment.ENABLE_WEB_READER = "true";
+          environment = {
+            ENABLE_WEB_READER = "true";
+            # Storyteller's Auth.js base URL: its own origin plus Auth.js's `basePath`. Required for
+            # OAuth/OIDC login, and what its session cookie's `Domain` is pinned to - see `url`
+            # above for why that forces a single canonical hostname.
+            AUTH_URL = "https://${url}/api/v2/auth";
+          };
           environmentFiles = [ config.age.secrets."storyteller.env".path ];
         };
       };

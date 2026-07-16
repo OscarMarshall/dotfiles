@@ -117,7 +117,9 @@ in
           # Every hostname a `global` virtual-host actually answers on: its own (derived or
           # overridden) name, plus the canonical `<name>.<domain>` too - see virtual-host.nix's
           # `oidc` field comment for why both need a redirect URI registered, not just one.
-          hostnames-of = vh: [ (hostname-of vh) ] ++ lib.optional (vh.global or false) "${vh.name}.${domain}";
+          # `unique` because a `global` host whose `url` override IS already the canonical name
+          # (storyteller.nix) would otherwise register every redirect URI twice.
+          hostnames-of = vh: lib.unique ([ (hostname-of vh) ] ++ lib.optional (vh.global or false) "${vh.name}.${domain}");
 
           # Reuses each service's own `virtual-host.icon` (virtual-host.nix) rather than picking
           # Authentik icons separately, translating Homepage's icon shorthands into the plain URL
