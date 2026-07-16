@@ -20,8 +20,8 @@ in
         inherit port global;
         label = "Radarr";
         icon = "radarr.svg";
+        group = "Arr Stack";
         homepage = {
-          group = "Arr Stack";
           description = "Movie organizer/manager";
           widget = {
             type = "radarr";

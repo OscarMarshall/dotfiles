@@ -13,8 +13,8 @@
         inherit global;
         label = "Plex";
         icon = "plex.svg";
+        group = "Media";
         homepage = {
-          group = "Media";
           description = "Media server";
         };
       };

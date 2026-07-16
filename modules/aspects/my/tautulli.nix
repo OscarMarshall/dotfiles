@@ -14,8 +14,8 @@ in
         inherit port global;
         label = "Tautulli";
         icon = "tautulli.svg";
+        group = "Media";
         homepage = {
-          group = "Media";
           description = "Plex monitoring & stats";
         };
       };

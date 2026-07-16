@@ -20,8 +20,8 @@
         inherit port global;
         label = "Sonarr";
         icon = "sonarr.svg";
+        group = "Arr Stack";
         homepage = {
-          group = "Arr Stack";
           description = "Show organizer/manager";
           widget = {
             type = "sonarr";

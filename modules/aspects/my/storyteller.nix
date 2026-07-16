@@ -21,8 +21,8 @@
         label = "Storyteller";
         # No dashboard-icons entry for this app - its own upstream logo instead.
         icon = "https://gitlab.com/storyteller-platform/storyteller/-/raw/main/applications/docs/static/img/Storyteller_Logo.png";
+        group = "Media";
         homepage = {
-          group = "Media";
           description = "Read-aloud book alignment";
         };
       };

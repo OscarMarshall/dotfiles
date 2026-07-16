@@ -8,7 +8,7 @@ in
 {
   my.homepage = { host, ... }: {
     # No `homepage` block of its own: Homepage doesn't list itself as one of its own tiles, but
-    # `label`/`icon` still feed its Authentik application (see virtual-host.nix).
+    # `label`/`icon`/`group` still feed its Authentik application (see virtual-host.nix).
     virtual-host = {
       name = "homepage";
       host = host.name;
@@ -19,6 +19,7 @@ in
       protected = true;
       label = "Homepage";
       icon = "https://raw.githubusercontent.com/gethomepage/homepage/dev/public/android-chrome-512x512.png";
+      group = "Infra";
       inherit port;
     };
 
@@ -83,7 +84,7 @@ in
         hosts = lib.listToAttrs (map (vh: lib.nameValuePair vh.name vh) virtual-host);
 
         homepageServices = lib.filter (vh: vh ? homepage) virtual-host;
-        groups = lib.unique (map (vh: vh.homepage.group) homepageServices);
+        groups = lib.unique (map (vh: vh.group) homepageServices);
         entryToService =
           vh:
           let
@@ -91,9 +92,9 @@ in
             widget = vh.homepage.widget or null;
           in
           {
-            # `label`/`icon` live at the top level of the record, not under `homepage` - Authentik
-            # displays a service by the same name and icon (see modules/aspects/my/authentik.nix),
-            # including for services with no dashboard tile at all.
+            # `label`/`icon`/`group` live at the top level of the record, not under `homepage` -
+            # Authentik presents a service by the same name, icon, and grouping (see
+            # modules/aspects/my/authentik.nix), including for services with no dashboard tile.
             ${vh.label or vh.name} = {
               inherit href;
               inherit (vh.homepage) description;
@@ -134,9 +135,7 @@ in
               };
             }
           ];
-          services = map (group: {
-            ${group} = map entryToService (lib.filter (vh: vh.homepage.group == group) homepageServices);
-          }) groups;
+          services = map (group: { ${group} = map entryToService (lib.filter (vh: vh.group == group) homepageServices); }) groups;
           bookmarks = [
             {
               "Servers" = [

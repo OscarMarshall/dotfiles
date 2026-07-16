@@ -34,8 +34,8 @@ in
         };
         label = "Seerr";
         icon = "seerr.svg";
+        group = "Media";
         homepage = {
-          group = "Media";
           description = "Media requests";
         };
       };

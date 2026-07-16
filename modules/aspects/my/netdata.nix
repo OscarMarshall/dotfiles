@@ -14,8 +14,8 @@ in
         inherit port global;
         label = "Netdata";
         icon = "netdata.svg";
+        group = "Infra";
         homepage = {
-          group = "Infra";
           description = "System monitoring & alerts";
           widget = {
             type = "netdata";

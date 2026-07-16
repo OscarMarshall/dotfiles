@@ -23,8 +23,8 @@
         inherit port global;
         label = "Prowlarr";
         icon = "prowlarr.svg";
+        group = "Arr Stack";
         homepage = {
-          group = "Arr Stack";
           description = "Indexer manager/proxy";
           widget = {
             type = "prowlarr";

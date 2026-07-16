@@ -34,10 +34,8 @@ let
         # entry is a different, unrelated app) - its own upstream logo instead. Named Readarr.svg
         # upstream since Bookshelf is a Readarr fork.
         icon = "https://raw.githubusercontent.com/pennydreadful/bookshelf/develop/Logo/Readarr.svg";
-        homepage = {
-          group = "Arr Stack";
-          inherit description;
-        };
+        group = "Arr Stack";
+        homepage = { inherit description; };
       };
 
       nixos = {

@@ -35,8 +35,8 @@ in
         };
         label = "Nextcloud";
         icon = "nextcloud.svg";
+        group = "Media";
         homepage = {
-          group = "Media";
           description = "Files, calendar & office suite";
         };
       };

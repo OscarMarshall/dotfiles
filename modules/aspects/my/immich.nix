@@ -44,8 +44,8 @@ in
         };
         label = "Immich";
         icon = "immich.svg";
+        group = "Media";
         homepage = {
-          group = "Media";
           description = "Photo & video backup";
         };
       };

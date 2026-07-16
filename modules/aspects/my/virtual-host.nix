@@ -35,9 +35,13 @@
 #                         https://gethomepage.dev/configs/services/#icons - or an absolute URL, for
 #                         apps whose only real logo lives in their own upstream repo. Prefer SVG.
 #                         authentik.nix translates the shorthands into plain URLs for `meta_icon`.
-#   homepage            - (optional) `{ group; description; widget ? {...}; }` - contributes a
-#                         Homepage dashboard tile (`label`/`icon` above feed it too, but live at the
-#                         top level since Authentik wants the same two). Omit for a service that
+#   group               - (optional) which section this service is filed under, for BOTH the Homepage
+#                         dashboard and Authentik's application library (see `label`). Required in
+#                         practice for anything with a `homepage` block below, since a tile has to
+#                         land in some section.
+#   homepage            - (optional) `{ description; widget ? {...}; }` - contributes a Homepage
+#                         dashboard tile (`label`/`icon`/`group` above feed it too, but live at the
+#                         top level since Authentik wants the same three). Omit for a service that
 #                         shouldn't appear on the dashboard at all but may still be an Authentik
 #                         application (e.g. qbittorrent). `widget.api-key` (optional, bool) marks the
 #                         widget as needing an API key - homepage.nix finds the matching secret by

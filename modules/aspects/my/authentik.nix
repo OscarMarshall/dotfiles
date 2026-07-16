@@ -231,7 +231,8 @@ in
                     slug = vh.name;
                     protocol_provider = "\${authentik_provider_proxy.${vh.name}.id}";
                   }
-                  // lib.optionalAttrs (vh ? icon) { meta_icon = icon-url-of vh.icon; };
+                  // lib.optionalAttrs (vh ? icon) { meta_icon = icon-url-of vh.icon; }
+                  // lib.optionalAttrs (vh ? group) { inherit (vh) group; };
                 }) protected-hosts
               );
 
@@ -274,7 +275,8 @@ in
                     slug = vh.name;
                     protocol_provider = "\${authentik_provider_oauth2.${vh.name}-oidc.id}";
                   }
-                  // lib.optionalAttrs (vh ? icon) { meta_icon = icon-url-of vh.icon; };
+                  // lib.optionalAttrs (vh ? icon) { meta_icon = icon-url-of vh.icon; }
+                  // lib.optionalAttrs (vh ? group) { inherit (vh) group; };
                 }) oidc-hosts
               );
             })
@@ -296,8 +298,8 @@ in
         inherit global url;
         label = "Authentik";
         icon = "authentik.svg";
+        group = "Infra";
         homepage = {
-          group = "Infra";
           description = "Single sign-on";
         };
       };
