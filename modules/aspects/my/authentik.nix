@@ -296,17 +296,32 @@ in
                 sensitive = true;
               });
 
-              # An OAuth2 provider returns ONLY the claims whose scope mapping is attached to it -
-              # `ScopeMapping.objects.filter(provider=provider, scope_name__in=scopes_from_client)`
-              # in authentik's userinfo view - and the Terraform provider's `property_mappings` is
-              # Optional WITHOUT `Computed`, so leaving it unset doesn't inherit anything: it
-              # attaches nothing, and userinfo comes back with no `email`, no `profile`, no
-              # `groups`. (Authentik's own UI pre-selects these three when you click a provider
-              # together, which is why this only bites configs built through the API.) These are the
-              # same three defaults that form picks. `profile` is what carries the `groups` claim -
-              # see the default mapping's expression, `[group.name for group in
+              # `grant_types` and `property_mappings` below BOTH have to be spelled out, for the same
+              # underlying reason: authentik's API defaults them to empty and only its own admin UI
+              # pre-fills them, so a provider built through the API (like these) comes out inert
+              # unless we say so. `authentik_provider_proxy` above is immune to both and hides the
+              # problem - authentik's `ProxyProvider.set_oauth_defaults()` reassigns its own
+              # `grant_types` AND `property_mappings` server-side on every save - which is exactly
+              # why forward-auth worked while these OIDC providers didn't.
+              #
+              # `grant_types`: the model is `ArrayField(..., default=list)` - an EMPTY list, not the
+              # obvious `[authorization_code]`. authentik's authorize view rejects any flow whose
+              # grant type isn't listed (`if self.grant_type not in self.provider.grant_types`)
+              # with a bare `invalid_request`/"The request is otherwise malformed" and no further
+              # explanation, which is what a login against these providers actually returned.
+              # `refresh_token` isn't needed by anything here today; it's what lets a client ask for
+              # `offline_access` later without rediscovering this the hard way.
+              #
+              # `property_mappings`: an OAuth2 provider returns ONLY the claims whose scope mapping
+              # is attached to it - `ScopeMapping.objects.filter(provider=provider,
+              # scope_name__in=scopes_from_client)` in authentik's userinfo view - so with none
+              # attached, userinfo comes back with no `email`, no `profile`, no `groups`. These are
+              # the same three the UI's form pre-selects. `profile` is what carries the `groups`
+              # claim - see the default mapping's expression, `[group.name for group in
               # request.user.groups.all()]` - so group-based permissions in a downstream app
               # (storyteller.nix) depend on this too, not just on a `groups` scope being requested.
+              # (Requesting a scope authentik doesn't know is harmless, incidentally: it logs and
+              # intersects with what's attached rather than erroring.)
               data.authentik_property_mapping_provider_scope.oidc-defaults.managed_list = [
                 "goauthentik.io/providers/oauth2/scope-openid"
                 "goauthentik.io/providers/oauth2/scope-email"
@@ -320,6 +335,10 @@ in
                     name = vh.name;
                     client_id = vh.name;
                     client_secret = "\${var.${tf-var-name-of vh.oidc.client-secret}}";
+                    grant_types = [
+                      "authorization_code"
+                      "refresh_token"
+                    ];
                     property_mappings = "\${data.authentik_property_mapping_provider_scope.oidc-defaults.ids}";
                     allowed_redirect_uris = lib.concatMap (
                       hostname:
