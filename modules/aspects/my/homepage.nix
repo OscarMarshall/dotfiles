@@ -37,6 +37,10 @@ in
         ...
       }:
       let
+        # `sec.settings` is a declared option, default `null` - `a.b.c or default` short-circuits
+        # the WHOLE chain (not just the last step), so this is safe even when `sec.settings`
+        # itself is `null` (see modules/terranix.nix's identical `terraform-mode-of` for the same
+        # pattern spelled out further).
         api-key-secrets = lib.filterAttrs (_: sec: sec.settings.homepage or null != null) config.age.secrets;
       in
       {
