@@ -72,14 +72,28 @@ in
           host = "127.0.0.1";
           inherit port;
           mediaLocation = "/metalminds/pictures";
-          settings.oauth = {
-            enabled = true;
-            issuerUrl = "https://${config.services.authentik.nginx.host}/application/o/immich/";
-            clientId = "immich";
-            clientSecret._secret = config.age.secrets.immich-oidc-client-secret.path;
-            scope = "openid email profile";
-            mobileOverrideEnabled = true;
-            mobileRedirectUri = "https://${url}/api/oauth/mobile-redirect";
+          settings = {
+            oauth = {
+              enabled = true;
+              issuerUrl = "https://${config.services.authentik.nginx.host}/application/o/immich/";
+              clientId = "immich";
+              clientSecret._secret = config.age.secrets.immich-oidc-client-secret.path;
+              scope = "openid email profile";
+              mobileOverrideEnabled = true;
+              mobileRedirectUri = "https://${url}/api/oauth/mobile-redirect";
+            };
+            # Authentik is the only way in; Immich's own local accounts can no longer be used.
+            # Immich attaches an OAuth login to an existing account by EMAIL (its auth service
+            # looks the user up with `getByEmail`, then stamps the `oauthId` onto that row), so
+            # whoever administers this has to carry the same address in Authentik as on their
+            # Immich account - otherwise `autoRegister` (on by default, not set here) quietly
+            # makes them a SECOND, non-admin user instead of logging them into the existing one.
+            #
+            # Not a lockout risk despite that: `services.immich.settings` being set at all puts
+            # Immich in config-file mode, where the admin UI can't override any of this anyway, so
+            # the way back is flipping this line and rebuilding - not clicking through a UI that
+            # would refuse anyway.
+            passwordLogin.enabled = false;
           };
         };
       };
