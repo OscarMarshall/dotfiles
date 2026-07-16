@@ -25,7 +25,7 @@
           group = "Arr Stack";
           label = "Prowlarr";
           description = "Indexer manager/proxy";
-          icon = "prowlarr.png";
+          icon = "prowlarr.svg";
           widget = {
             type = "prowlarr";
             # Hit Prowlarr directly rather than through nginx/Authentik, since Homepage's

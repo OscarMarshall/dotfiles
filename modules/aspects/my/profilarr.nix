@@ -22,7 +22,7 @@
           group = "Arr Stack";
           label = "Profilarr";
           description = "Radarr/Sonarr custom format manager";
-          icon = "profilarr.png";
+          icon = "profilarr.svg";
         };
       };
 

@@ -129,8 +129,8 @@ in
             icon:
             if lib.hasPrefix "mdi-" icon then
               "https://cdn.jsdelivr.net/npm/@mdi/svg/svg/${lib.removePrefix "mdi-" icon}.svg"
-            else if lib.hasSuffix ".png" icon then
-              "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/${icon}"
+            else if lib.hasSuffix ".svg" icon then
+              "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/${icon}"
             else
               throw "my.authentik: don't know how to turn homepage icon \"${icon}\" into a meta_icon URL";
 
@@ -296,7 +296,7 @@ in
           group = "Infra";
           label = "Authentik";
           description = "Single sign-on";
-          icon = "authentik.png";
+          icon = "authentik.svg";
         };
       };
 

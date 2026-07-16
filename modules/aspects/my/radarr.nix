@@ -22,7 +22,7 @@ in
           group = "Arr Stack";
           label = "Radarr";
           description = "Movie organizer/manager";
-          icon = "radarr.png";
+          icon = "radarr.svg";
           widget = {
             type = "radarr";
             # Hit Radarr directly rather than through nginx/Authentik, since Homepage's

@@ -36,7 +36,7 @@ in
           group = "Media";
           label = "Seerr";
           description = "Media requests";
-          icon = "seerr.png";
+          icon = "seerr.svg";
         };
       };
 

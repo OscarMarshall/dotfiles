@@ -22,7 +22,7 @@
           group = "Arr Stack";
           label = "Sonarr";
           description = "Show organizer/manager";
-          icon = "sonarr.png";
+          icon = "sonarr.svg";
           widget = {
             type = "sonarr";
             # Hit Sonarr directly rather than through nginx/Authentik, since Homepage's
