@@ -121,6 +121,32 @@ in
           # (storyteller.nix) would otherwise register every redirect URI twice.
           hostnames-of = vh: lib.unique ([ (hostname-of vh) ] ++ lib.optional (vh.global or false) "${vh.name}.${domain}");
 
+          # The `group` (virtual-host.nix) whose applications everyone gets, rather than just
+          # `admins` - the same string the Homepage dashboard and Authentik's library file these
+          # services under, so a service moving between sections moves its access with it.
+          open-group = "Media";
+
+          # WHO may reach an application. An application with NO bindings is open to every
+          # authenticated user, which - combined with the Discord/Plex sources below being able to
+          # ENROLL brand-new accounts - would otherwise mean a stranger's Discord account reaching
+          # every service here. So every application gets at least the `admins` binding, and only
+          # `open-group` ones additionally get `users`.
+          #
+          # Two bindings on one application are OR, not AND: `authentik_application`'s
+          # `policy_engine_mode` defaults to `any`, so an `admins` member still reaches an
+          # `open-group` app they're not a `users` member of. `target` is the application's `uuid`,
+          # NOT its `id` - the provider's own group-binding example spells this out.
+          binding-entries-for =
+            app-key: vh:
+            lib.imap0 (
+              index: group-name:
+              lib.nameValuePair "${app-key}-${group-name}" {
+                target = "\${authentik_application.${app-key}.uuid}";
+                group = "\${authentik_group.${group-name}.id}";
+                order = index;
+              }
+            ) ([ "admins" ] ++ lib.optional (vh.group or null == open-group) "users");
+
           # Reuses each service's own `virtual-host.icon` (virtual-host.nix) rather than picking
           # Authentik icons separately, translating Homepage's icon shorthands into the plain URL
           # Authentik's `meta_icon` expects. Only the forms actually in use are handled - an
@@ -189,12 +215,13 @@ in
             variable.DISCORD_CLIENT_SECRET.sensitive = true;
             variable.PLEX_TOKEN.sensitive = true;
 
-            # Groups live here rather than on the service that consumes them: they're a DIRECTORY
+            # Groups live here rather than on the services that consume them: they're a DIRECTORY
             # concept (authentik.nix owns every `authentik_*` resource, the way dns.nix owns every
-            # `cloudflare_*` one), and nothing stops a second service keying off the same group
-            # later. Only their NAMES matter to a consumer - Authentik's default `profile` scope
-            # emits `groups` as a list of group names, and Storyteller maps those names to its own
-            # permissions (see storyteller.nix).
+            # `cloudflare_*` one), and two unrelated things key off them already - the application
+            # bindings below, and Storyteller's own group-to-permission mapping. Both match on the
+            # group's NAME (Authentik's default `profile` scope emits `groups` as a list of names -
+            # see the `oidc-defaults` comment below), so renaming one is a breaking change for
+            # whatever maps it.
             #
             # MEMBERSHIP is deliberately not managed here: `users` on `authentik_group` is
             # `Optional` AND `Computed` in the Terraform provider, so omitting it means "leave
@@ -202,7 +229,7 @@ in
             # `protocol_providers` above, which really does replace the whole list. Accounts arrive
             # by Discord/Plex enrollment and don't exist in this config, so assign people through
             # Authentik's UI (Directory > Groups) and applies won't fight you over it.
-            resource.authentik_group = lib.genAttrs [ "storyteller-admins" "storyteller-users" ] (name: {
+            resource.authentik_group = lib.genAttrs [ "admins" "users" ] (name: {
               inherit name;
             });
 
@@ -253,6 +280,10 @@ in
                   // lib.optionalAttrs (vh ? icon) { meta_icon = icon-url-of vh.icon; }
                   // lib.optionalAttrs (vh ? group) { inherit (vh) group; };
                 }) protected-hosts
+              );
+
+              resource.authentik_policy_binding = lib.listToAttrs (
+                lib.concatMap (vh: binding-entries-for vh.name vh) protected-hosts
               );
 
               resource.authentik_outpost.embedded = {
@@ -315,6 +346,10 @@ in
                   // lib.optionalAttrs (vh ? icon) { meta_icon = icon-url-of vh.icon; }
                   // lib.optionalAttrs (vh ? group) { inherit (vh) group; };
                 }) oidc-hosts
+              );
+
+              resource.authentik_policy_binding = lib.listToAttrs (
+                lib.concatMap (vh: binding-entries-for "${vh.name}-oidc" vh) oidc-hosts
               );
             })
           ];
