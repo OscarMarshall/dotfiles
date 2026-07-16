@@ -75,6 +75,11 @@ in
           settings = {
             oauth = {
               enabled = true;
+              # Skip Immich's own login page and bounce straight to Authentik - there's nothing else
+              # to pick from it now that `passwordLogin` is off below. `/auth/login?autoLaunch=0`
+              # (also `?password=1`) still renders the form instead of redirecting, which is how to
+              # reach it if password login ever gets temporarily turned back on to recover.
+              autoLaunch = true;
               issuerUrl = "https://${config.services.authentik.nginx.host}/application/o/immich/";
               clientId = "immich";
               clientSecret._secret = config.age.secrets.immich-oidc-client-secret.path;
