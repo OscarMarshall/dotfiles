@@ -33,11 +33,11 @@ in
           redirect-paths = [ "/apps/user_oidc/code" ];
           client-secret = "nextcloud-oidc-client-secret";
         };
+        label = "Nextcloud";
+        icon = "nextcloud.svg";
         homepage = {
           group = "Media";
-          label = "Nextcloud";
           description = "Files, calendar & office suite";
-          icon = "nextcloud.svg";
         };
       };
 

@@ -119,20 +119,22 @@ in
           # `oidc` field comment for why both need a redirect URI registered, not just one.
           hostnames-of = vh: [ (hostname-of vh) ] ++ lib.optional (vh.global or false) "${vh.name}.${domain}";
 
-          # Reuses each service's own `homepage.icon` (homepage.nix) rather than picking Authentik
-          # icons separately, translating Homepage's shorthand syntax into the plain URL
-          # Authentik's `meta_icon` expects. Only the two forms actually in use are handled -
-          # dashboard-icons filenames as-is, "mdi-<name>" via jsdelivr's @mdi/svg CDN - so a future
-          # icon written in Homepage's other shorthands (`si-`, `sh-`, a bare URL) fails loudly
-          # here instead of silently landing on a broken image.
+          # Reuses each service's own `virtual-host.icon` (virtual-host.nix) rather than picking
+          # Authentik icons separately, translating Homepage's icon shorthands into the plain URL
+          # Authentik's `meta_icon` expects. Only the forms actually in use are handled - an
+          # absolute URL as-is, "mdi-<name>" via jsdelivr's @mdi/svg CDN, and a bare dashboard-icons
+          # filename - so an icon written in one of Homepage's OTHER shorthands (`si-`, `sh-`) fails
+          # loudly here instead of silently landing on a broken image.
           icon-url-of =
             icon:
-            if lib.hasPrefix "mdi-" icon then
+            if lib.hasPrefix "https://" icon then
+              icon
+            else if lib.hasPrefix "mdi-" icon then
               "https://cdn.jsdelivr.net/npm/@mdi/svg/svg/${lib.removePrefix "mdi-" icon}.svg"
             else if lib.hasSuffix ".svg" icon then
               "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/${icon}"
             else
-              throw "my.authentik: don't know how to turn homepage icon \"${icon}\" into a meta_icon URL";
+              throw "my.authentik: don't know how to turn icon \"${icon}\" into a meta_icon URL";
 
           # Mirrors `env-var-for` (modules/terranix.nix) exactly - the `TF_VAR_` prefix a
           # `settings.terraform = "variable";` secret surfaces under is added programmatically
@@ -225,11 +227,11 @@ in
                 map (vh: {
                   name = vh.name;
                   value = {
-                    name = vh.homepage.label or vh.name;
+                    name = vh.label or vh.name;
                     slug = vh.name;
                     protocol_provider = "\${authentik_provider_proxy.${vh.name}.id}";
                   }
-                  // lib.optionalAttrs (vh.homepage.icon or null != null) { meta_icon = icon-url-of vh.homepage.icon; };
+                  // lib.optionalAttrs (vh ? icon) { meta_icon = icon-url-of vh.icon; };
                 }) protected-hosts
               );
 
@@ -268,11 +270,11 @@ in
                 map (vh: {
                   name = "${vh.name}-oidc";
                   value = {
-                    name = vh.name;
+                    name = vh.label or vh.name;
                     slug = vh.name;
                     protocol_provider = "\${authentik_provider_oauth2.${vh.name}-oidc.id}";
                   }
-                  // lib.optionalAttrs (vh.homepage.icon or null != null) { meta_icon = icon-url-of vh.homepage.icon; };
+                  // lib.optionalAttrs (vh ? icon) { meta_icon = icon-url-of vh.icon; };
                 }) oidc-hosts
               );
             })
@@ -292,11 +294,11 @@ in
         name = "auth";
         host = host.name;
         inherit global url;
+        label = "Authentik";
+        icon = "authentik.svg";
         homepage = {
           group = "Infra";
-          label = "Authentik";
           description = "Single sign-on";
-          icon = "authentik.svg";
         };
       };
 

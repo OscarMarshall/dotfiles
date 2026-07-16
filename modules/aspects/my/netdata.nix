@@ -12,11 +12,11 @@ in
         host = host.name;
         protected = true;
         inherit port global;
+        label = "Netdata";
+        icon = "netdata.svg";
         homepage = {
           group = "Infra";
-          label = "Netdata";
           description = "System monitoring & alerts";
-          icon = "netdata.svg";
           widget = {
             type = "netdata";
             # Hit Netdata directly rather than through nginx, since the public URL sits behind

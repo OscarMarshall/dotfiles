@@ -18,11 +18,11 @@ in
         # machine-to-machine, with no browser session to carry an Authentik cookie.
         bypassAuthPaths = [ "^/api" ];
         inherit port global;
+        label = "Radarr";
+        icon = "radarr.svg";
         homepage = {
           group = "Arr Stack";
-          label = "Radarr";
           description = "Movie organizer/manager";
-          icon = "radarr.svg";
           widget = {
             type = "radarr";
             # Hit Radarr directly rather than through nginx/Authentik, since Homepage's

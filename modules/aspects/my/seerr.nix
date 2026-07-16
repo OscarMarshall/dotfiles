@@ -32,11 +32,11 @@ in
           ];
           client-secret = "seerr-oidc-client-secret";
         };
+        label = "Seerr";
+        icon = "seerr.svg";
         homepage = {
           group = "Media";
-          label = "Seerr";
           description = "Media requests";
-          icon = "seerr.svg";
         };
       };
 

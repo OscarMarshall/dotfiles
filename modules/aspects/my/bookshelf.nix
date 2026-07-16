@@ -29,13 +29,14 @@ let
         inherit name port global;
         host = host.name;
         protected = true;
+        label = "Bookshelf (${label})";
+        # No dashboard-icons entry for pennydreadful/bookshelf specifically (its "audiobookshelf"
+        # entry is a different, unrelated app) - its own upstream logo instead. Named Readarr.svg
+        # upstream since Bookshelf is a Readarr fork.
+        icon = "https://raw.githubusercontent.com/pennydreadful/bookshelf/develop/Logo/Readarr.svg";
         homepage = {
           group = "Arr Stack";
           inherit description;
-          label = "Bookshelf (${label})";
-          # No dashboard-icons entry for pennydreadful/bookshelf specifically (its "audiobookshelf"
-          # entry is a different, unrelated app) - generic MDI fallback instead.
-          icon = "mdi-bookshelf";
         };
       };
 

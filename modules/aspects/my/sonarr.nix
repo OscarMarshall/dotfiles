@@ -18,11 +18,11 @@
         # machine-to-machine, with no browser session to carry an Authentik cookie.
         bypassAuthPaths = [ "^/api" ];
         inherit port global;
+        label = "Sonarr";
+        icon = "sonarr.svg";
         homepage = {
           group = "Arr Stack";
-          label = "Sonarr";
           description = "Show organizer/manager";
-          icon = "sonarr.svg";
           widget = {
             type = "sonarr";
             # Hit Sonarr directly rather than through nginx/Authentik, since Homepage's

@@ -18,11 +18,11 @@
         host = host.name;
         protected = true;
         inherit port global;
+        label = "Profilarr";
+        icon = "https://raw.githubusercontent.com/Dictionarry-Hub/profilarr/develop/src/lib/client/assets/logo-512.png";
         homepage = {
           group = "Arr Stack";
-          label = "Profilarr";
           description = "Radarr/Sonarr custom format manager";
-          icon = "profilarr.svg";
         };
       };
 

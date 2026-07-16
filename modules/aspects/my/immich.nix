@@ -42,11 +42,11 @@ in
           ];
           client-secret = "immich-oidc-client-secret";
         };
+        label = "Immich";
+        icon = "immich.svg";
         homepage = {
           group = "Media";
-          label = "Immich";
           description = "Photo & video backup";
-          icon = "immich.svg";
         };
       };
 

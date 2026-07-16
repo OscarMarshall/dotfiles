@@ -21,11 +21,11 @@
           "^/[0-9]+/api"
         ];
         inherit port global;
+        label = "Prowlarr";
+        icon = "prowlarr.svg";
         homepage = {
           group = "Arr Stack";
-          label = "Prowlarr";
           description = "Indexer manager/proxy";
-          icon = "prowlarr.svg";
           widget = {
             type = "prowlarr";
             # Hit Prowlarr directly rather than through nginx/Authentik, since Homepage's

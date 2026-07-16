@@ -24,16 +24,26 @@
 #   global              - (optional, bool) also serve at the bare `<name>.<domain>` alias (an
 #                         nginx `serverAlias`) and generate a `cloudflare_dns_record` for it.
 #   url                 - (optional) explicit override for the derived hostname.
-#   homepage            - (optional) `{ group; label; description; icon ? ...; widget ? {...}; }` -
-#                         contributes a Homepage dashboard tile. `icon` (optional) is a Homepage
-#                         icon reference (e.g. `"sonarr.png"` from the dashboard-icons library,
-#                         `"mdi-<name>"`, `"si-<name>"` - see
-#                         https://gethomepage.dev/configs/services/#icons). `widget.api-key`
-#                         (optional, bool) marks the widget as needing an API key - homepage.nix
-#                         finds the matching secret by scanning for `settings.homepage = "<this
-#                         name>";` on that same aspect's `secrets` field
-#                         (modules/aspects/my/homepage.nix), rather than this record naming the
-#                         secret directly.
+#   label               - (optional) human-readable display name, defaulting to `name`. Used for
+#                         BOTH the Homepage tile's title and the Authentik application's name, so
+#                         a service is called the same thing everywhere it's presented to a person.
+#                         Only needed where `name` (a lowercase URL component) isn't the brand's own
+#                         styling - e.g. `name = "qbittorrent"` but `label = "qBittorrent"`.
+#   icon                - (optional) service icon, used for BOTH the Homepage tile and the Authentik
+#                         application (see `label`). Either a Homepage icon reference - a
+#                         dashboard-icons filename (`"sonarr.svg"`) or `"mdi-<name>"`, see
+#                         https://gethomepage.dev/configs/services/#icons - or an absolute URL, for
+#                         apps whose only real logo lives in their own upstream repo. Prefer SVG.
+#                         authentik.nix translates the shorthands into plain URLs for `meta_icon`.
+#   homepage            - (optional) `{ group; description; widget ? {...}; }` - contributes a
+#                         Homepage dashboard tile (`label`/`icon` above feed it too, but live at the
+#                         top level since Authentik wants the same two). Omit for a service that
+#                         shouldn't appear on the dashboard at all but may still be an Authentik
+#                         application (e.g. qbittorrent). `widget.api-key` (optional, bool) marks the
+#                         widget as needing an API key - homepage.nix finds the matching secret by
+#                         scanning for `settings.homepage = "<this name>";` on that same aspect's
+#                         `secrets` field (modules/aspects/my/homepage.nix), rather than this record
+#                         naming the secret directly.
 #   oidc                - (optional) `{ redirect-paths; client-secret; }` - requests a native
 #                         OAuth2/OIDC Provider + Application from Authentik, for a service that
 #                         handles its own OIDC login rather than sitting behind Authentik's

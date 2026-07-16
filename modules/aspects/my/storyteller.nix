@@ -18,12 +18,12 @@
         host = host.name;
         protected = true;
         inherit port global;
+        label = "Storyteller";
+        # No dashboard-icons entry for this app - its own upstream logo instead.
+        icon = "https://gitlab.com/storyteller-platform/storyteller/-/raw/main/applications/docs/static/img/Storyteller_Logo.png";
         homepage = {
           group = "Media";
-          label = "Storyteller";
           description = "Read-aloud book alignment";
-          # No dashboard-icons entry for this app - generic MDI fallback instead.
-          icon = "mdi-book-music";
         };
       };
 

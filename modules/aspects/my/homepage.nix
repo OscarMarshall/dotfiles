@@ -7,6 +7,8 @@ let
 in
 {
   my.homepage = { host, ... }: {
+    # No `homepage` block of its own: Homepage doesn't list itself as one of its own tiles, but
+    # `label`/`icon` still feed its Authentik application (see virtual-host.nix).
     virtual-host = {
       name = "homepage";
       host = host.name;
@@ -15,6 +17,8 @@ in
       # for everything else.
       url = "${host.name}.${domain}";
       protected = true;
+      label = "Homepage";
+      icon = "https://raw.githubusercontent.com/gethomepage/homepage/dev/public/android-chrome-512x512.png";
       inherit port;
     };
 
@@ -87,11 +91,14 @@ in
             widget = vh.homepage.widget or null;
           in
           {
-            ${vh.homepage.label} = {
+            # `label`/`icon` live at the top level of the record, not under `homepage` - Authentik
+            # displays a service by the same name and icon (see modules/aspects/my/authentik.nix),
+            # including for services with no dashboard tile at all.
+            ${vh.label or vh.name} = {
               inherit href;
               inherit (vh.homepage) description;
             }
-            // lib.optionalAttrs (vh.homepage ? icon) { inherit (vh.homepage) icon; }
+            // lib.optionalAttrs (vh ? icon) { inherit (vh) icon; }
             // lib.optionalAttrs (widget != null) {
               # Widgets default to the vhost's own href; services behind Authentik forward-auth
               # (e.g. Netdata) override `widget.url` to a direct, unauthenticated address instead.
