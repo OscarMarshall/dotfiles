@@ -12,11 +12,17 @@
       servers = {
         nixos.command = "${pkgs.mcp-nixos}/bin/mcp-nixos";
 
-        github = {
-          command = "${pkgs.github-mcp-server}/bin/github-mcp-server";
-          args = [ "stdio" ];
-          env.GITHUB_PERSONAL_ACCESS_TOKEN.file = config.age.secrets.github-mcp-server-github-access-token.path;
-        };
+        # `programs.mcp`'s env.*.file support single-quotes the path before
+        # `cat`-ing it, but agenix's Darwin secret paths are themselves an
+        # unexpanded `$(getconf DARWIN_USER_TEMP_DIR)/agenix/...` shell
+        # command substitution — single-quoting prevents that expansion, so
+        # the token file is never found. Read it ourselves in a wrapper
+        # script instead, where the substitution is left unquoted for bash
+        # to expand at runtime.
+        github.command = "${pkgs.writeShellScript "github-mcp-server-wrapper" ''
+          export GITHUB_PERSONAL_ACCESS_TOKEN="$(cat ${config.age.secrets.github-mcp-server-github-access-token.path})"
+          exec ${pkgs.github-mcp-server}/bin/github-mcp-server stdio
+        ''}";
 
         context7.command = "${pkgs.context7-mcp}/bin/context7-mcp";
       };
