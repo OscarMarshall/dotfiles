@@ -23,8 +23,10 @@
         domain = "silverlight-nex.us";
 
         # Address of Authentik's embedded outpost, used to gate `protected` virtual hosts behind
-        # forward-auth. Matches the address authentik-nix's own nginx integration proxies to.
-        authentikOutpost = "https://127.0.0.1:9443";
+        # forward-auth. Temporarily switched to the plaintext port (9000) instead of the TLS one
+        # (9443) to rule out an HTTPS/TLS-layer cause of the mysterious auth_request 400s — see
+        # git history/PR discussion if this comment is still here, it should have been reverted.
+        authentikOutpost = "http://127.0.0.1:9000";
         # Looked up rather than referenced directly, since `my.authentik` (and thus the
         # `services.authentik.*` options) may not be included on every host that uses `my.nginx`.
         # Only forced — and only throws — when a `protected` virtual host actually needs it.
