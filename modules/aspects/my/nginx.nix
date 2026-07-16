@@ -81,12 +81,16 @@
                 # nginx `serverAlias`, which nixos's ACME integration automatically adds as a SAN
                 # on the same certificate.
                 url = vh.url or "${vh.name}.${host.name}.${domain}";
+                global-url = "${vh.name}.${domain}";
               in
               lib.nameValuePair url (
                 {
                   forceSSL = true;
                   enableACME = true;
-                  serverAliases = lib.optionals (vh.global or false) [ "${vh.name}.${domain}" ];
+                  # Skips adding `global-url` when a service's own `url` override (e.g.
+                  # authentik.nix's, when `global`) already IS the canonical name - the usual case
+                  # is `url` staying host-scoped, with `global-url` merely an alias alongside it.
+                  serverAliases = lib.optionals (vh.global or false && url != global-url) [ global-url ];
                   # appendHttpConfig's proxy_cookie_path rewrite appends its own secure/HttpOnly/
                   # SameSite flags to every Set-Cookie header, even ones a backend already set its
                   # own correct flags on. That produces a Set-Cookie with duplicated attributes,

@@ -1,7 +1,7 @@
 # The `virtual-host` quirk: any service aspect contributes one alongside its `nixos` config to get
-# a reverse-proxied vhost (nginx.nix), a Homepage dashboard tile (homepage.nix), and/or a
-# Cloudflare DNS record (dns.nix) - declared once, consumed by all three. Lives in its own file
-# since it no longer belongs to any single consumer.
+# a reverse-proxied vhost (nginx.nix), a Homepage dashboard tile (homepage.nix), a Cloudflare DNS
+# record (dns.nix), and/or a native OIDC application in Authentik (authentik.nix) - declared once,
+# consumed by all four. Lives in its own file since it no longer belongs to any single consumer.
 #
 # Record shape (every producer is a plain attrset under `virtual-host = {...};`, never a function -
 # see modules/terranix.nix for why that matters for any aspect consuming it as a class field):
@@ -25,8 +25,25 @@
 #                         nginx `serverAlias`) and generate a `cloudflare_dns_record` for it.
 #   url                 - (optional) explicit override for the derived hostname.
 #   homepage            - (optional) `{ group; label; description; widget ? {...}; }` - contributes
-#                         a Homepage dashboard tile. `widget.apiKeySecret` (optional) names an age
-#                         secret to surface as a `{{HOMEPAGE_VAR_*}}` template value.
+#                         a Homepage dashboard tile. `widget.api-key` (optional, bool) marks the
+#                         widget as needing an API key - homepage.nix finds the matching secret by
+#                         scanning for `settings.homepage = "<this name>";` on that same aspect's
+#                         `secrets` field (modules/aspects/my/homepage.nix), rather than this record
+#                         naming the secret directly.
+#   oidc                - (optional) `{ redirect-paths; client-secret; }` - requests a native
+#                         OAuth2/OIDC Provider + Application from Authentik, for a service that
+#                         handles its own OIDC login rather than sitting behind Authentik's
+#                         forward-auth (`protected` above - a different mechanism, mutually
+#                         exclusive with this one in practice). `redirect-paths` is a list of
+#                         PATH-ONLY callback routes (e.g. `[ "/login" ]`, whatever the service's own
+#                         OIDC docs say to register) - authentik.nix registers one full redirect URI
+#                         per path, per hostname this record is actually reachable at (its derived/
+#                         overridden `url`, plus the canonical `<name>.<domain>` too if `global`) -
+#                         so a globally-exposed service doesn't break OIDC login for people using
+#                         the canonical URL. `client-secret` names an age secret (declared on that
+#                         same aspect's `secrets` field, with `settings.terraform = "variable";` -
+#                         see modules/terranix.nix's header comment) holding the OIDC client secret
+#                         value the service itself was already configured to send.
 {
   den.quirks.virtual-host.description = "Reverse-proxied virtual hosts served by nginx, optionally exposed globally and/or on the Homepage dashboard";
 }

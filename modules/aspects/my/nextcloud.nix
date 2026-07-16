@@ -23,6 +23,16 @@ in
         # Deliberately no `port` — Nextcloud is PHP-FPM, not a plain HTTP service to
         # proxy_pass to. The quirk emits only forceSSL/enableACME for this vhost, and
         # Nextcloud's own module below supplies its `locations`/`root`, merging cleanly.
+        #
+        # Requests the matching OAuth2 Provider + Application from Authentik (authentik.nix) - see
+        # virtual-host.nix's `oidc` field for the shape. Per user_oidc's own callback route (and
+        # Authentik's Nextcloud integration guide) - `/index.php/...` only matters for installs
+        # that haven't set `overwriteprotocol`-style pretty URLs, which this one has (see
+        # `settings.overwriteprotocol` below).
+        oidc = {
+          redirect-paths = [ "/apps/user_oidc/code" ];
+          client-secret = "nextcloud-oidc-client-secret";
+        };
         homepage = {
           group = "Media";
           label = "Nextcloud";
@@ -32,7 +42,13 @@ in
 
       secrets = {
         nextcloud-admin-password.generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -base64 24";
-        nextcloud-oidc-client-secret.generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
+        # `settings.terraform = "variable";` feeds a Terraform `variable` (modules/terranix.nix's
+        # two modes); also read directly below (LoadCredential) to configure user_oidc via occ, so
+        # it's NOT `intermediary` - it has to be materialized as a real host secret too.
+        nextcloud-oidc-client-secret = {
+          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
+          settings.terraform = "variable";
+        };
       };
 
       nixos = { config, pkgs, ... }: {
@@ -94,7 +110,7 @@ in
             nextcloud-occ user_oidc:provider "authentik" $UPDATE_FLAG \
               --clientid="nextcloud" \
               --clientsecret="$CLIENT_SECRET" \
-              --discoveryuri="https://auth.harmony.silverlight-nex.us/application/o/nextcloud/.well-known/openid-configuration" \
+              --discoveryuri="https://${config.services.authentik.nginx.host}/application/o/nextcloud/.well-known/openid-configuration" \
               --scope="openid email profile"
 
             nextcloud-occ config:app:set richdocuments wopi_url --value="http://[::1]:9980"

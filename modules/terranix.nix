@@ -14,23 +14,41 @@
 # whitelisting only real Terraform keys (resource/variable/provider/etc.), so the shimmed
 # `warnings` value never reaches config.tf.json regardless of its contents.
 #
-# The `terraform-secret` quirk: any aspect with a `terranix` field that needs a credential (a
-# Terraform provider reading an API token from an env var - see dns.nix/meraki.nix) contributes
-# the NAME of an age secret (declared on that same aspect's `secrets` field), same idea as
-# `virtual-host`/`port-forward` (modules/aspects/my/virtual-host.nix,
-# modules/aspects/my/port-forward.nix) - declared once per aspect, collected here rather than each
-# aspect wiring its own separate `agenix -d | source` step by hand.
+# Exposing a secret to Terraform: set `settings.terraform` on that secret's OWN entry under the
+# aspect's `secrets` field (agenix-rekey's `age.secrets.<name>.settings` - a genuinely freeform
+# `nullOr attrs` field agenix-rekey declares but never itself reads, so it's safe to use for our
+# own bookkeeping - see https://github.com/oddlama/agenix-rekey). No separate quirk or list to keep
+# in sync elsewhere; the secret's own declaration is the single source of truth for whether (and
+# how) it reaches Terraform:
 #
-# The env var name is derived from the secret name (`env-var-for` below: kebab-case -> SCREAMING_SNAKE
-# - e.g. `cloudflare-api-token` -> `CLOUDFLARE_API_TOKEN`), so name the secret to match whatever env
-# var the provider actually reads - the provider's env var is the fixed, external constraint here,
-# not the secret name.
+#   settings.terraform = true;        - a provider reads this straight from an env var (e.g.
+#                                        Cloudflare's/Meraki's dashboard tokens) - exposed under
+#                                        the env var `env-var-for` derives from the secret's OWN
+#                                        name (kebab-case -> SCREAMING_SNAKE, e.g.
+#                                        `cloudflare-api-token` -> `CLOUDFLARE_API_TOKEN`) - so name
+#                                        the secret to match whatever env var the provider actually
+#                                        reads.
+#   settings.terraform = "variable";  - the value is a RESOURCE ATTRIBUTE (e.g. an OIDC client
+#                                        secret Authentik's API has to persist), which nothing in
+#                                        Terraform can read from an arbitrary env var - only from a
+#                                        declared `variable`, populated via the `TF_VAR_*`
+#                                        convention. Exposed as `TF_VAR_<env-var-for name>`; the
+#                                        consuming aspect declares `variable.<env-var-for name>` in
+#                                        its own `terranix` field and references
+#                                        `"\${var.<env-var-for name>}"`.
 #
-# Collected per host into a single generated secret, `secrets/generated/<hostname>-tf.env.age`
-# (create/update it like any other generated secret: `agenix generate -a && agenix rekey -a`) -
-# `terraformWrapper.prefixText` below decrypts and sources it automatically before every `nix run
-# .#<hostname>-tf*` invocation, so there's no manual per-secret `source <(agenix -d ...)` step to
-# remember (or to add to) when a new aspect starts contributing a credential.
+# Every such secret, across every aspect on a host, is collected below into that host's own
+# `"${host.name}-tf.env"` generated secret (create/update it like any other generated secret:
+# `agenix generate -a && agenix rekey -a`) - `terraformWrapper.prefixText` decrypts and sources it
+# automatically before every `nix run .#<hostname>-tf*` invocation, so there's no manual per-secret
+# `source <(agenix -d ...)` step to remember (or to add to) when a new aspect starts contributing a
+# credential.
+#
+# `settings.terraform = "variable"` secrets can end up in Terraform's STATE file in plaintext once
+# applied (Terraform has to persist resource attributes to manage them - no env-var trick routes
+# around that), and state for hosts like harmony is committed to this (public) repo (see
+# .gitignore's comment, and #516). `terraform.encryption` below (contributed unconditionally for
+# every host) is what actually keeps those out of the plaintext git history.
 {
   den,
   inputs,
@@ -49,34 +67,23 @@ let
   # kebab-case -> SCREAMING_SNAKE_CASE, e.g. `cloudflare-api-token` -> `CLOUDFLARE_API_TOKEN`.
   env-var-for = secret: lib.toUpper (lib.replaceStrings [ "-" ] [ "_" ] secret);
 
-  # Collects `terraform-secret` quirk contributions for every host into that host's own
-  # `"${host.name}-tf.env"` generated secret - lives outside any single aspect (like
+  # `sec.settings` is a declared option, default `null` - `a.b.c or default` short-circuits the
+  # WHOLE chain (not just the last step), so this is safe even when `sec.settings` itself is
+  # `null`. Returns `null` for anything not opted in, `true`/`"variable"` (or whatever else
+  # `settings.terraform` was set to) otherwise.
+  terraform-mode-of = sec: sec.settings.terraform or null;
+
+  # The actual env var a `settings.terraform`-flagged secret surfaces as, per the two modes
+  # documented above.
+  terraform-env-var-for =
+    name: sec: if terraform-mode-of sec == "variable" then "TF_VAR_${env-var-for name}" else env-var-for name;
+
+  # Collects every `settings.terraform`-flagged secret, across every aspect on a host, into that
+  # host's own `"${host.name}-tf.env"` generated secret - lives outside any single aspect (like
   # virtual-host.nix/port-forward.nix's consumers) since it's shared plumbing, not owned by any one
   # service. `os` (not `nixos`) so this works identically whichever platform a future
-  # terraform-contributing host runs - see modules/aspects/defaults.nix's `secrets` forwarding rule
-  # for why `config.my.terraform-secrets` (set here) is visible from the `secrets` field below: both
-  # land in the SAME per-host nixos/darwin evalModules pass. `secrets` itself can't request the
-  # `terraform-secret` quirk directly - `age.secrets` is a flat `attrsOf submodule` with no
-  # `warnings` option to shim (see the header comment above), so a field mixing a den-recognized
-  # quirk with `secrets` (the self-reference used for `dependencies` below) breaks the same way
-  # documented in modules/aspects/my/homepage.nix - hence stashing it through an option instead.
+  # terraform-contributing host runs.
   terraform-secrets-aspect = { host, ... }: {
-    os =
-      {
-        terraform-secret ? [ ],
-        lib,
-        ...
-      }:
-      {
-        options.my.terraform-secrets = lib.mkOption {
-          type = lib.types.listOf lib.types.str;
-          internal = true;
-          default = [ ];
-        };
-
-        config.my.terraform-secrets = terraform-secret;
-      };
-
     secrets =
       {
         config,
@@ -84,9 +91,27 @@ let
         lib,
         ...
       }:
-      lib.optionalAttrs (config.my.terraform-secrets != [ ]) {
+      let
+        terraform-secrets = lib.filterAttrs (_: sec: terraform-mode-of sec != null) config.age.secrets;
+      in
+      {
+        # Always present (not left to opt in) - it backs `terraform.encryption` below, which every
+        # `<host>-tf` gets unconditionally (see that field's own comment for why).
+        open-tofu-state-passphrase = {
+          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -base64 32";
+          intermediary = true;
+          settings.terraform = "variable";
+        };
+
+        # This key's PRESENCE must be unconditional, even though `terraform-secrets` (its VALUE
+        # depends on it) is empty exactly when only `open-tofu-state-passphrase` above is
+        # flagged - making it conditional on `terraform-secrets != { }` would mean
+        # `config.age.secrets`'s own key set depends on whether THIS module contributes this SAME
+        # key, which depends on scanning `config.age.secrets`'s key set - "infinite recursion
+        # encountered". A value may safely depend on the fully-merged `config.age.secrets` (lazy
+        # evaluation handles that fine); a key's PRESENCE may not.
         "${host.name}-tf.env".generator = {
-          dependencies = lib.genAttrs config.my.terraform-secrets (name: secrets.${name});
+          dependencies = lib.mapAttrs (name: _: secrets.${name}) terraform-secrets;
           script =
             {
               lib,
@@ -99,10 +124,61 @@ let
               # generated env file - this file gets `source`d (see terraformWrapper.prefixText
               # below), so an unescaped value containing `$`, backticks, `\`, or `"` would be
               # reinterpreted by the shell instead of reproduced literally.
-              printf '${env-var-for name}=%q\n' "$(${decrypt} ${lib.escapeShellArg deps.${name}.file})"
-            '') config.my.terraform-secrets;
+              printf '${terraform-env-var-for name terraform-secrets.${name}}=%q\n' "$(${decrypt} ${
+                lib.escapeShellArg deps.${name}.file
+              })"
+            '') (lib.attrNames terraform-secrets);
         };
       };
+
+    # Encrypts every `<host>-tf` state/plan at rest (OpenTofu's built-in state encryption, stable
+    # since 1.8 - pinned opentofu is 1.12.3) - added repo-wide here, not per-aspect, since ANY
+    # aspect's `terranix` field can start carrying a secret-bearing resource attribute (the
+    # `settings.terraform = "variable"` convention above exists precisely for that), and state for
+    # hosts like harmony is committed to this (public) repo (see .gitignore's comment, and #516).
+    # Unconditional (not gated on whether any `settings.terraform` secret actually exists) because
+    # this field can't see `config.age.secrets` to gate itself on - it's evaluated in terranix's
+    # own module-type pass, which only den quirks bridge into (see this file's header comment), and
+    # `age.secrets` isn't one.
+    terranix = {
+      variable.OPEN_TOFU_STATE_PASSPHRASE.sensitive = true;
+
+      terraform.encryption = {
+        key_provider.pbkdf2.main.passphrase = "\${var.OPEN_TOFU_STATE_PASSPHRASE}";
+
+        method = {
+          aes_gcm.main.keys = "\${key_provider.pbkdf2.main}";
+          # No real key_provider - exists only so `state.fallback` below has something to name.
+          # State written under this method is never produced going forward, only ever read.
+          unencrypted.migrate = { };
+        };
+
+        # `method` (here and in `fallback` below) is a STATIC TRAVERSAL, not a computed value -
+        # HCL's JSON spec requires this as a plain string containing raw HCL syntax
+        # (`"method.aes_gcm.main"`), NOT a `"\${...}"` template - the latter parses as a template
+        # expression and fails validate ("A single static variable reference is required ... No
+        # ... template expressions ... allowed here"), even though `"\${...}"` is exactly right for
+        # genuinely computed values elsewhere in this block (`key_provider.pbkdf2.main.passphrase`,
+        # `aes_gcm.main.keys`).
+        state = {
+          method = "method.aes_gcm.main";
+          # Every `<host>-tf/terraform.tfstate` committed before this (e.g. harmony's, from #516)
+          # is still plaintext JSON - without a fallback, OpenTofu would try to decrypt that as
+          # ciphertext and fail outright on the very next `plan`/`apply`. Read-only: the moment
+          # anything applies, the state is rewritten through `method.aes_gcm.main` above and
+          # stays encrypted from then on.
+          #
+          # `fallback` is a nested BLOCK in OpenTofu's schema (`fallback { method = ...; }`), not
+          # a plain attribute like `method` above - a bare string here (rather than a JSON object)
+          # fails at apply time ("Incorrect JSON value type ... Either a JSON object or a JSON
+          # array is required, representing the contents of one or more \"fallback\" blocks"),
+          # even though it looks identical to `method`'s own assignment in HCL. JSON syntax needs
+          # the block's actual contents as an object, hence nesting one more level than `method`
+          # does.
+          fallback.method = "method.unencrypted.migrate";
+        };
+      };
+    };
   };
 
   # Read from the file's own top-level `config` (closed over here, not re-requested) for the same
@@ -124,8 +200,6 @@ in
 
   den = {
     classes.terranix = { };
-
-    quirks.terraform-secret.description = "Names of age secrets a Terraform provider reads as env vars, decrypted into a per-host generated secret for `nix run .#<hostname>-tf`";
 
     policies.host-to-terranix = { host, ... }: [
       (den.lib.policy.instantiate {
@@ -167,9 +241,9 @@ in
           modules = modules ++ [ warnings-shim ];
           terraformWrapper = {
             package = pkgs.opentofu;
-            # No-ops for hosts with no `terraform-secret` contributions (nothing to generate, so
-            # the file never exists). Both tools are called by their full store path (not left to
-            # PATH) so this works even outside the dev shell.
+            # No-ops for hosts with no `settings.terraform`-flagged secrets (nothing to generate,
+            # so the file never exists). Both tools are called by their full store path (not left
+            # to PATH) so this works even outside the dev shell.
             #
             # agenix-rekey's own CLI (`config.agenix-rekey.package`, built from its
             # nix/package.nix) is NOT plain agenix/ragenix - it has no `-d` flag. `view` is its

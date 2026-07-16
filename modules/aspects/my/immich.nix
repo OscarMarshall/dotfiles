@@ -27,6 +27,21 @@ in
         # server-side but the session never sticks, so the UI hangs forever waiting for one that
         # never arrives.
         preserveCookieFlags = true;
+        # Requests the matching OAuth2 Provider + Application from Authentik (authentik.nix) - see
+        # virtual-host.nix's `oidc` field for the shape. Per Immich's own OIDC docs
+        # (docs.immich.app/administration/oauth) - web login redirects to `/auth/login`, the "link
+        # another device" flow redirects to `/user-settings`, and the mobile app comes in through
+        # the HTTPS override below (`mobileRedirectUri`) rather than its native
+        # `app.immich:///oauth-callback` scheme, which Authentik doesn't need to know about as a
+        # result.
+        oidc = {
+          redirect-paths = [
+            "/auth/login"
+            "/user-settings"
+            "/api/oauth/mobile-redirect"
+          ];
+          client-secret = "immich-oidc-client-secret";
+        };
         homepage = {
           group = "Media";
           label = "Immich";
@@ -34,8 +49,16 @@ in
         };
       };
 
+      # `settings.terraform = "variable";` (not just any secret) - it now feeds a Terraform
+      # `variable` (modules/terranix.nix's two modes) as well as Immich's own `environmentFile`-
+      # style secret consumption below, so it's NOT `intermediary` - unlike a secret that ONLY ever
+      # feeds a Terraform `variable`, this one is ALSO read directly by `services.immich` below via
+      # its own decrypted file, so it has to be materialized as a real host secret.
       secrets = {
-        immich-oidc-client-secret.generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
+        immich-oidc-client-secret = {
+          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
+          settings.terraform = "variable";
+        };
       };
 
       nixos = { config, ... }: {
@@ -50,7 +73,7 @@ in
           mediaLocation = "/metalminds/pictures";
           settings.oauth = {
             enabled = true;
-            issuerUrl = "https://auth.harmony.silverlight-nex.us/application/o/immich/";
+            issuerUrl = "https://${config.services.authentik.nginx.host}/application/o/immich/";
             clientId = "immich";
             clientSecret._secret = config.age.secrets.immich-oidc-client-secret.path;
             scope = "openid email profile";

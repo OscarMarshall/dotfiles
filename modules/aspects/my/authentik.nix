@@ -14,17 +14,255 @@ in
     }:
     { host, ... }:
     let
-      url = "auth.${host.name}.${domain}";
+      # Unlike every other service's `global` (an ADDITIONAL alias alongside its host-scoped name -
+      # see virtual-host.nix), Authentik's own identity is baked into every OIDC issuer URL,
+      # redirect URI, and the Terraform provider's target - having it answer on two different
+      # names would mean picking one as canonical anyway. So `global` here SWITCHES Authentik's
+      # actual served hostname to the bare domain instead of merely aliasing it there; the
+      # host-scoped name stops being served at all. `config.services.authentik.nginx.host`
+      # (`nixos` below) is this exact value, and other aspects that need Authentik's URL
+      # (immich.nix/nextcloud.nix/seerr.nix) read it from there rather than re-deriving it.
+      url = if global then "auth.${domain}" else "auth.${host.name}.${domain}";
     in
     {
+      # SSO-as-code, managed via terranix (Nix -> Terraform config, see modules/terranix.nix) and
+      # the authentik Terraform provider - see dns.nix/meraki.nix for the general pattern
+      # (`nix run .#<host>-tf[.plan|.destroy]`, `nix develop .#<host>-tf`,
+      # `nix build .#<host>-tf.config`).
+      #
+      # Every OTHER service's `protected = true;` (see virtual-host.nix) already makes nginx.nix
+      # gate that vhost behind Authentik's embedded outpost (`auth_request
+      # /outpost.goauthentik.io/auth/nginx`) - but that snippet only WORKS once Authentik itself
+      # has a matching Proxy Provider + Application for that hostname, and the embedded outpost
+      # has been told to serve it. Until now that pairing was manual (Applications > Providers in
+      # the UI); this block generates one `forward_single`-mode provider + application + outpost
+      # attachment per `protected` virtual host straight from the SAME quirk data nginx.nix already
+      # consumes, so a service can't end up `protected` in nginx but unconfigured in Authentik (or
+      # vice versa).
+      #
+      # Auth: the provider needs an Authentik API token (AUTHENTIK_TOKEN env var - never written
+      # into the generated config or Terraform state) and the server URL (not secret, set directly
+      # below). Rather than click out a token in the UI, this reuses Authentik's own
+      # AUTHENTIK_BOOTSTRAP_TOKEN mechanism (see `services.authentik.environmentFile` below): on
+      # Authentik's FIRST boot only, it creates the `akadmin` superuser with that exact token
+      # already valid for the API - `authentik-token` below is that same value, flagged
+      # `settings.terraform = true;` (modules/terranix.nix) so it lands as `AUTHENTIK_TOKEN` in
+      # harmony's generated Terraform env automatically. Run `agenix generate -a && agenix rekey -a`
+      # once, `nixos-rebuild switch` harmony so the bootstrap actually runs, and `nix run
+      # .#harmony-tf*` just works from then on - no manual `agenix -d | source` step to remember.
+      #
+      # Because the bootstrap only fires once, rotating `authentik-token` later (e.g. `agenix
+      # edit`) does NOT rotate the live API token - that would need a fresh akadmin token minted
+      # from the UI (Directory > Tokens) and swapped in by hand, same as any other
+      # already-bootstrapped credential.
+      #
+      # `forward_single` (one provider/application per hostname, matched by the outpost via the
+      # request's Host header) rather than `forward_domain` (one shared provider for a whole
+      # cookie-domain) because nginx.nix's `protected` snippet is already per-vhost and generic -
+      # this mirrors that shape 1:1, and keeps each service's access policy independently
+      # assignable later instead of all-or-nothing for the domain.
+      #
+      # `data.authentik_outpost.embedded` looks up Authentik's own built-in outpost (created
+      # automatically, named "authentik Embedded Outpost") rather than managing it as a resource -
+      # recreating it would conflict with the instance that already exists out of the box.
+      #
+      # Social login (`authentik_source_oauth`/`authentik_source_plex` below) is a DIFFERENT thing
+      # from the `protected` forward-auth above: it's an identity SOURCE (an extra "Log in with
+      # ..." button on Authentik's own login page), not a per-service Provider/Application. Neither
+      # Discord (discord.nix is just the desktop client, there's no self-hosted server to front) nor
+      # Plex (plex.nix's `virtual-host` is deliberately never `protected` - Plex has its own
+      # account/library-based auth) get gated behind Authentik; this only lets people who already
+      # have a Discord or Plex.tv account use it to log into Authentik itself (and, once
+      # authenticated, whatever `protected` services above already gate).
+      #
+      # Native OIDC applications (`authentik_provider_oauth2` below) are a THIRD, distinct thing:
+      # some services (Immich, Nextcloud, Seerr) have their own OIDC client built in and just need
+      # Authentik to hand them a matching Provider + Application, rather than sitting behind
+      # forward-auth at all - driven by the `oidc` field on `virtual-host` (virtual-host.nix) each
+      # of those services' own aspect sets.
+      #
+      # Discord/Plex's credentials and every `oidc`-tagged host's `client-secret` are RESOURCE
+      # ATTRIBUTES here, not provider-level auth like AUTHENTIK_TOKEN above - Authentik's API has
+      # to persist the actual value to work at all, so unlike everything else in this file, these
+      # DO end up in Terraform's state file in plaintext once applied (an inherent Terraform
+      # limitation, not something the env-var trick can route around) - and harmony-tf's state is
+      # committed to this (public) repo (see #516). modules/terranix.nix's `terraform.encryption`
+      # (contributed unconditionally for every host, see its own comment) is what actually keeps
+      # these out of the plaintext git history; `settings.terraform = "variable";` (below, on each
+      # secret) is just how their values reach the `variable`s that encryption config wraps.
+      terranix =
+        { virtual-host, lib, ... }:
+        let
+          protected-hosts = lib.filter (vh: vh.protected or false) virtual-host;
+          oidc-hosts = lib.filter (vh: vh ? oidc) virtual-host;
+          hostname-of = vh: vh.url or "${vh.name}.${host.name}.${domain}";
+          # Every hostname a `global` virtual-host actually answers on: its own (derived or
+          # overridden) name, plus the canonical `<name>.<domain>` too - see virtual-host.nix's
+          # `oidc` field comment for why both need a redirect URI registered, not just one.
+          hostnames-of = vh: [ (hostname-of vh) ] ++ lib.optional (vh.global or false) "${vh.name}.${domain}";
+
+          # Mirrors `env-var-for` (modules/terranix.nix) exactly - the `TF_VAR_` prefix a
+          # `settings.terraform = "variable";` secret surfaces under is added programmatically
+          # there, not baked into the secret's name, so the Terraform `variable` it populates is
+          # just this transform of the secret's own name. Also used for every `oidc`-tagged virtual
+          # host's own `client-secret` below, so all of these stay derived from one place instead
+          # of hand-typed twice per secret.
+          tf-var-name-of = secret: lib.toUpper (lib.replaceStrings [ "-" ] [ "_" ] secret);
+
+          # Discord: create an OAuth2 app at https://discord.com/developers/applications, copy its
+          # Client ID below (not secret - it's public in every OAuth redirect), put the Client
+          # Secret in the `discord-client-secret` age file (one-time `agenix edit
+          # secrets/discord-client-secret.age`, then `agenix rekey -a`), and add
+          # `https://${url}/source/oauth/callback/discord/` as that app's OAuth2 redirect URI.
+          discord-client-id = "1525363641598083102";
+
+          # Plex: unlike Discord, this ID isn't issued BY Plex - it's an arbitrary, stable string
+          # Authentik uses to identify itself to plex.tv (the `X-Plex-Client-Identifier`). Any
+          # value works and never needs to change; no action needed.
+          plex-client-id = "silverlight-nex-us-authentik";
+
+          # harmony's Plex server `machineIdentifier` (`curl http://localhost:32400/identity` on
+          # harmony) - restricts Plex login to people with access to this server; left empty, ANY
+          # Plex.tv account could log into Authentik instead.
+          plex-allowed-servers = [ "8c5824dcf35bfbe5a6f73239e4150ab2f563f624" ];
+        in
+        # `lib.foldl' lib.recursiveUpdate`, not `//` - every branch below declares a top-level
+        # `resource`/`data` attrset, and `//` only shallow-merges, which would make each later
+        # branch silently clobber the earlier ones' resources instead of adding to them.
+        lib.foldl' lib.recursiveUpdate
+          {
+            terraform.required_providers.authentik = {
+              source = "goauthentik/authentik";
+              version = "~> 2026";
+            };
+
+            # `token` isn't set here - the provider reads it from AUTHENTIK_TOKEN (see above); `url`
+            # isn't secret, so it's set directly rather than round-tripped through an env var.
+            provider.authentik.url = "https://${url}";
+
+            data.authentik_flow = {
+              default-authorization-flow.slug = "default-provider-authorization-implicit-consent";
+              default-invalidation-flow.slug = "default-provider-invalidation-flow";
+              # Distinct from the provider-authorization flow above - these are Authentik's built-in
+              # flows for external identity SOURCES (Discord/Plex/etc.), not Providers.
+              default-source-authentication.slug = "default-source-authentication";
+              default-source-enrollment.slug = "default-source-enrollment";
+            };
+
+            data.authentik_outpost.embedded.name = "authentik Embedded Outpost";
+
+            variable.DISCORD_CLIENT_SECRET.sensitive = true;
+            variable.PLEX_TOKEN.sensitive = true;
+
+            resource.authentik_source_oauth.discord = {
+              name = "Discord";
+              slug = "discord";
+              authentication_flow = "\${data.authentik_flow.default-source-authentication.id}";
+              enrollment_flow = "\${data.authentik_flow.default-source-enrollment.id}";
+              provider_type = "discord";
+              consumer_key = discord-client-id;
+              consumer_secret = "\${var.${tf-var-name-of "discord-client-secret"}}";
+            };
+
+            resource.authentik_source_plex.plex = {
+              name = "Plex";
+              slug = "plex";
+              authentication_flow = "\${data.authentik_flow.default-source-authentication.id}";
+              enrollment_flow = "\${data.authentik_flow.default-source-enrollment.id}";
+              client_id = plex-client-id;
+              plex_token = "\${var.${tf-var-name-of "plex-token"}}";
+              allowed_servers = plex-allowed-servers;
+              allow_friends = true;
+            };
+          }
+          [
+            (lib.optionalAttrs (protected-hosts != [ ]) {
+              resource.authentik_provider_proxy = lib.listToAttrs (
+                map (vh: {
+                  name = vh.name;
+                  value = {
+                    name = vh.name;
+                    mode = "forward_single";
+                    external_host = "https://${hostname-of vh}";
+                    authorization_flow = "\${data.authentik_flow.default-authorization-flow.id}";
+                    invalidation_flow = "\${data.authentik_flow.default-invalidation-flow.id}";
+                  };
+                }) protected-hosts
+              );
+
+              resource.authentik_application = lib.listToAttrs (
+                map (vh: {
+                  name = vh.name;
+                  value = {
+                    name = vh.homepage.label or vh.name;
+                    slug = vh.name;
+                    protocol_provider = "\${authentik_provider_proxy.${vh.name}.id}";
+                  };
+                }) protected-hosts
+              );
+
+              resource.authentik_outpost_provider_attachment = lib.listToAttrs (
+                map (vh: {
+                  name = vh.name;
+                  value = {
+                    outpost = "\${data.authentik_outpost.embedded.id}";
+                    protocol_provider = "\${authentik_provider_proxy.${vh.name}.id}";
+                  };
+                }) protected-hosts
+              );
+            })
+            (lib.optionalAttrs (oidc-hosts != [ ]) {
+              variable = lib.genAttrs (map (vh: tf-var-name-of vh.oidc.client-secret) oidc-hosts) (_: {
+                sensitive = true;
+              });
+
+              resource.authentik_provider_oauth2 = lib.listToAttrs (
+                map (vh: {
+                  name = "${vh.name}-oidc";
+                  value = {
+                    name = vh.name;
+                    client_id = vh.name;
+                    client_secret = "\${var.${tf-var-name-of vh.oidc.client-secret}}";
+                    allowed_redirect_uris = lib.concatMap (
+                      hostname:
+                      map (path: {
+                        matching_mode = "strict";
+                        url = "https://${hostname}${path}";
+                      }) vh.oidc.redirect-paths
+                    ) (hostnames-of vh);
+                    authorization_flow = "\${data.authentik_flow.default-authorization-flow.id}";
+                    invalidation_flow = "\${data.authentik_flow.default-invalidation-flow.id}";
+                  };
+                }) oidc-hosts
+              );
+
+              resource.authentik_application = lib.listToAttrs (
+                map (vh: {
+                  name = "${vh.name}-oidc";
+                  value = {
+                    name = vh.name;
+                    slug = vh.name;
+                    protocol_provider = "\${authentik_provider_oauth2.${vh.name}-oidc.id}";
+                  };
+                }) oidc-hosts
+              );
+            })
+          ];
+
       # No `port`: authentik-nix's own module wires `services.nginx.virtualHosts.${url}.locations`
       # directly (see `services.authentik.nginx` below), same pattern as Nextcloud's PHP-FPM vhost.
       # This entry only exists so nginx.nix's `serverAliases`/global-toggle and homepage.nix's
-      # dashboard tile can pick Authentik up like every other service.
+      # dashboard tile can pick Authentik up like every other service - `url` MUST be given
+      # explicitly (not left to nginx.nix's own `${name}.${host.name}.${domain}` default), or
+      # nginx.nix and `services.authentik.nginx.host` below would disagree on Authentik's vhost
+      # name and produce two separate, non-merging `virtualHosts` entries instead of one. `global`
+      # is still passed through so dns.nix keeps creating the canonical record - see the `url`
+      # binding's comment above for why Authentik's `global` means something stronger than every
+      # other service's (replace, not merely alias).
       virtual-host = {
         name = "auth";
         host = host.name;
-        inherit global;
+        inherit global url;
         homepage = {
           group = "Infra";
           label = "Authentik";
@@ -37,8 +275,18 @@ in
           generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -base64 60";
           intermediary = true;
         };
+        # Consumed both by `authentik.env` below (so Authentik mints it as `akadmin`'s API token
+        # on first boot, under the DIFFERENT env var name that bootstrap mechanism expects) and,
+        # via `settings.terraform = true;`, by harmony's shared Terraform env (as `AUTHENTIK_TOKEN`)
+        # - see the `terranix` field's comment for why a bootstrap token rather than a UI-created
+        # one.
+        authentik-token = {
+          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
+          intermediary = true;
+          settings.terraform = true;
+        };
         "authentik.env".generator = {
-          dependencies = { inherit (secrets) authentik-secret-key; };
+          dependencies = { inherit (secrets) authentik-secret-key authentik-token; };
           script =
             {
               lib,
@@ -48,7 +296,26 @@ in
             }:
             ''
               printf 'AUTHENTIK_SECRET_KEY=%s\n' "$(${decrypt} ${lib.escapeShellArg deps.authentik-secret-key.file})"
+              printf 'AUTHENTIK_BOOTSTRAP_TOKEN=%s\n' "$(${decrypt} ${lib.escapeShellArg deps.authentik-token.file})"
             '';
+        };
+
+        # Both come from an external dashboard (Discord's, Plex's own account), so - unlike the
+        # generated secrets above - these use `rekeyFile` and need a one-time `agenix edit` (see
+        # the `terranix` field's comment for where each value comes from), same as
+        # `cloudflare-api-token`/`meraki-dashboard-api-key`. `settings.terraform = "variable";`
+        # (not `= true;`) because they're only ever consumed as Terraform `variable`s, never by a
+        # NixOS service directly - see modules/terranix.nix's header comment on the two modes.
+        discord-client-secret = {
+          rekeyFile = ../../../secrets/discord-client-secret.age;
+          intermediary = true;
+          settings.terraform = "variable";
+        };
+
+        plex-token = {
+          rekeyFile = ../../../secrets/plex-token.age;
+          intermediary = true;
+          settings.terraform = "variable";
         };
       };
 

@@ -9,8 +9,8 @@
 #   nix build .#harmony-tf.config — inspect the generated config.tf.json
 #
 # The Cloudflare API token is never written into the generated config or into Terraform state -
-# the provider reads it from the CLOUDFLARE_API_TOKEN env var, contributed below via the
-# `terraform-secret` quirk (modules/terranix.nix) and collected into harmony's single
+# the provider reads it from the CLOUDFLARE_API_TOKEN env var, contributed below via
+# `settings.terraform = true;` (modules/terranix.nix) and collected into harmony's single
 # `secrets/generated/harmony-tf.env.age`, decrypted and sourced automatically by `nix run
 # .#harmony-tf*`. Run `agenix generate -a && agenix rekey -a` once to materialize it.
 #
@@ -60,10 +60,9 @@
       cloudflare-api-token = {
         rekeyFile = ../../../secrets/cloudflare-api-token.age;
         intermediary = true;
+        settings.terraform = true;
       };
     };
-
-    terraform-secret = "cloudflare-api-token";
 
     terranix =
       { virtual-host, lib, ... }:

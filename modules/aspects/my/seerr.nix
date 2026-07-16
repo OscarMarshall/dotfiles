@@ -1,5 +1,5 @@
 let
-  domain = "silverlight-nex.us";
+
   port = 5055;
 
   # Seerr has no released OIDC support yet (seerr-team/seerr#2715 is still open). Build from
@@ -16,15 +16,22 @@ in
     {
       global ? false,
     }:
-    { host, ... }:
-    let
-      authentikUrl = "auth.${host.name}.${domain}";
-    in
-    {
+    { host, ... }: {
       virtual-host = {
         name = "seerr";
         host = host.name;
         inherit port global;
+        # Requests the matching OAuth2 Provider + Application from Authentik (authentik.nix) - see
+        # virtual-host.nix's `oidc` field for the shape. Redirect paths per the OIDC setup docs for
+        # this exact fork revision (docs/using-seerr/settings/users/oidc.md at `oidcFork.rev`
+        # above).
+        oidc = {
+          redirect-paths = [
+            "/login"
+            "/profile/settings/linked-accounts"
+          ];
+          client-secret = "seerr-oidc-client-secret";
+        };
         homepage = {
           group = "Media";
           label = "Seerr";
@@ -32,8 +39,14 @@ in
         };
       };
 
+      # `settings.terraform = "variable";` feeds a Terraform `variable` (modules/terranix.nix's two
+      # modes); also read directly below (LoadCredential) by `configureOidc`, so it's NOT
+      # `intermediary` - it has to be materialized as a real host secret too.
       secrets = {
-        seerr-oidc-client-secret.generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
+        seerr-oidc-client-secret = {
+          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
+          settings.terraform = "variable";
+        };
       };
 
       nixos =
@@ -90,7 +103,7 @@ in
                     providers: ($others + [{
                       slug: "authentik",
                       name: "Authentik",
-                      issuerUrl: "https://${authentikUrl}/application/o/seerr/",
+                      issuerUrl: "https://${config.services.authentik.nginx.host}/application/o/seerr/",
                       clientId: "seerr",
                       clientSecret: $secret,
                       scopes: "openid profile email",
