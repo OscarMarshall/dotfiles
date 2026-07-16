@@ -16,7 +16,6 @@
         virtual-host,
         host,
         lib,
-        config,
         ...
       }:
       let
@@ -25,17 +24,6 @@
         # Address of Authentik's embedded outpost, used to gate `protected` virtual hosts behind
         # forward-auth. Matches the address authentik-nix's own nginx integration proxies to.
         authentikOutpost = "https://127.0.0.1:9443";
-        # Looked up rather than referenced directly, since `my.authentik` (and thus the
-        # `services.authentik.*` options) may not be included on every host that uses `my.nginx`.
-        # Only forced — and only throws — when a `protected` virtual host actually needs it.
-        authentikHost =
-          let
-            host = lib.attrByPath [ "services" "authentik" "nginx" "host" ] null config;
-          in
-          if host != null then
-            host
-          else
-            throw "my.nginx: a `protected` virtual host requires my.authentik (or another module setting services.authentik.nginx.host) to be included on this host";
 
         # nginx only inherits a parent context's `add_header` directives into a location that
         # doesn't declare any of its own. Forward-auth locations below need `add_header
@@ -154,7 +142,14 @@
                         internal;
                         add_header Set-Cookie $auth_cookie;
                         ${securityHeaders}
-                        return 302 "https://${authentikHost}/outpost.goauthentik.io/start?rd=$scheme://$http_host$request_uri";
+                        # Authentik's own forward-auth (single application) docs redirect back to
+                        # the CURRENT app's own domain, not Authentik's - every protected vhost
+                        # already has its own "/outpost.goauthentik.io" location (below) proxying
+                        # to the same embedded outpost, so $http_host lands back on a domain the
+                        # outpost can actually match to this provider. Redirecting to Authentik's
+                        # own domain instead landed on "Not Found", since that domain has no
+                        # per-provider Host-header context for the outpost to key off of.
+                        return 302 "https://$http_host/outpost.goauthentik.io/start?rd=$scheme://$http_host$request_uri";
                       '';
                     };
                     "/outpost.goauthentik.io" = {
