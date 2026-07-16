@@ -29,6 +29,8 @@
           model_reasoning_effort = "medium";
           approvals_reviewer = "auto_review";
 
+          projects."${config.home.homeDirectory}/co/personal-assistant".trust_level = "trusted";
+
           # Only checked out on this machine.
           mcp_servers.outlook = {
             command = "${pkgs.uv}/bin/uv";
