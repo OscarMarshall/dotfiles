@@ -238,6 +238,7 @@ in
                       hostname:
                       map (path: {
                         matching_mode = "strict";
+                        redirect_uri_type = "authorization";
                         url = "https://${hostname}${path}";
                       }) vh.oidc.redirect-paths
                     ) (hostnames-of vh);
