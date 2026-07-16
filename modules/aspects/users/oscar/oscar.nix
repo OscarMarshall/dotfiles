@@ -131,7 +131,10 @@ in
         # (SSH_AUTH_SOCK) without needing a private key file on disk.
         age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGt95coA4j19+fPxpOLRfIFb7AvAXdSmf1MyOPibmhe/";
 
-        services.proton-pass-agent.extraArgs = [
+        # On work machines, the agent needs SSH keys from both the Personal and Meraki
+        # vaults - pass-cli's ssh-agent only accepts a single --vault-name, so the only way
+        # to cover more than one named vault is to omit the flag and let it scan all vaults.
+        services.proton-pass-agent.extraArgs = lib.optionals (!(scope.work or false)) [
           "--vault-name"
           "Personal"
         ];
