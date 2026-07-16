@@ -23,10 +23,8 @@
         domain = "silverlight-nex.us";
 
         # Address of Authentik's embedded outpost, used to gate `protected` virtual hosts behind
-        # forward-auth. Temporarily switched to the plaintext port (9000) instead of the TLS one
-        # (9443) to rule out an HTTPS/TLS-layer cause of the mysterious auth_request 400s — see
-        # git history/PR discussion if this comment is still here, it should have been reverted.
-        authentikOutpost = "http://127.0.0.1:9000";
+        # forward-auth. Matches the address authentik-nix's own nginx integration proxies to.
+        authentikOutpost = "https://127.0.0.1:9443";
         # Looked up rather than referenced directly, since `my.authentik` (and thus the
         # `services.authentik.*` options) may not be included on every host that uses `my.nginx`.
         # Only forced — and only throws — when a `protected` virtual host actually needs it.
@@ -162,7 +160,13 @@
                     "/outpost.goauthentik.io" = {
                       proxyPass = "${authentikOutpost}/outpost.goauthentik.io";
                       extraConfig = ''
-                        proxy_set_header Host $host;
+                        # No explicit `proxy_set_header Host` here: recommendedProxySettings
+                        # already adds one (any location with proxyPass gets it) and nginx doesn't
+                        # deduplicate repeated proxy_set_header lines for the same name — an
+                        # explicit second one here sent the upstream a request with two literal
+                        # `Host:` header lines. Go's net/http (Authentik's outpost server) rejects
+                        # that outright with a bare 400 before any application code runs, which is
+                        # why it never showed up in Authentik's own logs, even at trace level.
                         proxy_set_header X-Original-URL $scheme://$http_host$request_uri;
                         add_header Set-Cookie $auth_cookie;
                         ${securityHeaders}
