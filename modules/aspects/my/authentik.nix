@@ -189,6 +189,23 @@ in
             variable.DISCORD_CLIENT_SECRET.sensitive = true;
             variable.PLEX_TOKEN.sensitive = true;
 
+            # Groups live here rather than on the service that consumes them: they're a DIRECTORY
+            # concept (authentik.nix owns every `authentik_*` resource, the way dns.nix owns every
+            # `cloudflare_*` one), and nothing stops a second service keying off the same group
+            # later. Only their NAMES matter to a consumer - Authentik's default `profile` scope
+            # emits `groups` as a list of group names, and Storyteller maps those names to its own
+            # permissions (see storyteller.nix).
+            #
+            # MEMBERSHIP is deliberately not managed here: `users` on `authentik_group` is
+            # `Optional` AND `Computed` in the Terraform provider, so omitting it means "leave
+            # whatever's there alone" rather than "empty it" - unlike `authentik_outpost`'s
+            # `protocol_providers` above, which really does replace the whole list. Accounts arrive
+            # by Discord/Plex enrollment and don't exist in this config, so assign people through
+            # Authentik's UI (Directory > Groups) and applies won't fight you over it.
+            resource.authentik_group = lib.genAttrs [ "storyteller-admins" "storyteller-users" ] (name: {
+              inherit name;
+            });
+
             resource.authentik_source_oauth.discord = {
               name = "Discord";
               slug = "discord";
@@ -248,6 +265,23 @@ in
                 sensitive = true;
               });
 
+              # An OAuth2 provider returns ONLY the claims whose scope mapping is attached to it -
+              # `ScopeMapping.objects.filter(provider=provider, scope_name__in=scopes_from_client)`
+              # in authentik's userinfo view - and the Terraform provider's `property_mappings` is
+              # Optional WITHOUT `Computed`, so leaving it unset doesn't inherit anything: it
+              # attaches nothing, and userinfo comes back with no `email`, no `profile`, no
+              # `groups`. (Authentik's own UI pre-selects these three when you click a provider
+              # together, which is why this only bites configs built through the API.) These are the
+              # same three defaults that form picks. `profile` is what carries the `groups` claim -
+              # see the default mapping's expression, `[group.name for group in
+              # request.user.groups.all()]` - so group-based permissions in a downstream app
+              # (storyteller.nix) depend on this too, not just on a `groups` scope being requested.
+              data.authentik_property_mapping_provider_scope.oidc-defaults.managed_list = [
+                "goauthentik.io/providers/oauth2/scope-openid"
+                "goauthentik.io/providers/oauth2/scope-email"
+                "goauthentik.io/providers/oauth2/scope-profile"
+              ];
+
               resource.authentik_provider_oauth2 = lib.listToAttrs (
                 map (vh: {
                   name = "${vh.name}-oidc";
@@ -255,6 +289,7 @@ in
                     name = vh.name;
                     client_id = vh.name;
                     client_secret = "\${var.${tf-var-name-of vh.oidc.client-secret}}";
+                    property_mappings = "\${data.authentik_property_mapping_provider_scope.oidc-defaults.ids}";
                     allowed_redirect_uris = lib.concatMap (
                       hostname:
                       map (path: {
