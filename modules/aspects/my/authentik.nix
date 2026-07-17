@@ -129,11 +129,11 @@ in
           # WHO may reach an application. An application with NO bindings is open to every
           # authenticated user, which - combined with the Discord/Plex sources below being able to
           # ENROLL brand-new accounts - would otherwise mean a stranger's Discord account reaching
-          # every service here. So every application gets at least the `admins` binding, and only
+          # every service here. So every application gets at least the `admin` binding, and only
           # `open-group` ones additionally get `users`.
           #
           # Two bindings on one application are OR, not AND: `authentik_application`'s
-          # `policy_engine_mode` defaults to `any`, so an `admins` member still reaches an
+          # `policy_engine_mode` defaults to `any`, so an `admin` member still reaches an
           # `open-group` app they're not a `users` member of. `target` is the application's `uuid`,
           # NOT its `id` - the provider's own group-binding example spells this out.
           binding-entries-for =
@@ -145,7 +145,7 @@ in
                 group = "\${authentik_group.${group-name}.id}";
                 order = index;
               }
-            ) ([ "admins" ] ++ lib.optional (vh.group or null == open-group) "users");
+            ) ([ "admin" ] ++ lib.optional (vh.group or null == open-group) "users");
 
           # Reuses each service's own `virtual-host.icon` (virtual-host.nix) rather than picking
           # Authentik icons separately, translating Homepage's icon shorthands into the plain URL
@@ -217,11 +217,17 @@ in
 
             # Groups live here rather than on the services that consume them: they're a DIRECTORY
             # concept (authentik.nix owns every `authentik_*` resource, the way dns.nix owns every
-            # `cloudflare_*` one), and two unrelated things key off them already - the application
-            # bindings below, and Storyteller's own group-to-permission mapping. Both match on the
-            # group's NAME (Authentik's default `profile` scope emits `groups` as a list of names -
-            # see the `oidc-defaults` comment below), so renaming one is a breaking change for
-            # whatever maps it.
+            # `cloudflare_*` one), and three unrelated things key off them already - the application
+            # bindings below, Storyteller's group-to-permission mapping, and Nextcloud's group
+            # provisioning. All match on the group's NAME (Authentik's default `profile` scope emits
+            # `groups` as a list of names - see the `oidc-defaults` comment below), so renaming one
+            # is a breaking change for whatever maps it.
+            #
+            # "admin" is SINGULAR on purpose, and not free to rename: Nextcloud grants
+            # administrator rights to exactly the group whose gid is `admin`, and user_oidc's group
+            # provisioning creates each Nextcloud group under the claim value verbatim (see
+            # nextcloud.nix). Calling this "admins" would provision a Nextcloud group named
+            # "admins" that confers nothing, and there's no mapping layer in between.
             #
             # MEMBERSHIP is deliberately not managed here: `users` on `authentik_group` is
             # `Optional` AND `Computed` in the Terraform provider, so omitting it means "leave
@@ -229,7 +235,7 @@ in
             # `protocol_providers` above, which really does replace the whole list. Accounts arrive
             # by Discord/Plex enrollment and don't exist in this config, so assign people through
             # Authentik's UI (Directory > Groups) and applies won't fight you over it.
-            resource.authentik_group = lib.genAttrs [ "admins" "users" ] (name: {
+            resource.authentik_group = lib.genAttrs [ "admin" "users" ] (name: {
               inherit name;
             });
 

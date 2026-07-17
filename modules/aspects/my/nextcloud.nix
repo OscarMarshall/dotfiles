@@ -113,11 +113,39 @@ in
             # `--clientsecret-file` rather than `--clientsecret`: the latter would put the secret in
             # this unit's argv, briefly readable via /proc/<pid>/cmdline by any local user. occ reads
             # and trims the file itself.
+            #
+            # `--unique-uid=0` turns OFF user_oidc's default of hashing identifiers
+            # (`LocalIdService.getId`: sha256 of "<providerId>_0_<id>" when it's on, the raw value
+            # when it's off). It governs GROUP gids as much as user ids, so it's what makes both of
+            # the settings below land as readable names rather than hex. Flipping it later
+            # re-identifies everyone - existing accounts become unreachable and log in as new,
+            # empty ones - so it's effectively permanent once anyone has files.
+            #
+            # `--mapping-uid=preferred_username` is required alongside it: the uid claim defaults to
+            # `sub` (`SETTING_MAPPING_UID_DEFAULT`), which authentik derives as a hash
+            # (`sub_mode = hashed_user_id`), so `--unique-uid=0` alone would just swap our hash for
+            # authentik's. Authentik's default `profile` scope supplies `preferred_username`.
+            #
+            # `--group-provisioning=1` syncs Nextcloud group membership from the `groups` claim on
+            # each login, and it's AUTHORITATIVE: user_oidc removes an OIDC user from any group
+            # absent from the claim, so don't hand-assign groups to these accounts - Authentik is
+            # the only place that sticks. This is also what grants admin, without a mapping layer:
+            # user_oidc creates each group under the claim value verbatim, and Nextcloud confers
+            # administrator rights on exactly the group whose gid is `admin` - hence that group
+            # being singular in authentik.nix. The local `admin` account is untouched by any of
+            # this (it never logs in through OIDC) and stays the way back in.
+            #
+            # Values are literal 0/1: occ coerces every boolean setting with `$value === '0' ? '0' :
+            # '1'`, so `false` would silently mean TRUE.
             nextcloud-occ user_oidc:provider "authentik" \
               --clientid="nextcloud" \
               --clientsecret-file="$CREDENTIALS_DIRECTORY/oidc-client-secret" \
               --discoveryuri="https://${config.services.authentik.nginx.host}/application/o/nextcloud/.well-known/openid-configuration" \
-              --scope="openid email profile"
+              --scope="openid email profile" \
+              --unique-uid=0 \
+              --mapping-uid=preferred_username \
+              --mapping-groups=groups \
+              --group-provisioning=1
 
             nextcloud-occ config:app:set richdocuments wopi_url --value="http://[::1]:9980"
             nextcloud-occ config:app:set richdocuments public_wopi_url --value="https://collabora.${host.name}.${domain}"
