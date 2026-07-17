@@ -98,19 +98,24 @@ in
 
           script = ''
             set -euo pipefail
-            CLIENT_SECRET=$(<"$CREDENTIALS_DIRECTORY/oidc-client-secret")
 
-            if nextcloud-occ user_oidc:provider "authentik" >/dev/null 2>&1; then
-              UPDATE_FLAG="--update"
-            else
-              UPDATE_FLAG=""
-            fi
-            # user_oidc:provider has no file/stdin input for the secret, so it's briefly visible
-            # via /proc/<pid>/cmdline to other local users while this oneshot runs. Accepted here
-            # since harmony has no untrusted local users; revisit if occ ever grows a safer input.
-            nextcloud-occ user_oidc:provider "authentik" $UPDATE_FLAG \
+            # `user_oidc:provider` is an UPSERT keyed on the identifier - its own class is
+            # `UpsertProvider`, and it calls `createOrUpdateProvider()` - so it needs no
+            # create-vs-update branch. There is no `--update` option (passing one aborts the whole
+            # unit before it can correct anything), which is worth stating because getting this
+            # wrong FAILS SILENTLY in the worst way: the very first run creates the provider and
+            # succeeds, and only later runs - the ones meant to carry a changed `discoveryuri` or a
+            # rotated secret into Nextcloud - die, leaving a provider frozen at whatever the first
+            # run happened to write. That's exactly how Nextcloud ended up pointing at Authentik's
+            # old pre-`global` hostname, which no longer resolves, and reporting only "Could not
+            # reach the OpenID Connect provider" at login.
+            #
+            # `--clientsecret-file` rather than `--clientsecret`: the latter would put the secret in
+            # this unit's argv, briefly readable via /proc/<pid>/cmdline by any local user. occ reads
+            # and trims the file itself.
+            nextcloud-occ user_oidc:provider "authentik" \
               --clientid="nextcloud" \
-              --clientsecret="$CLIENT_SECRET" \
+              --clientsecret-file="$CREDENTIALS_DIRECTORY/oidc-client-secret" \
               --discoveryuri="https://${config.services.authentik.nginx.host}/application/o/nextcloud/.well-known/openid-configuration" \
               --scope="openid email profile"
 
