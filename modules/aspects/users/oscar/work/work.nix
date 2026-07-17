@@ -36,6 +36,7 @@ in
       );
 
       homeManager = { pkgs, ... }: {
+        home.packages = [ glab ];
         programs.codex.settings.mcp_servers = lib.optionalAttrs (scope.work or false) {
           grafana = {
             command = "${pkgs.uv}/bin/uvx";
