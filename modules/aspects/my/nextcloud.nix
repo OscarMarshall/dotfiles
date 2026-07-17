@@ -72,7 +72,19 @@ in
             inherit user_oidc richdocuments;
           };
 
-          settings.overwriteprotocol = "https";
+          settings = {
+            overwriteprotocol = "https";
+            # Drops the username/password form from /login, leaving just the "Log in with
+            # Authentik" button - the alternative-logins block sits OUTSIDE the form's `v-if` in
+            # core's Login.vue, so SSO survives being hidden.
+            #
+            # This is friction, not a security boundary, and Nextcloud means it that way: the same
+            # view re-renders the form for `?direct=1`, so /login?direct=1 remains the way in for
+            # the local `admin` account if Authentik is ever down. Little is lost by that - the
+            # OIDC-provisioned accounts have no password to type in the first place (user_oidc is
+            # their backend), so `admin` was already the only account a form could authenticate.
+            hide_login_form = true;
+          };
         };
 
         # Wires user_oidc -> Authentik and richdocuments -> Collabora post-install, since
