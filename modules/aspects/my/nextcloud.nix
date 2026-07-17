@@ -87,11 +87,13 @@ in
           };
         };
 
-        # Wires user_oidc -> Authentik and richdocuments -> Collabora post-install, since
-        # neither app exposes a declarative option surface (both are app-level DB state
-        # configured via occ).
-        systemd.services.nextcloud-authentik-richdocuments-setup = {
-          description = "Configure Nextcloud OIDC (Authentik) and richdocuments (Collabora) via occ";
+        # Everything Nextcloud keeps as app-level DB state rather than in config.php, and so has no
+        # `services.nextcloud` option to set: wiring user_oidc -> Authentik, richdocuments ->
+        # Collabora, and turning shipped apps off. Renamed from
+        # `nextcloud-authentik-richdocuments-setup` once that list stopped being two things worth
+        # enumerating in a unit name.
+        systemd.services.nextcloud-occ-setup = {
+          description = "Apply Nextcloud app-level config that has no NixOS option, via occ";
           after = [
             "nextcloud-setup.service"
             "coolwsd.service"
@@ -176,6 +178,14 @@ in
             nextcloud-occ config:app:set richdocuments wopi_url --value="http://[::1]:9980"
             nextcloud-occ config:app:set richdocuments public_wopi_url --value="https://collabora.${host.name}.${domain}"
             nextcloud-occ config:app:set richdocuments wopi_allowlist --value="::1,127.0.0.1"
+
+            # Immich (immich.nix) is the photo library here, so Nextcloud's own Photos tab is just a
+            # second, worse gallery over the same account's files. `photos` ships with Nextcloud
+            # rather than coming from `extraApps`, so there's no `services.nextcloud` option that
+            # leaves it out - disabling after the fact is the only lever. Safe to re-run: occ
+            # short-circuits with "No such app enabled" and exits 0 rather than failing this unit's
+            # `set -e` on every subsequent boot.
+            nextcloud-occ app:disable photos
           '';
         };
       };
