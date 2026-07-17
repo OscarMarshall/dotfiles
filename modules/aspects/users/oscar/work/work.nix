@@ -48,6 +48,11 @@ in
               "info"
             ];
             startup_timeout_sec = 30;
+            env_vars = [
+              "GRAFANA_URL"
+              "GRAFANA_USERNAME"
+              "GRAFANA_PASSWORD"
+            ];
           };
         };
       };
