@@ -159,6 +159,20 @@ in
               --mapping-groups=groups \
               --group-provisioning=1
 
+            # Sends /login straight to Authentik instead of rendering a page whose only control is
+            # the "Log in with Authentik" button. Despite the name, this is purely that redirect -
+            # user_oidc only acts on it for a top-level HTML navigation to /login, and only when
+            # exactly one provider is configured (AppInfo/Application.php); it takes nothing away.
+            #
+            # This is an APP config rather than a `services.nextcloud.settings` (config.php) one,
+            # hence occ. `--lazy` is not optional: user_oidc reads the key with `lazy: true`, and a
+            # non-lazy write lands somewhere it won't look. It defaults to "1" (allow), so "0" is
+            # what enables the redirect - the inverse of how it reads.
+            #
+            # `?direct=1` opts out of this too, the same escape hatch `hide_login_form` above
+            # honours, so one URL still reaches the form for the local `admin` account.
+            nextcloud-occ config:app:set user_oidc allow_multiple_user_backends --value=0 --lazy
+
             nextcloud-occ config:app:set richdocuments wopi_url --value="http://[::1]:9980"
             nextcloud-occ config:app:set richdocuments public_wopi_url --value="https://collabora.${host.name}.${domain}"
             nextcloud-occ config:app:set richdocuments wopi_allowlist --value="::1,127.0.0.1"
