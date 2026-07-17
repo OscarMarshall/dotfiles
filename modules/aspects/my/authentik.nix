@@ -130,11 +130,11 @@ in
           # authenticated user, which - combined with the Discord/Plex sources below being able to
           # ENROLL brand-new accounts - would otherwise mean a stranger's Discord account reaching
           # every service here. So every application gets at least the `admin` binding, and only
-          # `open-group` ones additionally get `users`.
+          # `open-group` ones additionally get `user`.
           #
           # Two bindings on one application are OR, not AND: `authentik_application`'s
           # `policy_engine_mode` defaults to `any`, so an `admin` member still reaches an
-          # `open-group` app they're not a `users` member of. `target` is the application's `uuid`,
+          # `open-group` app they're not a `user` member of. `target` is the application's `uuid`,
           # NOT its `id` - the provider's own group-binding example spells this out.
           binding-entries-for =
             app-key: vh:
@@ -145,7 +145,7 @@ in
                 group = "\${authentik_group.${group-name}.id}";
                 order = index;
               }
-            ) ([ "admin" ] ++ lib.optional (vh.group or null == open-group) "users");
+            ) ([ "admin" ] ++ lib.optional (vh.group or null == open-group) "user");
 
           # Reuses each service's own `virtual-host.icon` (virtual-host.nix) rather than picking
           # Authentik icons separately, translating Homepage's icon shorthands into the plain URL
@@ -223,19 +223,21 @@ in
             # `groups` as a list of names - see the `oidc-defaults` comment below), so renaming one
             # is a breaking change for whatever maps it.
             #
-            # "admin" is SINGULAR on purpose, and not free to rename: Nextcloud grants
-            # administrator rights to exactly the group whose gid is `admin`, and user_oidc's group
-            # provisioning creates each Nextcloud group under the claim value verbatim (see
-            # nextcloud.nix). Calling this "admins" would provision a Nextcloud group named
-            # "admins" that confers nothing, and there's no mapping layer in between.
+            # "admin" is SINGULAR because it isn't free to rename: Nextcloud grants administrator
+            # rights to exactly the group whose gid is `admin`, and user_oidc's group provisioning
+            # creates each Nextcloud group under the claim value verbatim (see nextcloud.nix), with
+            # no mapping layer in between - "admins" would provision a Nextcloud group named
+            # "admins" that confers nothing. "user" is singular only to match it; nothing external
+            # constrains that one.
             #
-            # MEMBERSHIP is deliberately not managed here: `users` on `authentik_group` is
-            # `Optional` AND `Computed` in the Terraform provider, so omitting it means "leave
-            # whatever's there alone" rather than "empty it" - unlike `authentik_outpost`'s
-            # `protocol_providers` above, which really does replace the whole list. Accounts arrive
-            # by Discord/Plex enrollment and don't exist in this config, so assign people through
-            # Authentik's UI (Directory > Groups) and applies won't fight you over it.
-            resource.authentik_group = lib.genAttrs [ "admin" "users" ] (name: {
+            # MEMBERSHIP is deliberately not managed here: the `users` FIELD on `authentik_group`
+            # (not to be confused with the group named `user`) is `Optional` AND `Computed` in the
+            # Terraform provider, so omitting it means "leave whatever's there alone" rather than
+            # "empty it" - unlike `authentik_outpost`'s `protocol_providers` above, which really
+            # does replace the whole list. Accounts arrive by Discord/Plex enrollment and don't
+            # exist in this config, so assign people through Authentik's UI (Directory > Groups)
+            # and applies won't fight you over it.
+            resource.authentik_group = lib.genAttrs [ "admin" "user" ] (name: {
               inherit name;
             });
 
