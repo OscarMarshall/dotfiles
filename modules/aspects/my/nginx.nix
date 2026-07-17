@@ -92,7 +92,16 @@
                 // lib.optionalAttrs (vh ? port) {
                   locations = {
                     "/" = {
-                      proxyPass = "http://127.0.0.1:${toString vh.port}/";
+                      # No trailing URI here (deliberately, like the regex bypassAuthPaths
+                      # locations below): with one, nginx has to decode+re-merge the request URI to
+                      # splice it onto the backend path, and an encoded slash anywhere in it (e.g.
+                      # Collabora's WOPI websocket path, which embeds a full url-encoded WOPISrc
+                      # URL) trips that merge and nginx 400s the request before it ever reaches the
+                      # backend - confirmed by bisecting: `/foo%2Fbar` 400s, `/foo` doesn't, on this
+                      # exact location. Omitting the URI makes nginx forward $request_uri verbatim,
+                      # which every location here is "/" (matches the whole path) so this is a
+                      # no-op for every other backend already relying on the old behavior.
+                      proxyPass = "http://127.0.0.1:${toString vh.port}";
                       # recommendedProxySettings clears the Connection header (`proxy_set_header
                       # Connection "";`), which breaks WebSocket upgrades. Backends that use them
                       # (e.g. Immich's real-time updates) opt in via `websockets = true;` on their

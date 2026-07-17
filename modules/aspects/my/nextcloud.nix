@@ -53,6 +53,18 @@ in
       };
 
       nixos = { config, pkgs, ... }: {
+        # Public DNS for this hostname resolves off-box; on-box callers (notably coolwsd's
+        # server-side WOPI CheckFileInfo/GetFile requests back to Nextcloud) hit it too and hairpin
+        # through the router - or worse, since this host's AAAA record points at an address that's
+        # simply unreachable from harmony, causing coolwsd's outbound HTTP client (which tries IPv6
+        # first, unlike curl's happy-eyeballs fallback) to hang for a full 60s timeout rather than
+        # fail fast. Confirmed via `journalctl -u coolwsd`: "CheckTimeout: Timeout while requesting
+        # ... after 60072ms", and directly reproduced with `curl -6` to the resolved address hanging
+        # to its own timeout. Pinning to loopback here sidesteps both problems for every on-box
+        # self-reference; nginx still serves the right vhost by Host header, over the real
+        # Let's Encrypt cert. External browsers use public DNS and are unaffected.
+        networking.hosts."127.0.0.1" = [ url ];
+
         services.nextcloud = {
           enable = true;
           hostName = url;
@@ -175,7 +187,11 @@ in
             # honours, so one URL still reaches the form for the local `admin` account.
             nextcloud-occ config:app:set user_oidc allow_multiple_user_backends --value=0 --lazy
 
-            nextcloud-occ config:app:set richdocuments wopi_url --value="http://[::1]:9980"
+            # coolwsd's net.proto is forced to IPv4 (see collabora-online.nix) since net.listen =
+            # "loopback" otherwise binds [::1] only on this host, which nginx's proxyPass
+            # (nginx.nix, always 127.0.0.1) can't reach. That leaves coolwsd IPv4-only, so this
+            # discovery URL has to target 127.0.0.1, not [::1] - the latter no longer listens.
+            nextcloud-occ config:app:set richdocuments wopi_url --value="http://127.0.0.1:9980"
             nextcloud-occ config:app:set richdocuments public_wopi_url --value="https://collabora.${host.name}.${domain}"
             nextcloud-occ config:app:set richdocuments wopi_allowlist --value="::1,127.0.0.1"
 
