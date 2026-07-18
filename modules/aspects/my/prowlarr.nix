@@ -21,16 +21,17 @@
           "^/[0-9]+/api"
         ];
         inherit port global;
+        label = "Prowlarr";
+        icon = "prowlarr.svg";
+        group = "Arr Stack";
         homepage = {
-          group = "Arr Stack";
-          label = "Prowlarr";
           description = "Indexer manager/proxy";
           widget = {
             type = "prowlarr";
             # Hit Prowlarr directly rather than through nginx/Authentik, since Homepage's
             # server-side widget fetch has no browser session to pass the forward-auth gate.
             url = "http://127.0.0.1:${toString port}";
-            apiKeySecret = "prowlarr-api-key";
+            api-key = true;
           };
         };
       };
@@ -39,6 +40,7 @@
         prowlarr-api-key = {
           generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 16";
           intermediary = true;
+          settings.homepage = "prowlarr";
         };
         "prowlarr.env".generator = {
           dependencies = { inherit (secrets) prowlarr-api-key; };

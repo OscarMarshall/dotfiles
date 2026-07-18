@@ -9,8 +9,8 @@
 #   nix build .#harmony-tf.config — inspect the generated config.tf.json
 #
 # The Cloudflare API token is never written into the generated config or into Terraform state -
-# the provider reads it from the CLOUDFLARE_API_TOKEN env var, contributed below via the
-# `terraform-secret` quirk (modules/terranix.nix) and collected into harmony's single
+# the provider reads it from the CLOUDFLARE_API_TOKEN env var, contributed below via
+# `settings.terraform = true;` (modules/terranix.nix) and collected into harmony's single
 # `secrets/generated/harmony-tf.env.age`, decrypted and sourced automatically by `nix run
 # .#harmony-tf*`. Run `agenix generate -a && agenix rekey -a` once to materialize it.
 #
@@ -60,10 +60,9 @@
       cloudflare-api-token = {
         rekeyFile = ../../../secrets/cloudflare-api-token.age;
         intermediary = true;
+        settings.terraform = true;
       };
     };
-
-    terraform-secret = "cloudflare-api-token";
 
     terranix =
       { virtual-host, lib, ... }:
@@ -133,20 +132,29 @@
   perSystem =
     { pkgs, lib, ... }:
     let
-      # host -> every alias its nginx vhosts actually claim (empty unless `global = true;` set
-      # somewhere), read straight from each host's own resolved NixOS config.
-      globalAliasesByHost = lib.mapAttrs (
+      # host -> every hostname its nginx vhosts actually claim: both `serverAliases` AND each
+      # vhost's own PRIMARY name (the attribute key). The primary name matters too, not just
+      # aliases: a service's `url` override can already equal the canonical global name (e.g.
+      # authentik.nix/storyteller.nix when `global = true;`), and nginx.nix then deliberately
+      # skips adding a redundant alias for it (see its own comment) - so that hostname would
+      # otherwise never appear in `serverAliases` at all and slip past this check entirely.
+      # Including every host-scoped primary name too (`${vh.name}.${host.name}.${domain}`) is
+      # harmless: `host.name` differs per host by construction, so those can never collide across
+      # hosts and only the genuinely global-scoped names below ever populate `collisions`.
+      hostnamesByHost = lib.mapAttrs (
         _: hostCfg:
-        lib.concatMap (vh: vh.serverAliases or [ ]) (lib.attrValues (hostCfg.config.services.nginx.virtualHosts or { }))
+        lib.concatLists (
+          lib.mapAttrsToList (name: vh: [ name ] ++ (vh.serverAliases or [ ])) (hostCfg.config.services.nginx.virtualHosts or { })
+        )
       ) config.flake.nixosConfigurations;
 
       allEntries = lib.concatLists (
-        lib.mapAttrsToList (host: aliases: map (alias: { inherit host alias; }) aliases) globalAliasesByHost
+        lib.mapAttrsToList (host: hostnames: map (hostname: { inherit host hostname; }) hostnames) hostnamesByHost
       );
 
-      # Group by alias; anything claimed by more than one DISTINCT host is a collision.
+      # Group by hostname; anything claimed by more than one DISTINCT host is a collision.
       collisions = lib.filterAttrs (_: entries: lib.length (lib.unique (map (e: e.host) entries)) > 1) (
-        lib.groupBy (e: e.alias) allEntries
+        lib.groupBy (e: e.hostname) allEntries
       );
     in
     {
@@ -155,11 +163,12 @@
           pkgs.runCommand "dns-global-uniqueness-check" { } "touch $out"
         else
           throw ''
-            Two or more hosts flag `global = true;` on services that share the same alias, which
-            would create competing Cloudflare DNS records for the same hostname:
+            Two or more hosts serve the same public hostname - most likely two DIFFERENT hosts
+            both flag `global = true;` on a same-named service, which would create competing
+            Cloudflare DNS records for it:
             ${lib.concatStringsSep "\n" (
               lib.mapAttrsToList (
-                alias: entries: "  ${alias}: ${lib.concatStringsSep ", " (lib.unique (map (e: e.host) entries))}"
+                hostname: entries: "  ${hostname}: ${lib.concatStringsSep ", " (lib.unique (map (e: e.host) entries))}"
               ) collisions
             )}
             Rename one of the services, or drop `global` from all but one host.

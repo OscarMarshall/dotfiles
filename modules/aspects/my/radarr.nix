@@ -18,16 +18,17 @@ in
         # machine-to-machine, with no browser session to carry an Authentik cookie.
         bypassAuthPaths = [ "^/api" ];
         inherit port global;
+        label = "Radarr";
+        icon = "radarr.svg";
+        group = "Arr Stack";
         homepage = {
-          group = "Arr Stack";
-          label = "Radarr";
           description = "Movie organizer/manager";
           widget = {
             type = "radarr";
             # Hit Radarr directly rather than through nginx/Authentik, since Homepage's
             # server-side widget fetch has no browser session to pass the forward-auth gate.
             url = "http://127.0.0.1:${toString port}";
-            apiKeySecret = "radarr-api-key";
+            api-key = true;
             enableQueue = true;
           };
         };
@@ -37,6 +38,7 @@ in
         radarr-api-key = {
           generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 16";
           intermediary = true;
+          settings.homepage = "radarr";
         };
         "radarr.env".generator = {
           dependencies = { inherit (secrets) radarr-api-key; };

@@ -18,16 +18,17 @@
         # machine-to-machine, with no browser session to carry an Authentik cookie.
         bypassAuthPaths = [ "^/api" ];
         inherit port global;
+        label = "Sonarr";
+        icon = "sonarr.svg";
+        group = "Arr Stack";
         homepage = {
-          group = "Arr Stack";
-          label = "Sonarr";
           description = "Show organizer/manager";
           widget = {
             type = "sonarr";
             # Hit Sonarr directly rather than through nginx/Authentik, since Homepage's
             # server-side widget fetch has no browser session to pass the forward-auth gate.
             url = "http://127.0.0.1:${toString port}";
-            apiKeySecret = "sonarr-api-key";
+            api-key = true;
             enableQueue = true;
           };
         };
@@ -37,6 +38,7 @@
         sonarr-api-key = {
           generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 16";
           intermediary = true;
+          settings.homepage = "sonarr";
         };
         "sonarr.env".generator = {
           dependencies = { inherit (secrets) sonarr-api-key; };

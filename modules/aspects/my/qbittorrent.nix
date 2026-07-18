@@ -10,10 +10,15 @@ in
       global ? false,
     }:
     { host, ... }: {
+      # No `homepage` block: deliberately not a dashboard tile, but `label`/`icon`/`group` still
+      # feed its Authentik application (see virtual-host.nix).
       virtual-host = {
         name = "qbittorrent";
         host = host.name;
         protected = true;
+        label = "qBittorrent";
+        icon = "https://raw.githubusercontent.com/qbittorrent/qBittorrent/master/src/icons/qbittorrent-tray.svg";
+        group = "Arr Stack";
         inherit port global;
       };
 

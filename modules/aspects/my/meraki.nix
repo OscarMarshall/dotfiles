@@ -8,8 +8,8 @@
 #   nix build .#harmony-tf.config — inspect the generated config.tf.json
 #
 # The Meraki Dashboard API key is never written into the generated config or into Terraform state -
-# the provider reads it from the MERAKI_DASHBOARD_API_KEY env var, contributed below via the
-# `terraform-secret` quirk (modules/terranix.nix) and collected, alongside the Cloudflare token
+# the provider reads it from the MERAKI_DASHBOARD_API_KEY env var, contributed below via
+# `settings.terraform = true;` (modules/terranix.nix) and collected, alongside the Cloudflare token
 # (see dns.nix), into harmony's single `secrets/generated/harmony-tf.env.age`, decrypted and
 # sourced automatically by `nix run .#harmony-tf*`. Run `agenix edit
 # secrets/meraki-dashboard-api-key.age` once to create it, then `agenix generate -a && agenix
@@ -67,10 +67,9 @@ in
       meraki-dashboard-api-key = {
         rekeyFile = ../../../secrets/meraki-dashboard-api-key.age;
         intermediary = true;
+        settings.terraform = true;
       };
     };
-
-    terraform-secret = "meraki-dashboard-api-key";
 
     terranix =
       { port-forward, lib, ... }:

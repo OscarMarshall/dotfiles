@@ -35,7 +35,7 @@
       (seerr { global = true; })
       (sonarr { administrators = [ "oscar" ]; })
       ssh-server
-      (storyteller { })
+      (storyteller { global = true; })
       (tautulli { })
       unpackerr
       (zfs [ "metalminds" ])

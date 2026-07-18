@@ -16,7 +16,6 @@
         virtual-host,
         host,
         lib,
-        config,
         ...
       }:
       let
@@ -25,17 +24,6 @@
         # Address of Authentik's embedded outpost, used to gate `protected` virtual hosts behind
         # forward-auth. Matches the address authentik-nix's own nginx integration proxies to.
         authentikOutpost = "https://127.0.0.1:9443";
-        # Looked up rather than referenced directly, since `my.authentik` (and thus the
-        # `services.authentik.*` options) may not be included on every host that uses `my.nginx`.
-        # Only forced — and only throws — when a `protected` virtual host actually needs it.
-        authentikHost =
-          let
-            host = lib.attrByPath [ "services" "authentik" "nginx" "host" ] null config;
-          in
-          if host != null then
-            host
-          else
-            throw "my.nginx: a `protected` virtual host requires my.authentik (or another module setting services.authentik.nginx.host) to be included on this host";
 
         # nginx only inherits a parent context's `add_header` directives into a location that
         # doesn't declare any of its own. Forward-auth locations below need `add_header
@@ -81,12 +69,16 @@
                 # nginx `serverAlias`, which nixos's ACME integration automatically adds as a SAN
                 # on the same certificate.
                 url = vh.url or "${vh.name}.${host.name}.${domain}";
+                global-url = "${vh.name}.${domain}";
               in
               lib.nameValuePair url (
                 {
                   forceSSL = true;
                   enableACME = true;
-                  serverAliases = lib.optionals (vh.global or false) [ "${vh.name}.${domain}" ];
+                  # Skips adding `global-url` when a service's own `url` override (e.g.
+                  # authentik.nix's, when `global`) already IS the canonical name - the usual case
+                  # is `url` staying host-scoped, with `global-url` merely an alias alongside it.
+                  serverAliases = lib.optionals (vh.global or false && url != global-url) [ global-url ];
                   # appendHttpConfig's proxy_cookie_path rewrite appends its own secure/HttpOnly/
                   # SameSite flags to every Set-Cookie header, even ones a backend already set its
                   # own correct flags on. That produces a Set-Cookie with duplicated attributes,
@@ -100,7 +92,16 @@
                 // lib.optionalAttrs (vh ? port) {
                   locations = {
                     "/" = {
-                      proxyPass = "http://127.0.0.1:${toString vh.port}/";
+                      # No trailing URI here (deliberately, like the regex bypassAuthPaths
+                      # locations below): with one, nginx has to decode+re-merge the request URI to
+                      # splice it onto the backend path, and an encoded slash anywhere in it (e.g.
+                      # Collabora's WOPI websocket path, which embeds a full url-encoded WOPISrc
+                      # URL) trips that merge and nginx 400s the request before it ever reaches the
+                      # backend - confirmed by bisecting: `/foo%2Fbar` 400s, `/foo` doesn't, on this
+                      # exact location. Omitting the URI makes nginx forward $request_uri verbatim,
+                      # which every location here is "/" (matches the whole path) so this is a
+                      # no-op for every other backend already relying on the old behavior.
+                      proxyPass = "http://127.0.0.1:${toString vh.port}";
                       # recommendedProxySettings clears the Connection header (`proxy_set_header
                       # Connection "";`), which breaks WebSocket upgrades. Backends that use them
                       # (e.g. Immich's real-time updates) opt in via `websockets = true;` on their
@@ -150,13 +151,26 @@
                         internal;
                         add_header Set-Cookie $auth_cookie;
                         ${securityHeaders}
-                        return 302 "https://${authentikHost}/outpost.goauthentik.io/start?rd=$scheme://$http_host$request_uri";
+                        # Authentik's own forward-auth (single application) docs redirect back to
+                        # the CURRENT app's own domain, not Authentik's - every protected vhost
+                        # already has its own "/outpost.goauthentik.io" location (below) proxying
+                        # to the same embedded outpost, so $http_host lands back on a domain the
+                        # outpost can actually match to this provider. Redirecting to Authentik's
+                        # own domain instead landed on "Not Found", since that domain has no
+                        # per-provider Host-header context for the outpost to key off of.
+                        return 302 "https://$http_host/outpost.goauthentik.io/start?rd=$scheme://$http_host$request_uri";
                       '';
                     };
                     "/outpost.goauthentik.io" = {
                       proxyPass = "${authentikOutpost}/outpost.goauthentik.io";
                       extraConfig = ''
-                        proxy_set_header Host $host;
+                        # No explicit `proxy_set_header Host` here: recommendedProxySettings
+                        # already adds one (any location with proxyPass gets it) and nginx doesn't
+                        # deduplicate repeated proxy_set_header lines for the same name — an
+                        # explicit second one here sent the upstream a request with two literal
+                        # `Host:` header lines. Go's net/http (Authentik's outpost server) rejects
+                        # that outright with a bare 400 before any application code runs, which is
+                        # why it never showed up in Authentik's own logs, even at trace level.
                         proxy_set_header X-Original-URL $scheme://$http_host$request_uri;
                         add_header Set-Cookie $auth_cookie;
                         ${securityHeaders}

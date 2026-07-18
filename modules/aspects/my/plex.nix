@@ -11,9 +11,10 @@
         host = host.name;
         port = 32400;
         inherit global;
+        label = "Plex";
+        icon = "plex.svg";
+        group = "Media";
         homepage = {
-          group = "Media";
-          label = "Plex";
           description = "Media server";
         };
       };

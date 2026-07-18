@@ -12,9 +12,10 @@ in
         host = host.name;
         protected = true;
         inherit port global;
+        label = "Netdata";
+        icon = "netdata.svg";
+        group = "Infra";
         homepage = {
-          group = "Infra";
-          label = "Netdata";
           description = "System monitoring & alerts";
           widget = {
             type = "netdata";

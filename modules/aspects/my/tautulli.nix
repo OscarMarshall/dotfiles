@@ -12,9 +12,10 @@ in
         host = host.name;
         protected = true;
         inherit port global;
+        label = "Tautulli";
+        icon = "tautulli.svg";
+        group = "Infra";
         homepage = {
-          group = "Media";
-          label = "Tautulli";
           description = "Plex monitoring & stats";
         };
       };
