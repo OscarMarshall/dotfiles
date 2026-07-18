@@ -51,6 +51,10 @@
           recommendedProxySettings = true;
           recommendedTlsSettings = true;
 
+          # Exposes /nginx_status on localhost for Netdata's nginx collector (request/connection
+          # metrics).
+          statusPage = true;
+
           # nginx's default bucket size can't fit our longest server_name once enough
           # <service>.<host>.<domain> vhosts pile up (e.g. bookshelf-audiobooks.harmony.…, 47
           # chars) - it then refuses to start at all ("could not build server_names_hash, you
