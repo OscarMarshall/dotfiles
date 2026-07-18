@@ -62,6 +62,9 @@ in
           package = pkgs.netdata.override { withCloudUi = true; };
           # Bind only to loopback; nginx handles external access
           config.web."bind to" = "127.0.0.1";
+          # smartmontools gives the smartctl collector S.M.A.R.T. access to individual disks
+          # (pre-fail indicators), complementing the built-in ZFS pool-level health alerting above.
+          extraNdsudoPackages = [ pkgs.smartmontools ];
           # Discord notifications via health_alarm_notify.conf.
           # The file is a bash script sourced by Netdata's alarm-notify.sh;
           # sourcing the age secret sets DISCORD_WEBHOOK_URL at runtime.
