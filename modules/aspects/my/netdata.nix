@@ -1,12 +1,15 @@
 let
   port = 19999;
 in
-{
+{ den, ... }: {
   my.netdata =
     {
       global ? false,
     }:
     { host, ... }: {
+      # withCloudUi's dashboard files (below) are under the non-free Netdata Cloud UI License.
+      includes = [ (den._.unfree [ "netdata" ]) ];
+
       virtual-host = {
         name = "netdata";
         host = host.name;
@@ -54,6 +57,9 @@ in
         # Includes built-in ZFS pool health/capacity alerting.
         services.netdata = {
           enable = true;
+          # withCloudUi pulls in the local dashboard's static files; without it the package omits
+          # them entirely and every request 404s with "File does not exist, or is not accessible:".
+          package = pkgs.netdata.override { withCloudUi = true; };
           # Bind only to loopback; nginx handles external access
           config.web."bind to" = "127.0.0.1";
           # Discord notifications via health_alarm_notify.conf.
