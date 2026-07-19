@@ -17,11 +17,11 @@
               map (
                 d:
                 lib.nameValuePair d.name {
-                  path = "/${d.pool}/${d.name}";
+                  browsable = "yes";
                   "guest ok" = if d.guestAccess or false then "yes" else "no";
+                  path = "/${d.pool}/${d.name}";
                   "read only" = "yes";
                   "write list" = "@users";
-                  browsable = "yes";
                 }
               ) shares
             ));

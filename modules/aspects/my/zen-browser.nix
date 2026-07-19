@@ -2,11 +2,11 @@
 
 {
   flake-file.inputs.zen-browser = {
-    url = "github:0xc000022070/zen-browser-flake";
     inputs = {
       home-manager.follows = "home-manager";
       nixpkgs.follows = "nixpkgs";
     };
+    url = "github:0xc000022070/zen-browser-flake";
   };
 
   my.zen-browser.homeManager = {

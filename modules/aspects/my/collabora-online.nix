@@ -12,19 +12,11 @@ in
       url = "collabora.${host.name}.${domain}";
     in
     {
-      virtual-host = {
-        name = "collabora";
-        host = host.name;
-        inherit port global;
-        websockets = true;
-      };
-
       # Deliberately no homepage-entry: Collabora has no useful standalone landing page,
       # it's only used embedded inside Nextcloud.
-
       nixos.services.collabora-online = {
-        enable = true;
         inherit port;
+        enable = true;
         settings = {
           # These MUST be nested attrsets, not quoted dotted keys: this option's freeform type maps
           # attribute NESTING onto XML nesting, so `"ssl.enable"` is one attribute whose name merely
@@ -43,6 +35,7 @@ in
           # virtual-host - so every browser-facing request 502'd while Nextcloud's own WOPI
           # discovery (which is configured to hit http://[::1]:9980 directly) kept working.
           net.proto = "IPv4";
+          server_name = url;
           ssl.enable = false; # nginx terminates TLS
           # Without this, coolwsd's own listener being plain HTTP makes it advertise http:// URLs
           # in its self-generated discovery.xml (urlsrc entries) - confirmed via
@@ -53,11 +46,16 @@ in
           # is coolwsd's own name for "tell clients this is https even though I only speak http" -
           # exactly this reverse-proxy-terminates-TLS setup.
           ssl.termination = true;
-          server_name = url;
           # No explicit WOPI host allowlist: coolwsd.xml's storage.wopi.alias_groups defaults to
           # mode="first", which trusts whichever host connects first. That's fine since Nextcloud
           # is the only WOPI client here; there's no plain storage.wopi.host key in the real schema.
         };
+      };
+      virtual-host = {
+        inherit port global;
+        host = host.name;
+        name = "collabora";
+        websockets = true;
       };
     };
 }

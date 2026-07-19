@@ -1,9 +1,4 @@
 { inputs, my, ... }: {
-  flake-file.inputs.nixos-hardware = {
-    url = "github:NixOS/nixos-hardware";
-    inputs.nixpkgs.follows = "nixpkgs";
-  };
-
   den.aspects.melaan = {
     includes = with my; [
       (auto-upgrade { allowReboot = false; })
@@ -17,16 +12,13 @@
     ];
 
     nixos = {
-      imports = [ (inputs.nixos-hardware.nixosModules.framework-12-13th-gen-intel or { }) ];
-
       age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILqFHtkApjVtbJj4hR4sEyHJhwrZ74+gR3OviJk9VxYb";
-
+      imports = [ (inputs.nixos-hardware.nixosModules.framework-12-13th-gen-intel or { }) ];
       services = {
         flatpak.enable = true;
         openssh.enable = true;
         printing.enable = true;
       };
-
       # This option defines the first version of NixOS you have installed on this particular machine, and is used to
       # maintain compatibility with application data (e.g. databases) created on older NixOS versions.
       #
@@ -56,10 +48,10 @@
       let
         # See the comment in OMARSHAL-M-T2QF.nix for why these sentinels are needed.
         hmSentinels = {
-          hmLinux = { };
-          hmDarwin = { };
-          hmAarch64 = { };
           hm64bit = { };
+          hmAarch64 = { };
+          hmDarwin = { };
+          hmLinux = { };
         };
       in
       {
@@ -70,5 +62,9 @@
           homeManager.home.stateVersion = "25.05";
         };
       };
+  };
+  flake-file.inputs.nixos-hardware = {
+    inputs.nixpkgs.follows = "nixpkgs";
+    url = "github:NixOS/nixos-hardware";
   };
 }

@@ -1,5 +1,23 @@
 { den, my, ... }: {
   den.aspects.harmony = {
+    dataset =
+      map
+        (name: {
+          inherit name;
+          guestAccess = true;
+          pool = "metalminds";
+          samba = true;
+        })
+        [
+          "backups"
+          "documents"
+          "movies"
+          "music"
+          "pictures"
+          "shows"
+          "torrents"
+          "yarg-charts"
+        ];
     includes = with my; [
       (auto-upgrade { allowReboot = true; })
       (authentik { global = true; })
@@ -40,26 +58,6 @@
       unpackerr
       (zfs [ "metalminds" ])
     ];
-
-    dataset =
-      map
-        (name: {
-          pool = "metalminds";
-          inherit name;
-          samba = true;
-          guestAccess = true;
-        })
-        [
-          "backups"
-          "documents"
-          "movies"
-          "music"
-          "pictures"
-          "shows"
-          "torrents"
-          "yarg-charts"
-        ];
-
     nixos = {
       age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMkM5uNY0rMy2QMG6IptlxgVl4sQWoeSSNmUp7/f2z1B";
       networking.hostId = "7dab76c0";
@@ -88,19 +86,18 @@
       # https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
       system.stateVersion = "25.05"; # Did you read the comment?
     };
-
     # This value determines the Home Manager release that your configuration is compatible with. This helps avoid
     # breakage when a new Home Manager release introduces backwards incompatible changes.
     #
     # You can update Home Manager without changing this value. See the Home Manager release notes for a list of state
     # version changes in each release.
     provides.oscar = {
-      homeManager.home.stateVersion = "25.05";
+      hm64bit = { };
+      hmAarch64 = { };
+      hmDarwin = { };
       # See the comment in OMARSHAL-M-T2QF.nix for why these sentinels are needed.
       hmLinux = { };
-      hmDarwin = { };
-      hmAarch64 = { };
-      hm64bit = { };
+      homeManager.home.stateVersion = "25.05";
     };
   };
 }

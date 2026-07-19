@@ -10,9 +10,8 @@
       ...
     }:
     {
-      imports = [ (modulesPath + "/installer/scan/not-detected.nix") ];
-
       boot = {
+        extraModulePackages = [ ];
         initrd = {
           availableKernelModules = [
             "xhci_pci"
@@ -23,9 +22,7 @@
           kernelModules = [ ];
         };
         kernelModules = [ "kvm-intel" ];
-        extraModulePackages = [ ];
       };
-
       fileSystems = {
         "/" = {
           device = "/dev/disk/by-uuid/97fa9e33-f044-41f2-ba6b-d493d82a144b";
@@ -40,10 +37,9 @@
           ];
         };
       };
-
-      swapDevices = [ { device = "/dev/disk/by-uuid/58f51069-e018-4f9c-bb1b-71c4bcc9ce81"; } ];
-
-      nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
       hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
+      imports = [ (modulesPath + "/installer/scan/not-detected.nix") ];
+      nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
+      swapDevices = [ { device = "/dev/disk/by-uuid/58f51069-e018-4f9c-bb1b-71c4bcc9ce81"; } ];
     };
 }

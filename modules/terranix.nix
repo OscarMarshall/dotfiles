@@ -50,17 +50,17 @@
 # .gitignore's comment, and #516). `terraform.encryption` below (contributed unconditionally for
 # every host) is what actually keeps those out of the plaintext git history.
 {
+  config,
   den,
   inputs,
   lib,
-  config,
   ...
 }:
 let
   warnings-shim = {
     options.warnings = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
       default = [ ];
+      type = lib.types.listOf lib.types.str;
     };
   };
 
@@ -76,7 +76,8 @@ let
   # The actual env var a `settings.terraform`-flagged secret surfaces as, per the two modes
   # documented above.
   terraform-env-var-for =
-    name: sec: if terraform-mode-of sec == "variable" then "TF_VAR_${env-var-for name}" else env-var-for name;
+    name: sec:
+    if terraform-mode-of sec == "variable" then "TF_VAR_${env-var-for name}" else env-var-for name;
 
   # Collects every `settings.terraform`-flagged secret, across every aspect on a host, into that
   # host's own `"${host.name}-tf.env"` generated secret - lives outside any single aspect (like
@@ -87,22 +88,14 @@ let
     secrets =
       {
         config,
-        secrets,
         lib,
+        secrets,
         ...
       }:
       let
         terraform-secrets = lib.filterAttrs (_: sec: terraform-mode-of sec != null) config.age.secrets;
       in
       {
-        # Always present (not left to opt in) - it backs `terraform.encryption` below, which every
-        # `<host>-tf` gets unconditionally (see that field's own comment for why).
-        open-tofu-state-passphrase = {
-          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -base64 32";
-          intermediary = true;
-          settings.terraform = "variable";
-        };
-
         # This key's PRESENCE must be unconditional, even though `terraform-secrets` (its VALUE
         # depends on it) is empty exactly when only `open-tofu-state-passphrase` above is
         # flagged - making it conditional on `terraform-secrets != { }` would mean
@@ -114,9 +107,9 @@ let
           dependencies = lib.mapAttrs (name: _: secrets.${name}) terraform-secrets;
           script =
             {
-              lib,
               decrypt,
               deps,
+              lib,
               ...
             }:
             lib.concatMapStrings (name: ''
@@ -128,6 +121,13 @@ let
                 lib.escapeShellArg deps.${name}.file
               })"
             '') (lib.attrNames terraform-secrets);
+        };
+        # Always present (not left to opt in) - it backs `terraform.encryption` below, which every
+        # `<host>-tf` gets unconditionally (see that field's own comment for why).
+        open-tofu-state-passphrase = {
+          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -base64 32";
+          intermediary = true;
+          settings.terraform = "variable";
         };
       };
 
@@ -141,8 +141,6 @@ let
     # own module-type pass, which only den quirks bridge into (see this file's header comment), and
     # `age.secrets` isn't one.
     terranix = {
-      variable.OPEN_TOFU_STATE_PASSPHRASE.sensitive = true;
-
       terraform.encryption = {
         key_provider.pbkdf2.main.passphrase = "\${var.OPEN_TOFU_STATE_PASSPHRASE}";
 
@@ -168,6 +166,7 @@ let
         # `state.fallback.method = "method.unencrypted.migrate";` temporarily.
         state.method = "method.aes_gcm.main";
       };
+      variable.OPEN_TOFU_STATE_PASSPHRASE.sensitive = true;
     };
   };
 
@@ -181,19 +180,11 @@ let
   terranix-modules = config.flake.terranixModules or { };
 in
 {
-  flake-file.inputs.terranix = {
-    url = "github:terranix/terranix";
-    inputs.nixpkgs.follows = "nixpkgs";
-  };
-
-  imports = [ (inputs.terranix.flakeModule or { }) ];
-
   den = {
     classes.terranix = { };
 
     policies.host-to-terranix = { host, ... }: [
       (den.lib.policy.instantiate {
-        name = "${host.name}-tf";
         class = "terranix";
         instantiate = { modules, ... }: modules;
         # `-tf` suffix (rather than the bare host name) avoids colliding with the
@@ -204,6 +195,7 @@ in
           "terranixModules"
           "${host.name}-tf"
         ];
+        name = "${host.name}-tf";
       })
     ];
 
@@ -212,7 +204,11 @@ in
       terraform-secrets-aspect
     ];
   };
-
+  flake-file.inputs.terranix = {
+    inputs.nixpkgs.follows = "nixpkgs";
+    url = "github:terranix/terranix";
+  };
+  imports = [ (inputs.terranix.flakeModule or { }) ];
   # Guarded on `inputs ? terranix`: the first `nix run .#write-flake` pass after adding this
   # module runs before flake.nix/flake.lock actually have a `terranix` input, so the option this
   # sets (declared by terranix's own flakeModule, imported above) doesn't exist yet either.

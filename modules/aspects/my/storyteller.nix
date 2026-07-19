@@ -21,14 +21,75 @@ in
     in
     {
       dataset = {
+        name = "storyteller";
         pool = "metalminds";
-        name = "storyteller";
       };
-
+      nixos = { config, ... }: {
+        virtualisation.oci-containers.containers.storyteller = {
+          environment = {
+            # Storyteller's Auth.js base URL: its own origin plus Auth.js's `basePath`. Required for
+            # OAuth/OIDC login, and what its session cookie's `Domain` is pinned to - see `url`
+            # above for why that forces a single canonical hostname.
+            AUTH_URL = "https://${url}/api/v2/auth";
+            ENABLE_WEB_READER = "true";
+          };
+          environmentFiles = [ config.age.secrets."storyteller.env".path ];
+          # Pinned to the current `latest` tag's digest at the time this was written --
+          # storyteller-platform doesn't cut stable releases, so there's nothing more specific to
+          # pin to. Re-resolve via the GitLab registry API if bumping:
+          #   curl -s "https://gitlab.com/api/v4/projects/67994333/registry/repositories/8429296/tags/latest"
+          image = "registry.gitlab.com/storyteller-platform/storyteller@sha256:a15609ec102de6aace73b5aae3794f7f8e9f40ed3ac2f57e923ef72daa505668";
+          ports =
+            let
+              port' = toString port;
+            in
+            [ "127.0.0.1:${port'}:${port'}" ];
+          volumes = [ "/metalminds/storyteller:/data" ];
+        };
+      };
+      secrets = { secrets, ... }: {
+        # `intermediary` (unlike immich/nextcloud/seerr's equivalents, which are NOT) - Storyteller
+        # keeps its OIDC provider config in its own settings DATABASE, entered through the settings
+        # UI, with no env-var or config-file equivalent to point at a decrypted secret. So nothing
+        # on the host ever reads this; it exists only to feed Authentik's side via a Terraform
+        # `variable` (modules/terranix.nix's two modes), and gets typed into Storyteller by hand -
+        # read it back with `agenix view secrets/generated/storyteller-oidc-client-secret.age`.
+        storyteller-oidc-client-secret = {
+          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
+          intermediary = true;
+          settings.terraform = "variable";
+        };
+        storyteller-secret-key = {
+          generator.script = "alnum";
+          intermediary = true;
+        };
+        "storyteller.env".generator = {
+          dependencies = { inherit (secrets) storyteller-secret-key; };
+          script =
+            {
+              decrypt,
+              deps,
+              lib,
+              ...
+            }:
+            ''
+              printf 'STORYTELLER_SECRET_KEY="%s"\n' "$(
+                ${decrypt} ${lib.escapeShellArg deps.storyteller-secret-key.file}
+              )"
+            '';
+        };
+      };
       virtual-host = {
-        name = "storyteller";
-        host = host.name;
         inherit port global url;
+        group = "Media";
+        homepage = {
+          description = "Read-aloud book alignment";
+        };
+        host = host.name;
+        # No dashboard-icons entry for this app - its own upstream logo instead.
+        icon = "https://gitlab.com/storyteller-platform/storyteller/-/raw/main/applications/docs/static/img/Storyteller_Logo.png";
+        label = "Storyteller";
+        name = "storyteller";
         # Deliberately NOT `protected`: Storyteller does its own OIDC login against Authentik via
         # the `oidc` field below, so forward-auth on top would mean logging in twice (once at the
         # outpost, again at Storyteller's own login page) and would break its mobile/OPDS clients,
@@ -41,72 +102,8 @@ in
         # (`customProviderId`, same file) - so the name MUST be entered as "Authentik" in
         # Storyteller's settings for this registered URI to match.
         oidc = {
-          redirect-paths = [ "/api/v2/auth/callback/authentik" ];
           client-secret = "storyteller-oidc-client-secret";
-        };
-        label = "Storyteller";
-        # No dashboard-icons entry for this app - its own upstream logo instead.
-        icon = "https://gitlab.com/storyteller-platform/storyteller/-/raw/main/applications/docs/static/img/Storyteller_Logo.png";
-        group = "Media";
-        homepage = {
-          description = "Read-aloud book alignment";
-        };
-      };
-
-      secrets = { secrets, ... }: {
-        storyteller-secret-key = {
-          generator.script = "alnum";
-          intermediary = true;
-        };
-        # `intermediary` (unlike immich/nextcloud/seerr's equivalents, which are NOT) - Storyteller
-        # keeps its OIDC provider config in its own settings DATABASE, entered through the settings
-        # UI, with no env-var or config-file equivalent to point at a decrypted secret. So nothing
-        # on the host ever reads this; it exists only to feed Authentik's side via a Terraform
-        # `variable` (modules/terranix.nix's two modes), and gets typed into Storyteller by hand -
-        # read it back with `agenix view secrets/generated/storyteller-oidc-client-secret.age`.
-        storyteller-oidc-client-secret = {
-          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
-          intermediary = true;
-          settings.terraform = "variable";
-        };
-        "storyteller.env".generator = {
-          dependencies = { inherit (secrets) storyteller-secret-key; };
-          script =
-            {
-              lib,
-              decrypt,
-              deps,
-              ...
-            }:
-            ''
-              printf 'STORYTELLER_SECRET_KEY="%s"\n' "$(
-                ${decrypt} ${lib.escapeShellArg deps.storyteller-secret-key.file}
-              )"
-            '';
-        };
-      };
-
-      nixos = { config, ... }: {
-        virtualisation.oci-containers.containers.storyteller = {
-          # Pinned to the current `latest` tag's digest at the time this was written --
-          # storyteller-platform doesn't cut stable releases, so there's nothing more specific to
-          # pin to. Re-resolve via the GitLab registry API if bumping:
-          #   curl -s "https://gitlab.com/api/v4/projects/67994333/registry/repositories/8429296/tags/latest"
-          image = "registry.gitlab.com/storyteller-platform/storyteller@sha256:a15609ec102de6aace73b5aae3794f7f8e9f40ed3ac2f57e923ef72daa505668";
-          ports =
-            let
-              port' = toString port;
-            in
-            [ "127.0.0.1:${port'}:${port'}" ];
-          volumes = [ "/metalminds/storyteller:/data" ];
-          environment = {
-            ENABLE_WEB_READER = "true";
-            # Storyteller's Auth.js base URL: its own origin plus Auth.js's `basePath`. Required for
-            # OAuth/OIDC login, and what its session cookie's `Domain` is pinned to - see `url`
-            # above for why that forces a single canonical hostname.
-            AUTH_URL = "https://${url}/api/v2/auth";
-          };
-          environmentFiles = [ config.age.secrets."storyteller.env".path ];
+          redirect-paths = [ "/api/v2/auth/callback/authentik" ];
         };
       };
     };

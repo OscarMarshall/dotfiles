@@ -9,18 +9,18 @@ let
   hmPlatforms =
     { aspect-chain, ... }:
     den._.forward {
+      adaptArgs = { config, ... }: { osConfig = config; };
       each = [
         "Linux"
         "Darwin"
         "Aarch64"
         "64bit"
       ];
+      fromAspect = _: lib.head aspect-chain;
       fromClass = platform: "hm${platform}";
+      guard = { pkgs, ... }: platform: lib.mkIf pkgs.stdenv."is${platform}";
       intoClass = _: "homeManager";
       intoPath = _: [ ];
-      fromAspect = _: lib.head aspect-chain;
-      guard = { pkgs, ... }: platform: lib.mkIf pkgs.stdenv."is${platform}";
-      adaptArgs = { config, ... }: { osConfig = config; };
     };
   secrets =
     {
@@ -29,39 +29,39 @@ let
       ...
     }:
     den._.forward {
+      adaptArgs = { config, ... }: {
+        inherit config;
+        inherit (config.age) secrets;
+      };
       each = [
         "nixos"
         "darwin"
         "homeManager"
       ];
+      fromAspect = _: lib.head aspect-chain;
       fromClass = _: "secrets";
+      fromCtx = _: lib.optionalAttrs (home != null) { inherit home; };
       intoClass = lib.id;
       intoPath = _: [
         "age"
         "secrets"
       ];
-      fromAspect = _: lib.head aspect-chain;
-      fromCtx = _: lib.optionalAttrs (home != null) { inherit home; };
-      adaptArgs = { config, ... }: {
-        inherit config;
-        inherit (config.age) secrets;
-      };
     };
   nixosSecrets =
     { aspect-chain, ... }:
     den._.forward {
+      adaptArgs = { config, ... }: {
+        inherit config;
+        inherit (config.age) secrets;
+      };
       each = [ "nixos" ];
+      fromAspect = _: lib.head aspect-chain;
       fromClass = _: "nixosSecrets";
       intoClass = lib.id;
       intoPath = _: [
         "age"
         "secrets"
       ];
-      fromAspect = _: lib.head aspect-chain;
-      adaptArgs = { config, ... }: {
-        inherit config;
-        inherit (config.age) secrets;
-      };
     };
 in
 {
@@ -93,9 +93,8 @@ in
         os.system.configurationRevision = self.rev or self.dirtyRev or null;
       };
       user = {
-        includes = [ my.starship ];
-
         classes = lib.mkDefault [ "homeManager" ];
+        includes = [ my.starship ];
       };
     };
   };

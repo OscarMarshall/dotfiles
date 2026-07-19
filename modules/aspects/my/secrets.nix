@@ -1,17 +1,20 @@
 { inputs, lib, ... }:
 let
   rekey = name: pkgs: {
-    masterIdentities = [ ../../../secrets/yubikey-identity.pub ];
     agePlugins = [ pkgs.age-plugin-yubikey ];
-    storageMode = "local";
-    localStorageDir = ../../../. + "/secrets/rekeyed/${name}";
     generatedSecretsDir = ../../../secrets/generated;
+    localStorageDir = ../../../. + "/secrets/rekeyed/${name}";
+    masterIdentities = [ ../../../secrets/yubikey-identity.pub ];
+    storageMode = "local";
   };
 in
 {
   flake-file.inputs = {
+    agenix-rekey = {
+      inputs.nixpkgs.follows = "nixpkgs";
+      url = "github:oddlama/agenix-rekey";
+    };
     ragenix = {
-      url = "github:yaxitech/ragenix";
       inputs = {
         agenix.inputs = {
           darwin.follows = "darwin";
@@ -21,11 +24,7 @@ in
         };
         nixpkgs.follows = "nixpkgs";
       };
-    };
-
-    agenix-rekey = {
-      url = "github:oddlama/agenix-rekey";
-      inputs.nixpkgs.follows = "nixpkgs";
+      url = "github:yaxitech/ragenix";
     };
   };
 
@@ -34,8 +33,8 @@ in
     # this to avoid applying darwin/nixos age.rekey twice — once at host level
     # and again at the user level, which would cause a duplicate-definition error.
     {
-      host ? null,
       home ? null,
+      host ? null,
       user ? null,
       ...
     }:
@@ -57,7 +56,8 @@ in
       # whichever node ran last on a given `agenix rekey -a` pass would delete the other's exclusively-owned
       # secrets as "orphans". Giving the embedded user a separate sibling directory keeps each node's
       # cleanup pass scoped to only its own files.
-      homeManagerEntityName = if host != null && user != null then "${host.name}-home-${user.userName}" else entityName;
+      homeManagerEntityName =
+        if host != null && user != null then "${host.name}-home-${user.userName}" else entityName;
     in
     {
       homeManager =
@@ -68,25 +68,25 @@ in
             (inputs.agenix-rekey.homeManagerModules.default or { })
           ];
         }
-        // lib.optionalAttrs (homeManagerEntityName != null) { age.rekey = rekey homeManagerEntityName pkgs; };
+        // lib.optionalAttrs (homeManagerEntityName != null) {
+          age.rekey = rekey homeManagerEntityName pkgs;
+        };
     }
     // lib.optionalAttrs isHostEntity {
       darwin = { pkgs, ... }: {
+        age.rekey = rekey host.name pkgs;
         imports = [
           (inputs.ragenix.darwinModules.default or { })
           (inputs.agenix-rekey.darwinModules.default or { })
         ];
-
-        age.rekey = rekey host.name pkgs;
       };
 
       nixos = { pkgs, ... }: {
+        age.rekey = rekey host.name pkgs;
         imports = [
           (inputs.ragenix.nixosModules.default or { })
           (inputs.agenix-rekey.nixosModules.default or { })
         ];
-
-        age.rekey = rekey host.name pkgs;
       };
     };
 }

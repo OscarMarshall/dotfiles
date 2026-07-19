@@ -12,46 +12,9 @@ in
     in
     {
       dataset = {
+        name = "nextcloud";
         pool = "metalminds";
-        name = "nextcloud";
       };
-
-      virtual-host = {
-        name = "nextcloud";
-        host = host.name;
-        inherit global;
-        # Deliberately no `port` — Nextcloud is PHP-FPM, not a plain HTTP service to
-        # proxy_pass to. The quirk emits only forceSSL/enableACME for this vhost, and
-        # Nextcloud's own module below supplies its `locations`/`root`, merging cleanly.
-        #
-        # Requests the matching OAuth2 Provider + Application from Authentik (authentik.nix) - see
-        # virtual-host.nix's `oidc` field for the shape. Per user_oidc's own callback route (and
-        # Authentik's Nextcloud integration guide) - `/index.php/...` only matters for installs
-        # that haven't set `overwriteprotocol`-style pretty URLs, which this one has (see
-        # `settings.overwriteprotocol` below).
-        oidc = {
-          redirect-paths = [ "/apps/user_oidc/code" ];
-          client-secret = "nextcloud-oidc-client-secret";
-        };
-        label = "Nextcloud";
-        icon = "nextcloud.svg";
-        group = "Media";
-        homepage = {
-          description = "Files, calendar & office suite";
-        };
-      };
-
-      secrets = {
-        nextcloud-admin-password.generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -base64 24";
-        # `settings.terraform = "variable";` feeds a Terraform `variable` (modules/terranix.nix's
-        # two modes); also read directly below (LoadCredential) to configure user_oidc via occ, so
-        # it's NOT `intermediary` - it has to be materialized as a real host secret too.
-        nextcloud-oidc-client-secret = {
-          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
-          settings.terraform = "variable";
-        };
-      };
-
       nixos = { config, pkgs, ... }: {
         # Public DNS for this hostname resolves off-box; on-box callers (notably coolwsd's
         # server-side WOPI CheckFileInfo/GetFile requests back to Nextcloud) hit it too and hairpin
@@ -66,26 +29,21 @@ in
         networking.hosts."127.0.0.1" = [ url ];
 
         services.nextcloud = {
-          enable = true;
-          hostName = url;
-          https = true;
-          package = pkgs.nextcloud33;
-
-          database.createLocally = true;
           config = {
-            dbtype = "pgsql";
-            adminuser = "admin";
             adminpassFile = config.age.secrets.nextcloud-admin-password.path;
+            adminuser = "admin";
+            dbtype = "pgsql";
           };
-
+          database.createLocally = true;
           datadir = "/metalminds/nextcloud"; # holds both config/ (config.php) and data/ (user files)
-
+          enable = true;
           extraApps = with config.services.nextcloud.package.packages.apps; {
             inherit user_oidc richdocuments;
           };
-
+          hostName = url;
+          https = true;
+          package = pkgs.nextcloud33;
           settings = {
-            overwriteprotocol = "https";
             # Drops the username/password form from /login, leaving just the "Log in with
             # Authentik" button - the alternative-logins block sits OUTSIDE the form's `v-if` in
             # core's Login.vue, so SSO survives being hidden.
@@ -96,6 +54,7 @@ in
             # OIDC-provisioned accounts have no password to type in the first place (user_oidc is
             # their backend), so `admin` was already the only account a form could authenticate.
             hide_login_form = true;
+            overwriteprotocol = "https";
           };
         };
 
@@ -105,23 +64,14 @@ in
         # `nextcloud-authentik-richdocuments-setup` once that list stopped being two things worth
         # enumerating in a unit name.
         systemd.services.nextcloud-occ-setup = {
-          description = "Apply Nextcloud app-level config that has no NixOS option, via occ";
           after = [
             "nextcloud-setup.service"
             "coolwsd.service"
             "nginx.service"
           ];
-          requires = [ "nextcloud-setup.service" ];
-          wantedBy = [ "multi-user.target" ];
-
-          serviceConfig = {
-            Type = "oneshot";
-            User = "nextcloud";
-            LoadCredential = "oidc-client-secret:${config.age.secrets.nextcloud-oidc-client-secret.path}";
-          };
-
+          description = "Apply Nextcloud app-level config that has no NixOS option, via occ";
           path = [ config.services.nextcloud.occ ];
-
+          requires = [ "nextcloud-setup.service" ];
           script = ''
             set -euo pipefail
 
@@ -203,6 +153,47 @@ in
             # `set -e` on every subsequent boot.
             nextcloud-occ app:disable photos
           '';
+          serviceConfig = {
+            LoadCredential = "oidc-client-secret:${config.age.secrets.nextcloud-oidc-client-secret.path}";
+            Type = "oneshot";
+            User = "nextcloud";
+          };
+          wantedBy = [ "multi-user.target" ];
+        };
+      };
+      secrets = {
+        nextcloud-admin-password.generator.script =
+          { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -base64 24";
+        # `settings.terraform = "variable";` feeds a Terraform `variable` (modules/terranix.nix's
+        # two modes); also read directly below (LoadCredential) to configure user_oidc via occ, so
+        # it's NOT `intermediary` - it has to be materialized as a real host secret too.
+        nextcloud-oidc-client-secret = {
+          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
+          settings.terraform = "variable";
+        };
+      };
+      virtual-host = {
+        inherit global;
+        group = "Media";
+        homepage = {
+          description = "Files, calendar & office suite";
+        };
+        host = host.name;
+        icon = "nextcloud.svg";
+        label = "Nextcloud";
+        name = "nextcloud";
+        # Deliberately no `port` — Nextcloud is PHP-FPM, not a plain HTTP service to
+        # proxy_pass to. The quirk emits only forceSSL/enableACME for this vhost, and
+        # Nextcloud's own module below supplies its `locations`/`root`, merging cleanly.
+        #
+        # Requests the matching OAuth2 Provider + Application from Authentik (authentik.nix) - see
+        # virtual-host.nix's `oidc` field for the shape. Per user_oidc's own callback route (and
+        # Authentik's Nextcloud integration guide) - `/index.php/...` only matters for installs
+        # that haven't set `overwriteprotocol`-style pretty URLs, which this one has (see
+        # `settings.overwriteprotocol` below).
+        oidc = {
+          client-secret = "nextcloud-oidc-client-secret";
+          redirect-paths = [ "/apps/user_oidc/code" ];
         };
       };
     };

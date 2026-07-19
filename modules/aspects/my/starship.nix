@@ -25,11 +25,6 @@ in
           enable = true;
           presets = [ "nerd-font-symbols" ];
           settings.custom.nix-config = {
-            description = "Shows the current nix config status";
-            shell = [ "${pkgs.bash}/bin/bash" ];
-            style = "bold blue";
-            ignore_timeout = true;
-            when = true;
             # Accumulate all applicable indicators into $symbols.
             # Both the dirty marker and the branch-status marker may appear
             # at the same time (e.g. uncommitted changes on a non-main rev).
@@ -64,7 +59,10 @@ in
                         status=$(cat "$cache_file")
                       else
                         github_token=${
-                          if tokenPath != null then ''"$(${pkgs.coreutils}/bin/cat ${tokenPath} 2>/dev/null || true)"'' else ''""''
+                          if tokenPath != null then
+                            ''"$(${pkgs.coreutils}/bin/cat ${tokenPath} 2>/dev/null || true)"''
+                          else
+                            ''""''
                         }
                         status=$(
                           retries=2
@@ -109,6 +107,11 @@ in
                   echo "$symbols"
                 fi
               '';
+            description = "Shows the current nix config status";
+            ignore_timeout = true;
+            shell = [ "${pkgs.bash}/bin/bash" ];
+            style = "bold blue";
+            when = true;
           };
         };
       };

@@ -1,5 +1,6 @@
 {
   my.gnome = {
+    hmLinux.dconf.enable = true;
     nixos = { pkgs, ... }: {
       environment = {
         gnome.excludePackages = with pkgs; [
@@ -27,7 +28,5 @@
         displayManager.gdm.enable = true;
       };
     };
-
-    hmLinux.dconf.enable = true;
   };
 }

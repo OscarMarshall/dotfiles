@@ -8,20 +8,6 @@
       port = 7474;
     in
     {
-      # No `homepage` block: deliberately not a dashboard tile, but `icon`/`group` still feed its
-      # Authentik application (see virtual-host.nix). No `label` either - "autobrr" IS the brand's
-      # own styling.
-      virtual-host = {
-        name = "autobrr";
-        host = host.name;
-        protected = true;
-        icon = "https://raw.githubusercontent.com/autobrr/autobrr/develop/web/src/logo.svg";
-        group = "Arr Stack";
-        inherit port global;
-      };
-
-      secrets.autobrr-session-secret.generator.script = "alnum";
-
       nixos = { config, ... }: {
         services.autobrr = {
           enable = true;
@@ -32,6 +18,18 @@
             host = "127.0.0.1";
           };
         };
+      };
+      secrets.autobrr-session-secret.generator.script = "alnum";
+      # No `homepage` block: deliberately not a dashboard tile, but `icon`/`group` still feed its
+      # Authentik application (see virtual-host.nix). No `label` either - "autobrr" IS the brand's
+      # own styling.
+      virtual-host = {
+        inherit port global;
+        group = "Arr Stack";
+        host = host.name;
+        icon = "https://raw.githubusercontent.com/autobrr/autobrr/develop/web/src/logo.svg";
+        name = "autobrr";
+        protected = true;
       };
     };
 }

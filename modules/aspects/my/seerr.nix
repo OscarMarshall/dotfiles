@@ -5,10 +5,10 @@ let
   # Seerr has no released OIDC support yet (seerr-team/seerr#2715 is still open). Build from
   # michaelhthomas's PR branch until it lands in a release, then drop this override.
   oidcFork = {
+    hash = "sha256-JchL4DJk/DrveZthiawtNJW2tDtr66e3k+EaS+iPJp8=";
     owner = "michaelhthomas";
     repo = "seerr";
     rev = "0078a482c9e2a1144069af5d196660e392940ea0";
-    hash = "sha256-JchL4DJk/DrveZthiawtNJW2tDtr66e3k+EaS+iPJp8=";
   };
 in
 {
@@ -17,51 +17,22 @@ in
       global ? false,
     }:
     { host, ... }: {
-      virtual-host = {
-        name = "seerr";
-        host = host.name;
-        inherit port global;
-        # Requests the matching OAuth2 Provider + Application from Authentik (authentik.nix) - see
-        # virtual-host.nix's `oidc` field for the shape. Redirect paths per the OIDC setup docs for
-        # this exact fork revision (docs/using-seerr/settings/users/oidc.md at `oidcFork.rev`
-        # above).
-        oidc = {
-          redirect-paths = [
-            "/login"
-            "/profile/settings/linked-accounts"
-          ];
-          client-secret = "seerr-oidc-client-secret";
-        };
-        label = "Seerr";
-        icon = "seerr.svg";
-        group = "Media";
-        homepage = {
-          description = "Media requests";
-        };
-      };
-
-      # `settings.terraform = "variable";` feeds a Terraform `variable` (modules/terranix.nix's two
-      # modes); also read directly below (LoadCredential) by `configureOidc`, so it's NOT
-      # `intermediary` - it has to be materialized as a real host secret too.
-      secrets = {
-        seerr-oidc-client-secret = {
-          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
-          settings.terraform = "variable";
-        };
-      };
-
       nixos =
         {
           config,
-          pkgs,
           lib,
+          pkgs,
           ...
         }:
         let
           package = pkgs.seerr.overrideAttrs (old: rec {
             pname = "seerr";
-            version = "unstable-2026-07-12";
-
+            pnpmDeps = pkgs.fetchPnpmDeps {
+              inherit pname version src;
+              fetcherVersion = 3;
+              hash = "sha256-7nBkeXGJfDRSvNesOjOK+Mtzp6SlBvbytyfsQl9eh/Y=";
+              pnpm = pkgs.pnpm_10.override { nodejs-slim = pkgs.nodejs-slim_22; };
+            };
             src = pkgs.fetchFromGitHub {
               inherit (oidcFork)
                 owner
@@ -70,13 +41,7 @@ in
                 hash
                 ;
             };
-
-            pnpmDeps = pkgs.fetchPnpmDeps {
-              inherit pname version src;
-              pnpm = pkgs.pnpm_10.override { nodejs-slim = pkgs.nodejs-slim_22; };
-              fetcherVersion = 3;
-              hash = "sha256-7nBkeXGJfDRSvNesOjOK+Mtzp6SlBvbytyfsQl9eh/Y=";
-            };
+            version = "unstable-2026-07-12";
           });
 
           # Seerr's OIDC settings have no env-var equivalent yet — only settings.json. Merge our
@@ -118,14 +83,45 @@ in
         in
         {
           services.seerr = {
-            enable = true;
             inherit port package;
+            enable = true;
           };
 
           systemd.services.seerr.serviceConfig = {
-            LoadCredential = "oidc-client-secret:${config.age.secrets.seerr-oidc-client-secret.path}";
             ExecStartPre = [ (lib.getExe configureOidc) ];
+            LoadCredential = "oidc-client-secret:${config.age.secrets.seerr-oidc-client-secret.path}";
           };
         };
+      # `settings.terraform = "variable";` feeds a Terraform `variable` (modules/terranix.nix's two
+      # modes); also read directly below (LoadCredential) by `configureOidc`, so it's NOT
+      # `intermediary` - it has to be materialized as a real host secret too.
+      secrets = {
+        seerr-oidc-client-secret = {
+          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
+          settings.terraform = "variable";
+        };
+      };
+      virtual-host = {
+        inherit port global;
+        group = "Media";
+        homepage = {
+          description = "Media requests";
+        };
+        host = host.name;
+        icon = "seerr.svg";
+        label = "Seerr";
+        name = "seerr";
+        # Requests the matching OAuth2 Provider + Application from Authentik (authentik.nix) - see
+        # virtual-host.nix's `oidc` field for the shape. Redirect paths per the OIDC setup docs for
+        # this exact fork revision (docs/using-seerr/settings/users/oidc.md at `oidcFork.rev`
+        # above).
+        oidc = {
+          client-secret = "seerr-oidc-client-secret";
+          redirect-paths = [
+            "/login"
+            "/profile/settings/linked-accounts"
+          ];
+        };
+      };
     };
 }

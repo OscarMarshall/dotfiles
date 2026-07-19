@@ -7,9 +7,9 @@ let
   # `my.bookshelf-audiobooks`), sharing this builder.
   mkBookshelfInstance =
     {
+      description,
       instance,
       label,
-      description,
       port,
     }:
     {
@@ -21,25 +21,16 @@ let
     in
     {
       dataset = {
-        pool = "metalminds";
         inherit name;
+        pool = "metalminds";
       };
-
-      virtual-host = {
-        inherit name port global;
-        host = host.name;
-        protected = true;
-        label = "Bookshelf (${label})";
-        # No dashboard-icons entry for pennydreadful/bookshelf specifically (its "audiobookshelf"
-        # entry is a different, unrelated app) - its own upstream logo instead. Named Readarr.svg
-        # upstream since Bookshelf is a Readarr fork.
-        icon = "https://raw.githubusercontent.com/pennydreadful/bookshelf/develop/Logo/Readarr.svg";
-        group = "Arr Stack";
-        homepage = { inherit description; };
-      };
-
       nixos = {
         virtualisation.oci-containers.containers.${name} = {
+          # Bookshelf only reaches this vhost via nginx over loopback (its port isn't opened in
+          # the firewall), so every request it sees is "local" -- this drops Bookshelf's own login
+          # screen (it's a Readarr fork and shares Readarr's `<APPNAME>__AUTH__REQUIRED` setting)
+          # in favor of the Authentik forward-auth gate in front of it, rather than stacking both.
+          environment.READARR__AUTH__REQUIRED = "DisabledForLocalAddresses";
           # Pinned to the current "hardcover" tag's digest (Hardcover-sourced metadata, higher
           # quality than the Goodreads-compatible "softcover" variant) -- re-resolve if bumping:
           #   curl -sH "Authorization: Bearer $(curl -s 'https://ghcr.io/token?scope=repository:pennydreadful/bookshelf:pull' | jq -r .token)" \
@@ -52,26 +43,33 @@ let
             in
             [ "127.0.0.1:${port'}:${port'}" ];
           volumes = [ "/metalminds/${name}:/config" ];
-          # Bookshelf only reaches this vhost via nginx over loopback (its port isn't opened in
-          # the firewall), so every request it sees is "local" -- this drops Bookshelf's own login
-          # screen (it's a Readarr fork and shares Readarr's `<APPNAME>__AUTH__REQUIRED` setting)
-          # in favor of the Authentik forward-auth gate in front of it, rather than stacking both.
-          environment.READARR__AUTH__REQUIRED = "DisabledForLocalAddresses";
         };
+      };
+      virtual-host = {
+        inherit name port global;
+        group = "Arr Stack";
+        homepage = { inherit description; };
+        host = host.name;
+        # No dashboard-icons entry for pennydreadful/bookshelf specifically (its "audiobookshelf"
+        # entry is a different, unrelated app) - its own upstream logo instead. Named Readarr.svg
+        # upstream since Bookshelf is a Readarr fork.
+        icon = "https://raw.githubusercontent.com/pennydreadful/bookshelf/develop/Logo/Readarr.svg";
+        label = "Bookshelf (${label})";
+        protected = true;
       };
     };
 in
 {
   my.bookshelf-audiobooks = mkBookshelfInstance {
+    description = "Audiobook manager";
     instance = "audiobooks";
     label = "Audiobooks";
-    description = "Audiobook manager";
     port = 8788;
   };
   my.bookshelf-ebooks = mkBookshelfInstance {
+    description = "Ebook manager";
     instance = "ebooks";
     label = "Ebooks";
-    description = "Ebook manager";
     port = 8787;
   };
 }

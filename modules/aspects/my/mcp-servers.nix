@@ -10,8 +10,7 @@
       enable = true;
 
       servers = {
-        nixos.command = "${pkgs.mcp-nixos}/bin/mcp-nixos";
-
+        context7.command = "${pkgs.context7-mcp}/bin/context7-mcp";
         # `programs.mcp`'s env.*.file support single-quotes the path before
         # `cat`-ing it, but agenix's Darwin secret paths are themselves an
         # unexpanded `$(getconf DARWIN_USER_TEMP_DIR)/agenix/...` shell
@@ -23,8 +22,7 @@
           export GITHUB_PERSONAL_ACCESS_TOKEN="$(cat ${config.age.secrets.github-mcp-server-github-access-token.path})"
           exec ${pkgs.github-mcp-server}/bin/github-mcp-server stdio
         ''}";
-
-        context7.command = "${pkgs.context7-mcp}/bin/context7-mcp";
+        nixos.command = "${pkgs.mcp-nixos}/bin/mcp-nixos";
       };
     };
   };

@@ -9,8 +9,10 @@ let
   userAspect = { user, ... }: {
     nixos = { config, ... }: {
       users.users.${user.userName} = {
-        openssh.authorizedKeys.keys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGt95coA4j19+fPxpOLRfIFb7AvAXdSmf1MyOPibmhe/" ];
         hashedPasswordFile = toString config.age.secrets.oscar-hashed-password.file;
+        openssh.authorizedKeys.keys = [
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGt95coA4j19+fPxpOLRfIFb7AvAXdSmf1MyOPibmhe/"
+        ];
       };
     };
     # nixos/modules/config/nix.nix and nix-darwin's equivalent both set
@@ -23,8 +25,8 @@ in
 {
   den.aspects.oscar =
     {
-      host ? null,
       home ? null,
+      host ? null,
       ...
     }:
     let
@@ -41,6 +43,65 @@ in
           { };
     in
     {
+      darwin = {
+        homebrew.casks = [
+          "arc"
+          "domzilla-caffeine"
+          "proton-mail"
+        ];
+        users.knownUsers = [ "oscar" ];
+        users.users.oscar.uid = 501;
+      };
+      homeManager = { pkgs, ... }: {
+        # age uses this key when rekeying home-manager-level secrets. At
+        # activation time, age decrypts via the Proton Pass SSH agent
+        # (SSH_AUTH_SOCK) without needing a private key file on disk.
+        age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGt95coA4j19+fPxpOLRfIFb7AvAXdSmf1MyOPibmhe/";
+        home.packages =
+          with pkgs;
+          [
+            fd
+            gnupg
+            ripgrep
+            rsync
+          ]
+          ++ lib.optionals (scope.graphical or false) [
+            inkscape
+            mkvtoolnix
+            mpv
+            prismlauncher
+          ];
+        programs = {
+          fzf.enable = true;
+          gh = {
+            enable = true;
+            settings.git_protocol = "ssh";
+          };
+          ssh.settings."github-personal" = {
+            HostName = "github.com";
+            IdentitiesOnly = true;
+            IdentityFile = "${./id_ed25519_personal.pub}";
+            User = "git";
+          };
+        };
+        # On work machines, the agent needs SSH keys from both the Personal and Meraki
+        # vaults - pass-cli's ssh-agent only accepts a single --vault-name, so the only way
+        # to cover more than one named vault is to omit the flag and let it scan all vaults.
+        services.proton-pass-agent.extraArgs = lib.optionals (!(scope.work or false)) [
+          "--vault-name"
+          "Personal"
+        ];
+        stylix.fonts = {
+          monospace = {
+            name = "Maple Mono NF";
+            package = pkgs.maple-mono.NF;
+          };
+          sansSerif = {
+            name = "Inter";
+            package = pkgs.inter;
+          };
+        };
+      };
       includes = [
         den.aspects.oscar.provides.work
         den._.primary-user
@@ -73,32 +134,7 @@ in
         my.steam
         den.aspects.oscar.provides.zen-browser
       ];
-
-      provides."dev203.meraki.com" = {
-        homeManager = {
-          home = {
-            sessionVariables.PATH = "$HOME/.nix-profile/bin:$PATH";
-            stateVersion = "26.05";
-          };
-        };
-
-        # See the comment on provides.oscar in OMARSHAL-M-T2QF.nix for why these sentinels are needed:
-        # this home entity's re-walked spawn scope doesn't re-run the user aspect's own includes, so
-        # hmLinux is absent at compile time without this and the forward falls through to resolveSourceFallback.
-        hmLinux = { };
-        hmDarwin = { };
-        hmAarch64 = { };
-        hm64bit = { };
-      };
-
-      user.description = name;
-
       nixosSecrets = { secrets, ... }: {
-        oscar-password = {
-          rekeyFile = ../../../../secrets/oscar-password.age;
-          intermediary = true;
-        };
-
         oscar-hashed-password.generator = {
           dependencies = { inherit (secrets) oscar-password; };
           script =
@@ -113,71 +149,26 @@ in
               ${pkgs.mkpasswd}/bin/mkpasswd "$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
             '';
         };
-      };
-
-      darwin = {
-        users.knownUsers = [ "oscar" ];
-        users.users.oscar.uid = 501;
-        homebrew.casks = [
-          "arc"
-          "domzilla-caffeine"
-          "proton-mail"
-        ];
-      };
-
-      homeManager = { pkgs, ... }: {
-        # age uses this key when rekeying home-manager-level secrets. At
-        # activation time, age decrypts via the Proton Pass SSH agent
-        # (SSH_AUTH_SOCK) without needing a private key file on disk.
-        age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGt95coA4j19+fPxpOLRfIFb7AvAXdSmf1MyOPibmhe/";
-
-        # On work machines, the agent needs SSH keys from both the Personal and Meraki
-        # vaults - pass-cli's ssh-agent only accepts a single --vault-name, so the only way
-        # to cover more than one named vault is to omit the flag and let it scan all vaults.
-        services.proton-pass-agent.extraArgs = lib.optionals (!(scope.work or false)) [
-          "--vault-name"
-          "Personal"
-        ];
-
-        home.packages =
-          with pkgs;
-          [
-            fd
-            gnupg
-            ripgrep
-            rsync
-          ]
-          ++ lib.optionals (scope.graphical or false) [
-            inkscape
-            mkvtoolnix
-            mpv
-            prismlauncher
-          ];
-
-        programs = {
-          ssh.settings."github-personal" = {
-            HostName = "github.com";
-            User = "git";
-            IdentityFile = "${./id_ed25519_personal.pub}";
-            IdentitiesOnly = true;
-          };
-          fzf.enable = true;
-          gh = {
-            enable = true;
-            settings.git_protocol = "ssh";
-          };
+        oscar-password = {
+          intermediary = true;
+          rekeyFile = ../../../../secrets/oscar-password.age;
         };
-
-        stylix.fonts = {
-          monospace = {
-            package = pkgs.maple-mono.NF;
-            name = "Maple Mono NF";
-          };
-          sansSerif = {
-            package = pkgs.inter;
-            name = "Inter";
+      };
+      provides."dev203.meraki.com" = {
+        hm64bit = { };
+        hmAarch64 = { };
+        hmDarwin = { };
+        # See the comment on provides.oscar in OMARSHAL-M-T2QF.nix for why these sentinels are needed:
+        # this home entity's re-walked spawn scope doesn't re-run the user aspect's own includes, so
+        # hmLinux is absent at compile time without this and the forward falls through to resolveSourceFallback.
+        hmLinux = { };
+        homeManager = {
+          home = {
+            sessionVariables.PATH = "$HOME/.nix-profile/bin:$PATH";
+            stateVersion = "26.05";
           };
         };
       };
+      user.description = name;
     };
 }

@@ -14,20 +14,23 @@
           name: kernelPackages:
           (builtins.match "linux_[0-9]+_[0-9]+" name) != null
           && (builtins.tryEval kernelPackages).success
-          && (builtins.tryEval (!kernelPackages.${defaultZfsPackage.kernelModuleAttribute}.meta.broken)).value or false
+          && (builtins.tryEval (!kernelPackages.${defaultZfsPackage.kernelModuleAttribute}.meta.broken)).value
+            or false
         ) pkgs.linuxKernel.packages;
 
         # Select the latest compatible kernel version
         latestKernelPackage = lib.last (
-          lib.sort (a: b: (lib.versionOlder a.kernel.version b.kernel.version)) (builtins.attrValues zfsCompatibleKernelPackages)
+          lib.sort (a: b: (lib.versionOlder a.kernel.version b.kernel.version)) (
+            builtins.attrValues zfsCompatibleKernelPackages
+          )
         );
       in
       {
         boot = {
-          supportedFilesystems = [ "zfs" ];
           # Use latest ZFS-compatible kernel instead of absolute latest
           # Note: this might jump back and forth as kernels are added or removed
           kernelPackages = latestKernelPackage;
+          supportedFilesystems = [ "zfs" ];
           zfs = {
             extraPools = pools;
             forceImportRoot = false;

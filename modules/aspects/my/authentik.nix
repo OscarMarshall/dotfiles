@@ -4,8 +4,8 @@ let
 in
 {
   flake-file.inputs.authentik-nix = {
-    url = "github:nix-community/authentik-nix";
     inputs.nixpkgs.follows = "nixpkgs";
+    url = "github:nix-community/authentik-nix";
   };
 
   my.authentik =
@@ -25,6 +25,76 @@ in
       url = if global then "auth.${domain}" else "auth.${host.name}.${domain}";
     in
     {
+      nixos = { config, ... }: {
+        imports = [ (inputs.authentik-nix.nixosModules.default or { }) ];
+
+        services.authentik = {
+          enable = true;
+          environmentFile = config.age.secrets."authentik.env".path;
+          nginx = {
+            enable = true;
+            enableACME = true;
+            host = url;
+          };
+          settings.disable_startup_analytics = true;
+        };
+
+        # nginx.nix forces `HttpOnly` onto every proxied cookie, but Authentik's frontend needs to
+        # read its CSRF cookie via JavaScript (it echoes the value back as the X-Authentik-Csrf
+        # header). With HttpOnly forced on, that read fails and Authentik rejects the empty token
+        # with "CSRF token ... incorrect length". Reset the cookie rewrite for this vhost only.
+        services.nginx.virtualHosts.${url}.extraConfig = ''
+          proxy_cookie_path / /;
+        '';
+      };
+      secrets = { secrets, ... }: {
+        authentik-secret-key = {
+          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -base64 60";
+          intermediary = true;
+        };
+        # Consumed both by `authentik.env` below (so Authentik mints it as `akadmin`'s API token
+        # on first boot, under the DIFFERENT env var name that bootstrap mechanism expects) and,
+        # via `settings.terraform = true;`, by harmony's shared Terraform env (as `AUTHENTIK_TOKEN`)
+        # - see the `terranix` field's comment for why a bootstrap token rather than a UI-created
+        # one.
+        authentik-token = {
+          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
+          intermediary = true;
+          settings.terraform = true;
+        };
+        "authentik.env".generator = {
+          dependencies = { inherit (secrets) authentik-secret-key authentik-token; };
+          script =
+            {
+              decrypt,
+              deps,
+              lib,
+              ...
+            }:
+            ''
+              printf 'AUTHENTIK_SECRET_KEY=%s\n' "$(${decrypt} ${lib.escapeShellArg deps.authentik-secret-key.file})"
+              printf 'AUTHENTIK_BOOTSTRAP_TOKEN=%s\n' "$(${decrypt} ${lib.escapeShellArg deps.authentik-token.file})"
+            '';
+        };
+
+        # Both come from an external dashboard (Discord's, Plex's own account), so - unlike the
+        # generated secrets above - these use `rekeyFile` and need a one-time `agenix edit` (see
+        # the `terranix` field's comment for where each value comes from), same as
+        # `cloudflare-api-token`/`meraki-dashboard-api-key`. `settings.terraform = "variable";`
+        # (not `= true;`) because they're only ever consumed as Terraform `variable`s, never by a
+        # NixOS service directly - see modules/terranix.nix's header comment on the two modes.
+        discord-client-secret = {
+          intermediary = true;
+          rekeyFile = ../../../secrets/discord-client-secret.age;
+          settings.terraform = "variable";
+        };
+
+        plex-token = {
+          intermediary = true;
+          rekeyFile = ../../../secrets/plex-token.age;
+          settings.terraform = "variable";
+        };
+      };
       # SSO-as-code, managed via terranix (Nix -> Terraform config, see modules/terranix.nix) and
       # the authentik Terraform provider - see dns.nix/meraki.nix for the general pattern
       # (`nix run .#<host>-tf[.plan|.destroy]`, `nix develop .#<host>-tf`,
@@ -109,7 +179,7 @@ in
       # these out of the plaintext git history; `settings.terraform = "variable";` (below, on each
       # secret) is just how their values reach the `variable`s that encryption config wraps.
       terranix =
-        { virtual-host, lib, ... }:
+        { lib, virtual-host, ... }:
         let
           protected-hosts = lib.filter (vh: vh.protected or false) virtual-host;
           oidc-hosts = lib.filter (vh: vh ? oidc) virtual-host;
@@ -119,7 +189,8 @@ in
           # `oidc` field comment for why both need a redirect URI registered, not just one.
           # `unique` because a `global` host whose `url` override IS already the canonical name
           # (storyteller.nix) would otherwise register every redirect URI twice.
-          hostnames-of = vh: lib.unique ([ (hostname-of vh) ] ++ lib.optional (vh.global or false) "${vh.name}.${domain}");
+          hostnames-of =
+            vh: lib.unique ([ (hostname-of vh) ] ++ lib.optional (vh.global or false) "${vh.name}.${domain}");
 
           # The `group` (virtual-host.nix) whose applications everyone gets, rather than just
           # `admins` - the same string the Homepage dashboard and Authentik's library file these
@@ -141,9 +212,9 @@ in
             lib.imap0 (
               index: group-name:
               lib.nameValuePair "${app-key}-${group-name}" {
-                target = "\${authentik_application.${app-key}.uuid}";
                 group = "\${authentik_group.${group-name}.id}";
                 order = index;
+                target = "\${authentik_application.${app-key}.uuid}";
               }
             ) ([ "admin" ] ++ lib.optional (vh.group or null == open-group) "user");
 
@@ -194,15 +265,6 @@ in
         # branch silently clobber the earlier ones' resources instead of adding to them.
         lib.foldl' lib.recursiveUpdate
           {
-            terraform.required_providers.authentik = {
-              source = "goauthentik/authentik";
-              version = "~> 2026";
-            };
-
-            # `token` isn't set here - the provider reads it from AUTHENTIK_TOKEN (see above); `url`
-            # isn't secret, so it's set directly rather than round-tripped through an env var.
-            provider.authentik.url = "https://${url}";
-
             data.authentik_flow = {
               default-authorization-flow.slug = "default-provider-authorization-implicit-consent";
               default-invalidation-flow.slug = "default-provider-invalidation-flow";
@@ -211,10 +273,9 @@ in
               default-source-authentication.slug = "default-source-authentication";
               default-source-enrollment.slug = "default-source-enrollment";
             };
-
-            variable.DISCORD_CLIENT_SECRET.sensitive = true;
-            variable.PLEX_TOKEN.sensitive = true;
-
+            # `token` isn't set here - the provider reads it from AUTHENTIK_TOKEN (see above); `url`
+            # isn't secret, so it's set directly rather than round-tripped through an env var.
+            provider.authentik.url = "https://${url}";
             # Groups live here rather than on the services that consume them: they're a DIRECTORY
             # concept (authentik.nix owns every `authentik_*` resource, the way dns.nix owns every
             # `cloudflare_*` one), and three unrelated things key off them already - the application
@@ -240,70 +301,86 @@ in
             resource.authentik_group = lib.genAttrs [ "admin" "user" ] (name: {
               inherit name;
             });
-
             resource.authentik_source_oauth.discord = {
-              name = "Discord";
-              slug = "discord";
               authentication_flow = "\${data.authentik_flow.default-source-authentication.id}";
-              enrollment_flow = "\${data.authentik_flow.default-source-enrollment.id}";
-              provider_type = "discord";
               consumer_key = discord-client-id;
               consumer_secret = "\${var.${tf-var-name-of "discord-client-secret"}}";
-            };
-
-            resource.authentik_source_plex.plex = {
-              name = "Plex";
-              slug = "plex";
-              authentication_flow = "\${data.authentik_flow.default-source-authentication.id}";
               enrollment_flow = "\${data.authentik_flow.default-source-enrollment.id}";
-              client_id = plex-client-id;
-              plex_token = "\${var.${tf-var-name-of "plex-token"}}";
-              allowed_servers = plex-allowed-servers;
-              allow_friends = true;
+              name = "Discord";
+              provider_type = "discord";
+              slug = "discord";
             };
+            resource.authentik_source_plex.plex = {
+              allow_friends = true;
+              allowed_servers = plex-allowed-servers;
+              authentication_flow = "\${data.authentik_flow.default-source-authentication.id}";
+              client_id = plex-client-id;
+              enrollment_flow = "\${data.authentik_flow.default-source-enrollment.id}";
+              name = "Plex";
+              plex_token = "\${var.${tf-var-name-of "plex-token"}}";
+              slug = "plex";
+            };
+            terraform.required_providers.authentik = {
+              source = "goauthentik/authentik";
+              version = "~> 2026";
+            };
+            variable.DISCORD_CLIENT_SECRET.sensitive = true;
+            variable.PLEX_TOKEN.sensitive = true;
           }
           [
             (lib.optionalAttrs (protected-hosts != [ ]) {
-              resource.authentik_provider_proxy = lib.listToAttrs (
-                map (vh: {
-                  name = vh.name;
-                  value = {
-                    name = vh.name;
-                    mode = "forward_single";
-                    external_host = "https://${hostname-of vh}";
-                    authorization_flow = "\${data.authentik_flow.default-authorization-flow.id}";
-                    invalidation_flow = "\${data.authentik_flow.default-invalidation-flow.id}";
-                  };
-                }) protected-hosts
-              );
-
               resource.authentik_application = lib.listToAttrs (
                 map (vh: {
                   name = vh.name;
                   value = {
                     name = vh.label or vh.name;
-                    slug = vh.name;
                     protocol_provider = "\${authentik_provider_proxy.${vh.name}.id}";
+                    slug = vh.name;
                   }
                   // lib.optionalAttrs (vh ? icon) { meta_icon = icon-url-of vh.icon; }
                   // lib.optionalAttrs (vh ? group) { inherit (vh) group; };
                 }) protected-hosts
               );
-
-              resource.authentik_policy_binding = lib.listToAttrs (
-                lib.concatMap (vh: binding-entries-for vh.name vh) protected-hosts
-              );
-
               resource.authentik_outpost.embedded = {
                 name = "authentik Embedded Outpost";
                 protocol_providers = map (vh: "\${authentik_provider_proxy.${vh.name}.id}") protected-hosts;
               };
+              resource.authentik_policy_binding = lib.listToAttrs (
+                lib.concatMap (vh: binding-entries-for vh.name vh) protected-hosts
+              );
+              resource.authentik_provider_proxy = lib.listToAttrs (
+                map (vh: {
+                  name = vh.name;
+                  value = {
+                    authorization_flow = "\${data.authentik_flow.default-authorization-flow.id}";
+                    external_host = "https://${hostname-of vh}";
+                    invalidation_flow = "\${data.authentik_flow.default-invalidation-flow.id}";
+                    mode = "forward_single";
+                    name = vh.name;
+                  };
+                }) protected-hosts
+              );
             })
             (lib.optionalAttrs (oidc-hosts != [ ]) {
-              variable = lib.genAttrs (map (vh: tf-var-name-of vh.oidc.client-secret) oidc-hosts) (_: {
-                sensitive = true;
-              });
-
+              # `signing_key`: with none attached, authentik doesn't fall back to a default keypair -
+              # it signs id_tokens with the CLIENT SECRET under HS256 ("No Certificate at all,
+              # assume HS256", `OAuth2Provider.jwt_key`). Clients that actually verify the id_token
+              # expect an asymmetric alg and reject that; Immich, whose default `signingAlgorithm` is
+              # RS256, fails the login with "unexpected JWT alg received" and even names this exact
+              # cause in its own warning ("...or that you have specified a signing key in your OAuth
+              # provider"). This is the keypair authentik generates for itself on first start, and
+              # it's RSA (`CertificateBuilder.alg` is `PrivateKeyAlg.RSA`), so `jwt_key` reports
+              # RS256 - matching what these clients expect without further configuration.
+              #
+              # `fetch_certificate`/`fetch_key` OFF because both default ON, and `key_data` would
+              # pull authentik's PRIVATE KEY into the state file - which, for harmony, is committed
+              # to this public repo (see the header comment on encryption). Only `.id` is needed to
+              # reference the keypair, and that's returned regardless.
+              data.authentik_certificate_key_pair.signing = {
+                fetch_certificate = false;
+                fetch_key = false;
+                name = "authentik Self-signed Certificate";
+              };
               # `grant_types`, `property_mappings` and `signing_key` below ALL have to be spelled
               # out, for the same underlying reason: authentik's API defaults them to empty and only
               # its own admin UI pre-fills them, so a provider built through the API (like these)
@@ -335,40 +412,25 @@ in
                 "goauthentik.io/providers/oauth2/scope-email"
                 "goauthentik.io/providers/oauth2/scope-profile"
               ];
-
-              # `signing_key`: with none attached, authentik doesn't fall back to a default keypair -
-              # it signs id_tokens with the CLIENT SECRET under HS256 ("No Certificate at all,
-              # assume HS256", `OAuth2Provider.jwt_key`). Clients that actually verify the id_token
-              # expect an asymmetric alg and reject that; Immich, whose default `signingAlgorithm` is
-              # RS256, fails the login with "unexpected JWT alg received" and even names this exact
-              # cause in its own warning ("...or that you have specified a signing key in your OAuth
-              # provider"). This is the keypair authentik generates for itself on first start, and
-              # it's RSA (`CertificateBuilder.alg` is `PrivateKeyAlg.RSA`), so `jwt_key` reports
-              # RS256 - matching what these clients expect without further configuration.
-              #
-              # `fetch_certificate`/`fetch_key` OFF because both default ON, and `key_data` would
-              # pull authentik's PRIVATE KEY into the state file - which, for harmony, is committed
-              # to this public repo (see the header comment on encryption). Only `.id` is needed to
-              # reference the keypair, and that's returned regardless.
-              data.authentik_certificate_key_pair.signing = {
-                name = "authentik Self-signed Certificate";
-                fetch_certificate = false;
-                fetch_key = false;
-              };
-
+              resource.authentik_application = lib.listToAttrs (
+                map (vh: {
+                  name = "${vh.name}-oidc";
+                  value = {
+                    name = vh.label or vh.name;
+                    protocol_provider = "\${authentik_provider_oauth2.${vh.name}-oidc.id}";
+                    slug = vh.name;
+                  }
+                  // lib.optionalAttrs (vh ? icon) { meta_icon = icon-url-of vh.icon; }
+                  // lib.optionalAttrs (vh ? group) { inherit (vh) group; };
+                }) oidc-hosts
+              );
+              resource.authentik_policy_binding = lib.listToAttrs (
+                lib.concatMap (vh: binding-entries-for "${vh.name}-oidc" vh) oidc-hosts
+              );
               resource.authentik_provider_oauth2 = lib.listToAttrs (
                 map (vh: {
                   name = "${vh.name}-oidc";
                   value = {
-                    name = vh.name;
-                    client_id = vh.name;
-                    client_secret = "\${var.${tf-var-name-of vh.oidc.client-secret}}";
-                    grant_types = [
-                      "authorization_code"
-                      "refresh_token"
-                    ];
-                    property_mappings = "\${data.authentik_property_mapping_provider_scope.oidc-defaults.ids}";
-                    signing_key = "\${data.authentik_certificate_key_pair.signing.id}";
                     allowed_redirect_uris = lib.concatMap (
                       hostname:
                       map (path: {
@@ -378,30 +440,24 @@ in
                       }) vh.oidc.redirect-paths
                     ) (hostnames-of vh);
                     authorization_flow = "\${data.authentik_flow.default-authorization-flow.id}";
+                    client_id = vh.name;
+                    client_secret = "\${var.${tf-var-name-of vh.oidc.client-secret}}";
+                    grant_types = [
+                      "authorization_code"
+                      "refresh_token"
+                    ];
                     invalidation_flow = "\${data.authentik_flow.default-invalidation-flow.id}";
+                    name = vh.name;
+                    property_mappings = "\${data.authentik_property_mapping_provider_scope.oidc-defaults.ids}";
+                    signing_key = "\${data.authentik_certificate_key_pair.signing.id}";
                   };
                 }) oidc-hosts
               );
-
-              resource.authentik_application = lib.listToAttrs (
-                map (vh: {
-                  name = "${vh.name}-oidc";
-                  value = {
-                    name = vh.label or vh.name;
-                    slug = vh.name;
-                    protocol_provider = "\${authentik_provider_oauth2.${vh.name}-oidc.id}";
-                  }
-                  // lib.optionalAttrs (vh ? icon) { meta_icon = icon-url-of vh.icon; }
-                  // lib.optionalAttrs (vh ? group) { inherit (vh) group; };
-                }) oidc-hosts
-              );
-
-              resource.authentik_policy_binding = lib.listToAttrs (
-                lib.concatMap (vh: binding-entries-for "${vh.name}-oidc" vh) oidc-hosts
-              );
+              variable = lib.genAttrs (map (vh: tf-var-name-of vh.oidc.client-secret) oidc-hosts) (_: {
+                sensitive = true;
+              });
             })
           ];
-
       # No `port`: authentik-nix's own module wires `services.nginx.virtualHosts.${url}.locations`
       # directly (see `services.authentik.nginx` below), same pattern as Nextcloud's PHP-FPM vhost.
       # This entry only exists so nginx.nix's `serverAliases`/global-toggle and homepage.nix's
@@ -413,87 +469,15 @@ in
       # binding's comment above for why Authentik's `global` means something stronger than every
       # other service's (replace, not merely alias).
       virtual-host = {
-        name = "auth";
-        host = host.name;
         inherit global url;
-        label = "Authentik";
-        icon = "authentik.svg";
         group = "Infra";
         homepage = {
           description = "Single sign-on";
         };
-      };
-
-      secrets = { secrets, ... }: {
-        authentik-secret-key = {
-          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -base64 60";
-          intermediary = true;
-        };
-        # Consumed both by `authentik.env` below (so Authentik mints it as `akadmin`'s API token
-        # on first boot, under the DIFFERENT env var name that bootstrap mechanism expects) and,
-        # via `settings.terraform = true;`, by harmony's shared Terraform env (as `AUTHENTIK_TOKEN`)
-        # - see the `terranix` field's comment for why a bootstrap token rather than a UI-created
-        # one.
-        authentik-token = {
-          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
-          intermediary = true;
-          settings.terraform = true;
-        };
-        "authentik.env".generator = {
-          dependencies = { inherit (secrets) authentik-secret-key authentik-token; };
-          script =
-            {
-              lib,
-              decrypt,
-              deps,
-              ...
-            }:
-            ''
-              printf 'AUTHENTIK_SECRET_KEY=%s\n' "$(${decrypt} ${lib.escapeShellArg deps.authentik-secret-key.file})"
-              printf 'AUTHENTIK_BOOTSTRAP_TOKEN=%s\n' "$(${decrypt} ${lib.escapeShellArg deps.authentik-token.file})"
-            '';
-        };
-
-        # Both come from an external dashboard (Discord's, Plex's own account), so - unlike the
-        # generated secrets above - these use `rekeyFile` and need a one-time `agenix edit` (see
-        # the `terranix` field's comment for where each value comes from), same as
-        # `cloudflare-api-token`/`meraki-dashboard-api-key`. `settings.terraform = "variable";`
-        # (not `= true;`) because they're only ever consumed as Terraform `variable`s, never by a
-        # NixOS service directly - see modules/terranix.nix's header comment on the two modes.
-        discord-client-secret = {
-          rekeyFile = ../../../secrets/discord-client-secret.age;
-          intermediary = true;
-          settings.terraform = "variable";
-        };
-
-        plex-token = {
-          rekeyFile = ../../../secrets/plex-token.age;
-          intermediary = true;
-          settings.terraform = "variable";
-        };
-      };
-
-      nixos = { config, ... }: {
-        imports = [ (inputs.authentik-nix.nixosModules.default or { }) ];
-
-        services.authentik = {
-          enable = true;
-          environmentFile = config.age.secrets."authentik.env".path;
-          settings.disable_startup_analytics = true;
-          nginx = {
-            enable = true;
-            enableACME = true;
-            host = url;
-          };
-        };
-
-        # nginx.nix forces `HttpOnly` onto every proxied cookie, but Authentik's frontend needs to
-        # read its CSRF cookie via JavaScript (it echoes the value back as the X-Authentik-Csrf
-        # header). With HttpOnly forced on, that read fails and Authentik rejects the empty token
-        # with "CSRF token ... incorrect length". Reset the cookie rewrite for this vhost only.
-        services.nginx.virtualHosts.${url}.extraConfig = ''
-          proxy_cookie_path / /;
-        '';
+        host = host.name;
+        icon = "authentik.svg";
+        label = "Authentik";
+        name = "auth";
       };
     };
 }

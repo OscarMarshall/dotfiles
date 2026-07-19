@@ -6,18 +6,12 @@
 }:
 {
   flake-file.inputs.claude-code-nix = {
-    url = "github:sadjow/claude-code-nix";
     inputs.nixpkgs.follows = "nixpkgs";
+    url = "github:sadjow/claude-code-nix";
   };
 
   my.claude = {
-    includes = [
-      (den._.unfree [ "claude-code" ])
-      my.mcp-servers
-    ];
-
     darwin.homebrew.casks = [ "claude" ];
-
     homeManager = { pkgs, ... }: {
       home.packages = with pkgs; [
         gh
@@ -29,9 +23,8 @@
 
       programs.claude-code = {
         enable = true;
-        package = inputs.claude-code-nix.packages.${pkgs.stdenv.hostPlatform.system}.claude-code;
         enableMcpIntegration = true;
-
+        package = inputs.claude-code-nix.packages.${pkgs.stdenv.hostPlatform.system}.claude-code;
         settings = {
           agentPushNotifEnabled = true;
           autoUpdaterStatus = "disabled";
@@ -46,5 +39,9 @@
         };
       };
     };
+    includes = [
+      (den._.unfree [ "claude-code" ])
+      my.mcp-servers
+    ];
   };
 }
