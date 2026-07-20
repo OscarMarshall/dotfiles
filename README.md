@@ -159,14 +159,13 @@ The dev shell (automatically activated by [direnv](https://direnv.net/) via the 
 ```console
 # Edit or create a primitive secret (human only — requires YubiKey)
 agenix edit secrets/<name>.age
+git add secrets/<name>.age
 
 # Generate template secrets from primitives (human only — requires YubiKey)
-agenix generate
-git add secrets/generated/
+agenix generate -a
 
 # Rekey all secrets for all hosts and commit (human only — requires YubiKey)
 agenix rekey -a
-git add -A secrets/rekeyed/
 ```
 
 ### Secrets Architecture
