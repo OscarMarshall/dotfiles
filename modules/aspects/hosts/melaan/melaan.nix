@@ -7,8 +7,8 @@
   den.aspects.melaan = {
     includes = with my; [
       (auto-upgrade { allowReboot = false; })
-      boot
       (cachyos-kernel { })
+      boot
       gnome
       locale
       networkmanager
@@ -18,7 +18,6 @@
 
     nixos = {
       imports = [ (inputs.nixos-hardware.nixosModules.framework-12-13th-gen-intel or { }) ];
-
       age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILqFHtkApjVtbJj4hR4sEyHJhwrZ74+gR3OviJk9VxYb";
 
       services = {
@@ -56,16 +55,17 @@
       let
         # See the comment in OMARSHAL-M-T2QF.nix for why these sentinels are needed.
         hmSentinels = {
-          hmLinux = { };
-          hmDarwin = { };
-          hmAarch64 = { };
           hm64bit = { };
+          hmAarch64 = { };
+          hmDarwin = { };
+          hmLinux = { };
         };
       in
       {
         adelline = hmSentinels // {
           homeManager.home.stateVersion = "25.05";
         };
+
         oscar = hmSentinels // {
           homeManager.home.stateVersion = "25.05";
         };

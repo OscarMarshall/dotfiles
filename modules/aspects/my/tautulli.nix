@@ -7,24 +7,26 @@ in
       global ? false,
     }:
     { host, ... }: {
-      virtual-host = {
-        name = "tautulli";
-        host = host.name;
-        protected = true;
-        inherit port global;
-        label = "Tautulli";
-        icon = "tautulli.svg";
-        group = "Infra";
-        homepage = {
-          description = "Plex monitoring & stats";
+      nixos = {
+        services.tautulli = {
+          inherit port;
+          enable = true;
         };
       };
 
-      nixos = {
-        services.tautulli = {
-          enable = true;
-          inherit port;
+      virtual-host = {
+        inherit global port;
+        group = "Infra";
+
+        homepage = {
+          description = "Plex monitoring & stats";
         };
+
+        host = host.name;
+        icon = "tautulli.svg";
+        label = "Tautulli";
+        name = "tautulli";
+        protected = true;
       };
     };
 }

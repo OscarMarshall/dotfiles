@@ -65,20 +65,15 @@ in
   my.meraki = { host, ... }: {
     secrets = {
       meraki-dashboard-api-key = {
-        rekeyFile = ../../../secrets/meraki-dashboard-api-key.age;
         intermediary = true;
+        rekeyFile = ../../../secrets/meraki-dashboard-api-key.age;
         settings.terraform = true;
       };
     };
 
     terranix =
-      { port-forward, lib, ... }:
+      { lib, port-forward, ... }:
       lib.optionalAttrs (host ? lan-ip) {
-        terraform.required_providers.meraki = {
-          source = "cisco-open/meraki";
-          version = "1.2.4-beta";
-        };
-
         # Credentials aren't set here - the provider reads meraki_dashboard_api_key from
         # MERAKI_DASHBOARD_API_KEY, so nothing sensitive lands in this config or in Terraform
         # state.
@@ -86,15 +81,21 @@ in
 
         resource.meraki_networks_appliance_firewall_port_forwarding_rules.${host.name} = {
           network_id = host.meraki-network-id;
+
           rules = map (pf: {
-            name = pf.name;
+            inherit (pf) name;
+            allowed_ips = if pf.restrict-to-cloudflare or false then cloudflareIps else [ "any" ];
+            lan_ip = host.lan-ip;
+            local_port = toString pf.port;
             protocol = pf.protocol or "tcp";
             public_port = toString pf.port;
-            local_port = toString pf.port;
-            lan_ip = host.lan-ip;
             uplink = "both";
-            allowed_ips = if pf.restrict-to-cloudflare or false then cloudflareIps else [ "any" ];
           }) port-forward;
+        };
+
+        terraform.required_providers.meraki = {
+          source = "cisco-open/meraki";
+          version = "1.2.4-beta";
         };
       };
   };

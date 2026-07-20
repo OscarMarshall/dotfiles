@@ -4,6 +4,7 @@
       url = "github:Bad3r/nix-logseq-git-flake";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
     nixConfig = {
       extra-substituters = [ "https://nix-logseq-git-flake.cachix.org" ];
       extra-trusted-public-keys = [ "nix-logseq-git-flake.cachix.org-1:DSBNW07PSRyCvS926tpIWahb53OIydwwZhsP6LhJNZo=" ];
@@ -16,7 +17,7 @@
       ...
     }:
     {
-      homeManager = { pkgs, lib, ... }: {
+      homeManager = { lib, pkgs, ... }: {
         home.packages = [
           inputs.nix-logseq-git-flake.packages.${pkgs.stdenv.hostPlatform.system}.logseq-cli
         ]

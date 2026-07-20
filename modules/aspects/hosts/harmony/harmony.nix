@@ -1,53 +1,53 @@
 { den, my, ... }: {
   den.aspects.harmony = {
     includes = with my; [
-      (auto-upgrade { allowReboot = true; })
       (authentik { global = true; })
+      (auto-upgrade { allowReboot = true; })
       (autobrr { })
       (bookshelf-audiobooks { })
       (bookshelf-ebooks { })
-      boot
       (cachyos-kernel { variant = "server"; })
       (collabora-online { })
-      cross-seed
-      dns
-      gluetun
-      homepage
       (immich {
         administrators = [ "oscar" ];
         global = true;
       })
-      lm-sensors
-      locale
-      meraki
       (netdata { })
-      networkmanager
       (nextcloud { global = true; })
-      nginx
-      den.aspects.oscar.provides.minecraft-servers
       (plex { global = true; })
       (profilarr { })
       (prowlarr { })
       (qbittorrent { administrators = [ "oscar" ]; })
       (radarr { administrators = [ "oscar" ]; })
-      samba
-      satisfactory-server
       (seerr { global = true; })
       (sonarr { administrators = [ "oscar" ]; })
-      ssh-server
       (storyteller { global = true; })
       (tautulli { })
-      unpackerr
       (zfs [ "metalminds" ])
+      boot
+      cross-seed
+      den.aspects.oscar.provides.minecraft-servers
+      dns
+      gluetun
+      homepage
+      lm-sensors
+      locale
+      meraki
+      networkmanager
+      nginx
+      samba
+      satisfactory-server
+      ssh-server
+      unpackerr
     ];
 
     dataset =
       map
         (name: {
-          pool = "metalminds";
           inherit name;
-          samba = true;
           guestAccess = true;
+          pool = "metalminds";
+          samba = true;
         })
         [
           "backups"
@@ -95,12 +95,12 @@
     # You can update Home Manager without changing this value. See the Home Manager release notes for a list of state
     # version changes in each release.
     provides.oscar = {
-      homeManager.home.stateVersion = "25.05";
+      hm64bit = { };
+      hmAarch64 = { };
+      hmDarwin = { };
       # See the comment in OMARSHAL-M-T2QF.nix for why these sentinels are needed.
       hmLinux = { };
-      hmDarwin = { };
-      hmAarch64 = { };
-      hm64bit = { };
+      homeManager.home.stateVersion = "25.05";
     };
   };
 }

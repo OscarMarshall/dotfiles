@@ -3,53 +3,28 @@ let
   isDirty = self ? dirtyRev;
   # Extract the base commit SHA: self.rev when clean, or strip the "-dirty" suffix
   # from self.dirtyRev (available in Nix >= 2.11) when dirty.
-  rev =
-    if self ? rev then
-      self.rev
-    else if self ? dirtyRev then
-      builtins.substring 0 40 self.dirtyRev
-    else
-      null;
+  rev = self.rev or (if self ? dirtyRev then builtins.substring 0 40 self.dirtyRev else null);
 in
 {
   my.starship = {
     homeManager =
       {
         config,
-        osConfig ? { },
         pkgs,
+        osConfig ? { },
         ...
       }:
       {
         programs.starship = {
           enable = true;
           presets = [ "nerd-font-symbols" ];
+
           settings.custom.nix-config = {
-            description = "Shows the current nix config status";
-            shell = [ "${pkgs.bash}/bin/bash" ];
-            style = "bold blue";
-            ignore_timeout = true;
-            when = true;
             # Accumulate all applicable indicators into $symbols.
             # Both the dirty marker and the branch-status marker may appear
             # at the same time (e.g. uncommitted changes on a non-main rev).
             command =
               let
-                dirtyPart = if isDirty then ''symbols="''${symbols}!"'' else "";
-                # Reuse the token already provisioned for authenticated Nix
-                # flake fetches (modules/aspects/my/nix.nix) instead of
-                # provisioning a second GitHub PAT just for this rate-limit
-                # workaround.
-                #
-                # On host-embedded users (melaan/harmony/the MacBook), my.nix's
-                # secret lives in the system (osConfig), not this home-manager
-                # config; on a standalone home (dev203) it lives in this config
-                # directly and osConfig is empty. Check both.
-                tokenPath =
-                  let
-                    osPath = osConfig.age.secrets.nix-github-access-token.path or null;
-                  in
-                  if osPath != null then osPath else config.age.secrets.nix-github-access-token.path or null;
                 apiPart =
                   if rev != null then
                     ''
@@ -100,6 +75,21 @@ in
                     ''
                   else
                     "";
+                dirtyPart = if isDirty then ''symbols="''${symbols}!"'' else "";
+                # Reuse the token already provisioned for authenticated Nix
+                # flake fetches (modules/aspects/my/nix.nix) instead of
+                # provisioning a second GitHub PAT just for this rate-limit
+                # workaround.
+                #
+                # On host-embedded users (melaan/harmony/the MacBook), my.nix's
+                # secret lives in the system (osConfig), not this home-manager
+                # config; on a standalone home (dev203) it lives in this config
+                # directly and osConfig is empty. Check both.
+                tokenPath =
+                  let
+                    osPath = osConfig.age.secrets.nix-github-access-token.path or null;
+                  in
+                  if osPath != null then osPath else config.age.secrets.nix-github-access-token.path or null;
               in
               ''
                 symbols=""
@@ -109,6 +99,12 @@ in
                   echo "$symbols"
                 fi
               '';
+
+            description = "Shows the current nix config status";
+            ignore_timeout = true;
+            shell = [ "${pkgs.bash}/bin/bash" ];
+            style = "bold blue";
+            when = true;
           };
         };
       };

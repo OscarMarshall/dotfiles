@@ -2,8 +2,8 @@
   my.auto-upgrade = { allowReboot }: {
     nixos = {
       system.autoUpgrade = {
-        enable = true;
         inherit allowReboot;
+        enable = true;
         flake = "github:OscarMarshall/dotfiles";
       };
     };

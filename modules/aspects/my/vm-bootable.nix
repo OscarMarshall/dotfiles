@@ -6,7 +6,7 @@ in
 {
   # make USB/VM installers.
   my.vm-bootable.provides = {
-    tui = installer "minimal";
     gui = installer "graphical-base";
+    tui = installer "minimal";
   };
 }

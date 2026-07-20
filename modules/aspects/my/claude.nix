@@ -21,10 +21,10 @@
     homeManager = { pkgs, ... }: {
       home.packages = with pkgs; [
         gh
+        jq
         nodejs
         python3
         uv
-        jq
       ];
 
       programs.claude-code = {
@@ -37,6 +37,7 @@
           autoUpdaterStatus = "disabled";
           enableWorkflows = true;
           inputNeededNotifEnabled = true;
+
           permissions = {
             allow = [
               "Bash(git:*)"

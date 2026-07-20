@@ -58,24 +58,19 @@
   my.dns = { host, ... }: {
     secrets = {
       cloudflare-api-token = {
-        rekeyFile = ../../../secrets/cloudflare-api-token.age;
         intermediary = true;
+        rekeyFile = ../../../secrets/cloudflare-api-token.age;
         settings.terraform = true;
       };
     };
 
     terranix =
-      { virtual-host, lib, ... }:
+      { lib, virtual-host, ... }:
       let
         domain = "silverlight-nex.us";
         globalHosts = lib.filter (vh: vh.global or false) virtual-host;
       in
       lib.optionalAttrs (host ? dns-record) {
-        terraform.required_providers.cloudflare = {
-          source = "cloudflare/cloudflare";
-          version = "~> 5";
-        };
-
         # Credentials aren't set here - the provider reads api_token from CLOUDFLARE_API_TOKEN, so
         # nothing sensitive lands in this config or in Terraform state.
         provider.cloudflare = { };
@@ -86,12 +81,11 @@
         resource.cloudflare_dns_record =
           lib.listToAttrs (
             map (vh: {
-              name = vh.name;
+              inherit (vh) name;
+
               value = {
-                zone_id = host.cloudflare-zone-id;
+                inherit (host.dns-record) content type;
                 name = "${vh.name}.${domain}";
-                inherit (host.dns-record) type content;
-                ttl = 1800;
                 # DNS-only (not proxied through Cloudflare's edge). This one-level name is
                 # actually covered by Cloudflare's free Universal SSL cert, but the per-host
                 # wildcard below (`*.${host.name}.${domain}`) is namespaced two levels deep,
@@ -102,36 +96,50 @@
                 # port-forward rules no longer restrict to Cloudflare's IPs) and nginx already
                 # terminates with its own per-host ACME cert.
                 proxied = false;
+                ttl = 1800;
+                zone_id = host.cloudflare-zone-id;
               };
             }) globalHosts
           )
           // {
-            "${host.name}-wildcard" = {
-              zone_id = host.cloudflare-zone-id;
-              name = "*.${host.name}.${domain}";
-              inherit (host.dns-record) type content;
-              ttl = 1800;
-              proxied = false;
-            };
-
             # The host's own root/apex hostname - NOT covered by the wildcard above (a wildcard
             # only matches names with something before it, never its own apex), and homepage.nix's
             # `url = "${host.name}.${domain}"` deliberately doesn't go through the `global`/
             # `globalHosts` path above either (that would produce `homepage.${domain}`, not this).
             "${host.name}-root" = {
-              zone_id = host.cloudflare-zone-id;
+              inherit (host.dns-record) content type;
               name = "${host.name}.${domain}";
-              inherit (host.dns-record) type content;
-              ttl = 1800;
               proxied = false;
+              ttl = 1800;
+              zone_id = host.cloudflare-zone-id;
+            };
+
+            "${host.name}-wildcard" = {
+              inherit (host.dns-record) content type;
+              name = "*.${host.name}.${domain}";
+              proxied = false;
+              ttl = 1800;
+              zone_id = host.cloudflare-zone-id;
             };
           };
+
+        terraform.required_providers.cloudflare = {
+          source = "cloudflare/cloudflare";
+          version = "~> 5";
+        };
       };
   };
 
   perSystem =
-    { pkgs, lib, ... }:
+    { lib, pkgs, ... }:
     let
+      allEntries = lib.concatLists (
+        lib.mapAttrsToList (host: hostnames: map (hostname: { inherit host hostname; }) hostnames) hostnamesByHost
+      );
+      # Group by hostname; anything claimed by more than one DISTINCT host is a collision.
+      collisions = lib.filterAttrs (_: entries: lib.length (lib.unique (map (e: e.host) entries)) > 1) (
+        lib.groupBy (e: e.hostname) allEntries
+      );
       # host -> every hostname its nginx vhosts actually claim: both `serverAliases` AND each
       # vhost's own PRIMARY name (the attribute key). The primary name matters too, not just
       # aliases: a service's `url` override can already equal the canonical global name (e.g.
@@ -147,15 +155,6 @@
           lib.mapAttrsToList (name: vh: [ name ] ++ (vh.serverAliases or [ ])) (hostCfg.config.services.nginx.virtualHosts or { })
         )
       ) config.flake.nixosConfigurations;
-
-      allEntries = lib.concatLists (
-        lib.mapAttrsToList (host: hostnames: map (hostname: { inherit host hostname; }) hostnames) hostnamesByHost
-      );
-
-      # Group by hostname; anything claimed by more than one DISTINCT host is a collision.
-      collisions = lib.filterAttrs (_: entries: lib.length (lib.unique (map (e: e.host) entries)) > 1) (
-        lib.groupBy (e: e.hostname) allEntries
-      );
     in
     {
       checks.dns-global-uniqueness =

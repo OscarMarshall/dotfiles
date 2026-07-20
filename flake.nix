@@ -94,6 +94,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    pedantix = {
+      url = "github:Swarsel/pedantix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     ragenix = {
       url = "github:yaxitech/ragenix";
       inputs = {

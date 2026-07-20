@@ -3,7 +3,10 @@
     boot = {
       # Use latest kernel for all systems (lowest priority, can be overridden)
       kernelPackages = lib.mkDefault pkgs.linuxPackages_latest;
+
       loader = {
+        efi.canTouchEfiVariables = true;
+
         systemd-boot = {
           enable = true;
           # Without a limit, every generation's kernel+initrd accumulates on the EFI System
@@ -11,7 +14,6 @@
           # incompletely and fail to boot with "Switch root target contains no usable init".
           configurationLimit = lib.mkDefault 10;
         };
-        efi.canTouchEfiVariables = true;
       };
     };
   };
