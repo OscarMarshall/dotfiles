@@ -1,17 +1,18 @@
 {
+  lib,
   den,
   inputs,
-  lib,
   ...
 }:
 {
   flake-file.inputs.nix-minecraft = {
+    url = "github:Infinidoge/nix-minecraft";
+
     inputs = {
       flake-compat.follows = "flake-compat";
       nixpkgs.follows = "nixpkgs";
       systems.follows = "systems";
     };
-    url = "github:Infinidoge/nix-minecraft";
   };
 
   # `worlds` is an attrset keyed by world name:
@@ -26,37 +27,39 @@
   # a real `pkgs` at all.
   my.minecraft-servers =
     {
-      administrators ? [ ],
       worlds,
+      administrators ? [ ],
     }:
     { host, ... }:
     let
       domain = "silverlight-nex.us";
     in
     {
-      dataset = {
-        guestAccess = true;
-        name = "minecraft-worlds";
-        pool = "metalminds";
-        samba = true;
-      };
       includes = [
         (den._.unfree [
           "minecraft-server"
           "neoforge"
         ])
       ];
+
+      dataset = {
+        guestAccess = true;
+        name = "minecraft-worlds";
+        pool = "metalminds";
+        samba = true;
+      };
+
       nixos = { config, pkgs, ... }: {
         imports = [ (inputs.nix-minecraft.nixosModules.minecraft-servers or { }) ];
-
         nixpkgs.overlays = [ (inputs.nix-minecraft.overlay or { }) ];
 
         services.minecraft-servers = {
-          dataDir = "/metalminds/minecraft-worlds";
           enable = true;
+          dataDir = "/metalminds/minecraft-worlds";
           environmentFile = config.age.secrets."minecraft-servers.env".path;
           eula = true;
           openFirewall = true;
+
           servers = lib.mapAttrs (
             _: world:
             let
@@ -75,19 +78,22 @@
           extraGroups = [ "minecraft" ];
         });
       };
+
       # One inbound rule per world, on its own game port (see modules/aspects/my/meraki.nix).
       port-forward = lib.mapAttrsToList (name: world: {
         inherit (world) port;
         name = "minecraft-${name}";
       }) worlds;
+
       secrets = { secrets, ... }: {
         "minecraft-servers.env".generator = {
           dependencies = { inherit (secrets) oscar-password; };
+
           script =
             {
+              lib,
               decrypt,
               deps,
-              lib,
               ...
             }:
             ''
@@ -95,6 +101,7 @@
             '';
         };
       };
+
       # A world at `<name>.minecraft.${domain}` (an A/CNAME record, same type/content as every
       # other DNS record this host produces - see modules/aspects/my/dns.nix) plus a
       # `_minecraft._tcp` SRV record pointing at that same hostname on its actual game port, so
@@ -107,12 +114,13 @@
       terranix = lib.optionalAttrs (host ? dns-record) {
         resource.cloudflare_dns_record = lib.concatMapAttrs (name: world: {
           "minecraft-${name}" = {
-            inherit (host.dns-record) type content;
+            inherit (host.dns-record) content type;
             name = "${name}.minecraft.${domain}";
             proxied = false;
             ttl = 1800;
             zone_id = host.cloudflare-zone-id;
           };
+
           "minecraft-${name}-srv" = {
             data = {
               inherit (world) port;
@@ -122,6 +130,7 @@
               target = "${name}.minecraft.${domain}";
               weight = 0;
             };
+
             name = "_minecraft._tcp.${name}.minecraft.${domain}";
             priority = 0;
             ttl = 1800;

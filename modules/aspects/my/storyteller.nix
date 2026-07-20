@@ -24,6 +24,7 @@ in
         name = "storyteller";
         pool = "metalminds";
       };
+
       nixos = { config, ... }: {
         virtualisation.oci-containers.containers.storyteller = {
           environment = {
@@ -33,20 +34,24 @@ in
             AUTH_URL = "https://${url}/api/v2/auth";
             ENABLE_WEB_READER = "true";
           };
+
           environmentFiles = [ config.age.secrets."storyteller.env".path ];
           # Pinned to the current `latest` tag's digest at the time this was written --
           # storyteller-platform doesn't cut stable releases, so there's nothing more specific to
           # pin to. Re-resolve via the GitLab registry API if bumping:
           #   curl -s "https://gitlab.com/api/v4/projects/67994333/registry/repositories/8429296/tags/latest"
           image = "registry.gitlab.com/storyteller-platform/storyteller@sha256:a15609ec102de6aace73b5aae3794f7f8e9f40ed3ac2f57e923ef72daa505668";
+
           ports =
             let
               port' = toString port;
             in
             [ "127.0.0.1:${port'}:${port'}" ];
+
           volumes = [ "/metalminds/storyteller:/data" ];
         };
       };
+
       secrets = { secrets, ... }: {
         # `intermediary` (unlike immich/nextcloud/seerr's equivalents, which are NOT) - Storyteller
         # keeps its OIDC provider config in its own settings DATABASE, entered through the settings
@@ -59,17 +64,20 @@ in
           intermediary = true;
           settings.terraform = "variable";
         };
+
         storyteller-secret-key = {
           generator.script = "alnum";
           intermediary = true;
         };
+
         "storyteller.env".generator = {
           dependencies = { inherit (secrets) storyteller-secret-key; };
+
           script =
             {
+              lib,
               decrypt,
               deps,
-              lib,
               ...
             }:
             ''
@@ -79,17 +87,21 @@ in
             '';
         };
       };
+
       virtual-host = {
-        inherit port global url;
+        inherit global port url;
         group = "Media";
+
         homepage = {
           description = "Read-aloud book alignment";
         };
+
         host = host.name;
         # No dashboard-icons entry for this app - its own upstream logo instead.
         icon = "https://gitlab.com/storyteller-platform/storyteller/-/raw/main/applications/docs/static/img/Storyteller_Logo.png";
         label = "Storyteller";
         name = "storyteller";
+
         # Deliberately NOT `protected`: Storyteller does its own OIDC login against Authentik via
         # the `oidc` field below, so forward-auth on top would mean logging in twice (once at the
         # outpost, again at Storyteller's own login page) and would break its mobile/OPDS clients,

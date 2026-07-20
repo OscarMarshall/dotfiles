@@ -18,6 +18,7 @@ in
           # in favor of the Authentik forward-auth gate in front of it, rather than stacking both.
           settings.auth.required = "DisabledForLocalAddresses";
         };
+
         users.users = {
           radarr.extraGroups = [ "qbittorrent" ];
         }
@@ -25,19 +26,22 @@ in
           extraGroups = [ "radarr" ];
         }));
       };
+
       secrets = { secrets, ... }: {
         radarr-api-key = {
           generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 16";
           intermediary = true;
           settings.homepage = "radarr";
         };
+
         "radarr.env".generator = {
           dependencies = { inherit (secrets) radarr-api-key; };
+
           script =
             {
+              lib,
               decrypt,
               deps,
-              lib,
               ...
             }:
             ''
@@ -45,15 +49,18 @@ in
             '';
         };
       };
+
       virtual-host = {
-        inherit port global;
+        inherit global port;
         # Radarr serves its REST API under /api; nginx.nix lets that through the Authentik
         # forward-auth gate untouched since cross-seed/unpackerr call it directly with an API key,
         # machine-to-machine, with no browser session to carry an Authentik cookie.
         bypassAuthPaths = [ "^/api" ];
         group = "Arr Stack";
+
         homepage = {
           description = "Movie organizer/manager";
+
           widget = {
             api-key = true;
             enableQueue = true;
@@ -63,6 +70,7 @@ in
             url = "http://127.0.0.1:${toString port}";
           };
         };
+
         host = host.name;
         icon = "radarr.svg";
         label = "Radarr";

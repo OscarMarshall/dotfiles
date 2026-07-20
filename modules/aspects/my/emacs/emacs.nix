@@ -2,6 +2,8 @@
 
 {
   flake-file.inputs.nix-doom-emacs-unstraightened = {
+    url = "github:marienz/nix-doom-emacs-unstraightened";
+
     inputs = {
       # Unused: we set `doomDir` explicitly below instead of relying on this
       # input's default. Left unfollowed, it resolves to a mutable relative
@@ -11,10 +13,11 @@
       nixpkgs.follows = "nixpkgs";
       systems.follows = "systems";
     };
-    url = "github:marienz/nix-doom-emacs-unstraightened";
   };
 
   my.emacs = {
+    includes = [ (den._.unfree [ "aspell-dict-en-science" ]) ];
+
     hmDarwin = { pkgs, ... }: {
       programs.doom-emacs.emacs =
         with pkgs;
@@ -48,13 +51,16 @@
           ];
         });
     };
+
     homeManager = { pkgs, ... }: {
-      home.sessionVariables.EDITOR = "emacs -nw";
       imports = [ (inputs.nix-doom-emacs-unstraightened.homeModule or { }) ];
+      home.sessionVariables.EDITOR = "emacs -nw";
+
       programs.doom-emacs = {
-        doomDir = ./doom;
         enable = true;
+        doomDir = ./doom;
         experimentalFetchTree = true;
+
         extraBinPackages = with pkgs; [
           coreutils
           fd
@@ -98,10 +104,11 @@
           vscode-langservers-extracted
           yaml-language-server
         ];
+
         extraPackages = epkgs: [ epkgs.treesit-grammars.with-all-grammars ];
       };
+
       services.emacs.enable = true;
     };
-    includes = [ (den._.unfree [ "aspell-dict-en-science" ]) ];
   };
 }

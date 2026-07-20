@@ -1,4 +1,4 @@
-{ inputs, lib, ... }:
+{ lib, inputs, ... }:
 let
   rekey = name: pkgs: {
     agePlugins = [ pkgs.age-plugin-yubikey ];
@@ -11,10 +11,13 @@ in
 {
   flake-file.inputs = {
     agenix-rekey = {
-      inputs.nixpkgs.follows = "nixpkgs";
       url = "github:oddlama/agenix-rekey";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
+
     ragenix = {
+      url = "github:yaxitech/ragenix";
+
       inputs = {
         agenix.inputs = {
           darwin.follows = "darwin";
@@ -22,9 +25,9 @@ in
           nixpkgs.follows = "nixpkgs";
           systems.follows = "systems";
         };
+
         nixpkgs.follows = "nixpkgs";
       };
-      url = "github:yaxitech/ragenix";
     };
   };
 
@@ -47,8 +50,6 @@ in
           home.hostName or home.name
         else
           null;
-      # Only set OS-level rekey from the host entity itself, not from user entities.
-      isHostEntity = user == null && host != null;
       # A user embedded under a host (e.g. oscar's home-manager profile on a host) is a separate
       # agenix-rekey node from that host's own OS-level node. `agenix rekey`'s local storage mode deletes
       # any file in a node's `localStorageDir` that isn't one of that node's own secrets, to clean up
@@ -56,8 +57,9 @@ in
       # whichever node ran last on a given `agenix rekey -a` pass would delete the other's exclusively-owned
       # secrets as "orphans". Giving the embedded user a separate sibling directory keeps each node's
       # cleanup pass scoped to only its own files.
-      homeManagerEntityName =
-        if host != null && user != null then "${host.name}-home-${user.userName}" else entityName;
+      homeManagerEntityName = if host != null && user != null then "${host.name}-home-${user.userName}" else entityName;
+      # Only set OS-level rekey from the host entity itself, not from user entities.
+      isHostEntity = user == null && host != null;
     in
     {
       homeManager =
@@ -68,25 +70,25 @@ in
             (inputs.agenix-rekey.homeManagerModules.default or { })
           ];
         }
-        // lib.optionalAttrs (homeManagerEntityName != null) {
-          age.rekey = rekey homeManagerEntityName pkgs;
-        };
+        // lib.optionalAttrs (homeManagerEntityName != null) { age.rekey = rekey homeManagerEntityName pkgs; };
     }
     // lib.optionalAttrs isHostEntity {
       darwin = { pkgs, ... }: {
-        age.rekey = rekey host.name pkgs;
         imports = [
           (inputs.ragenix.darwinModules.default or { })
           (inputs.agenix-rekey.darwinModules.default or { })
         ];
+
+        age.rekey = rekey host.name pkgs;
       };
 
       nixos = { pkgs, ... }: {
-        age.rekey = rekey host.name pkgs;
         imports = [
           (inputs.ragenix.nixosModules.default or { })
           (inputs.agenix-rekey.nixosModules.default or { })
         ];
+
+        age.rekey = rekey host.name pkgs;
       };
     };
 }

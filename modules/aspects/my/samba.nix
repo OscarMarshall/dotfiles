@@ -1,7 +1,7 @@
 {
   my.samba = {
     nixos =
-      { dataset, lib, ... }:
+      { lib, dataset, ... }:
       let
         shares = builtins.filter (d: d.samba or false) dataset;
       in
@@ -10,6 +10,7 @@
           samba = {
             enable = true;
             openFirewall = true;
+
             settings = {
               global."map to guest" = "Bad User";
             }
@@ -26,6 +27,7 @@
               ) shares
             ));
           };
+
           samba-wsdd = {
             enable = true;
             openFirewall = true;

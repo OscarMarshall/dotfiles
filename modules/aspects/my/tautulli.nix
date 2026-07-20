@@ -13,12 +13,15 @@ in
           enable = true;
         };
       };
+
       virtual-host = {
-        inherit port global;
+        inherit global port;
         group = "Infra";
+
         homepage = {
           description = "Plex monitoring & stats";
         };
+
         host = host.name;
         icon = "tautulli.svg";
         label = "Tautulli";

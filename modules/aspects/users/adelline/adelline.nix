@@ -1,5 +1,21 @@
 { den, my, ... }: {
   den.aspects.adelline = {
+    includes = [
+      (den._.user-shell "fish")
+      ({ user, ... }: {
+        nixos.users.users.${user.userName}.hashedPassword =
+          "$y$j9T$PIOU1O0/eDXQdlTWkzuf5.$AhnTDMJLgzM04nt6pzz/ae.3U.3LUWhte6PiBw.Mzb2";
+      })
+      den._.primary-user
+      my.chrome
+      my.discord
+      my.fish
+      my.ghostty
+      my.steam
+      my.zen-browser
+      my.zoom
+    ];
+
     homeManager = { pkgs, ... }: {
       dconf.settings = {
         "org/gnome/desktop/screensaver".lock-enabled = false;
@@ -19,21 +35,7 @@
         git.enable = true;
       };
     };
-    includes = [
-      den._.primary-user
-      (den._.user-shell "fish")
-      my.discord
-      my.chrome
-      my.fish
-      my.ghostty
-      my.steam
-      my.zoom
-      my.zen-browser
-      ({ user, ... }: {
-        nixos.users.users.${user.userName}.hashedPassword =
-          "$y$j9T$PIOU1O0/eDXQdlTWkzuf5.$AhnTDMJLgzM04nt6pzz/ae.3U.3LUWhte6PiBw.Mzb2";
-      })
-    ];
+
     user.description = "Adelline Marshall";
   };
 }

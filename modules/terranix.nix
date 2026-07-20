@@ -51,34 +51,23 @@
 # every host) is what actually keeps those out of the plaintext git history.
 {
   config,
+  lib,
   den,
   inputs,
-  lib,
   ...
 }:
 let
-  warnings-shim = {
-    options.warnings = lib.mkOption {
-      default = [ ];
-      type = lib.types.listOf lib.types.str;
-    };
-  };
-
   # kebab-case -> SCREAMING_SNAKE_CASE, e.g. `cloudflare-api-token` -> `CLOUDFLARE_API_TOKEN`.
   env-var-for = secret: lib.toUpper (lib.replaceStrings [ "-" ] [ "_" ] secret);
-
+  # The actual env var a `settings.terraform`-flagged secret surfaces as, per the two modes
+  # documented above.
+  terraform-env-var-for =
+    name: sec: if terraform-mode-of sec == "variable" then "TF_VAR_${env-var-for name}" else env-var-for name;
   # `sec.settings` is a declared option, default `null` - `a.b.c or default` short-circuits the
   # WHOLE chain (not just the last step), so this is safe even when `sec.settings` itself is
   # `null`. Returns `null` for anything not opted in, `true`/`"variable"` (or whatever else
   # `settings.terraform` was set to) otherwise.
   terraform-mode-of = sec: sec.settings.terraform or null;
-
-  # The actual env var a `settings.terraform`-flagged secret surfaces as, per the two modes
-  # documented above.
-  terraform-env-var-for =
-    name: sec:
-    if terraform-mode-of sec == "variable" then "TF_VAR_${env-var-for name}" else env-var-for name;
-
   # Collects every `settings.terraform`-flagged secret, across every aspect on a host, into that
   # host's own `"${host.name}-tf.env"` generated secret - lives outside any single aspect (like
   # virtual-host.nix/port-forward.nix's consumers) since it's shared plumbing, not owned by any one
@@ -105,11 +94,12 @@ let
         # evaluation handles that fine); a key's PRESENCE may not.
         "${host.name}-tf.env".generator = {
           dependencies = lib.mapAttrs (name: _: secrets.${name}) terraform-secrets;
+
           script =
             {
+              lib,
               decrypt,
               deps,
-              lib,
               ...
             }:
             lib.concatMapStrings (name: ''
@@ -122,6 +112,7 @@ let
               })"
             '') (lib.attrNames terraform-secrets);
         };
+
         # Always present (not left to opt in) - it backs `terraform.encryption` below, which every
         # `<host>-tf` gets unconditionally (see that field's own comment for why).
         open-tofu-state-passphrase = {
@@ -143,9 +134,7 @@ let
     terranix = {
       terraform.encryption = {
         key_provider.pbkdf2.main.passphrase = "\${var.OPEN_TOFU_STATE_PASSPHRASE}";
-
         method.aes_gcm.main.keys = "\${key_provider.pbkdf2.main}";
-
         # `method` is a STATIC TRAVERSAL, not a computed value - HCL's JSON spec requires this as
         # a plain string containing raw HCL syntax (`"method.aes_gcm.main"`), NOT a `"\${...}"`
         # template - the latter parses as a template expression and fails validate ("A single
@@ -166,10 +155,10 @@ let
         # `state.fallback.method = "method.unencrypted.migrate";` temporarily.
         state.method = "method.aes_gcm.main";
       };
+
       variable.OPEN_TOFU_STATE_PASSPHRASE.sensitive = true;
     };
   };
-
   # Read from the file's own top-level `config` (closed over here, not re-requested) for the same
   # reason dns.nix's `perSystem` does the same for `config.flake.nixosConfigurations`: `config` is
   # ALSO the name flake-parts binds to each per-system module's own (different) result, so
@@ -178,8 +167,21 @@ let
   # making `.flake.terranixModules` resolve to `{ }` and silently dropping every `<hostname>-tf`
   # package. Hoisting the lookup here, before that shadow exists, keeps both readable.
   terranix-modules = config.flake.terranixModules or { };
+  warnings-shim = {
+    options.warnings = lib.mkOption {
+      default = [ ];
+      type = lib.types.listOf lib.types.str;
+    };
+  };
 in
 {
+  flake-file.inputs.terranix = {
+    url = "github:terranix/terranix";
+    inputs.nixpkgs.follows = "nixpkgs";
+  };
+
+  imports = [ (inputs.terranix.flakeModule or { }) ];
+
   den = {
     classes.terranix = { };
 
@@ -187,6 +189,7 @@ in
       (den.lib.policy.instantiate {
         class = "terranix";
         instantiate = { modules, ... }: modules;
+
         # `-tf` suffix (rather than the bare host name) avoids colliding with the
         # `packages.<host>` each host already gets from Den's `nh` battery (quick-rebuild
         # shortcuts) - terranix's flake-module keys `packages.<system>.<key>` off this same
@@ -195,6 +198,7 @@ in
           "terranixModules"
           "${host.name}-tf"
         ];
+
         name = "${host.name}-tf";
       })
     ];
@@ -204,11 +208,7 @@ in
       terraform-secrets-aspect
     ];
   };
-  flake-file.inputs.terranix = {
-    inputs.nixpkgs.follows = "nixpkgs";
-    url = "github:terranix/terranix";
-  };
-  imports = [ (inputs.terranix.flakeModule or { }) ];
+
   # Guarded on `inputs ? terranix`: the first `nix run .#write-flake` pass after adding this
   # module runs before flake.nix/flake.lock actually have a `terranix` input, so the option this
   # sets (declared by terranix's own flakeModule, imported above) doesn't exist yet either.
@@ -218,15 +218,17 @@ in
       terranix.terranixConfigurations = lib.mapAttrs (
         key: modules:
         let
+          env-file = "secrets/generated/${host-name}-tf.env.age";
           # Every entry here is keyed `"${host.name}-tf"` (see `intoAttr` above), so stripping the
           # suffix recovers the host name without needing `host` itself in this scope.
           host-name = lib.removeSuffix "-tf" key;
-          env-file = "secrets/generated/${host-name}-tf.env.age";
         in
         {
           modules = modules ++ [ warnings-shim ];
+
           terraformWrapper = {
             package = pkgs.opentofu;
+
             # No-ops for hosts with no `settings.terraform`-flagged secrets (nothing to generate,
             # so the file never exists). Both tools are called by their full store path (not left
             # to PATH) so this works even outside the dev shell.

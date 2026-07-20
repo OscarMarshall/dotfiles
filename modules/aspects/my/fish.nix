@@ -2,7 +2,6 @@
   my.fish.homeManager = {
     programs.fish = {
       enable = true;
-
       # Fish 4.4+ bundles Catppuccin (with light/dark variants baked into
       # each flavor) as a built-in theme; `theme choose` re-applies whichever
       # variant matches the terminal's reported background color, and reacts

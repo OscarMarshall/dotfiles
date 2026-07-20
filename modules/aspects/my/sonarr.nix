@@ -18,6 +18,7 @@
           # in favor of the Authentik forward-auth gate in front of it, rather than stacking both.
           settings.auth.required = "DisabledForLocalAddresses";
         };
+
         users.users = {
           sonarr.extraGroups = [ "qbittorrent" ];
         }
@@ -25,19 +26,22 @@
           extraGroups = [ "sonarr" ];
         }));
       };
+
       secrets = { secrets, ... }: {
         sonarr-api-key = {
           generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 16";
           intermediary = true;
           settings.homepage = "sonarr";
         };
+
         "sonarr.env".generator = {
           dependencies = { inherit (secrets) sonarr-api-key; };
+
           script =
             {
+              lib,
               decrypt,
               deps,
-              lib,
               ...
             }:
             ''
@@ -45,15 +49,18 @@
             '';
         };
       };
+
       virtual-host = {
-        inherit port global;
+        inherit global port;
         # Sonarr serves its REST API under /api; nginx.nix lets that through the Authentik
         # forward-auth gate untouched since cross-seed/unpackerr call it directly with an API key,
         # machine-to-machine, with no browser session to carry an Authentik cookie.
         bypassAuthPaths = [ "^/api" ];
         group = "Arr Stack";
+
         homepage = {
           description = "Show organizer/manager";
+
           widget = {
             api-key = true;
             enableQueue = true;
@@ -63,6 +70,7 @@
             url = "http://127.0.0.1:${toString port}";
           };
         };
+
         host = host.name;
         icon = "sonarr.svg";
         label = "Sonarr";

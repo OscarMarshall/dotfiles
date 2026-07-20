@@ -1,9 +1,11 @@
 {
   my.ghostty = {
     hmDarwin = { pkgs, ... }: { programs.ghostty.package = pkgs.ghostty-bin; };
+
     homeManager = { lib, ... }: {
       programs.ghostty = {
         enable = true;
+
         settings = {
           auto-update = "off";
           keybind = [ "global:super+Backquote=toggle_quick_terminal" ];

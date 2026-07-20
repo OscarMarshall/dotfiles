@@ -1,9 +1,9 @@
 { lib, ... }:
 let
   domain = "silverlight-nex.us";
+  env-var-for = name: "HOMEPAGE_VAR_${lib.toUpper name}_API_KEY";
   port = 8082;
   port' = toString port;
-  env-var-for = name: "HOMEPAGE_VAR_${lib.toUpper name}_API_KEY";
 in
 {
   my.homepage = { host, ... }: {
@@ -15,11 +15,6 @@ in
         ...
       }:
       let
-        urlFor = vh: vh.url or "${vh.name}.${vh.host}.${domain}";
-        hosts = lib.listToAttrs (map (vh: lib.nameValuePair vh.name vh) virtual-host);
-
-        homepageServices = lib.filter (vh: vh ? homepage) virtual-host;
-        groups = lib.unique (map (vh: vh.group) homepageServices);
         entryToService =
           vh:
           let
@@ -49,10 +44,16 @@ in
               // removeAttrs widget [ "api-key" ];
             };
           };
+        groups = lib.unique (map (vh: vh.group) homepageServices);
+        homepageServices = lib.filter (vh: vh ? homepage) virtual-host;
+        hosts = lib.listToAttrs (map (vh: lib.nameValuePair vh.name vh) virtual-host);
+        urlFor = vh: vh.url or "${vh.name}.${vh.host}.${domain}";
       in
       {
         services.homepage-dashboard = {
+          enable = true;
           allowedHosts = "localhost:${port'},127.0.0.1:${port'},${urlFor hosts.homepage}";
+
           bookmarks = [
             {
               "Servers" = [
@@ -67,19 +68,20 @@ in
               ];
             }
           ];
-          enable = true;
+
           environmentFiles = [ config.age.secrets."homepage-dashboard.env".path ];
-          services = map (group: {
-            ${group} = map entryToService (lib.filter (vh: vh.group == group) homepageServices);
-          }) groups;
+          services = map (group: { ${group} = map entryToService (lib.filter (vh: vh.group == group) homepageServices); }) groups;
+
           widgets = [
             {
               glances = {
                 cputemp = true;
+
                 disk = [
                   "/"
                   "/metalminds"
                 ];
+
                 expanded = true;
                 uptime = true;
                 url = "http://127.0.0.1:${toString config.services.glances.port}";
@@ -89,6 +91,7 @@ in
           ];
         };
       };
+
     # Each API-key secret names the service it belongs to via its own `settings.homepage` (e.g.
     # sonarr.nix sets `secrets.sonarr-api-key.settings.homepage = "sonarr";`) - collected here by
     # scanning `config.age.secrets` directly, so a new API-key widget only needs that one field on
@@ -112,9 +115,7 @@ in
         # the WHOLE chain (not just the last step), so this is safe even when `sec.settings`
         # itself is `null` (see modules/terranix.nix's identical `terraform-mode-of` for the same
         # pattern spelled out further).
-        api-key-secrets = lib.filterAttrs (
-          _: sec: (sec.settings.homepage or null) != null
-        ) config.age.secrets;
+        api-key-secrets = lib.filterAttrs (_: sec: (sec.settings.homepage or null) != null) config.age.secrets;
       in
       {
         # This key's PRESENCE is unconditional (always generated, even if no widget currently sets
@@ -125,11 +126,12 @@ in
         # the long version of this).
         "homepage-dashboard.env".generator = {
           dependencies = lib.mapAttrs (name: _: secrets.${name}) api-key-secrets;
+
           script =
             {
+              lib,
               decrypt,
               deps,
-              lib,
               ...
             }:
             lib.concatMapStrings (name: ''
@@ -139,6 +141,7 @@ in
             '') (lib.attrNames api-key-secrets);
         };
       };
+
     # No `homepage` block of its own: Homepage doesn't list itself as one of its own tiles, but
     # `label`/`icon`/`group` still feed its Authentik application (see virtual-host.nix).
     virtual-host = {

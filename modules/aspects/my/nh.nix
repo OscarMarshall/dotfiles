@@ -1,10 +1,12 @@
 {
   my.nh.homeManager.programs.nh = {
+    enable = true;
+
     clean = {
       enable = true;
       extraArgs = "--keep-since 7d";
     };
-    enable = true;
+
     flake = "github:OscarMarshall/dotfiles";
   };
 }

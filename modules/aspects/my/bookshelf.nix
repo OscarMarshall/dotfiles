@@ -24,6 +24,7 @@ let
         inherit name;
         pool = "metalminds";
       };
+
       nixos = {
         virtualisation.oci-containers.containers.${name} = {
           # Bookshelf only reaches this vhost via nginx over loopback (its port isn't opened in
@@ -37,16 +38,19 @@ let
           #     -H "Accept: application/vnd.docker.distribution.manifest.v2+json" -D - -o /dev/null \
           #     https://ghcr.io/v2/pennydreadful/bookshelf/manifests/hardcover
           image = "ghcr.io/pennydreadful/bookshelf@sha256:388eecc94362580eae31ee0a454be6af516f8a311f8432a521c202fb475f4359";
+
           ports =
             let
               port' = toString port;
             in
             [ "127.0.0.1:${port'}:${port'}" ];
+
           volumes = [ "/metalminds/${name}:/config" ];
         };
       };
+
       virtual-host = {
-        inherit name port global;
+        inherit global name port;
         group = "Arr Stack";
         homepage = { inherit description; };
         host = host.name;
@@ -60,16 +64,19 @@ let
     };
 in
 {
-  my.bookshelf-audiobooks = mkBookshelfInstance {
-    description = "Audiobook manager";
-    instance = "audiobooks";
-    label = "Audiobooks";
-    port = 8788;
-  };
-  my.bookshelf-ebooks = mkBookshelfInstance {
-    description = "Ebook manager";
-    instance = "ebooks";
-    label = "Ebooks";
-    port = 8787;
+  my = {
+    bookshelf-audiobooks = mkBookshelfInstance {
+      description = "Audiobook manager";
+      instance = "audiobooks";
+      label = "Audiobooks";
+      port = 8788;
+    };
+
+    bookshelf-ebooks = mkBookshelfInstance {
+      description = "Ebook manager";
+      instance = "ebooks";
+      label = "Ebooks";
+      port = 8787;
+    };
   };
 }

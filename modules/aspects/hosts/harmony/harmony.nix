@@ -1,5 +1,46 @@
 { den, my, ... }: {
   den.aspects.harmony = {
+    includes = with my; [
+      (authentik { global = true; })
+      (auto-upgrade { allowReboot = true; })
+      (autobrr { })
+      (bookshelf-audiobooks { })
+      (bookshelf-ebooks { })
+      (cachyos-kernel { variant = "server"; })
+      (collabora-online { })
+      (immich {
+        administrators = [ "oscar" ];
+        global = true;
+      })
+      (netdata { })
+      (nextcloud { global = true; })
+      (plex { global = true; })
+      (profilarr { })
+      (prowlarr { })
+      (qbittorrent { administrators = [ "oscar" ]; })
+      (radarr { administrators = [ "oscar" ]; })
+      (seerr { global = true; })
+      (sonarr { administrators = [ "oscar" ]; })
+      (storyteller { global = true; })
+      (tautulli { })
+      (zfs [ "metalminds" ])
+      boot
+      cross-seed
+      den.aspects.oscar.provides.minecraft-servers
+      dns
+      gluetun
+      homepage
+      lm-sensors
+      locale
+      meraki
+      networkmanager
+      nginx
+      samba
+      satisfactory-server
+      ssh-server
+      unpackerr
+    ];
+
     dataset =
       map
         (name: {
@@ -18,46 +59,7 @@
           "torrents"
           "yarg-charts"
         ];
-    includes = with my; [
-      (auto-upgrade { allowReboot = true; })
-      (authentik { global = true; })
-      (autobrr { })
-      (bookshelf-audiobooks { })
-      (bookshelf-ebooks { })
-      boot
-      (cachyos-kernel { variant = "server"; })
-      (collabora-online { })
-      cross-seed
-      dns
-      gluetun
-      homepage
-      (immich {
-        administrators = [ "oscar" ];
-        global = true;
-      })
-      lm-sensors
-      locale
-      meraki
-      (netdata { })
-      networkmanager
-      (nextcloud { global = true; })
-      nginx
-      den.aspects.oscar.provides.minecraft-servers
-      (plex { global = true; })
-      (profilarr { })
-      (prowlarr { })
-      (qbittorrent { administrators = [ "oscar" ]; })
-      (radarr { administrators = [ "oscar" ]; })
-      samba
-      satisfactory-server
-      (seerr { global = true; })
-      (sonarr { administrators = [ "oscar" ]; })
-      ssh-server
-      (storyteller { global = true; })
-      (tautulli { })
-      unpackerr
-      (zfs [ "metalminds" ])
-    ];
+
     nixos = {
       age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMkM5uNY0rMy2QMG6IptlxgVl4sQWoeSSNmUp7/f2z1B";
       networking.hostId = "7dab76c0";
@@ -86,6 +88,7 @@
       # https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
       system.stateVersion = "25.05"; # Did you read the comment?
     };
+
     # This value determines the Home Manager release that your configuration is compatible with. This helps avoid
     # breakage when a new Home Manager release introduces backwards incompatible changes.
     #

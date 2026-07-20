@@ -7,18 +7,21 @@
 #
 # For our template, we enable home-manager and nix-darwin by default, but
 # you are free to remove them if not being used by you.
-{ ... }: {
+_: {
   flake-file.inputs = {
     darwin = {
-      inputs.nixpkgs.follows = "nixpkgs";
       url = "github:nix-darwin/nix-darwin";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
+
     # Follow targets
     flake-compat.url = "github:NixOS/flake-compat";
+
     home-manager = {
-      inputs.nixpkgs.follows = "nixpkgs";
       url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
+
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     systems.url = "github:nix-systems/default";
   };

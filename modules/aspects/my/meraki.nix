@@ -78,18 +78,21 @@ in
         # MERAKI_DASHBOARD_API_KEY, so nothing sensitive lands in this config or in Terraform
         # state.
         provider.meraki = { };
+
         resource.meraki_networks_appliance_firewall_port_forwarding_rules.${host.name} = {
           network_id = host.meraki-network-id;
+
           rules = map (pf: {
+            inherit (pf) name;
             allowed_ips = if pf.restrict-to-cloudflare or false then cloudflareIps else [ "any" ];
             lan_ip = host.lan-ip;
             local_port = toString pf.port;
-            name = pf.name;
             protocol = pf.protocol or "tcp";
             public_port = toString pf.port;
             uplink = "both";
           }) port-forward;
         };
+
         terraform.required_providers.meraki = {
           source = "cisco-open/meraki";
           version = "1.2.4-beta";

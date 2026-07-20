@@ -74,15 +74,17 @@
         # Credentials aren't set here - the provider reads api_token from CLOUDFLARE_API_TOKEN, so
         # nothing sensitive lands in this config or in Terraform state.
         provider.cloudflare = { };
+
         # Unlike Namecheap's setHosts (which replaces the entire zone in one call), each record
         # here is its own independent resource - Terraform only ever touches what's declared
         # below, so there's no OVERWRITE-style footgun for the rest of the zone.
         resource.cloudflare_dns_record =
           lib.listToAttrs (
             map (vh: {
-              name = vh.name;
+              inherit (vh) name;
+
               value = {
-                inherit (host.dns-record) type content;
+                inherit (host.dns-record) content type;
                 name = "${vh.name}.${domain}";
                 # DNS-only (not proxied through Cloudflare's edge). This one-level name is
                 # actually covered by Cloudflare's free Universal SSL cert, but the per-host
@@ -105,20 +107,22 @@
             # `url = "${host.name}.${domain}"` deliberately doesn't go through the `global`/
             # `globalHosts` path above either (that would produce `homepage.${domain}`, not this).
             "${host.name}-root" = {
-              inherit (host.dns-record) type content;
+              inherit (host.dns-record) content type;
               name = "${host.name}.${domain}";
               proxied = false;
               ttl = 1800;
               zone_id = host.cloudflare-zone-id;
             };
+
             "${host.name}-wildcard" = {
-              inherit (host.dns-record) type content;
+              inherit (host.dns-record) content type;
               name = "*.${host.name}.${domain}";
               proxied = false;
               ttl = 1800;
               zone_id = host.cloudflare-zone-id;
             };
           };
+
         terraform.required_providers.cloudflare = {
           source = "cloudflare/cloudflare";
           version = "~> 5";
@@ -129,6 +133,13 @@
   perSystem =
     { lib, pkgs, ... }:
     let
+      allEntries = lib.concatLists (
+        lib.mapAttrsToList (host: hostnames: map (hostname: { inherit host hostname; }) hostnames) hostnamesByHost
+      );
+      # Group by hostname; anything claimed by more than one DISTINCT host is a collision.
+      collisions = lib.filterAttrs (_: entries: lib.length (lib.unique (map (e: e.host) entries)) > 1) (
+        lib.groupBy (e: e.hostname) allEntries
+      );
       # host -> every hostname its nginx vhosts actually claim: both `serverAliases` AND each
       # vhost's own PRIMARY name (the attribute key). The primary name matters too, not just
       # aliases: a service's `url` override can already equal the canonical global name (e.g.
@@ -141,22 +152,9 @@
       hostnamesByHost = lib.mapAttrs (
         _: hostCfg:
         lib.concatLists (
-          lib.mapAttrsToList (name: vh: [ name ] ++ (vh.serverAliases or [ ])) (
-            hostCfg.config.services.nginx.virtualHosts or { }
-          )
+          lib.mapAttrsToList (name: vh: [ name ] ++ (vh.serverAliases or [ ])) (hostCfg.config.services.nginx.virtualHosts or { })
         )
       ) config.flake.nixosConfigurations;
-
-      allEntries = lib.concatLists (
-        lib.mapAttrsToList (
-          host: hostnames: map (hostname: { inherit host hostname; }) hostnames
-        ) hostnamesByHost
-      );
-
-      # Group by hostname; anything claimed by more than one DISTINCT host is a collision.
-      collisions = lib.filterAttrs (_: entries: lib.length (lib.unique (map (e: e.host) entries)) > 1) (
-        lib.groupBy (e: e.hostname) allEntries
-      );
     in
     {
       checks.dns-global-uniqueness =
@@ -169,8 +167,7 @@
             Cloudflare DNS records for it:
             ${lib.concatStringsSep "\n" (
               lib.mapAttrsToList (
-                hostname: entries:
-                "  ${hostname}: ${lib.concatStringsSep ", " (lib.unique (map (e: e.host) entries))}"
+                hostname: entries: "  ${hostname}: ${lib.concatStringsSep ", " (lib.unique (map (e: e.host) entries))}"
               ) collisions
             )}
             Rename one of the services, or drop `global` from all but one host.

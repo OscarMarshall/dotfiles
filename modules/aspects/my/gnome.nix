@@ -1,6 +1,7 @@
 {
   my.gnome = {
     hmLinux.dconf.enable = true;
+
     nixos = { pkgs, ... }: {
       environment = {
         gnome.excludePackages = with pkgs; [

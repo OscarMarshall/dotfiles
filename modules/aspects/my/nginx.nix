@@ -2,18 +2,16 @@
   my.nginx = {
     nixos =
       {
-        host,
         lib,
+        host,
         virtual-host,
         ...
       }:
       let
-        domain = "silverlight-nex.us";
-
         # Address of Authentik's embedded outpost, used to gate `protected` virtual hosts behind
         # forward-auth. Matches the address authentik-nix's own nginx integration proxies to.
         authentikOutpost = "https://127.0.0.1:9443";
-
+        domain = "silverlight-nex.us";
         # nginx only inherits a parent context's `add_header` directives into a location that
         # doesn't declare any of its own. Forward-auth locations below need `add_header
         # Set-Cookie` to propagate Authentik's session cookie, which would otherwise silently
@@ -31,11 +29,15 @@
           80
           443
         ];
+
         security.acme = {
           acceptTerms = true;
           defaults.email = "letsencrypt@alias.oscarmarshall.com";
         };
+
         services.nginx = {
+          enable = true;
+
           appendHttpConfig = ''
             # Add HSTS header with preloading to HTTPS requests.
             # Adding this header to HTTP requests is discouraged
@@ -59,7 +61,7 @@
             # This might create errors
             proxy_cookie_path / "/; secure; HttpOnly; SameSite=strict";
           '';
-          enable = true;
+
           recommendedBrotliSettings = true;
           recommendedGzipSettings = true;
           recommendedOptimisation = true;
@@ -74,10 +76,12 @@
           # Exposes /nginx_status on localhost for Netdata's nginx collector (request/connection
           # metrics).
           statusPage = true;
+
           virtualHosts = lib.listToAttrs (
             map (
               vh:
               let
+                global-url = "${vh.name}.${domain}";
                 # Every service is namespaced under its host by default (immich.harmony.…), so
                 # multiple hosts can run the same service without colliding on one wildcard DNS
                 # entry. A service opts into also being reachable at the bare, host-agnostic name
@@ -85,11 +89,11 @@
                 # nginx `serverAlias`, which nixos's ACME integration automatically adds as a SAN
                 # on the same certificate.
                 url = vh.url or "${vh.name}.${host.name}.${domain}";
-                global-url = "${vh.name}.${domain}";
               in
               lib.nameValuePair url (
                 {
                   enableACME = true;
+
                   # appendHttpConfig's proxy_cookie_path rewrite appends its own secure/HttpOnly/
                   # SameSite flags to every Set-Cookie header, even ones a backend already set its
                   # own correct flags on. That produces a Set-Cookie with duplicated attributes,
@@ -99,6 +103,7 @@
                   extraConfig = lib.optionalString (vh.preserveCookieFlags or false) ''
                     proxy_cookie_path / /;
                   '';
+
                   forceSSL = true;
                   # Skips adding `global-url` when a service's own `url` override (e.g.
                   # authentik.nix's, when `global`) already IS the canonical name - the usual case
@@ -128,6 +133,7 @@
                         proxy_set_header X-authentik-name $authentik_name;
                         proxy_set_header X-authentik-uid $authentik_uid;
                       '';
+
                       # No trailing URI here (deliberately, like the regex bypassAuthPaths
                       # locations below): with one, nginx has to decode+re-merge the request URI to
                       # splice it onto the backend path, and an encoded slash anywhere in it (e.g.
@@ -178,8 +184,10 @@
                         proxy_pass_request_body off;
                         proxy_set_header Content-Length "";
                       '';
+
                       proxyPass = "${authentikOutpost}/outpost.goauthentik.io";
                     };
+
                     "@goauthentik_proxy_signin" = {
                       extraConfig = ''
                         internal;
@@ -202,6 +210,7 @@
           );
         };
       };
+
     port-forward = [
       {
         name = "http";

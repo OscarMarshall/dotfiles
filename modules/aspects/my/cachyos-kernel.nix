@@ -31,6 +31,7 @@
         "https://attic.xuyh0120.win/lantian"
         "https://cache.xinux.uz"
       ];
+
       extra-trusted-public-keys = [
         "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc="
         "cache.xinux.uz:BXCrtqejFjWzWEB9YuGB7X2MV4ttBur1N8BkwQRdH+0="
@@ -54,10 +55,10 @@
           boot = {
             # Use mkForce to override the default kernel (including ZFS aspect if present)
             kernelPackages = lib.mkForce pkgs.cachyosKernels."linuxPackages-cachyos-${variant}";
-
             # Configure ZFS to use the CachyOS-patched module (NixOS will only use this if ZFS is enabled)
             zfs.package = config.boot.kernelPackages.zfs_cachyos;
           };
+
           nixpkgs.overlays = [
             # Use the exact kernel versions as defined in nix-cachyos-kernel repo.
             # Guarantees binary cache availability.

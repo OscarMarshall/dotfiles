@@ -4,21 +4,25 @@
       services.cross-seed = {
         enable = true;
         group = "qbittorrent";
+
         settings = {
           linkDirs = [ "/metalminds/torrents/link-dir" ];
           matchMode = "partial";
           port = 2468;
         };
+
         settingsFile = config.age.secrets."cross-seed.json".path;
         useGenConfigDefaults = true;
         user = "qbittorrent";
       };
     };
+
     secrets = { secrets, ... }: {
       cross-seed-api-key = {
         generator.script = "alnum";
         intermediary = true;
       };
+
       # webuiPort below is qbittorrent.nix's hardcoded `port` (8080) - kept as a literal rather
       # than read from `config` because requesting `config` on this field (alongside `secrets`)
       # makes Den attach a collision-validator module to the same evalModules pass that builds
@@ -36,12 +40,13 @@
             sonarr-api-key
             ;
         };
+
         script =
           {
-            decrypt,
-            deps,
             lib,
             pkgs,
+            decrypt,
+            deps,
             ...
           }:
           ''

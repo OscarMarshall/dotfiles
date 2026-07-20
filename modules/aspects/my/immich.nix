@@ -20,6 +20,7 @@ in
           enable = true;
           host = "127.0.0.1";
           mediaLocation = "/metalminds/pictures";
+
           settings = {
             oauth = {
               # Skip Immich's own login page and bounce straight to Authentik - there's nothing else
@@ -35,6 +36,7 @@ in
               mobileRedirectUri = "https://${url}/api/oauth/mobile-redirect";
               scope = "openid email profile";
             };
+
             # Authentik is the only way in; Immich's own local accounts can no longer be used.
             # Immich attaches an OAuth login to an existing account by EMAIL (its auth service
             # looks the user up with `getByEmail`, then stamps the `oauthId` onto that row), so
@@ -49,10 +51,12 @@ in
             passwordLogin.enabled = false;
           };
         };
+
         users.users = lib.genAttrs administrators (user: {
           extraGroups = [ "immich" ];
         });
       };
+
       # `settings.terraform = "variable";` (not just any secret) - it now feeds a Terraform
       # `variable` (modules/terranix.nix's two modes) as well as Immich's own `environmentFile`-
       # style secret consumption below, so it's NOT `intermediary` - unlike a secret that ONLY ever
@@ -64,16 +68,20 @@ in
           settings.terraform = "variable";
         };
       };
+
       virtual-host = {
-        inherit port global;
+        inherit global port;
         group = "Media";
+
         homepage = {
           description = "Photo & video backup";
         };
+
         host = host.name;
         icon = "immich.svg";
         label = "Immich";
         name = "immich";
+
         # Requests the matching OAuth2 Provider + Application from Authentik (authentik.nix) - see
         # virtual-host.nix's `oidc` field for the shape. Per Immich's own OIDC docs
         # (docs.immich.app/administration/oauth) - web login redirects to `/auth/login`, the "link
@@ -83,12 +91,14 @@ in
         # result.
         oidc = {
           client-secret = "immich-oidc-client-secret";
+
           redirect-paths = [
             "/auth/login"
             "/user-settings"
             "/api/oauth/mobile-redirect"
           ];
         };
+
         # Immich sets its own secure/HttpOnly/SameSite flags on its session cookie. Without this,
         # nginx's blanket cookie rewrite appends a second, duplicate set of those flags, producing
         # a malformed Set-Cookie the browser silently refuses to store — login succeeds

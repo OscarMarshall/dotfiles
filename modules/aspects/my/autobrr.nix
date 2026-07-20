@@ -12,6 +12,7 @@
         services.autobrr = {
           enable = true;
           secretFile = config.age.secrets.autobrr-session-secret.path;
+
           settings = {
             inherit port;
             checkForUpdates = true;
@@ -19,12 +20,14 @@
           };
         };
       };
+
       secrets.autobrr-session-secret.generator.script = "alnum";
+
       # No `homepage` block: deliberately not a dashboard tile, but `icon`/`group` still feed its
       # Authentik application (see virtual-host.nix). No `label` either - "autobrr" IS the brand's
       # own styling.
       virtual-host = {
-        inherit port global;
+        inherit global port;
         group = "Arr Stack";
         host = host.name;
         icon = "https://raw.githubusercontent.com/autobrr/autobrr/develop/web/src/logo.svg";
