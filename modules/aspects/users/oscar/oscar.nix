@@ -69,6 +69,7 @@ in
         my.discord
         my.doc-browser
         my.ghostty
+        my.mkvtoolnix
         my.orca-slicer
         my.programmer-dvorak
         my.prusa-slicer
@@ -104,7 +105,6 @@ in
           ]
           ++ lib.optionals (scope.graphical or false) [
             inkscape
-            mkvtoolnix
             mpv
             prismlauncher
           ];
