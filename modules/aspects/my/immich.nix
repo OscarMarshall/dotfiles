@@ -63,9 +63,9 @@ in
       # feeds a Terraform `variable`, this one is ALSO read directly by `services.immich` below via
       # its own decrypted file, so it has to be materialized as a real host secret.
       secrets.immich-oidc-client-secret = {
-          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
-          settings.terraform = "variable";
-        };
+        generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
+        settings.terraform = "variable";
+      };
 
       virtual-host = {
         inherit global port;

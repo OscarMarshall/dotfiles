@@ -181,9 +181,9 @@ in
         hmLinux = { };
 
         homeManager.home = {
-            sessionVariables.PATH = "$HOME/.nix-profile/bin:$PATH";
-            stateVersion = "26.05";
-          };
+          sessionVariables.PATH = "$HOME/.nix-profile/bin:$PATH";
+          stateVersion = "26.05";
+        };
       };
     };
 }

@@ -99,9 +99,9 @@ let
 in
 {
   den.aspects.oscar.provides.minecraft-servers.includes = [
-      (my.minecraft-servers {
-        inherit worlds;
-        administrators = [ "oscar" ];
-      })
-    ];
+    (my.minecraft-servers {
+      inherit worlds;
+      administrators = [ "oscar" ];
+    })
+  ];
 }

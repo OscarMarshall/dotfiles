@@ -8,9 +8,9 @@ in
     }:
     { host, ... }: {
       nixos.services.tautulli = {
-          inherit port;
-          enable = true;
-        };
+        inherit port;
+        enable = true;
+      };
 
       virtual-host = {
         inherit global port;

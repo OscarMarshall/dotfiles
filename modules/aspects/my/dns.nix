@@ -57,10 +57,10 @@
 { config, ... }: {
   my.dns = { host, ... }: {
     secrets.cloudflare-api-token = {
-        intermediary = true;
-        rekeyFile = ../../../secrets/cloudflare-api-token.age;
-        settings.terraform = true;
-      };
+      intermediary = true;
+      rekeyFile = ../../../secrets/cloudflare-api-token.age;
+      settings.terraform = true;
+    };
 
     terranix =
       { lib, virtual-host, ... }:

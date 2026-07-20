@@ -7,9 +7,9 @@
       includes = [ (den._.unfree [ "plexmediaserver" ]) ];
 
       nixos.services.plex = {
-          enable = true;
-          openFirewall = true;
-        };
+        enable = true;
+        openFirewall = true;
+      };
 
       port-forward = {
         name = "plex";

@@ -100,9 +100,9 @@ in
       # modes); also read directly below (LoadCredential) by `configureOidc`, so it's NOT
       # `intermediary` - it has to be materialized as a real host secret too.
       secrets.seerr-oidc-client-secret = {
-          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
-          settings.terraform = "variable";
-        };
+        generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
+        settings.terraform = "variable";
+      };
 
       virtual-host = {
         inherit global port;
