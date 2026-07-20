@@ -62,10 +62,13 @@
           # `command`/`env` secret-file support in `programs.claude-code.mcpServers`
           # for remote servers, so we bridge it through mcp-proxy as a local
           # stdio server instead — same secret-at-runtime pattern as `github` above.
+          # The token is passed via $API_ACCESS_TOKEN (mcp-proxy turns it into
+          # an Authorization header itself) rather than `-H`/`--headers`, since
+          # CLI args are visible to other local users via `ps`.
           netdata-cloud.command = "${pkgs.writeShellScript "netdata-cloud-mcp-wrapper" ''
+            export API_ACCESS_TOKEN="$(cat ${config.age.secrets.netdata-cloud-mcp-token.path})"
             exec ${pkgs.mcp-proxy}/bin/mcp-proxy https://app.netdata.cloud/api/v1/mcp \
-              --transport streamablehttp \
-              -H Authorization "Bearer $(cat ${config.age.secrets.netdata-cloud-mcp-token.path})"
+              --transport streamablehttp
           ''}";
 
           nixos.command = "${pkgs.mcp-nixos}/bin/mcp-nixos";
