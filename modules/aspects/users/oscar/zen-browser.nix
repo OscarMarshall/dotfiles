@@ -62,9 +62,7 @@ in
         setAsDefaultBrowser = true;
       };
 
-      stylix = {
-        targets = {
-          zen-browser = {
+      stylix.targets.zen-browser = {
             # Zen already follows the system light/dark appearance on its own, which
             # conflicts with Stylix's injected (single-flavor) userChrome/userContent
             # CSS. Disable the CSS injection and let Zen handle its own theming.
@@ -73,8 +71,6 @@ in
             # declared zen-browser profile names and use them, so it's repeated here.
             profileNames = [ profileName ];
           };
-        };
-      };
     };
   };
 }

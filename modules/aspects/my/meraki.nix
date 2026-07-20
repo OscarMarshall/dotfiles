@@ -63,13 +63,11 @@ let
 in
 {
   my.meraki = { host, ... }: {
-    secrets = {
-      meraki-dashboard-api-key = {
+    secrets.meraki-dashboard-api-key = {
         intermediary = true;
         rekeyFile = ../../../secrets/meraki-dashboard-api-key.age;
         settings.terraform = true;
       };
-    };
 
     terranix =
       { lib, port-forward, ... }:

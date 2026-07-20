@@ -1,6 +1,5 @@
 {
-  my.samba = {
-    nixos =
+  my.samba.nixos =
       { lib, dataset, ... }:
       let
         shares = builtins.filter (d: d.samba or false) dataset;
@@ -34,5 +33,4 @@
           };
         };
       };
-  };
 }

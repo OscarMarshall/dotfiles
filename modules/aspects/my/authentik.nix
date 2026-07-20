@@ -501,11 +501,7 @@ in
       virtual-host = {
         inherit global url;
         group = "Infra";
-
-        homepage = {
-          description = "Single sign-on";
-        };
-
+        homepage.description = "Single sign-on";
         host = host.name;
         icon = "authentik.svg";
         label = "Authentik";

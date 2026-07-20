@@ -1,11 +1,9 @@
 {
-  my.ssh-client.homeManager = {
-    programs.ssh = {
+  my.ssh-client.homeManager.programs.ssh = {
       enable = true;
       enableDefaultConfig = false;
 
-      settings = {
-        "*" = {
+      settings."*" = {
           AddKeysToAgent = "no";
           Compression = false;
           ControlMaster = "no";
@@ -17,7 +15,5 @@
           ServerAliveInterval = 0;
           UserKnownHostsFile = "~/.ssh/known_hosts";
         };
-      };
     };
-  };
 }

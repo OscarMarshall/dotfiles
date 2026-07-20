@@ -188,8 +188,7 @@
                       proxyPass = "${authentikOutpost}/outpost.goauthentik.io";
                     };
 
-                    "@goauthentik_proxy_signin" = {
-                      extraConfig = ''
+                    "@goauthentik_proxy_signin".extraConfig = ''
                         internal;
                         add_header Set-Cookie $auth_cookie;
                         ${securityHeaders}
@@ -202,7 +201,6 @@
                         # per-provider Host-header context for the outpost to key off of.
                         return 302 "https://$http_host/outpost.goauthentik.io/start?rd=$scheme://$http_host$request_uri";
                       '';
-                    };
                   };
                 }
               )

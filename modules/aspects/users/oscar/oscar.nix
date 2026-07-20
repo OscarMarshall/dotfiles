@@ -180,12 +180,10 @@ in
         # hmLinux is absent at compile time without this and the forward falls through to resolveSourceFallback.
         hmLinux = { };
 
-        homeManager = {
-          home = {
+        homeManager.home = {
             sessionVariables.PATH = "$HOME/.nix-profile/bin:$PATH";
             stateVersion = "26.05";
           };
-        };
       };
     };
 }

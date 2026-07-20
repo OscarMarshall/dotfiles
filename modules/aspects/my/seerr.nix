@@ -99,21 +99,15 @@ in
       # `settings.terraform = "variable";` feeds a Terraform `variable` (modules/terranix.nix's two
       # modes); also read directly below (LoadCredential) by `configureOidc`, so it's NOT
       # `intermediary` - it has to be materialized as a real host secret too.
-      secrets = {
-        seerr-oidc-client-secret = {
+      secrets.seerr-oidc-client-secret = {
           generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
           settings.terraform = "variable";
         };
-      };
 
       virtual-host = {
         inherit global port;
         group = "Media";
-
-        homepage = {
-          description = "Media requests";
-        };
-
+        homepage.description = "Media requests";
         host = host.name;
         icon = "seerr.svg";
         label = "Seerr";

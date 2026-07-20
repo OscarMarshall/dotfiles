@@ -91,11 +91,7 @@ in
       virtual-host = {
         inherit global port url;
         group = "Media";
-
-        homepage = {
-          description = "Read-aloud book alignment";
-        };
-
+        homepage.description = "Read-aloud book alignment";
         host = host.name;
         # No dashboard-icons entry for this app - its own upstream logo instead.
         icon = "https://gitlab.com/storyteller-platform/storyteller/-/raw/main/applications/docs/static/img/Storyteller_Logo.png";

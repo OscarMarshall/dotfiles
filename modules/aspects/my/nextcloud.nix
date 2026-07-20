@@ -186,11 +186,7 @@ in
       virtual-host = {
         inherit global;
         group = "Media";
-
-        homepage = {
-          description = "Files, calendar & office suite";
-        };
-
+        homepage.description = "Files, calendar & office suite";
         host = host.name;
         icon = "nextcloud.svg";
         label = "Nextcloud";
