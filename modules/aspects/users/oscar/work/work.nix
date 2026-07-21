@@ -1,6 +1,6 @@
 {
-  den,
   lib,
+  den,
   my,
   ...
 }:
@@ -11,8 +11,8 @@ let
   # `work`/`graphical`. The real attributes always live on `home` for those.
   scopeFromArgs =
     {
-      host ? null,
       home ? null,
+      host ? null,
       ...
     }@args:
     if home != null then
@@ -37,9 +37,9 @@ in
 
       homeManager = { pkgs, ... }: {
         home.packages = with pkgs; [ glab ];
+
         programs.codex.settings.mcp_servers = lib.optionalAttrs (scope.work or false) {
           grafana = {
-            command = "${pkgs.uv}/bin/uvx";
             args = [
               "mcp-grafana"
               "--enabled-tools"
@@ -48,12 +48,16 @@ in
               "--log-level"
               "info"
             ];
-            startup_timeout_sec = 30;
+
+            command = "${pkgs.uv}/bin/uvx";
+
             env_vars = [
               "GRAFANA_URL"
               "GRAFANA_USERNAME"
               "GRAFANA_PASSWORD"
             ];
+
+            startup_timeout_sec = 30;
           };
         };
       };

@@ -12,67 +12,8 @@ in
     in
     {
       dataset = {
+        name = "nextcloud";
         pool = "metalminds";
-        name = "nextcloud";
-      };
-
-      virtual-host = {
-        name = "nextcloud";
-        host = host.name;
-        inherit global;
-        # Deliberately no `port` — Nextcloud is PHP-FPM, not a plain HTTP service to
-        # proxy_pass to. The quirk emits only forceSSL/enableACME for this vhost, and
-        # Nextcloud's own module below supplies its `locations`/`root`, merging cleanly.
-        #
-        # Requests the matching OAuth2 Provider + Application from Authentik (authentik.nix) - see
-        # virtual-host.nix's `oidc` field for the shape. Per user_oidc's own callback route (and
-        # Authentik's Nextcloud integration guide) - `/index.php/...` only matters for installs
-        # that haven't set `overwriteprotocol`-style pretty URLs, which this one has (see
-        # `settings.overwriteprotocol` below).
-        oidc = {
-          redirect-paths = [ "/apps/user_oidc/code" ];
-          client-secret = "nextcloud-oidc-client-secret";
-        };
-        label = "Nextcloud";
-        icon = "nextcloud.svg";
-        group = "Media";
-        homepage = {
-          description = "Files, calendar & office suite";
-        };
-      };
-
-      secrets = { secrets, ... }: {
-        nextcloud-admin-password.generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -base64 24";
-        # `settings.terraform = "variable";` feeds a Terraform `variable` (modules/terranix.nix's
-        # two modes); also read directly below (LoadCredential) to configure user_oidc via occ,
-        # so it's NOT `intermediary` - it has to be materialized as a real host secret too.
-        nextcloud-oidc-client-secret = {
-          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
-          settings.terraform = "variable";
-        };
-        # The raw SMTP token itself - an external credential from Proton, not something this
-        # repo can generate, so there's no `generator` here. Author it by hand once via `agenix
-        # edit secrets/nextcloud-postfix-smtp-token.age` with just the token (Proton Settings ->
-        # All settings -> IMAP/SMTP -> SMTP tokens - NOT the account password), then `agenix
-        # rekey -a`. `intermediary` because nothing reads this directly - only the generator
-        # below, which folds it into Postfix's actual sasl_passwd map line.
-        nextcloud-postfix-smtp-token = {
-          rekeyFile = ../../../secrets/nextcloud-postfix-smtp-token.age;
-          intermediary = true;
-        };
-        nextcloud-postfix-smtp-passwd.generator = {
-          dependencies = { inherit (secrets) nextcloud-postfix-smtp-token; };
-          script =
-            {
-              lib,
-              decrypt,
-              deps,
-              ...
-            }:
-            ''
-              printf '[smtp.protonmail.ch]:587 nextcloud@${domain}:%s\n' "$(${decrypt} ${lib.escapeShellArg deps.nextcloud-postfix-smtp-token.file})"
-            '';
-        };
       };
 
       nixos = { config, pkgs, ... }: {
@@ -88,87 +29,89 @@ in
         # Let's Encrypt cert. External browsers use public DNS and are unaffected.
         networking.hosts."127.0.0.1" = [ url ];
 
-        services.nextcloud = {
-          enable = true;
-          hostName = url;
-          https = true;
-          package = pkgs.nextcloud33;
+        services = {
+          nextcloud = {
+            config = {
+              adminpassFile = config.age.secrets.nextcloud-admin-password.path;
+              adminuser = "admin";
+              dbtype = "pgsql";
+            };
 
-          database.createLocally = true;
-          config = {
-            dbtype = "pgsql";
-            adminuser = "admin";
-            adminpassFile = config.age.secrets.nextcloud-admin-password.path;
+            enable = true;
+            package = pkgs.nextcloud33;
+            database.createLocally = true;
+            datadir = "/metalminds/nextcloud"; # holds both config/ (config.php) and data/ (user files)
+
+            extraApps = with config.services.nextcloud.package.packages.apps; {
+              inherit richdocuments user_oidc;
+            };
+
+            hostName = url;
+            https = true;
+            # The default (8 MB) is sized for a stock install; interned_strings_buffer holds
+            # deduplicated string literals from compiled PHP opcode, and Nextcloud's larger codebase
+            # keeps filling it, so OPcache warns that the buffer is nearly full and can't cache new
+            # strings effectively.
+            phpOptions."opcache.interned_strings_buffer" = "16";
+
+            settings = {
+              # Lets phone numbers be entered without a country code in profile settings; matches
+              # time.timeZone = America/Los_Angeles.
+              default_phone_region = "US";
+              # Drops the username/password form from /login, leaving just the "Log in with
+              # Authentik" button - the alternative-logins block sits OUTSIDE the form's `v-if` in
+              # core's Login.vue, so SSO survives being hidden.
+              #
+              # This is friction, not a security boundary, and Nextcloud means it that way: the same
+              # view re-renders the form for `?direct=1`, so /login?direct=1 remains the way in for
+              # the local `admin` account if Authentik is ever down. Little is lost by that - the
+              # OIDC-provisioned accounts have no password to type in the first place (user_oidc is
+              # their backend), so `admin` was already the only account a form could authenticate.
+              hide_login_form = true;
+              mail_domain = domain;
+              # `mail_smtphost`/`mail_smtpport`/`mail_smtpauth` are left at their module defaults
+              # (127.0.0.1:25, unauthenticated) - that's exactly the local Postfix relay set up
+              # below, which submission on loopback doesn't need SASL for. `mail_from_address` is
+              # config.php's local-part convention (combined with `mail_domain` into a full
+              # address), not a full address itself.
+              mail_from_address = "nextcloud";
+              # Hour (server-local, i.e. time.timeZone = America/Los_Angeles) at which the daily
+              # background-job cron runs its heavy tasks - picked for low usage.
+              maintenance_window_start = 2;
+              overwriteprotocol = "https";
+              # Silences the "server identifier isn't configured" admin warning. Only matters when
+              # several PHP servers share one Nextcloud install (e.g. behind a load balancer) and
+              # need to tell each other's log/lock entries apart - harmony is the only PHP server
+              # here, so any value in the allowed 0-1023 range is equally a no-op.
+              serverid = 0;
+            };
           };
 
-          datadir = "/metalminds/nextcloud"; # holds both config/ (config.php) and data/ (user files)
+          # Outbound-only relay so Nextcloud (mail_smtphost = 127.0.0.1 above, a module default) has
+          # somewhere to hand mail off to. Proton doesn't accept direct SMTP delivery from arbitrary
+          # servers, hence relaying through its own submission endpoint with a per-address SMTP
+          # token rather than attempting direct-to-recipient delivery.
+          postfix = {
+            enable = true;
+            # Compiled to /var/lib/postfix/conf/sasl_passwd.db; the plaintext source is the secret
+            # itself (see its declaration above) since its only content is credentials, not a mix of
+            # public config and a secret value to template together.
+            mapFiles."sasl_passwd" = config.age.secrets.nextcloud-postfix-smtp-passwd.path;
 
-          extraApps = with config.services.nextcloud.package.packages.apps; {
-            inherit user_oidc richdocuments;
+            settings.main = {
+              # Restricts every postfix listener (including `submission`/`smtps`, left disabled
+              # above anyway) to loopback, and restricts relaying to loopback callers - this box
+              # isn't meant to accept mail from the network, only from Nextcloud on the same host.
+              inet_interfaces = "loopback-only";
+              myhostname = "${host.name}.${domain}";
+              mynetworks = [ "127.0.0.0/8" ];
+              relayhost = [ "[smtp.protonmail.ch]:587" ];
+              smtp_sasl_auth_enable = true;
+              smtp_sasl_password_maps = "hash:/var/lib/postfix/conf/sasl_passwd";
+              smtp_sasl_security_options = "noanonymous";
+              smtp_tls_security_level = "encrypt";
+            };
           };
-
-          settings = {
-            overwriteprotocol = "https";
-            # Drops the username/password form from /login, leaving just the "Log in with
-            # Authentik" button - the alternative-logins block sits OUTSIDE the form's `v-if` in
-            # core's Login.vue, so SSO survives being hidden.
-            #
-            # This is friction, not a security boundary, and Nextcloud means it that way: the same
-            # view re-renders the form for `?direct=1`, so /login?direct=1 remains the way in for
-            # the local `admin` account if Authentik is ever down. Little is lost by that - the
-            # OIDC-provisioned accounts have no password to type in the first place (user_oidc is
-            # their backend), so `admin` was already the only account a form could authenticate.
-            hide_login_form = true;
-            # Hour (server-local, i.e. time.timeZone = America/Los_Angeles) at which the daily
-            # background-job cron runs its heavy tasks - picked for low usage.
-            maintenance_window_start = 2;
-            # Lets phone numbers be entered without a country code in profile settings; matches
-            # time.timeZone = America/Los_Angeles.
-            default_phone_region = "US";
-            # Silences the "server identifier isn't configured" admin warning. Only matters when
-            # several PHP servers share one Nextcloud install (e.g. behind a load balancer) and
-            # need to tell each other's log/lock entries apart - harmony is the only PHP server
-            # here, so any value in the allowed 0-1023 range is equally a no-op.
-            serverid = 0;
-            # `mail_smtphost`/`mail_smtpport`/`mail_smtpauth` are left at their module defaults
-            # (127.0.0.1:25, unauthenticated) - that's exactly the local Postfix relay set up
-            # below, which submission on loopback doesn't need SASL for. `mail_from_address` is
-            # config.php's local-part convention (combined with `mail_domain` into a full
-            # address), not a full address itself.
-            mail_from_address = "nextcloud";
-            mail_domain = domain;
-          };
-
-          # The default (8 MB) is sized for a stock install; interned_strings_buffer holds
-          # deduplicated string literals from compiled PHP opcode, and Nextcloud's larger codebase
-          # keeps filling it, so OPcache warns that the buffer is nearly full and can't cache new
-          # strings effectively.
-          phpOptions."opcache.interned_strings_buffer" = "16";
-        };
-
-        # Outbound-only relay so Nextcloud (mail_smtphost = 127.0.0.1 above, a module default) has
-        # somewhere to hand mail off to. Proton doesn't accept direct SMTP delivery from arbitrary
-        # servers, hence relaying through its own submission endpoint with a per-address SMTP
-        # token rather than attempting direct-to-recipient delivery.
-        services.postfix = {
-          enable = true;
-          settings.main = {
-            # Restricts every postfix listener (including `submission`/`smtps`, left disabled
-            # above anyway) to loopback, and restricts relaying to loopback callers - this box
-            # isn't meant to accept mail from the network, only from Nextcloud on the same host.
-            inet_interfaces = "loopback-only";
-            mynetworks = [ "127.0.0.0/8" ];
-            myhostname = "${host.name}.${domain}";
-            relayhost = [ "[smtp.protonmail.ch]:587" ];
-            smtp_sasl_auth_enable = true;
-            smtp_sasl_password_maps = "hash:/var/lib/postfix/conf/sasl_passwd";
-            smtp_sasl_security_options = "noanonymous";
-            smtp_tls_security_level = "encrypt";
-          };
-          # Compiled to /var/lib/postfix/conf/sasl_passwd.db; the plaintext source is the secret
-          # itself (see its declaration above) since its only content is credentials, not a mix of
-          # public config and a secret value to template together.
-          mapFiles."sasl_passwd" = config.age.secrets.nextcloud-postfix-smtp-passwd.path;
         };
 
         # Everything Nextcloud keeps as app-level DB state rather than in config.php, and so has no
@@ -178,21 +121,16 @@ in
         # enumerating in a unit name.
         systemd.services.nextcloud-occ-setup = {
           description = "Apply Nextcloud app-level config that has no NixOS option, via occ";
+          wantedBy = [ "multi-user.target" ];
+
           after = [
             "nextcloud-setup.service"
             "coolwsd.service"
             "nginx.service"
           ];
-          requires = [ "nextcloud-setup.service" ];
-          wantedBy = [ "multi-user.target" ];
-
-          serviceConfig = {
-            Type = "oneshot";
-            User = "nextcloud";
-            LoadCredential = "oidc-client-secret:${config.age.secrets.nextcloud-oidc-client-secret.path}";
-          };
 
           path = [ config.services.nextcloud.occ ];
+          requires = [ "nextcloud-setup.service" ];
 
           script = ''
             set -euo pipefail
@@ -290,6 +228,74 @@ in
             # `--on` when already enforced is a no-op.
             nextcloud-occ twofactorauth:enforce --on
           '';
+
+          serviceConfig = {
+            LoadCredential = "oidc-client-secret:${config.age.secrets.nextcloud-oidc-client-secret.path}";
+            Type = "oneshot";
+            User = "nextcloud";
+          };
+        };
+      };
+
+      secrets = { secrets, ... }: {
+        nextcloud-admin-password.generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -base64 24";
+
+        # `settings.terraform = "variable";` feeds a Terraform `variable` (modules/terranix.nix's
+        # two modes); also read directly below (LoadCredential) to configure user_oidc via occ,
+        # so it's NOT `intermediary` - it has to be materialized as a real host secret too.
+        nextcloud-oidc-client-secret = {
+          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
+          settings.terraform = "variable";
+        };
+
+        nextcloud-postfix-smtp-passwd.generator = {
+          dependencies = { inherit (secrets) nextcloud-postfix-smtp-token; };
+
+          script =
+            {
+              lib,
+              decrypt,
+              deps,
+              ...
+            }:
+            ''
+              printf '[smtp.protonmail.ch]:587 nextcloud@${domain}:%s\n' "$(${decrypt} ${lib.escapeShellArg deps.nextcloud-postfix-smtp-token.file})"
+            '';
+        };
+
+        # The raw SMTP token itself - an external credential from Proton, not something this
+        # repo can generate, so there's no `generator` here. Author it by hand once via `agenix
+        # edit secrets/nextcloud-postfix-smtp-token.age` with just the token (Proton Settings ->
+        # All settings -> IMAP/SMTP -> SMTP tokens - NOT the account password), then `agenix
+        # rekey -a`. `intermediary` because nothing reads this directly - only the generator
+        # below, which folds it into Postfix's actual sasl_passwd map line.
+        nextcloud-postfix-smtp-token = {
+          intermediary = true;
+          rekeyFile = ../../../secrets/nextcloud-postfix-smtp-token.age;
+        };
+      };
+
+      virtual-host = {
+        inherit global;
+        group = "Media";
+        homepage.description = "Files, calendar & office suite";
+        host = host.name;
+        icon = "nextcloud.svg";
+        label = "Nextcloud";
+        name = "nextcloud";
+
+        # Deliberately no `port` — Nextcloud is PHP-FPM, not a plain HTTP service to
+        # proxy_pass to. The quirk emits only forceSSL/enableACME for this vhost, and
+        # Nextcloud's own module below supplies its `locations`/`root`, merging cleanly.
+        #
+        # Requests the matching OAuth2 Provider + Application from Authentik (authentik.nix) - see
+        # virtual-host.nix's `oidc` field for the shape. Per user_oidc's own callback route (and
+        # Authentik's Nextcloud integration guide) - `/index.php/...` only matters for installs
+        # that haven't set `overwriteprotocol`-style pretty URLs, which this one has (see
+        # `settings.overwriteprotocol` below).
+        oidc = {
+          client-secret = "nextcloud-oidc-client-secret";
+          redirect-paths = [ "/apps/user_oidc/code" ];
         };
       };
     };

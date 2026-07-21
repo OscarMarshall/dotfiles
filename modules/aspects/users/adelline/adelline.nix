@@ -1,22 +1,20 @@
 { den, my, ... }: {
   den.aspects.adelline = {
     includes = [
-      den._.primary-user
       (den._.user-shell "fish")
-      my.discord
-      my.chrome
-      my.fish
-      my.ghostty
-      my.steam
-      my.zoom
-      my.zen-browser
       ({ user, ... }: {
         nixos.users.users.${user.userName}.hashedPassword =
           "$y$j9T$PIOU1O0/eDXQdlTWkzuf5.$AhnTDMJLgzM04nt6pzz/ae.3U.3LUWhte6PiBw.Mzb2";
       })
+      den._.primary-user
+      my.chrome
+      my.discord
+      my.fish
+      my.ghostty
+      my.steam
+      my.zen-browser
+      my.zoom
     ];
-
-    user.description = "Adelline Marshall";
 
     homeManager = { pkgs, ... }: {
       dconf.settings = {
@@ -37,5 +35,7 @@
         git.enable = true;
       };
     };
+
+    user.description = "Adelline Marshall";
   };
 }

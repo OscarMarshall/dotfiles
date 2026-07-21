@@ -77,10 +77,7 @@
       url = "github:nix-community/nix-index-database";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nix-logseq-git-flake = {
-      url = "github:Bad3r/nix-logseq-git-flake";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    nix-logseq-git-flake.url = "github:Bad3r/nix-logseq-git-flake";
     nix-minecraft = {
       url = "github:Infinidoge/nix-minecraft";
       inputs = {
@@ -94,6 +91,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    pedantix = {
+      url = "github:Swarsel/pedantix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     ragenix = {
       url = "github:yaxitech/ragenix";
       inputs = {

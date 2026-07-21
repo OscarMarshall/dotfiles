@@ -1,8 +1,43 @@
 {
   my.unpackerr = {
+    nixos =
+      {
+        config,
+        lib,
+        pkgs,
+        ...
+      }:
+      {
+        systemd.services.unpackerr = {
+          description = "Unpackerr daemon";
+          wantedBy = [ "multi-user.target" ];
+          after = [ "network-online.target" ];
+
+          serviceConfig = {
+            Environment = [
+              "UN_SONARR_0_URL=https://sonarr.harmony.silverlight-nex.us"
+              "UN_SONARR_0_PATHS_0=/metalminds/torrents/downloads"
+              "UN_RADARR_0_URL=https://radarr.harmony.silverlight-nex.us"
+              "UN_RADARR_0_PATHS_0=/metalminds/torrents/downloads"
+            ];
+
+            EnvironmentFile = config.age.secrets."unpackerr.env".path;
+            ExecStart = lib.getExe pkgs.unpackerr;
+            Group = "qbittorrent";
+            Restart = "always";
+            RestartSec = "5s";
+            Type = "simple";
+            User = "qbittorrent";
+          };
+
+          wants = [ "network-online.target" ];
+        };
+      };
+
     secrets = { secrets, ... }: {
       "unpackerr.env".generator = {
         dependencies = { inherit (secrets) radarr-api-key sonarr-api-key; };
+
         script =
           {
             lib,
@@ -16,36 +51,5 @@
           '';
       };
     };
-
-    nixos =
-      {
-        config,
-        lib,
-        pkgs,
-        ...
-      }:
-      {
-        systemd.services.unpackerr = {
-          description = "Unpackerr daemon";
-          after = [ "network-online.target" ];
-          wants = [ "network-online.target" ];
-          wantedBy = [ "multi-user.target" ];
-          serviceConfig = {
-            Type = "simple";
-            User = "qbittorrent";
-            Group = "qbittorrent";
-            EnvironmentFile = config.age.secrets."unpackerr.env".path;
-            Environment = [
-              "UN_SONARR_0_URL=https://sonarr.harmony.silverlight-nex.us"
-              "UN_SONARR_0_PATHS_0=/metalminds/torrents/downloads"
-              "UN_RADARR_0_URL=https://radarr.harmony.silverlight-nex.us"
-              "UN_RADARR_0_PATHS_0=/metalminds/torrents/downloads"
-            ];
-            ExecStart = lib.getExe pkgs.unpackerr;
-            Restart = "always";
-            RestartSec = "5s";
-          };
-        };
-      };
   };
 }

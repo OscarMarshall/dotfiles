@@ -56,26 +56,19 @@
 # signature below.
 { config, ... }: {
   my.dns = { host, ... }: {
-    secrets = {
-      cloudflare-api-token = {
-        rekeyFile = ../../../secrets/cloudflare-api-token.age;
-        intermediary = true;
-        settings.terraform = true;
-      };
+    secrets.cloudflare-api-token = {
+      intermediary = true;
+      rekeyFile = ../../../secrets/cloudflare-api-token.age;
+      settings.terraform = true;
     };
 
     terranix =
-      { virtual-host, lib, ... }:
+      { lib, virtual-host, ... }:
       let
         domain = "silverlight-nex.us";
         globalHosts = lib.filter (vh: vh.global or false) virtual-host;
       in
       lib.optionalAttrs (host ? dns-record) {
-        terraform.required_providers.cloudflare = {
-          source = "cloudflare/cloudflare";
-          version = "~> 5";
-        };
-
         # Credentials aren't set here - the provider reads api_token from CLOUDFLARE_API_TOKEN, so
         # nothing sensitive lands in this config or in Terraform state.
         provider.cloudflare = { };
@@ -86,12 +79,11 @@
         resource.cloudflare_dns_record =
           lib.listToAttrs (
             map (vh: {
-              name = vh.name;
+              inherit (vh) name;
+
               value = {
-                zone_id = host.cloudflare-zone-id;
+                inherit (host.dns-record) content type;
                 name = "${vh.name}.${domain}";
-                inherit (host.dns-record) type content;
-                ttl = 1800;
                 # DNS-only (not proxied through Cloudflare's edge). This one-level name is
                 # actually covered by Cloudflare's free Universal SSL cert, but the per-host
                 # wildcard below (`*.${host.name}.${domain}`) is namespaced two levels deep,
@@ -102,28 +94,106 @@
                 # port-forward rules no longer restrict to Cloudflare's IPs) and nginx already
                 # terminates with its own per-host ACME cert.
                 proxied = false;
+                ttl = 1800;
+                zone_id = host.cloudflare-zone-id;
               };
             }) globalHosts
           )
           // {
-            "${host.name}-wildcard" = {
-              zone_id = host.cloudflare-zone-id;
-              name = "*.${host.name}.${domain}";
-              inherit (host.dns-record) type content;
-              ttl = 1800;
-              proxied = false;
-            };
-
             # The host's own root/apex hostname - NOT covered by the wildcard above (a wildcard
             # only matches names with something before it, never its own apex), and homepage.nix's
             # `url = "${host.name}.${domain}"` deliberately doesn't go through the `global`/
             # `globalHosts` path above either (that would produce `homepage.${domain}`, not this).
             "${host.name}-root" = {
-              zone_id = host.cloudflare-zone-id;
+              inherit (host.dns-record) content type;
               name = "${host.name}.${domain}";
-              inherit (host.dns-record) type content;
-              ttl = 1800;
               proxied = false;
+              ttl = 1800;
+              zone_id = host.cloudflare-zone-id;
+            };
+
+            "${host.name}-wildcard" = {
+              inherit (host.dns-record) content type;
+              name = "*.${host.name}.${domain}";
+              proxied = false;
+              ttl = 1800;
+              zone_id = host.cloudflare-zone-id;
+            };
+
+            # DKIM signing keys - lets recipients verify mail Proton sends on ${domain}'s behalf
+            # actually came from Proton. Three, matching Proton's own custom-domain setup (it
+            # rotates through them), all pointing at the same per-account target Proton generated.
+            proton-dkim-1 = {
+              content = "protonmail.domainkey.de6twmuoanri7twyqgfpqae6nzexlkrk2374nj7blkbxfxlmtyjqq.domains.proton.ch";
+              name = "protonmail._domainkey.${domain}";
+              proxied = false;
+              ttl = 1800;
+              type = "CNAME";
+              zone_id = host.cloudflare-zone-id;
+            };
+
+            proton-dkim-2 = {
+              content = "protonmail2.domainkey.de6twmuoanri7twyqgfpqae6nzexlkrk2374nj7blkbxfxlmtyjqq.domains.proton.ch";
+              name = "protonmail2._domainkey.${domain}";
+              proxied = false;
+              ttl = 1800;
+              type = "CNAME";
+              zone_id = host.cloudflare-zone-id;
+            };
+
+            proton-dkim-3 = {
+              content = "protonmail3.domainkey.de6twmuoanri7twyqgfpqae6nzexlkrk2374nj7blkbxfxlmtyjqq.domains.proton.ch";
+              name = "protonmail3._domainkey.${domain}";
+              proxied = false;
+              ttl = 1800;
+              type = "CNAME";
+              zone_id = host.cloudflare-zone-id;
+            };
+
+            # `p=quarantine` (not `p=reject`) - recipients failing SPF/DKIM land in spam rather than
+            # being dropped outright, since this is a first DMARC policy for the domain and there's
+            # no reporting address configured yet to catch legitimate mail this misclassifies.
+            proton-dmarc = {
+              content = "v=DMARC1; p=quarantine";
+              name = "_dmarc.${domain}";
+              proxied = false;
+              ttl = 1800;
+              type = "TXT";
+              zone_id = host.cloudflare-zone-id;
+            };
+
+            # Lets Proton actually receive mail for ${domain} (nextcloud.nix's Postfix relay only
+            # covers sending) - two MX records, not one, since Proton's own setup instructions call
+            # for both a primary and a secondary (lower-priority) mail exchanger.
+            proton-mx-primary = {
+              content = "mail.protonmail.ch";
+              name = domain;
+              priority = 10;
+              proxied = false;
+              ttl = 1800;
+              type = "MX";
+              zone_id = host.cloudflare-zone-id;
+            };
+
+            proton-mx-secondary = {
+              content = "mailsec.protonmail.ch";
+              name = domain;
+              priority = 20;
+              proxied = false;
+              ttl = 1800;
+              type = "MX";
+              zone_id = host.cloudflare-zone-id;
+            };
+
+            # Authorizes Proton's servers as legitimate senders for ${domain} - without this,
+            # recipients' own SPF checks fail every message nextcloud.nix's Postfix relay sends.
+            proton-spf = {
+              content = "v=spf1 include:_spf.protonmail.ch ~all";
+              name = domain;
+              proxied = false;
+              ttl = 1800;
+              type = "TXT";
+              zone_id = host.cloudflare-zone-id;
             };
 
             # Proves domain ownership to Proton so nextcloud@${domain} can be verified as a custom
@@ -132,93 +202,32 @@
             # above - a one-off record with nothing to derive it from. TXT can't be proxied
             # regardless of the flag.
             proton-verification = {
-              zone_id = host.cloudflare-zone-id;
-              type = "TXT";
-              name = domain;
               content = "protonmail-verification=c79b190a4d3afe77f16020917ec9e11f1fc5ea4c";
-              ttl = 1800;
-              proxied = false;
-            };
-
-            # Lets Proton actually receive mail for ${domain} (nextcloud.nix's Postfix relay only
-            # covers sending) - two MX records, not one, since Proton's own setup instructions call
-            # for both a primary and a secondary (lower-priority) mail exchanger.
-            proton-mx-primary = {
-              zone_id = host.cloudflare-zone-id;
-              type = "MX";
               name = domain;
-              content = "mail.protonmail.ch";
-              priority = 10;
-              ttl = 1800;
               proxied = false;
-            };
-            proton-mx-secondary = {
-              zone_id = host.cloudflare-zone-id;
-              type = "MX";
-              name = domain;
-              content = "mailsec.protonmail.ch";
-              priority = 20;
               ttl = 1800;
-              proxied = false;
-            };
-
-            # Authorizes Proton's servers as legitimate senders for ${domain} - without this,
-            # recipients' own SPF checks fail every message nextcloud.nix's Postfix relay sends.
-            proton-spf = {
-              zone_id = host.cloudflare-zone-id;
               type = "TXT";
-              name = domain;
-              content = "v=spf1 include:_spf.protonmail.ch ~all";
-              ttl = 1800;
-              proxied = false;
-            };
-
-            # `p=quarantine` (not `p=reject`) - recipients failing SPF/DKIM land in spam rather than
-            # being dropped outright, since this is a first DMARC policy for the domain and there's
-            # no reporting address configured yet to catch legitimate mail this misclassifies.
-            proton-dmarc = {
               zone_id = host.cloudflare-zone-id;
-              type = "TXT";
-              name = "_dmarc.${domain}";
-              content = "v=DMARC1; p=quarantine";
-              ttl = 1800;
-              proxied = false;
-            };
-
-            # DKIM signing keys - lets recipients verify mail Proton sends on ${domain}'s behalf
-            # actually came from Proton. Three, matching Proton's own custom-domain setup (it
-            # rotates through them), all pointing at the same per-account target Proton generated.
-            proton-dkim-1 = {
-              zone_id = host.cloudflare-zone-id;
-              type = "CNAME";
-              name = "protonmail._domainkey.${domain}";
-              content = "protonmail.domainkey.de6twmuoanri7twyqgfpqae6nzexlkrk2374nj7blkbxfxlmtyjqq.domains.proton.ch";
-              ttl = 1800;
-              proxied = false;
-            };
-            proton-dkim-2 = {
-              zone_id = host.cloudflare-zone-id;
-              type = "CNAME";
-              name = "protonmail2._domainkey.${domain}";
-              content = "protonmail2.domainkey.de6twmuoanri7twyqgfpqae6nzexlkrk2374nj7blkbxfxlmtyjqq.domains.proton.ch";
-              ttl = 1800;
-              proxied = false;
-            };
-            proton-dkim-3 = {
-              zone_id = host.cloudflare-zone-id;
-              type = "CNAME";
-              name = "protonmail3._domainkey.${domain}";
-              content = "protonmail3.domainkey.de6twmuoanri7twyqgfpqae6nzexlkrk2374nj7blkbxfxlmtyjqq.domains.proton.ch";
-              ttl = 1800;
-              proxied = false;
             };
           };
+
+        terraform.required_providers.cloudflare = {
+          source = "cloudflare/cloudflare";
+          version = "~> 5";
+        };
       };
   };
 
   perSystem =
-    { pkgs, lib, ... }:
+    { lib, pkgs, ... }:
     let
+      allEntries = lib.concatLists (
+        lib.mapAttrsToList (host: hostnames: map (hostname: { inherit host hostname; }) hostnames) hostnamesByHost
+      );
+      # Group by hostname; anything claimed by more than one DISTINCT host is a collision.
+      collisions = lib.filterAttrs (_: entries: lib.length (lib.unique (map (e: e.host) entries)) > 1) (
+        lib.groupBy (e: e.hostname) allEntries
+      );
       # host -> every hostname its nginx vhosts actually claim: both `serverAliases` AND each
       # vhost's own PRIMARY name (the attribute key). The primary name matters too, not just
       # aliases: a service's `url` override can already equal the canonical global name (e.g.
@@ -234,15 +243,6 @@
           lib.mapAttrsToList (name: vh: [ name ] ++ (vh.serverAliases or [ ])) (hostCfg.config.services.nginx.virtualHosts or { })
         )
       ) config.flake.nixosConfigurations;
-
-      allEntries = lib.concatLists (
-        lib.mapAttrsToList (host: hostnames: map (hostname: { inherit host hostname; }) hostnames) hostnamesByHost
-      );
-
-      # Group by hostname; anything claimed by more than one DISTINCT host is a collision.
-      collisions = lib.filterAttrs (_: entries: lib.length (lib.unique (map (e: e.host) entries)) > 1) (
-        lib.groupBy (e: e.hostname) allEntries
-      );
     in
     {
       checks.dns-global-uniqueness =

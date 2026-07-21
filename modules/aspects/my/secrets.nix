@@ -1,17 +1,23 @@
-{ inputs, lib, ... }:
+{ lib, inputs, ... }:
 let
   rekey = name: pkgs: {
-    masterIdentities = [ ../../../secrets/yubikey-identity.pub ];
     agePlugins = [ pkgs.age-plugin-yubikey ];
-    storageMode = "local";
-    localStorageDir = ../../../. + "/secrets/rekeyed/${name}";
     generatedSecretsDir = ../../../secrets/generated;
+    localStorageDir = ../../../. + "/secrets/rekeyed/${name}";
+    masterIdentities = [ ../../../secrets/yubikey-identity.pub ];
+    storageMode = "local";
   };
 in
 {
   flake-file.inputs = {
+    agenix-rekey = {
+      url = "github:oddlama/agenix-rekey";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     ragenix = {
       url = "github:yaxitech/ragenix";
+
       inputs = {
         agenix.inputs = {
           darwin.follows = "darwin";
@@ -19,13 +25,9 @@ in
           nixpkgs.follows = "nixpkgs";
           systems.follows = "systems";
         };
+
         nixpkgs.follows = "nixpkgs";
       };
-    };
-
-    agenix-rekey = {
-      url = "github:oddlama/agenix-rekey";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
@@ -34,8 +36,8 @@ in
     # this to avoid applying darwin/nixos age.rekey twice — once at host level
     # and again at the user level, which would cause a duplicate-definition error.
     {
-      host ? null,
       home ? null,
+      host ? null,
       user ? null,
       ...
     }:
@@ -48,8 +50,6 @@ in
           home.hostName or home.name
         else
           null;
-      # Only set OS-level rekey from the host entity itself, not from user entities.
-      isHostEntity = user == null && host != null;
       # A user embedded under a host (e.g. oscar's home-manager profile on a host) is a separate
       # agenix-rekey node from that host's own OS-level node. `agenix rekey`'s local storage mode deletes
       # any file in a node's `localStorageDir` that isn't one of that node's own secrets, to clean up
@@ -58,6 +58,8 @@ in
       # secrets as "orphans". Giving the embedded user a separate sibling directory keeps each node's
       # cleanup pass scoped to only its own files.
       homeManagerEntityName = if host != null && user != null then "${host.name}-home-${user.userName}" else entityName;
+      # Only set OS-level rekey from the host entity itself, not from user entities.
+      isHostEntity = user == null && host != null;
     in
     {
       homeManager =
