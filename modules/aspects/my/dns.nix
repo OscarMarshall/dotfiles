@@ -56,12 +56,10 @@
 # signature below.
 { config, ... }: {
   my.dns = { host, ... }: {
-    secrets = {
-      cloudflare-api-token = {
-        intermediary = true;
-        rekeyFile = ../../../secrets/cloudflare-api-token.age;
-        settings.terraform = true;
-      };
+    secrets.cloudflare-api-token = {
+      intermediary = true;
+      rekeyFile = ../../../secrets/cloudflare-api-token.age;
+      settings.terraform = true;
     };
 
     terranix =

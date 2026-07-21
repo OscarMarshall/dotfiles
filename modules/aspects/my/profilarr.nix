@@ -31,11 +31,7 @@
       virtual-host = {
         inherit global port;
         group = "Arr Stack";
-
-        homepage = {
-          description = "Radarr/Sonarr custom format manager";
-        };
-
+        homepage.description = "Radarr/Sonarr custom format manager";
         host = host.name;
         icon = "https://raw.githubusercontent.com/Dictionarry-Hub/profilarr/develop/src/lib/client/assets/logo-512.png";
         label = "Profilarr";

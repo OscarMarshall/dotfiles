@@ -188,21 +188,19 @@
                       proxyPass = "${authentikOutpost}/outpost.goauthentik.io";
                     };
 
-                    "@goauthentik_proxy_signin" = {
-                      extraConfig = ''
-                        internal;
-                        add_header Set-Cookie $auth_cookie;
-                        ${securityHeaders}
-                        # Authentik's own forward-auth (single application) docs redirect back to
-                        # the CURRENT app's own domain, not Authentik's - every protected vhost
-                        # already has its own "/outpost.goauthentik.io" location (below) proxying
-                        # to the same embedded outpost, so $http_host lands back on a domain the
-                        # outpost can actually match to this provider. Redirecting to Authentik's
-                        # own domain instead landed on "Not Found", since that domain has no
-                        # per-provider Host-header context for the outpost to key off of.
-                        return 302 "https://$http_host/outpost.goauthentik.io/start?rd=$scheme://$http_host$request_uri";
-                      '';
-                    };
+                    "@goauthentik_proxy_signin".extraConfig = ''
+                      internal;
+                      add_header Set-Cookie $auth_cookie;
+                      ${securityHeaders}
+                      # Authentik's own forward-auth (single application) docs redirect back to
+                      # the CURRENT app's own domain, not Authentik's - every protected vhost
+                      # already has its own "/outpost.goauthentik.io" location (below) proxying
+                      # to the same embedded outpost, so $http_host lands back on a domain the
+                      # outpost can actually match to this provider. Redirecting to Authentik's
+                      # own domain instead landed on "Not Found", since that domain has no
+                      # per-provider Host-header context for the outpost to key off of.
+                      return 302 "https://$http_host/outpost.goauthentik.io/start?rd=$scheme://$http_host$request_uri";
+                    '';
                   };
                 }
               )

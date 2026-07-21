@@ -44,6 +44,8 @@
           "package"
         ];
 
+        flatten = true;
+
         last = [
           "meta"
           "provides"

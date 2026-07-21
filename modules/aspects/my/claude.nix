@@ -19,15 +19,13 @@
     darwin.homebrew.casks = [ "claude" ];
 
     homeManager = { config, pkgs, ... }: {
-      age = {
-        secrets = {
-          # Declared here (not in a top-level secrets block) so it lands in the
-          # home-manager config's age.secrets, which is what config.age.secrets
-          # refers to inside homeManager modules. The secrets block in user-level
-          # aspects isn't forwarded to age.secrets per defaults.nix.
-          github-mcp-server-github-access-token.rekeyFile = ../../../secrets/github-mcp-server-github-access-token.age;
-          netdata-cloud-mcp-token.rekeyFile = ../../../secrets/netdata-cloud-mcp-token.age;
-        };
+      age.secrets = {
+        # Declared here (not in a top-level secrets block) so it lands in the
+        # home-manager config's age.secrets, which is what config.age.secrets
+        # refers to inside homeManager modules. The secrets block in user-level
+        # aspects isn't forwarded to age.secrets per defaults.nix.
+        github-mcp-server-github-access-token.rekeyFile = ../../../secrets/github-mcp-server-github-access-token.age;
+        netdata-cloud-mcp-token.rekeyFile = ../../../secrets/netdata-cloud-mcp-token.age;
       };
 
       home.packages = with pkgs; [
@@ -80,12 +78,10 @@
           enableWorkflows = true;
           inputNeededNotifEnabled = true;
 
-          permissions = {
-            allow = [
-              "Bash(git:*)"
-              "Bash(nix:*)"
-            ];
-          };
+          permissions.allow = [
+            "Bash(git:*)"
+            "Bash(nix:*)"
+          ];
         };
       };
     };

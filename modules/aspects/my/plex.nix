@@ -6,11 +6,9 @@
     { host, ... }: {
       includes = [ (den._.unfree [ "plexmediaserver" ]) ];
 
-      nixos = {
-        services.plex = {
-          enable = true;
-          openFirewall = true;
-        };
+      nixos.services.plex = {
+        enable = true;
+        openFirewall = true;
       };
 
       port-forward = {
@@ -21,11 +19,7 @@
       virtual-host = {
         inherit global;
         group = "Media";
-
-        homepage = {
-          description = "Media server";
-        };
-
+        homepage.description = "Media server";
         host = host.name;
         icon = "plex.svg";
         label = "Plex";
