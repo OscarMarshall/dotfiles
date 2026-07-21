@@ -119,6 +119,96 @@
               ttl = 1800;
               zone_id = host.cloudflare-zone-id;
             };
+
+            # DKIM signing keys - lets recipients verify mail Proton sends on ${domain}'s behalf
+            # actually came from Proton. Three, matching Proton's own custom-domain setup (it
+            # rotates through them), all pointing at the same per-account target Proton generated.
+            proton-dkim-1 = {
+              content = "protonmail.domainkey.de6twmuoanri7twyqgfpqae6nzexlkrk2374nj7blkbxfxlmtyjqq.domains.proton.ch";
+              name = "protonmail._domainkey.${domain}";
+              proxied = false;
+              ttl = 1800;
+              type = "CNAME";
+              zone_id = host.cloudflare-zone-id;
+            };
+
+            proton-dkim-2 = {
+              content = "protonmail2.domainkey.de6twmuoanri7twyqgfpqae6nzexlkrk2374nj7blkbxfxlmtyjqq.domains.proton.ch";
+              name = "protonmail2._domainkey.${domain}";
+              proxied = false;
+              ttl = 1800;
+              type = "CNAME";
+              zone_id = host.cloudflare-zone-id;
+            };
+
+            proton-dkim-3 = {
+              content = "protonmail3.domainkey.de6twmuoanri7twyqgfpqae6nzexlkrk2374nj7blkbxfxlmtyjqq.domains.proton.ch";
+              name = "protonmail3._domainkey.${domain}";
+              proxied = false;
+              ttl = 1800;
+              type = "CNAME";
+              zone_id = host.cloudflare-zone-id;
+            };
+
+            # `p=quarantine` (not `p=reject`) - recipients failing SPF/DKIM land in spam rather than
+            # being dropped outright, since this is a first DMARC policy for the domain and there's
+            # no reporting address configured yet to catch legitimate mail this misclassifies.
+            proton-dmarc = {
+              content = "v=DMARC1; p=quarantine";
+              name = "_dmarc.${domain}";
+              proxied = false;
+              ttl = 1800;
+              type = "TXT";
+              zone_id = host.cloudflare-zone-id;
+            };
+
+            # Lets Proton actually receive mail for ${domain} (nextcloud.nix's Postfix relay only
+            # covers sending) - two MX records, not one, since Proton's own setup instructions call
+            # for both a primary and a secondary (lower-priority) mail exchanger.
+            proton-mx-primary = {
+              content = "mail.protonmail.ch";
+              name = domain;
+              priority = 10;
+              proxied = false;
+              ttl = 1800;
+              type = "MX";
+              zone_id = host.cloudflare-zone-id;
+            };
+
+            proton-mx-secondary = {
+              content = "mailsec.protonmail.ch";
+              name = domain;
+              priority = 20;
+              proxied = false;
+              ttl = 1800;
+              type = "MX";
+              zone_id = host.cloudflare-zone-id;
+            };
+
+            # Authorizes Proton's servers as legitimate senders for ${domain} - without this,
+            # recipients' own SPF checks fail every message nextcloud.nix's Postfix relay sends.
+            proton-spf = {
+              content = "v=spf1 include:_spf.protonmail.ch ~all";
+              name = domain;
+              proxied = false;
+              ttl = 1800;
+              type = "TXT";
+              zone_id = host.cloudflare-zone-id;
+            };
+
+            # Proves domain ownership to Proton so nextcloud@${domain} can be verified as a custom
+            # domain address there (nextcloud.nix's Postfix relay uses it). Lives at the zone apex,
+            # unrelated to any single service, so it doesn't fit the per-host/per-service loops
+            # above - a one-off record with nothing to derive it from. TXT can't be proxied
+            # regardless of the flag.
+            proton-verification = {
+              content = "protonmail-verification=c79b190a4d3afe77f16020917ec9e11f1fc5ea4c";
+              name = domain;
+              proxied = false;
+              ttl = 1800;
+              type = "TXT";
+              zone_id = host.cloudflare-zone-id;
+            };
           };
 
         terraform.required_providers.cloudflare = {
