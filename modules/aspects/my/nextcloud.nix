@@ -41,14 +41,37 @@ in
         };
       };
 
-      secrets = {
+      secrets = { secrets, ... }: {
         nextcloud-admin-password.generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -base64 24";
         # `settings.terraform = "variable";` feeds a Terraform `variable` (modules/terranix.nix's
-        # two modes); also read directly below (LoadCredential) to configure user_oidc via occ, so
-        # it's NOT `intermediary` - it has to be materialized as a real host secret too.
+        # two modes); also read directly below (LoadCredential) to configure user_oidc via occ,
+        # so it's NOT `intermediary` - it has to be materialized as a real host secret too.
         nextcloud-oidc-client-secret = {
           generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
           settings.terraform = "variable";
+        };
+        # The raw SMTP token itself - an external credential from Proton, not something this
+        # repo can generate, so there's no `generator` here. Author it by hand once via `agenix
+        # edit secrets/nextcloud-postfix-smtp-token.age` with just the token (Proton Settings ->
+        # All settings -> IMAP/SMTP -> SMTP tokens - NOT the account password), then `agenix
+        # rekey -a`. `intermediary` because nothing reads this directly - only the generator
+        # below, which folds it into Postfix's actual sasl_passwd map line.
+        nextcloud-postfix-smtp-token = {
+          rekeyFile = ../../../secrets/nextcloud-postfix-smtp-token.age;
+          intermediary = true;
+        };
+        nextcloud-postfix-smtp-passwd.generator = {
+          dependencies = { inherit (secrets) nextcloud-postfix-smtp-token; };
+          script =
+            {
+              lib,
+              decrypt,
+              deps,
+              ...
+            }:
+            ''
+              printf '[smtp.protonmail.ch]:587 nextcloud@${domain}:%s\n' "$(${decrypt} ${lib.escapeShellArg deps.nextcloud-postfix-smtp-token.file})"
+            '';
         };
       };
 
@@ -96,7 +119,56 @@ in
             # OIDC-provisioned accounts have no password to type in the first place (user_oidc is
             # their backend), so `admin` was already the only account a form could authenticate.
             hide_login_form = true;
+            # Hour (server-local, i.e. time.timeZone = America/Los_Angeles) at which the daily
+            # background-job cron runs its heavy tasks - picked for low usage.
+            maintenance_window_start = 2;
+            # Lets phone numbers be entered without a country code in profile settings; matches
+            # time.timeZone = America/Los_Angeles.
+            default_phone_region = "US";
+            # Silences the "server identifier isn't configured" admin warning. Only matters when
+            # several PHP servers share one Nextcloud install (e.g. behind a load balancer) and
+            # need to tell each other's log/lock entries apart - harmony is the only PHP server
+            # here, so any value in the allowed 0-1023 range is equally a no-op.
+            serverid = 0;
+            # `mail_smtphost`/`mail_smtpport`/`mail_smtpauth` are left at their module defaults
+            # (127.0.0.1:25, unauthenticated) - that's exactly the local Postfix relay set up
+            # below, which submission on loopback doesn't need SASL for. `mail_from_address` is
+            # config.php's local-part convention (combined with `mail_domain` into a full
+            # address), not a full address itself.
+            mail_from_address = "nextcloud";
+            mail_domain = domain;
           };
+
+          # The default (8 MB) is sized for a stock install; interned_strings_buffer holds
+          # deduplicated string literals from compiled PHP opcode, and Nextcloud's larger codebase
+          # keeps filling it, so OPcache warns that the buffer is nearly full and can't cache new
+          # strings effectively.
+          phpOptions."opcache.interned_strings_buffer" = "16";
+        };
+
+        # Outbound-only relay so Nextcloud (mail_smtphost = 127.0.0.1 above, a module default) has
+        # somewhere to hand mail off to. Proton doesn't accept direct SMTP delivery from arbitrary
+        # servers, hence relaying through its own submission endpoint with a per-address SMTP
+        # token rather than attempting direct-to-recipient delivery.
+        services.postfix = {
+          enable = true;
+          settings.main = {
+            # Restricts every postfix listener (including `submission`/`smtps`, left disabled
+            # above anyway) to loopback, and restricts relaying to loopback callers - this box
+            # isn't meant to accept mail from the network, only from Nextcloud on the same host.
+            inet_interfaces = "loopback-only";
+            mynetworks = [ "127.0.0.0/8" ];
+            myhostname = "${host.name}.${domain}";
+            relayhost = [ "[smtp.protonmail.ch]:587" ];
+            smtp_sasl_auth_enable = true;
+            smtp_sasl_password_maps = "hash:/var/lib/postfix/conf/sasl_passwd";
+            smtp_sasl_security_options = "noanonymous";
+            smtp_tls_security_level = "encrypt";
+          };
+          # Compiled to /var/lib/postfix/conf/sasl_passwd.db; the plaintext source is the secret
+          # itself (see its declaration above) since its only content is credentials, not a mix of
+          # public config and a secret value to template together.
+          mapFiles."sasl_passwd" = config.age.secrets.nextcloud-postfix-smtp-passwd.path;
         };
 
         # Everything Nextcloud keeps as app-level DB state rather than in config.php, and so has no
@@ -202,6 +274,21 @@ in
             # short-circuits with "No such app enabled" and exits 0 rather than failing this unit's
             # `set -e` on every subsequent boot.
             nextcloud-occ app:disable photos
+
+            # Every OIDC-provisioned account has no local password (user_oidc is their backend),
+            # so Nextcloud's own password-complexity rules have nothing to enforce against there -
+            # only the local `admin` break-glass account has a password, and Authentik doesn't
+            # touch it. Shipped app, so - as with `photos` above - disabling is the only lever, and
+            # it's the same safe-to-re-run no-op once already disabled.
+            nextcloud-occ app:disable password_policy
+
+            # OIDC-provisioned accounts authenticate entirely through Authentik and never see
+            # Nextcloud's native 2FA prompt, so this is really about the local `admin` break-glass
+            # account: its login form is still reachable (`?direct=1`, see `hide_login_form`
+            # above), it has no password_policy backing it anymore (disabled above), and it's the
+            # one account Authentik being down wouldn't protect. Idempotent - re-running with
+            # `--on` when already enforced is a no-op.
+            nextcloud-occ twofactorauth:enforce --on
           '';
         };
       };
