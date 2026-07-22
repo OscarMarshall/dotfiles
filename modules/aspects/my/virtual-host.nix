@@ -19,6 +19,11 @@
 #                         Authentik's own nginx integration, which supply their own `locations`).
 #   websockets          - (optional, bool) proxy WebSocket upgrades.
 #   protected           - (optional, bool) gate behind Authentik forward-auth.
+#   basicAuthSecret     - (optional) names an age secret holding an htpasswd-format (APR1-MD5)
+#                         credentials file - gates the vhost on HTTP Basic Auth instead of
+#                         Authentik, for backends called by scripts/machines rather than browsers
+#                         (no session to carry a forward-auth cookie). Mutually exclusive with
+#                         `protected` in practice, like `oidc` above.
 #   preserveCookieFlags - (optional, bool) skip nginx's blanket cookie-security rewrite, for
 #                         backends that set their own correct Set-Cookie flags.
 #   global              - (optional, bool) also serve at the bare `<name>.<domain>` alias (an

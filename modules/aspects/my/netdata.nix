@@ -8,7 +8,58 @@ in
     }:
     { host, ... }: {
       # withCloudUi's dashboard files (below) are under the non-free Netdata Cloud UI License.
-      includes = [ (den._.unfree [ "netdata" ]) ];
+      #
+      # The second entry contributes a SEPARATE vhost (netdata-api.<host>.<domain>) dedicated to
+      # programmatic access to Netdata's REST API. It deliberately doesn't touch the main
+      # `virtual-host` below: that one stays Authentik-protected end to end, since the dashboard
+      # SPA calls the exact same /api/v1 and /api/v2 endpoints to render itself, so gating them
+      # differently there would break chart/alarm loading for anyone logged into the dashboard.
+      # This second vhost proxies to the same backend but gates on HTTP Basic Auth instead -
+      # Authentik's forward-auth is built around browser session cookies, not a static API key, so
+      # it isn't a good fit for machine-to-machine calls.
+      includes = [
+        (den._.unfree [ "netdata" ])
+        {
+          secrets = { secrets, ... }: {
+            # The raw token - never read by nginx directly, only used to derive the htpasswd file
+            # below. Kept as its own secret (rather than inlined into that generator) so its
+            # plaintext stays retrievable (`agenix decrypt secrets/generated/netdata-api-key.age`)
+            # for actually using the API, matching Sonarr/Radarr/Prowlarr's own api-key secrets.
+            netdata-api-key = {
+              generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
+              intermediary = true;
+            };
+
+            "netdata-api.htpasswd".generator = {
+              dependencies = { inherit (secrets) netdata-api-key; };
+
+              # APR1-MD5 (`openssl passwd -apr1`), not bcrypt: nginx's auth_basic only verifies
+              # crypt/APR1-MD5/SHA hashes, not bcrypt, so `htpasswd -B` would produce a hash nginx
+              # can never match.
+              script =
+                {
+                  lib,
+                  pkgs,
+                  decrypt,
+                  deps,
+                  ...
+                }:
+                ''
+                  printf 'netdata:%s\n' "$(
+                    ${pkgs.openssl}/bin/openssl passwd -apr1 "$(${decrypt} ${lib.escapeShellArg deps.netdata-api-key.file})"
+                  )"
+                '';
+            };
+          };
+
+          virtual-host = {
+            inherit port;
+            basicAuthSecret = "netdata-api.htpasswd";
+            host = host.name;
+            name = "netdata-api";
+          };
+        }
+      ];
 
       nixos = { config, pkgs, ... }: {
         # Netdata monitoring (metrics, dashboards, and Discord health alerts)

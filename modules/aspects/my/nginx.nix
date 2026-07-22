@@ -2,6 +2,7 @@
   my.nginx = {
     nixos =
       {
+        config,
         lib,
         host,
         virtual-host,
@@ -113,26 +114,36 @@
                 // lib.optionalAttrs (vh ? port) {
                   locations = {
                     "/" = {
-                      extraConfig = lib.optionalString (vh.protected or false) ''
-                        auth_request /outpost.goauthentik.io/auth/nginx;
-                        error_page 401 = @goauthentik_proxy_signin;
+                      extraConfig =
+                        lib.optionalString (vh.protected or false) ''
+                          auth_request /outpost.goauthentik.io/auth/nginx;
+                          error_page 401 = @goauthentik_proxy_signin;
 
-                        auth_request_set $auth_cookie $upstream_http_set_cookie;
-                        add_header Set-Cookie $auth_cookie;
-                        ${securityHeaders}
+                          auth_request_set $auth_cookie $upstream_http_set_cookie;
+                          add_header Set-Cookie $auth_cookie;
+                          ${securityHeaders}
 
-                        auth_request_set $authentik_username $upstream_http_x_authentik_username;
-                        auth_request_set $authentik_groups $upstream_http_x_authentik_groups;
-                        auth_request_set $authentik_email $upstream_http_x_authentik_email;
-                        auth_request_set $authentik_name $upstream_http_x_authentik_name;
-                        auth_request_set $authentik_uid $upstream_http_x_authentik_uid;
+                          auth_request_set $authentik_username $upstream_http_x_authentik_username;
+                          auth_request_set $authentik_groups $upstream_http_x_authentik_groups;
+                          auth_request_set $authentik_email $upstream_http_x_authentik_email;
+                          auth_request_set $authentik_name $upstream_http_x_authentik_name;
+                          auth_request_set $authentik_uid $upstream_http_x_authentik_uid;
 
-                        proxy_set_header X-authentik-username $authentik_username;
-                        proxy_set_header X-authentik-groups $authentik_groups;
-                        proxy_set_header X-authentik-email $authentik_email;
-                        proxy_set_header X-authentik-name $authentik_name;
-                        proxy_set_header X-authentik-uid $authentik_uid;
-                      '';
+                          proxy_set_header X-authentik-username $authentik_username;
+                          proxy_set_header X-authentik-groups $authentik_groups;
+                          proxy_set_header X-authentik-email $authentik_email;
+                          proxy_set_header X-authentik-name $authentik_name;
+                          proxy_set_header X-authentik-uid $authentik_uid;
+                        ''
+                        # A service names an age secret (an htpasswd-format file) via
+                        # `basicAuthSecret` to gate its vhost on a static credential instead of
+                        # Authentik - for backends with no browser session to carry a forward-auth
+                        # cookie (e.g. Netdata's REST API, called by scripts, not humans). Mutually
+                        # exclusive with `protected` in practice, like `oidc` (see virtual-host.nix).
+                        + lib.optionalString (vh ? basicAuthSecret) ''
+                          auth_basic "API access";
+                          auth_basic_user_file ${config.age.secrets.${vh.basicAuthSecret}.path};
+                        '';
 
                       # No trailing URI here (deliberately, like the regex bypassAuthPaths
                       # locations below): with one, nginx has to decode+re-merge the request URI to
