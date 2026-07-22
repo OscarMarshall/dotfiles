@@ -33,10 +33,7 @@ in
         };
 
         "dev" = lib.hm.dag.entryBefore [ "meraki.com aliases" ] { HostName = "dev203.meraki.com"; };
-
-        "gerrit.ikarem.io" = {
-          User = "omarshal";
-        };
+        "gerrit.ikarem.io".User = "omarshal";
 
         "github-meraki" = {
           HostName = "github.com";
