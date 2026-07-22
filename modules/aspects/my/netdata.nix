@@ -30,25 +30,34 @@ in
               intermediary = true;
             };
 
-            "netdata-api.htpasswd".generator = {
-              dependencies = { inherit (secrets) netdata-api-key; };
+            "netdata-api.htpasswd" = {
+              generator = {
+                dependencies = { inherit (secrets) netdata-api-key; };
 
-              # APR1-MD5 (`openssl passwd -apr1`), not bcrypt: nginx's auth_basic only verifies
-              # crypt/APR1-MD5/SHA hashes, not bcrypt, so `htpasswd -B` would produce a hash nginx
-              # can never match.
-              script =
-                {
-                  lib,
-                  pkgs,
-                  decrypt,
-                  deps,
-                  ...
-                }:
-                ''
-                  printf 'netdata:%s\n' "$(
-                    ${pkgs.openssl}/bin/openssl passwd -apr1 "$(${decrypt} ${lib.escapeShellArg deps.netdata-api-key.file})"
-                  )"
-                '';
+                # APR1-MD5 (`openssl passwd -apr1`), not bcrypt: nginx's auth_basic only verifies
+                # crypt/APR1-MD5/SHA hashes, not bcrypt, so `htpasswd -B` would produce a hash
+                # nginx can never match.
+                script =
+                  {
+                    lib,
+                    pkgs,
+                    decrypt,
+                    deps,
+                    ...
+                  }:
+                  ''
+                    printf 'netdata:%s\n' "$(
+                      ${pkgs.openssl}/bin/openssl passwd -apr1 "$(${decrypt} ${lib.escapeShellArg deps.netdata-api-key.file})"
+                    )"
+                  '';
+              };
+
+              group = "nginx";
+              # Read directly by nginx's worker process (auth_basic_user_file), not by a systemd
+              # service with its own user= - defaults to root:root mode 0400 otherwise, which
+              # nginx can't open (500s every request to the netdata-api vhost with a bare "open()
+              # ... Permission denied" in its error log).
+              owner = "nginx";
             };
           };
 
