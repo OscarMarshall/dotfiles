@@ -147,7 +147,11 @@ in
                   AmbientCapabilities = [ "CAP_NET_ADMIN" ];
                   CapabilityBoundingSet = [ "CAP_NET_ADMIN" ];
 
-                  ExecStart = ''
+                  # `serviceConfig.ExecStart` isn't auto-wrapped into a script the way the
+                  # higher-level `systemd.services.<name>.script` option is - systemd parses a raw
+                  # string here as a single argv line, not a shell script, so this has to be an
+                  # actual executable path.
+                  ExecStart = "${pkgs.writeShellScript "qbittorrent-portforward" ''
                     mapped_port=""
                     for protocol in udp tcp; do
                       output="$(${pkgs.libnatpmp}/bin/natpmpc -g ${protonGatewayAddress} -a 1 0 "$protocol" 60)"
@@ -189,7 +193,7 @@ in
                         exit 1
                       fi
                     fi
-                  '';
+                  ''}";
 
                   Group = "qbittorrent";
                   Type = "oneshot";
