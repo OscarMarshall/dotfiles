@@ -234,11 +234,11 @@ in
               }
             ];
 
-            wireguardConfigFile = config.age.secrets."Harmony_P2P-US-CA-888.conf".path;
+            wireguardConfigFile = config.age.secrets."wg-US-CA-888.conf".path;
           };
         };
 
-      nixosSecrets."Harmony_P2P-US-CA-888.conf".rekeyFile = ../../../secrets/Harmony_P2P-US-CA-888.conf.age;
+      nixosSecrets."wg-US-CA-888.conf".rekeyFile = ../../../secrets/wg-US-CA-888.conf.age;
 
       secrets = { secrets, ... }: {
         "qbittorrent.env".generator = {
