@@ -13,7 +13,9 @@
   my.vpn-confinement.nixos = { lib, vpn-confinement, ... }: {
     imports = [ inputs.vpn-confinement.nixosModules.default ];
 
-    systemd.services = lib.genAttrs vpn-confinement (_: {
+    # `vpn-confinement` is documented as a string or a list of them; genAttrs needs a list, so
+    # normalize a lone string (a single-service contribution) before calling it.
+    systemd.services = lib.genAttrs (lib.toList vpn-confinement) (_: {
       vpnConfinement = {
         enable = true;
         vpnNamespace = "proton0";

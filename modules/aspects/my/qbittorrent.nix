@@ -86,11 +86,18 @@ in
               };
 
               Preferences.WebUI = {
-                AuthSubnetWhitelist = "0.0.0.0/0,::/0";
-                # The WebUI is only reachable at all via nginx's `protected` (Authentik forward-auth)
-                # vhost or from inside this same VPN namespace (qbittorrent-portforward below) -
-                # qBittorrent's own login is redundant on top of that, so skip it entirely rather than
-                # maintaining a separate Password_PBKDF2.
+                # Only the addresses nginx's `protected` (Authentik forward-auth) vhost and
+                # qbittorrent-portforward actually connect from - NOT `accessibleFrom` above, which
+                # would let any other device on that LAN reach the WebUI directly, bypassing both
+                # Authentik and qBittorrent's own (deliberately absent, see below) login.
+                #   127.0.0.1/::1 - qbittorrent-portforward, confined to this same namespace
+                #   192.168.15.0/24 - nginx, connecting from the veth/bridge pair (namespaceAddress/
+                #     bridgeAddress) in the default namespace
+                AuthSubnetWhitelist = "127.0.0.1/32,::1/128,192.168.15.0/24";
+                # qBittorrent's own login is redundant for the whitelisted addresses above (already
+                # authenticated by Authentik, or trusted internal automation), so skip it entirely
+                # there rather than maintaining a separate Password_PBKDF2 - anything else still hits
+                # a real login prompt it has no valid credentials for.
                 AuthSubnetWhitelistEnabled = true;
                 # `ServerDomains` below only has any effect while this is enabled - turned off
                 # because nginx's forwarded Host header didn't reliably satisfy it in practice
@@ -161,10 +168,10 @@ in
                     ${pkgs.iptables}/bin/iptables -A qbittorrent-portforward -p tcp --dport "$mapped_port" -j ACCEPT
                     ${pkgs.iptables}/bin/iptables -A qbittorrent-portforward -p udp --dport "$mapped_port" -j ACCEPT
 
-                    # No auth needed - AuthSubnetWhitelist above covers every address, including this
-                    # namespace's own loopback.
+                    # No auth needed - AuthSubnetWhitelist above covers this namespace's own
+                    # loopback, which is what this connects from.
                     current_port="$(${pkgs.curl}/bin/curl -fsS "http://127.0.0.1:${toString port}/api/v2/app/preferences" \
-                      | ${pkgs.gnugrep}/bin/grep -oE '"listen_port":[0-9]+' | ${pkgs.gnugrep}/bin/grep -oE '[0-9]+')"
+                      | ${pkgs.jq}/bin/jq -r '.listen_port')"
 
                     if [ "$current_port" != "$mapped_port" ]; then
                       if ${pkgs.curl}/bin/curl -fsS "http://127.0.0.1:${toString port}/api/v2/app/setPreferences" \
