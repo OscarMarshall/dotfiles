@@ -23,13 +23,20 @@
         intermediary = true;
       };
 
-      # webuiPort below is qbittorrent.nix's hardcoded `port` (8080) - kept as a literal rather
-      # than read from `config` because requesting `config` on this field (alongside `secrets`)
-      # makes Den attach a collision-validator module to the same evalModules pass that builds
-      # `age.secrets`, and that validator's `warnings` output collides with `age.secrets` being a
-      # flat `attrsOf submodule` (unlike terranix's allowlisted JSON schema, there's no shimming
-      # this away - see modules/terranix.nix). If qbittorrent's port ever changes, update it here
-      # too.
+      # webuiPort/qbittorrentHost below are qbittorrent.nix's hardcoded `port` (8080) and
+      # `namespaceAddress` (its VPN-Confinement namespace's veth address, the same one nginx
+      # proxies to) - kept as literals rather than read from `config` because requesting `config`
+      # on this field (alongside `secrets`) makes Den attach a collision-validator module to the
+      # same evalModules pass that builds `age.secrets`, and that validator's `warnings` output
+      # collides with `age.secrets` being a flat `attrsOf submodule` (unlike terranix's allowlisted
+      # JSON schema, there's no shimming this away - see modules/terranix.nix). If either changes
+      # in qbittorrent.nix, update it here too.
+      #
+      # Deliberately not 127.0.0.1: cross-seed runs in the default namespace, not qBittorrent's
+      # confined one, and a DNAT redirect from a literal 127.0.0.1 destination to a non-loopback
+      # address is silently dropped by the kernel's martian-destination check unless
+      # `net.ipv4.conf.*.route_localnet` is set (it isn't) - connecting directly to the namespace's
+      # own address sidesteps that entirely, the same way nginx already does.
       "cross-seed.json".generator = {
         dependencies = {
           inherit (secrets)
@@ -63,6 +70,7 @@
               --arg sonarrApiKey "$SONARR_API_KEY" \
               --arg qbittorrentPassword "$QBITTORRENT_PASSWORD" \
               --arg webuiPort "8080" \
+              --arg qbittorrentHost "192.168.15.1" \
               '{
                 apiKey: $apiKey,
                 torznab: [
@@ -82,7 +90,7 @@
                   "https://sonarr.harmony.silverlight-nex.us?apikey=\($sonarrApiKey)"
                 ],
                 torrentClients: [
-                  "qbittorrent:http://oscar:\($qbittorrentPassword)@127.0.0.1:\($webuiPort)"
+                  "qbittorrent:http://oscar:\($qbittorrentPassword)@\($qbittorrentHost):\($webuiPort)"
                 ]
               }'
           '';

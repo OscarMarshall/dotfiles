@@ -120,6 +120,7 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    vpn-confinement.url = "github:Maroka-chan/VPN-Confinement";
     zen-browser = {
       url = "github:0xc000022070/zen-browser-flake";
       inputs = {

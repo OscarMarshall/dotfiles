@@ -228,21 +228,35 @@
       collisions = lib.filterAttrs (_: entries: lib.length (lib.unique (map (e: e.host) entries)) > 1) (
         lib.groupBy (e: e.hostname) allEntries
       );
-      # host -> every hostname its nginx vhosts actually claim: both `serverAliases` AND each
-      # vhost's own PRIMARY name (the attribute key). The primary name matters too, not just
-      # aliases: a service's `url` override can already equal the canonical global name (e.g.
-      # authentik.nix/storyteller.nix when `global = true;`), and nginx.nix then deliberately
-      # skips adding a redundant alias for it (see its own comment) - so that hostname would
-      # otherwise never appear in `serverAliases` at all and slip past this check entirely.
+      # `hostnamesByHost`: every hostname each host's nginx vhosts actually claim - both
+      # `serverAliases` AND each vhost's own PRIMARY name (the attribute key). The primary name
+      # matters too, not just aliases: a service's `url` override can already equal the canonical
+      # global name (e.g. authentik.nix/storyteller.nix when `global = true;`), and nginx.nix then
+      # deliberately skips adding a redundant alias for it (see its own comment) - so that hostname
+      # would otherwise never appear in `serverAliases` at all and slip past this check entirely.
       # Including every host-scoped primary name too (`${vh.name}.${host.name}.${domain}`) is
       # harmless: `host.name` differs per host by construction, so those can never collide across
       # hosts and only the genuinely global-scoped names below ever populate `collisions`.
       hostnamesByHost = lib.mapAttrs (
         _: hostCfg:
-        lib.concatLists (
-          lib.mapAttrsToList (name: vh: [ name ] ++ (vh.serverAliases or [ ])) (hostCfg.config.services.nginx.virtualHosts or { })
+        lib.subtractLists reservedHostnames (
+          lib.concatLists (
+            lib.mapAttrsToList (name: vh: [ name ] ++ (vh.serverAliases or [ ])) (hostCfg.config.services.nginx.virtualHosts or { })
+          )
         )
       ) config.flake.nixosConfigurations;
+      # `services.nginx.virtualHosts` itself defaults to `{ localhost = { }; }` in nixpkgs
+      # (nixos/modules/services/web-servers/nginx/default.nix) regardless of whether nginx is even
+      # enabled, and `statusPage = true;` (netdata.nix's collector) adds "127.0.0.1"/"[::1]" as
+      # that same vhost's `serverAliases` - none of that is a real public hostname (it never flows
+      # through the `virtual-host` quirk / `globalHosts` that actually drives Cloudflare records
+      # above), so every host ends up "claiming" it and falsely collides with any other host that
+      # merely imports the nginx module. Dropped from `hostnamesByHost` above before comparing.
+      reservedHostnames = [
+        "localhost"
+        "127.0.0.1"
+        "[::1]"
+      ];
     in
     {
       checks.dns-global-uniqueness =

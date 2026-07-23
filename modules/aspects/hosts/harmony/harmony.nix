@@ -28,7 +28,6 @@
       cross-seed
       den.aspects.oscar.provides.minecraft-servers
       dns
-      gluetun
       homepage
       lm-sensors
       locale
@@ -39,6 +38,7 @@
       satisfactory-server
       ssh-server
       unpackerr
+      vpn-confinement
     ];
 
     dataset =
