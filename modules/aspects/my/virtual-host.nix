@@ -17,6 +17,9 @@
 #   port                - (optional) upstream port nginx proxy_passes to. Omit for backends that
 #                         aren't a plain HTTP proxy_pass target (e.g. Nextcloud's PHP-FPM,
 #                         Authentik's own nginx integration, which supply their own `locations`).
+#   upstreamHost        - (optional) upstream host nginx proxy_passes to, defaults to 127.0.0.1.
+#                         For backends confined to a non-default network namespace (e.g.
+#                         VPN-Confinement), where the upstream isn't reachable on loopback.
 #   websockets          - (optional, bool) proxy WebSocket upgrades.
 #   protected           - (optional, bool) gate behind Authentik forward-auth.
 #   preserveCookieFlags - (optional, bool) skip nginx's blanket cookie-security rewrite, for

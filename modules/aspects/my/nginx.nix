@@ -143,15 +143,15 @@
                       # exact location. Omitting the URI makes nginx forward $request_uri verbatim,
                       # which every location here is "/" (matches the whole path) so this is a
                       # no-op for every other backend already relying on the old behavior.
-                      proxyPass = "http://127.0.0.1:${toString vh.port}";
+                      proxyPass = "http://${vh.upstreamHost or "127.0.0.1"}:${toString vh.port}";
                       # recommendedProxySettings clears the Connection header (`proxy_set_header
                       # Connection "";`), which breaks WebSocket upgrades. Backends that use them
                       # (e.g. Immich's real-time updates) opt in via `websockets = true;` on their
                       # `virtual-host` record — nginx's standard websocket idiom (see
                       # https://nginx.org/en/docs/http/websocket.html), which sends `Connection:
                       # close` instead of keep-alive for non-Upgrade requests on that host. Fine
-                      # here: upstream is always 127.0.0.1, so the lost keep-alive just costs an
-                      # extra loopback handshake, not a real round trip.
+                      # here: upstream is always loopback or another local namespace, so the lost
+                      # keep-alive just costs an extra local handshake, not a real round trip.
                       proxyWebsockets = vh.websockets or false;
                     };
                   }
@@ -162,7 +162,7 @@
                         lib.nameValuePair "~ ${path}" {
                           # No URI on proxyPass: regex locations can't auto-rewrite the matched path, so this
                           # forwards the original path+query untouched, without the auth_request config below.
-                          proxyPass = "http://127.0.0.1:${toString vh.port}";
+                          proxyPass = "http://${vh.upstreamHost or "127.0.0.1"}:${toString vh.port}";
                         }
                       ) (vh.bypassAuthPaths or [ ])
                     )
