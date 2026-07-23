@@ -99,6 +99,13 @@ in
                 # there rather than maintaining a separate Password_PBKDF2 - anything else still hits
                 # a real login prompt it has no valid credentials for.
                 AuthSubnetWhitelistEnabled = true;
+                # Post-login redirects back from Authentik's own domain (auth.silverlight-nex.us)
+                # legitimately carry a Referer header pointing there rather than here, which
+                # qBittorrent's own CSRF check otherwise rejects as a mismatch ("WebUI: Referer
+                # header & Target origin mismatch!"), independent of the whitelist above. Authentik's
+                # session cookie is the real CSRF/session boundary for the reverse-proxied path;
+                # this redundant check just breaks the legitimate SSO redirect flow.
+                CSRFProtection = false;
                 # `ServerDomains` below only has any effect while this is enabled - turned off
                 # because nginx's forwarded Host header didn't reliably satisfy it in practice
                 # (qBittorrent's own "Invalid Host header" / blank-page behavior when it doesn't
