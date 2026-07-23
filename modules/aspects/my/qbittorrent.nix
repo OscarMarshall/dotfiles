@@ -138,6 +138,7 @@ in
                 description = "Sync qBittorrent's listening port with ProtonVPN's NAT-PMP forwarded port";
                 after = [ "qbittorrent.service" ];
                 bindsTo = [ "qbittorrent.service" ];
+                requires = [ "qbittorrent.service" ];
 
                 serviceConfig = {
                   # The namespace's own firewall (set up by VPN-Confinement) defaults to INPUT DROP and
@@ -236,7 +237,13 @@ in
           vpnNamespaces.${namespace} = {
             inherit namespaceAddress;
             enable = true;
-            accessibleFrom = [ "10.10.10.0/24" ];
+
+            # Deliberately no `accessibleFrom`: nginx and cross-seed both already reach the
+            # namespace fine without it, via the connected route the veth pair's own
+            # address assignment creates automatically (192.168.15.0/24, dev veth-proton0).
+            # Adding the wider LAN here would let any device on it route straight into the
+            # namespace and reach qBittorrent's WebUI directly - a real bypass of the
+            # Authentik-protected nginx vhost, for something nothing here actually needs.
 
             portMappings = [
               {
