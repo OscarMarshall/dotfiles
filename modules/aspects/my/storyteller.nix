@@ -40,7 +40,7 @@ in
           # storyteller-platform doesn't cut stable releases, so there's nothing more specific to
           # pin to. Re-resolve via the GitLab registry API if bumping:
           #   curl -s "https://gitlab.com/api/v4/projects/67994333/registry/repositories/8429296/tags/latest"
-          image = "registry.gitlab.com/storyteller-platform/storyteller:latest@sha256:a15609ec102de6aace73b5aae3794f7f8e9f40ed3ac2f57e923ef72daa505668";
+          image = "registry.gitlab.com/storyteller-platform/storyteller:latest@sha256:1c9b29cb5cd2cc597038d313bdc3e8ab31c8ad6b1ea695a14268244d5126d531";
 
           ports =
             let
