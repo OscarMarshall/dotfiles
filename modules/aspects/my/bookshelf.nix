@@ -37,7 +37,7 @@ let
           #   curl -sH "Authorization: Bearer $(curl -s 'https://ghcr.io/token?scope=repository:pennydreadful/bookshelf:pull' | jq -r .token)" \
           #     -H "Accept: application/vnd.docker.distribution.manifest.v2+json" -D - -o /dev/null \
           #     https://ghcr.io/v2/pennydreadful/bookshelf/manifests/hardcover
-          image = "ghcr.io/pennydreadful/bookshelf@sha256:388eecc94362580eae31ee0a454be6af516f8a311f8432a521c202fb475f4359";
+          image = "ghcr.io/pennydreadful/bookshelf:hardcover@sha256:388eecc94362580eae31ee0a454be6af516f8a311f8432a521c202fb475f4359";
 
           ports =
             let
