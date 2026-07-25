@@ -17,11 +17,19 @@
             environmentFiles = [ config.age.secrets."prowlarr.env".path ];
 
             settings = {
-              # Prowlarr only reaches this vhost via nginx over loopback (its port isn't opened in
-              # the firewall), so every request it sees is "local" — this drops Prowlarr's own
-              # login screen in favor of the Authentik forward-auth gate in front of it, rather
-              # than stacking both.
-              auth.required = "DisabledForLocalAddresses";
+              # Prowlarr only reaches this vhost via nginx (its port isn't opened in the
+              # firewall), and every such request already passed the Authentik forward-auth gate
+              # in front of it - so Prowlarr's own login is pure redundancy.
+              # `auth.required = "DisabledForLocalAddresses"` used to paper over that by treating
+              # loopback-proxied requests as local, but ASP.NET Core's forwarded-headers
+              # middleware rewrites the remote address from nginx's X-Forwarded-For header before
+              # that check runs, so "local" actually tracked the real client's address - true from
+              # the LAN, false the moment access came from anywhere else, which is why the login
+              # started reappearing. `auth.method = "External"` (unlisted in Prowlarr's own UI,
+              # but a real, supported value) sidesteps the IP heuristic entirely: Prowlarr treats
+              # every request as already authenticated, full stop, leaving Authentik as the sole
+              # real gate - matching what this was always supposed to do.
+              auth.method = "External";
               server = { inherit port; };
             };
           };

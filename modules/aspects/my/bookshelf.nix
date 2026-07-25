@@ -27,11 +27,19 @@ let
 
       nixos = {
         virtualisation.oci-containers.containers.${name} = {
-          # Bookshelf only reaches this vhost via nginx over loopback (its port isn't opened in
-          # the firewall), so every request it sees is "local" -- this drops Bookshelf's own login
-          # screen (it's a Readarr fork and shares Readarr's `<APPNAME>__AUTH__REQUIRED` setting)
-          # in favor of the Authentik forward-auth gate in front of it, rather than stacking both.
-          environment.READARR__AUTH__REQUIRED = "DisabledForLocalAddresses";
+          # Bookshelf only reaches this vhost via nginx (its port isn't opened in the firewall),
+          # and every such request already passed the Authentik forward-auth gate in front of it -
+          # so Bookshelf's own login is pure redundancy. `READARR__AUTH__REQUIRED =
+          # "DisabledForLocalAddresses"` used to paper over that by treating loopback-proxied
+          # requests as local, but ASP.NET Core's forwarded-headers middleware (Bookshelf is a
+          # Readarr fork and shares its auth code) rewrites the remote address from nginx's
+          # X-Forwarded-For header before that check runs, so "local" actually tracked the real
+          # client's address - true from the LAN, false the moment access came from anywhere else,
+          # which is why the login started reappearing. `READARR__AUTH__METHOD = "External"`
+          # (unlisted in Readarr/Bookshelf's own UI, but a real, supported value) sidesteps the IP
+          # heuristic entirely: it treats every request as already authenticated, full stop,
+          # leaving Authentik as the sole real gate - matching what this was always supposed to do.
+          environment.READARR__AUTH__METHOD = "External";
           # Pinned to the current "hardcover" tag's digest (Hardcover-sourced metadata, higher
           # quality than the Goodreads-compatible "softcover" variant) -- re-resolve if bumping:
           #   curl -sH "Authorization: Bearer $(curl -s 'https://ghcr.io/token?scope=repository:pennydreadful/bookshelf:pull' | jq -r .token)" \
