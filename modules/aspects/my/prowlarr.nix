@@ -28,8 +28,16 @@
               # started reappearing. `auth.method = "External"` (unlisted in Prowlarr's own UI,
               # but a real, supported value) sidesteps the IP heuristic entirely: Prowlarr treats
               # every request as already authenticated, full stop, leaving Authentik as the sole
-              # real gate - matching what this was always supposed to do.
-              auth.method = "External";
+              # real gate - matching what this was always supposed to do. `required` is pinned to
+              # "Enabled" alongside it (rather than left unset) so nothing falls back to
+              # Prowlarr's own persisted config.xml value, which could still be the old
+              # "DisabledForLocalAddresses" - it's moot once `method` already authenticates every
+              # request, but keeps that heuristic from silently reappearing if it ever weren't.
+              auth = {
+                method = "External";
+                required = "Enabled";
+              };
+
               server = { inherit port; };
             };
           };

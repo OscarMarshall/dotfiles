@@ -13,6 +13,7 @@
         services.sonarr = {
           enable = true;
           environmentFiles = [ config.age.secrets."sonarr.env".path ];
+
           # Sonarr only reaches this vhost via nginx (its port isn't opened in the firewall), and
           # every such request already passed the Authentik forward-auth gate in front of it - so
           # Sonarr's own login is pure redundancy. `auth.required = "DisabledForLocalAddresses"`
@@ -23,8 +24,15 @@
           # which is why the login started reappearing. `auth.method = "External"` (unlisted in
           # Sonarr's own UI, but a real, supported value) sidesteps the IP heuristic entirely:
           # Sonarr treats every request as already authenticated, full stop, leaving Authentik as
-          # the sole real gate - matching what this was always supposed to do.
-          settings.auth.method = "External";
+          # the sole real gate - matching what this was always supposed to do. `required` is
+          # pinned to "Enabled" alongside it (rather than left unset) so nothing falls back to
+          # Sonarr's own persisted config.xml value, which could still be the old
+          # "DisabledForLocalAddresses" - it's moot once `method` already authenticates every
+          # request, but keeps that heuristic from silently reappearing if it ever weren't.
+          settings.auth = {
+            method = "External";
+            required = "Enabled";
+          };
         };
 
         users.users = {
