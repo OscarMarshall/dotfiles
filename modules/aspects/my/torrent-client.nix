@@ -1,25 +1,17 @@
-# The `torrent-client` quirk: any *arr aspect (Radarr/Sonarr/Readarr/...) contributes one to get a
-# devopsarr `<kind>_download_client_qbittorrent` Terraform resource pointed at qBittorrent -
-# aggregated and filled in with qBittorrent's own connection details by qbittorrent.nix's own
-# `terranix` field (modules/aspects/my/qbittorrent.nix), the one place that actually knows
-# qBittorrent's real host/port/namespace (and whether a login is even needed there - see that
-# file's `AuthSubnetWhitelist` comment). Mirrors virtual-host.nix's shape (many contributors, one
-# aggregator), but inverted: qbittorrent.nix is the CONSUMER here, not a contributor - this keeps
-# every *arr aspect from having to know qBittorrent's connection details itself.
+# The `torrent-client` quirk: qbittorrent.nix (the one place that actually knows qBittorrent's real
+# connection details - namespace, host, port) contributes ONE entry describing itself; any aspect
+# that needs to point at it (Radarr/Sonarr/Bookshelf's own devopsarr terranix download-client
+# resources, cross-seed's own JSON config) reads that entry and formats it however its own config
+# shape requires. Mirrors virtual-host.nix's shape (one or more contributors, independent consumers
+# who each decide what to do with the data) rather than a Den "forward", which would prescribe the
+# shape consumers receive it in.
 #
 # Record shape:
-#   kind     - (required) which devopsarr Terraform provider/resource family this becomes -
-#              "radarr" -> radarr_download_client_qbittorrent, "sonarr" ->
-#              sonarr_download_client_qbittorrent, "readarr" -> readarr_download_client_qbittorrent.
-#              That aspect's own `terranix` field must already declare
-#              `terraform.required_providers.<kind>`.
-#   name     - (required) short identifier, unique per entry - becomes both the Terraform resource
-#              key and the qBittorrent category name.
-#   provider - (optional) Terraform provider ALIAS to attach the resource to, for a `kind` with more
-#              than one live instance (e.g. `"audiobooks"`/`"ebooks"` for the two Bookshelf/Readarr
-#              instances, each with its own aliased `provider.readarr` block) - omit for a `kind`
-#              with only one instance, where the provider is unaliased.
-#   priority - (optional, default 1) devopsarr's own download-client `priority` field.
+#   kind - (required) identifies which torrent client this is - currently always "qbittorrent",
+#          kept as a field (rather than assumed by every consumer) in case a second client is ever
+#          added and a consumer needs to tell them apart.
+#   host - (required) address consumers should connect to.
+#   port - (required) port consumers should connect to.
 {
-  den.quirks.torrent-client.description = "Radarr/Sonarr/Readarr download-client connections to qBittorrent, aggregated into Terraform resources by qbittorrent.nix";
+  den.quirks.torrent-client.description = "Torrent client connection details (currently just qBittorrent), consumed by *arr aspects and cross-seed";
 }

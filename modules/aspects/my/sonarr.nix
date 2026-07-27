@@ -80,36 +80,57 @@
       # pickup (Prowlarr's `prowlarr_application_sonarr` needs the same key as a plain resource
       # attribute).
       #
-      # The download-client connection to qBittorrent is declared via the `torrent-client` quirk
-      # below instead of directly here - see torrent-client.nix for why that's owned by
-      # qbittorrent.nix rather than duplicated across every *arr aspect.
+      # The qBittorrent download client below is built from the `torrent-client` quirk
+      # (torrent-client.nix) - qbittorrent.nix is the one place that knows its real connection
+      # details; this aspect just picks the entry and formats it into the
+      # `sonarr_download_client_qbittorrent` shape (`tv_category` is Sonarr's own field name for
+      # this - see radarr.nix's/bookshelf.nix's own `terranix` fields for their equivalents).
       #
-      # This resource already exists by hand in the running instance; applying without importing
-      # first would create a duplicate (same situation `authentik_outpost.embedded` was in - see
+      # These resources already exist by hand in the running instance; applying without importing
+      # first would create duplicates (same situation `authentik_outpost.embedded` was in - see
       # authentik.nix's comment on that resource). One-time, via `nix develop .#<host>-tf`
       # (AUTHENTIK_TOKEN-style env sourcing is automatic, see modules/terranix.nix's `prefixText`):
       #
-      #   tofu import sonarr_root_folder.shows <id>  # GET /api/v3/rootfolder
-      terranix = { host, ... }: {
-        provider.sonarr = {
-          api_key = "\${var.SONARR_API_KEY}";
-          url = "https://sonarr.${host.name}.${domain}";
+      #   tofu import sonarr_root_folder.shows <id>                     # GET /api/v3/rootfolder
+      #   tofu import sonarr_download_client_qbittorrent.qbittorrent <id> # GET /api/v3/downloadclient
+      terranix =
+        {
+          lib,
+          host,
+          torrent-client,
+          ...
+        }:
+        let
+          qbittorrent = lib.findFirst (
+            tc: tc.kind == "qbittorrent"
+          ) (throw "sonarr.nix: no qbittorrent torrent-client entry found") torrent-client;
+        in
+        {
+          provider.sonarr = {
+            api_key = "\${var.SONARR_API_KEY}";
+            url = "https://sonarr.${host.name}.${domain}";
+          };
+
+          resource = {
+            sonarr_download_client_qbittorrent.qbittorrent = {
+              enable = true;
+              inherit (qbittorrent) host;
+              name = "qBittorrent";
+              inherit (qbittorrent) port;
+              priority = 1;
+              tv_category = "sonarr";
+            };
+
+            sonarr_root_folder.shows.path = "/metalminds/shows";
+          };
+
+          terraform.required_providers.sonarr = {
+            source = "devopsarr/sonarr";
+            version = "~> 3.4";
+          };
+
+          variable.SONARR_API_KEY.sensitive = true;
         };
-
-        resource.sonarr_root_folder.shows.path = "/metalminds/shows";
-
-        terraform.required_providers.sonarr = {
-          source = "devopsarr/sonarr";
-          version = "~> 3.4";
-        };
-
-        variable.SONARR_API_KEY.sensitive = true;
-      };
-
-      torrent-client = {
-        kind = "sonarr";
-        name = "sonarr";
-      };
 
       virtual-host = {
         inherit global port;

@@ -129,39 +129,67 @@ let
       # instances are brand new, and a fresh Readarr/Bookshelf database ships with exactly one
       # profile of each, at id 1. Adjust (or import) if that's no longer true by the time this
       # applies.
-      terranix = { host, ... }: {
-        provider.readarr = [
-          {
-            alias = instance;
-            api_key = "\${var.${tf-var-name-of apiKeySecret}}";
-            url = "https://${name}.${host.name}.${domain}";
-          }
-        ];
+      #
+      # The qBittorrent download client below is built from the `torrent-client` quirk
+      # (torrent-client.nix) - qbittorrent.nix is the one place that knows its real connection
+      # details; this aspect just picks the entry and formats it into the
+      # `readarr_download_client_qbittorrent` shape (`book_category` is Readarr's own field name
+      # for this - see radarr.nix's/sonarr.nix's own `terranix` fields for their equivalents). One
+      # download-client resource per Bookshelf instance, sharing the same `book_category` (both
+      # write into the same `/books` root folder - see its comment above).
+      #
+      #   tofu import readarr_download_client_qbittorrent.${instance} <id>  # GET /api/v1/downloadclient
+      terranix =
+        {
+          lib,
+          host,
+          torrent-client,
+          ...
+        }:
+        let
+          qbittorrent = lib.findFirst (
+            tc: tc.kind == "qbittorrent"
+          ) (throw "bookshelf.nix: no qbittorrent torrent-client entry found") torrent-client;
+        in
+        {
+          provider.readarr = [
+            {
+              alias = instance;
+              api_key = "\${var.${tf-var-name-of apiKeySecret}}";
+              url = "https://${name}.${host.name}.${domain}";
+            }
+          ];
 
-        resource.readarr_root_folder.${instance} = {
-          default_metadata_profile_id = 1;
-          default_monitor_new_item_option = "all";
-          default_monitor_option = "all";
-          default_quality_profile_id = 1;
-          is_calibre_library = false;
-          name = "Books";
-          path = "/books";
-          provider = "readarr.${instance}";
+          resource = {
+            readarr_download_client_qbittorrent.${instance} = {
+              enable = true;
+              book_category = "books";
+              inherit (qbittorrent) host;
+              name = "qBittorrent";
+              inherit (qbittorrent) port;
+              priority = 1;
+              provider = "readarr.${instance}";
+            };
+
+            readarr_root_folder.${instance} = {
+              default_metadata_profile_id = 1;
+              default_monitor_new_item_option = "all";
+              default_monitor_option = "all";
+              default_quality_profile_id = 1;
+              is_calibre_library = false;
+              name = "Books";
+              path = "/books";
+              provider = "readarr.${instance}";
+            };
+          };
+
+          terraform.required_providers.readarr = {
+            source = "devopsarr/readarr";
+            version = "~> 2.1";
+          };
+
+          variable."${tf-var-name-of apiKeySecret}".sensitive = true;
         };
-
-        terraform.required_providers.readarr = {
-          source = "devopsarr/readarr";
-          version = "~> 2.1";
-        };
-
-        variable."${tf-var-name-of apiKeySecret}".sensitive = true;
-      };
-
-      torrent-client = {
-        inherit name;
-        kind = "readarr";
-        provider = instance;
-      };
 
       virtual-host = {
         inherit global name port;

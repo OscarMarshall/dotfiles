@@ -83,36 +83,58 @@ in
       # provider auth) - a `variable` is the only mode one secret can be read in from two different
       # places in the generated config.
       #
-      # The download-client connection to qBittorrent is declared via the `torrent-client` quirk
-      # below instead of directly here - see torrent-client.nix for why that's owned by
-      # qbittorrent.nix rather than duplicated across every *arr aspect.
+      # The qBittorrent download client below is built from the `torrent-client` quirk
+      # (torrent-client.nix) - qbittorrent.nix is the one place that knows its real connection
+      # details; this aspect just picks the entry and formats it into the
+      # `radarr_download_client_qbittorrent` shape (`movie_category` is Radarr's own field name for
+      # this - Sonarr's/Readarr's equivalents call it something else, see their own `terranix`
+      # fields).
       #
-      # This resource already exists by hand in the running instance; applying without importing
-      # first would create a duplicate (same situation `authentik_outpost.embedded` was in - see
+      # These resources already exist by hand in the running instance; applying without importing
+      # first would create duplicates (same situation `authentik_outpost.embedded` was in - see
       # authentik.nix's comment on that resource). One-time, via `nix develop .#<host>-tf`
       # (AUTHENTIK_TOKEN-style env sourcing is automatic, see modules/terranix.nix's `prefixText`):
       #
-      #   tofu import radarr_root_folder.movies <id>  # GET /api/v3/rootfolder
-      terranix = { host, ... }: {
-        provider.radarr = {
-          api_key = "\${var.RADARR_API_KEY}";
-          url = "https://radarr.${host.name}.${domain}";
+      #   tofu import radarr_root_folder.movies <id>                     # GET /api/v3/rootfolder
+      #   tofu import radarr_download_client_qbittorrent.qbittorrent <id> # GET /api/v3/downloadclient
+      terranix =
+        {
+          lib,
+          host,
+          torrent-client,
+          ...
+        }:
+        let
+          qbittorrent = lib.findFirst (
+            tc: tc.kind == "qbittorrent"
+          ) (throw "radarr.nix: no qbittorrent torrent-client entry found") torrent-client;
+        in
+        {
+          provider.radarr = {
+            api_key = "\${var.RADARR_API_KEY}";
+            url = "https://radarr.${host.name}.${domain}";
+          };
+
+          resource = {
+            radarr_download_client_qbittorrent.qbittorrent = {
+              enable = true;
+              inherit (qbittorrent) host;
+              movie_category = "radarr";
+              name = "qBittorrent";
+              inherit (qbittorrent) port;
+              priority = 1;
+            };
+
+            radarr_root_folder.movies.path = "/metalminds/movies";
+          };
+
+          terraform.required_providers.radarr = {
+            source = "devopsarr/radarr";
+            version = "~> 2.4";
+          };
+
+          variable.RADARR_API_KEY.sensitive = true;
         };
-
-        resource.radarr_root_folder.movies.path = "/metalminds/movies";
-
-        terraform.required_providers.radarr = {
-          source = "devopsarr/radarr";
-          version = "~> 2.4";
-        };
-
-        variable.RADARR_API_KEY.sensitive = true;
-      };
-
-      torrent-client = {
-        kind = "radarr";
-        name = "radarr";
-      };
 
       virtual-host = {
         inherit global port;
