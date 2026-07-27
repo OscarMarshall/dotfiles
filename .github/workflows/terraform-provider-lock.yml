@@ -30,6 +30,10 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          # Commits pushed with the default GITHUB_TOKEN don't trigger other workflows (e.g. Test),
+          # which would leave the lock-file commit itself untested - same PAT-fallback pattern
+          # format.yml already uses for its own auto-commit push.
+          token: ${{ secrets.PAT || github.token }}
 
       - name: Install Nix
         uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
@@ -45,14 +49,20 @@ jobs:
           name: oscarmarshall
           extraPullNames: nix-community
 
-      # `.init` generates and symlinks config.tf.json (gitignored, so it doesn't exist in a fresh
-      # checkout) and runs a plain `tofu init`; `.terraform` is the raw wrapper with args forwarded,
-      # so chaining the two is equivalent to `tofu init -upgrade` against the regenerated config.
-      # Neither step needs the `harmony-tf.env` secrets bundle - that's only for plan/apply.
+      # Deliberately NOT `nix run .#harmony-tf.init`/`.terraform` - both go through the same wrapped
+      # `tofu` binary, whose prefixText (modules/terranix.nix) unconditionally tries to `agenix view`
+      # secrets/generated/harmony-tf.env.age when the file exists. That file IS committed, so it's
+      # present in this checkout, but CI has no YubiKey/age identity to decrypt it with, and that
+      # step would fail. Building the generated config.tf.json directly and driving a plain
+      # `opentofu` binary bypasses the wrapper - and its secret handling - entirely; `init -upgrade`
+      # never needed provider credentials anyway (see the header comment above).
       - name: Refresh harmony-tf lock file
         run: |
-          nix run .#harmony-tf.init
-          nix run .#harmony-tf.terraform -- init -upgrade
+          config="$(nix build .#harmony-tf.config --no-link --print-out-paths)"
+          mkdir -p harmony-tf
+          ln -sf "$config" harmony-tf/config.tf.json
+          cd harmony-tf
+          nix run nixpkgs#opentofu -- init -upgrade
 
       - name: Commit lock file if changed
         run: |
