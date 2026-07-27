@@ -1,0 +1,66 @@
+name: Refresh Terraform provider lock
+
+# Renovate's terraform-provider customManager (see renovate.json) only rewrites the exact `version`
+# pin in the .nix source - it can't run `tofu init -upgrade` itself, so harmony-tf/.terraform.lock.hcl
+# would otherwise drift out of sync with the PR that bumped the pin. This job does that refresh and
+# pushes it back onto the same PR, so the lock-file diff review happens alongside the version bump
+# (see the "keep these PRs from automerging" decision in renovate.json's terraform-provider packageRule).
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  refresh-lock:
+    if: >
+      github.actor == 'renovate[bot]' && github.event.pull_request.user.login == 'renovate[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(github.event.pull_request.labels.*.name, 'terraform-provider')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+
+      - name: Setup Nix cache
+        uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
+        with:
+          name: oscarmarshall
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          extraPullNames: nix-community
+
+      # `.init` generates and symlinks config.tf.json (gitignored, so it doesn't exist in a fresh
+      # checkout) and runs a plain `tofu init`; `.terraform` is the raw wrapper with args forwarded,
+      # so chaining the two is equivalent to `tofu init -upgrade` against the regenerated config.
+      # Neither step needs the `harmony-tf.env` secrets bundle - that's only for plan/apply.
+      - name: Refresh harmony-tf lock file
+        run: |
+          nix run .#harmony-tf.init
+          nix run .#harmony-tf.terraform -- init -upgrade
+
+      - name: Commit lock file if changed
+        run: |
+          if git diff --quiet -- harmony-tf/.terraform.lock.hcl; then
+            echo "Lock file already up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add harmony-tf/.terraform.lock.hcl
+          git commit -m "chore(harmony-tf): refresh provider lock file"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}

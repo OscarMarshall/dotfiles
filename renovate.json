@@ -12,6 +12,23 @@
       ],
       "autoReplaceStringTemplate": "image = \"{{{depName}}}:{{{newValue}}}@{{{newDigest}}}\"",
       "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/.+\\.nix$/"],
+      "matchStrings": [
+        "(?<=required_providers\\.[a-zA-Z0-9_-]+\\s*=\\s*\\{\\r?\\n)(?<indent1>[ \\t]*)source\\s*=\\s*\"(?<depName>[^\"]+)\";\\r?\\n(?<indent2>[ \\t]*)version\\s*=\\s*\"(?<currentValue>[^\"]+)\";"
+      ],
+      "autoReplaceStringTemplate": "{{{indent1}}}source = \"{{{depName}}}\";\n{{{indent2}}}version = \"{{{newValue}}}\";",
+      "datasourceTemplate": "terraform-provider",
+      "versioningTemplate": "hashicorp"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchDatasources": ["terraform-provider"],
+      "automerge": false,
+      "addLabels": ["terraform-provider"]
     }
   ]
 }
