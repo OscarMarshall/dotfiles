@@ -5,11 +5,11 @@
     }:
     { host, ... }:
     let
-      port = 9696;
       # Matches virtual-host.nix's own derived hostname (`${name}.${host.name}.<domain>`) - no
       # shared domain constant exists in this repo (authentik.nix/dns.nix/nginx.nix each carry this
       # same literal), so this matches that convention rather than introducing one.
       domain = "silverlight-nex.us";
+      port = 9696;
     in
     {
       nixos = { config, ... }: {
@@ -48,6 +48,33 @@
         };
       };
 
+      secrets = { secrets, ... }: {
+        prowlarr-api-key = {
+          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 16";
+          intermediary = true;
+
+          settings = {
+            homepage = "prowlarr";
+            terraform = "variable";
+          };
+        };
+
+        "prowlarr.env".generator = {
+          dependencies = { inherit (secrets) prowlarr-api-key; };
+
+          script =
+            {
+              lib,
+              decrypt,
+              deps,
+              ...
+            }:
+            ''
+              printf 'PROWLARR__AUTH__APIKEY="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps.prowlarr-api-key.file})"
+            '';
+        };
+      };
+
       # Radarr/Sonarr "Applications" sync, managed via terranix (Nix -> Terraform config, see
       # modules/terranix.nix) and the devopsarr/prowlarr provider - so any indexer added in
       # Prowlarr (still manual for now - see the note below) keeps syncing out to both
@@ -72,8 +99,10 @@
       # `nix develop .#<host>-tf` (AUTHENTIK_TOKEN-style env sourcing is automatic, see
       # modules/terranix.nix's `prefixText`):
       #
-      #   tofu import prowlarr_application_radarr.radarr <id>  # GET /api/v1/applications
-      #   tofu import prowlarr_application_sonarr.sonarr <id>  # GET /api/v1/applications
+      #   tofu import prowlarr_application_radarr.radarr <id>                          # GET /api/v1/applications
+      #   tofu import prowlarr_application_sonarr.sonarr <id>                          # GET /api/v1/applications
+      #   tofu import prowlarr_application_readarr.bookshelf-audiobooks <id>           # GET /api/v1/applications
+      #   tofu import prowlarr_application_readarr.bookshelf-ebooks <id>               # GET /api/v1/applications
       #
       # Indexers themselves (`prowlarr_indexer_*`) aren't managed here yet - each of the existing
       # ones needs its own tracker credentials turned into age secrets, and the least error-prone
@@ -91,86 +120,105 @@
       #   4. Delete the generated file (it holds plaintext credentials) and re-run `tofu plan` to
       #      confirm no diff.
       terranix = { host, ... }: {
+        provider.prowlarr = {
+          api_key = "\${var.PROWLARR_API_KEY}";
+          url = "https://prowlarr.${host.name}.${domain}";
+        };
+
+        resource = {
+          prowlarr_application_radarr.radarr = {
+            api_key = "\${var.RADARR_API_KEY}";
+            base_url = "https://radarr.${host.name}.${domain}";
+            name = "Radarr";
+            prowlarr_url = "https://prowlarr.${host.name}.${domain}";
+
+            sync_categories = [
+              2000
+              2010
+              2020
+              2030
+              2040
+              2045
+              2050
+              2060
+            ];
+
+            sync_level = "addOnly";
+          };
+
+          prowlarr_application_readarr = {
+            # The two Bookshelf (Readarr) instances - see bookshelf.nix. `sync_categories` differ per
+            # instance since each is a single-purpose app, not the usual one-Readarr-does-everything
+            # setup: standard Newznab Books categories for the ebook instance, Audio/Audiobook for the
+            # audiobook one - adjust either once real indexers are inventoried (see the `indexers` note
+            # above).
+            bookshelf-audiobooks = {
+              api_key = "\${var.BOOKSHELF_AUDIOBOOKS_API_KEY}";
+              base_url = "https://bookshelf-audiobooks.${host.name}.${domain}";
+              name = "Bookshelf (Audiobooks)";
+              prowlarr_url = "https://prowlarr.${host.name}.${domain}";
+              sync_categories = [ 3030 ];
+              sync_level = "addOnly";
+            };
+
+            bookshelf-ebooks = {
+              api_key = "\${var.BOOKSHELF_EBOOKS_API_KEY}";
+              base_url = "https://bookshelf-ebooks.${host.name}.${domain}";
+              name = "Bookshelf (Ebooks)";
+              prowlarr_url = "https://prowlarr.${host.name}.${domain}";
+
+              sync_categories = [
+                7000
+                7010
+                7020
+                7030
+                7040
+                7050
+                7060
+              ];
+
+              sync_level = "addOnly";
+            };
+          };
+
+          prowlarr_application_sonarr.sonarr = {
+            api_key = "\${var.SONARR_API_KEY}";
+            base_url = "https://sonarr.${host.name}.${domain}";
+            name = "Sonarr";
+            prowlarr_url = "https://prowlarr.${host.name}.${domain}";
+
+            sync_categories = [
+              5000
+              5010
+              5020
+              5030
+              5040
+              5045
+              5050
+              5060
+            ];
+
+            sync_level = "addOnly";
+          };
+        };
+
         terraform.required_providers.prowlarr = {
           source = "devopsarr/prowlarr";
           version = "~> 3.2";
         };
 
-        # RADARR_API_KEY/SONARR_API_KEY are also declared by radarr.nix/sonarr.nix's own
-        # `terranix` fields (for their OWN providers' auth) - redeclared here too, defensively,
-        # since both are read as plain resource-attribute values above and this aspect shouldn't
-        # depend on include order/completeness elsewhere. Two aspects declaring the same
-        # `sensitive = true;` for the same variable merge fine (identical definitions, not a
-        # conflict).
-        variable.PROWLARR_API_KEY.sensitive = true;
-        variable.RADARR_API_KEY.sensitive = true;
-        variable.SONARR_API_KEY.sensitive = true;
-
-        provider.prowlarr = {
-          url = "https://prowlarr.${host.name}.${domain}";
-          api_key = "\${var.PROWLARR_API_KEY}";
-        };
-
-        resource.prowlarr_application_radarr.radarr = {
-          name = "Radarr";
-          sync_level = "addOnly";
-          base_url = "https://radarr.${host.name}.${domain}";
-          prowlarr_url = "https://prowlarr.${host.name}.${domain}";
-          api_key = "\${var.RADARR_API_KEY}";
-          sync_categories = [
-            2000
-            2010
-            2020
-            2030
-            2040
-            2045
-            2050
-            2060
-          ];
-        };
-
-        resource.prowlarr_application_sonarr.sonarr = {
-          name = "Sonarr";
-          sync_level = "addOnly";
-          base_url = "https://sonarr.${host.name}.${domain}";
-          prowlarr_url = "https://prowlarr.${host.name}.${domain}";
-          api_key = "\${var.SONARR_API_KEY}";
-          sync_categories = [
-            5000
-            5010
-            5020
-            5030
-            5040
-            5045
-            5050
-            5060
-          ];
-        };
-      };
-
-      secrets = { secrets, ... }: {
-        prowlarr-api-key = {
-          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 16";
-          intermediary = true;
-          settings = {
-            homepage = "prowlarr";
-            terraform = "variable";
-          };
-        };
-
-        "prowlarr.env".generator = {
-          dependencies = { inherit (secrets) prowlarr-api-key; };
-
-          script =
-            {
-              lib,
-              decrypt,
-              deps,
-              ...
-            }:
-            ''
-              printf 'PROWLARR__AUTH__APIKEY="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps.prowlarr-api-key.file})"
-            '';
+        variable = {
+          BOOKSHELF_AUDIOBOOKS_API_KEY.sensitive = true;
+          BOOKSHELF_EBOOKS_API_KEY.sensitive = true;
+          # RADARR_API_KEY/SONARR_API_KEY are also declared by radarr.nix/sonarr.nix's own
+          # `terranix` fields (for their OWN providers' auth) - redeclared here too, defensively,
+          # since both are read as plain resource-attribute values above and this aspect shouldn't
+          # depend on include order/completeness elsewhere. Two aspects declaring the same
+          # `sensitive = true;` for the same variable merge fine (identical definitions, not a
+          # conflict).
+          PROWLARR_API_KEY.sensitive = true;
+          RADARR_API_KEY.sensitive = true;
+          SONARR_API_KEY.sensitive = true;
         };
       };
 

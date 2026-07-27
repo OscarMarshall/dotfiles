@@ -1,4 +1,9 @@
+{ lib, ... }:
 let
+  # Matches virtual-host.nix's own derived hostname (`${name}.${host.name}.<domain>`) - no shared
+  # domain constant exists in this repo (authentik.nix/dns.nix/nginx.nix each carry this same
+  # literal), so this matches that convention rather than introducing one.
+  domain = "silverlight-nex.us";
   # Den has the same singleton constraint here as when this was a native build: two `includes`
   # entries for the *same* named aspect are treated as one aspect identity and merged
   # last-write-wins, not as two separate instances (see `den.lib.aspects.fx.identity`, which keys
@@ -17,6 +22,7 @@ let
     }:
     { host, ... }:
     let
+      apiKeySecret = "${name}-api-key";
       name = "bookshelf-${instance}";
     in
     {
@@ -25,7 +31,7 @@ let
         pool = "metalminds";
       };
 
-      nixos = {
+      nixos = { config, ... }: {
         virtualisation.oci-containers.containers.${name} = {
           environment = {
             # Bookshelf only reaches this vhost via nginx (its port isn't opened in the firewall),
@@ -48,6 +54,7 @@ let
             READARR__AUTH__REQUIRED = "Enabled";
           };
 
+          environmentFiles = [ config.age.secrets."${name}.env".path ];
           # Pinned to the current "hardcover" tag's digest (Hardcover-sourced metadata, higher
           # quality than the Goodreads-compatible "softcover" variant) -- re-resolve if bumping:
           #   curl -sH "Authorization: Bearer $(curl -s 'https://ghcr.io/token?scope=repository:pennydreadful/bookshelf:pull' | jq -r .token)" \
@@ -61,8 +68,99 @@ let
             in
             [ "127.0.0.1:${port'}:${port'}" ];
 
-          volumes = [ "/metalminds/${name}:/config" ];
+          # `/books` is shared by BOTH instances deliberately (see harmony.nix's `books` dataset) -
+          # the plan is for the ebook and audiobook instance to manage the same on-disk library for
+          # a given book, eventually kept in sync the way
+          # https://trash-guides.info/Radarr/Tips/Sync-2-radarr-sonarr/ describes for Radarr/Sonarr
+          # pairs - not implemented yet, tracked as a follow-up.
+          volumes = [
+            "/metalminds/${name}:/config"
+            "/metalminds/books:/books"
+          ];
         };
+      };
+
+      secrets = { secrets, ... }: {
+        ${apiKeySecret} = {
+          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 16";
+          intermediary = true;
+          settings.terraform = "variable";
+        };
+
+        "${name}.env".generator = {
+          dependencies = {
+            ${apiKeySecret} = secrets.${apiKeySecret};
+          };
+
+          script =
+            {
+              lib,
+              decrypt,
+              deps,
+              ...
+            }:
+            ''
+              printf 'READARR__AUTH__APIKEY="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps.${apiKeySecret}.file})"
+            '';
+        };
+      };
+
+      # Root folder, managed via terranix (Nix -> Terraform config, see modules/terranix.nix) and
+      # the devopsarr/readarr provider - same pattern as radarr.nix/sonarr.nix, but ALIASED
+      # (`provider.readarr` is a LIST here, one entry per Bookshelf instance, merged across both
+      # instances' own `terranix` fields - terranix's `provider` option supports this, see
+      # https://den.denful.dev/tutorials/terranix-demo/) since both instances share the one
+      # `readarr` provider TYPE but are two entirely separate live instances - every resource below
+      # pins itself to its own alias via `provider = "readarr.${instance}";`.
+      #
+      # `${apiKeySecret}` is flagged `settings.terraform = "variable";` for the same two-role reason
+      # radarr-api-key/sonarr-api-key are (see radarr.nix's `terranix` field) - Prowlarr's
+      # `prowlarr_application_readarr` (prowlarr.nix) needs it as a plain resource attribute too,
+      # not just as this provider's own auth.
+      #
+      # This resource already exists by hand in the running instance; applying without importing
+      # first would create a duplicate (same situation `authentik_outpost.embedded` was in - see
+      # authentik.nix's comment on that resource). One-time, via `nix develop .#<host>-tf`
+      # (AUTHENTIK_TOKEN-style env sourcing is automatic, see modules/terranix.nix's `prefixText`):
+      #
+      #   tofu import readarr_root_folder.${instance} <id>  # GET /api/v1/rootfolder
+      #
+      # `default_metadata_profile_id`/`default_quality_profile_id` are pinned to `1` - both
+      # instances are brand new, and a fresh Readarr/Bookshelf database ships with exactly one
+      # profile of each, at id 1. Adjust (or import) if that's no longer true by the time this
+      # applies.
+      terranix = { host, ... }: {
+        provider.readarr = [
+          {
+            alias = instance;
+            api_key = "\${var.${tf-var-name-of apiKeySecret}}";
+            url = "https://${name}.${host.name}.${domain}";
+          }
+        ];
+
+        resource.readarr_root_folder.${instance} = {
+          default_metadata_profile_id = 1;
+          default_monitor_new_item_option = "all";
+          default_monitor_option = "all";
+          default_quality_profile_id = 1;
+          is_calibre_library = false;
+          name = "Books";
+          path = "/books";
+          provider = "readarr.${instance}";
+        };
+
+        terraform.required_providers.readarr = {
+          source = "devopsarr/readarr";
+          version = "~> 2.1";
+        };
+
+        variable."${tf-var-name-of apiKeySecret}".sensitive = true;
+      };
+
+      torrent-client = {
+        inherit name;
+        kind = "readarr";
+        provider = instance;
       };
 
       virtual-host = {
@@ -78,6 +176,10 @@ let
         protected = true;
       };
     };
+  # Mirrors `env-var-for` (modules/terranix.nix) exactly - the `TF_VAR_` prefix a
+  # `settings.terraform = "variable";` secret surfaces under is added programmatically there, not
+  # baked into the secret's name.
+  tf-var-name-of = secret: lib.toUpper (lib.replaceStrings [ "-" ] [ "_" ] secret);
 in
 {
   my = {

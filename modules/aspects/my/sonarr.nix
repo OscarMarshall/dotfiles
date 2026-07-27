@@ -6,11 +6,11 @@
     }:
     { host, ... }:
     let
-      port = 8989;
       # Matches virtual-host.nix's own derived hostname (`${name}.${host.name}.<domain>`) - no
       # shared domain constant exists in this repo (authentik.nix/dns.nix/nginx.nix each carry this
       # same literal), so this matches that convention rather than introducing one.
       domain = "silverlight-nex.us";
+      port = 8989;
     in
     {
       nixos = { config, ... }: {
@@ -47,57 +47,11 @@
         }));
       };
 
-      # Root folder + qBittorrent download-client config, managed via terranix (Nix -> Terraform
-      # config, see modules/terranix.nix) and the devopsarr/sonarr provider - see radarr.nix's
-      # `terranix` field for why `sonarr-api-key` is flagged `settings.terraform = "variable";`
-      # rather than relying on implicit env-var pickup (Prowlarr's `prowlarr_application_sonarr`
-      # needs the same key as a plain resource attribute).
-      #
-      # These resources already exist by hand in the running instance; applying without importing
-      # first would create duplicates (same situation `authentik_outpost.embedded` was in - see
-      # authentik.nix's comment on that resource). One-time, per resource, via
-      # `nix develop .#<host>-tf` (AUTHENTIK_TOKEN-style env sourcing is automatic, see
-      # modules/terranix.nix's `prefixText`):
-      #
-      #   tofu import sonarr_root_folder.shows <id>                     # GET /api/v3/rootfolder
-      #   tofu import sonarr_download_client_qbittorrent.qbittorrent <id> # GET /api/v3/downloadclient
-      terranix = { host, ... }: {
-        terraform.required_providers.sonarr = {
-          source = "devopsarr/sonarr";
-          version = "~> 3.4";
-        };
-
-        variable.SONARR_API_KEY.sensitive = true;
-        variable.OSCAR_PASSWORD.sensitive = true;
-
-        provider.sonarr = {
-          url = "https://sonarr.${host.name}.${domain}";
-          api_key = "\${var.SONARR_API_KEY}";
-        };
-
-        resource.sonarr_root_folder.shows.path = "/metalminds/shows";
-
-        # `oscar`/`OSCAR_PASSWORD` mirrors cross-seed.nix's own treatment of qBittorrent's WebUI
-        # login as the `oscar` system user's password.
-        resource.sonarr_download_client_qbittorrent.qbittorrent = {
-          enable = true;
-          name = "qBittorrent";
-          host = "127.0.0.1";
-          # qbittorrent.nix's own `port` (8080), kept as a literal rather than shared - same as
-          # cross-seed.nix's own `webuiPort` comment. Update this if qbittorrent.nix's port ever
-          # changes.
-          port = 8080;
-          username = "oscar";
-          password = "\${var.OSCAR_PASSWORD}";
-          category = "sonarr";
-          priority = 1;
-        };
-      };
-
       secrets = { secrets, ... }: {
         sonarr-api-key = {
           generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 16";
           intermediary = true;
+
           settings = {
             homepage = "sonarr";
             terraform = "variable";
@@ -118,6 +72,43 @@
               printf 'SONARR__AUTH__APIKEY="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps.sonarr-api-key.file})"
             '';
         };
+      };
+
+      # Root folder, managed via terranix (Nix -> Terraform config, see modules/terranix.nix) and
+      # the devopsarr/sonarr provider - see radarr.nix's `terranix` field for why `sonarr-api-key`
+      # is flagged `settings.terraform = "variable";` rather than relying on implicit env-var
+      # pickup (Prowlarr's `prowlarr_application_sonarr` needs the same key as a plain resource
+      # attribute).
+      #
+      # The download-client connection to qBittorrent is declared via the `torrent-client` quirk
+      # below instead of directly here - see torrent-client.nix for why that's owned by
+      # qbittorrent.nix rather than duplicated across every *arr aspect.
+      #
+      # This resource already exists by hand in the running instance; applying without importing
+      # first would create a duplicate (same situation `authentik_outpost.embedded` was in - see
+      # authentik.nix's comment on that resource). One-time, via `nix develop .#<host>-tf`
+      # (AUTHENTIK_TOKEN-style env sourcing is automatic, see modules/terranix.nix's `prefixText`):
+      #
+      #   tofu import sonarr_root_folder.shows <id>  # GET /api/v3/rootfolder
+      terranix = { host, ... }: {
+        provider.sonarr = {
+          api_key = "\${var.SONARR_API_KEY}";
+          url = "https://sonarr.${host.name}.${domain}";
+        };
+
+        resource.sonarr_root_folder.shows.path = "/metalminds/shows";
+
+        terraform.required_providers.sonarr = {
+          source = "devopsarr/sonarr";
+          version = "~> 3.4";
+        };
+
+        variable.SONARR_API_KEY.sensitive = true;
+      };
+
+      torrent-client = {
+        kind = "sonarr";
+        name = "sonarr";
       };
 
       virtual-host = {

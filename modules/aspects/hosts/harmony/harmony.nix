@@ -51,6 +51,7 @@
         })
         [
           "backups"
+          "books"
           "documents"
           "movies"
           "music"
