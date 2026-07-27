@@ -37,11 +37,14 @@ jobs:
           extra_nix_config: |
             accept-flake-config = true
 
+      # No authToken: this job only needs to PULL prebuilt artifacts for speed, never push, so it
+      # doesn't need (and shouldn't be handed) a secret capable of writing to the cache - especially
+      # since pull_request_target grants this workflow access to repo secrets even for PRs whose
+      # branch content it doesn't control.
       - name: Setup Nix cache
         uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
         with:
           name: oscarmarshall
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           extraPullNames: nix-community
 
       # `.init` generates and symlinks config.tf.json (gitignored, so it doesn't exist in a fresh
