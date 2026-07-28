@@ -7,10 +7,15 @@ name: Refresh Terraform provider lock
 # (see the "keep these PRs from automerging" decision in renovate.json's terraform-provider packageRule).
 on:
   pull_request:
+    # `labeled` is required, not just belt-and-suspenders: Renovate applies labels via a separate
+    # API call after the PR is already open, so the `opened` event fires before the
+    # `terraform-provider` label exists - without `labeled`, this job would never run until some
+    # later `synchronize` (e.g. Renovate rebasing the PR).
     types:
       - opened
       - reopened
       - synchronize
+      - labeled
 
 permissions:
   contents: write
