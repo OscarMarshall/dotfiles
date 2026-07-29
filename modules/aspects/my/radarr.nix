@@ -117,11 +117,11 @@ in
 
           resource = {
             radarr_download_client_qbittorrent.qbittorrent = {
-              enable = true;
               inherit (qbittorrent) host;
+              inherit (qbittorrent) port;
+              enable = true;
               movie_category = "radarr";
               name = "qBittorrent";
-              inherit (qbittorrent) port;
               priority = 1;
             };
 

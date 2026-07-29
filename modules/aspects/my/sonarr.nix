@@ -113,10 +113,10 @@
 
           resource = {
             sonarr_download_client_qbittorrent.qbittorrent = {
-              enable = true;
               inherit (qbittorrent) host;
-              name = "qBittorrent";
               inherit (qbittorrent) port;
+              enable = true;
+              name = "qBittorrent";
               priority = 1;
               tv_category = "sonarr";
             };

@@ -162,11 +162,11 @@ let
 
           resource = {
             readarr_download_client_qbittorrent.${instance} = {
+              inherit (qbittorrent) host;
+              inherit (qbittorrent) port;
               enable = true;
               book_category = "books";
-              inherit (qbittorrent) host;
               name = "qBittorrent";
-              inherit (qbittorrent) port;
               priority = 1;
               provider = "readarr.${instance}";
             };
