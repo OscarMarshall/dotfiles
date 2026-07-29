@@ -32,13 +32,14 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'terraform-provider')
     runs-on: ubuntu-latest
     steps:
+      # persist-credentials: false - this job runs `nix build`/`nix run` against PR-controlled Nix
+      # code below, so the push token (a PAT, see the commit step) shouldn't sit in .git/config for
+      # that untrusted code to read. The default GITHUB_TOKEN here is read-only anyway; the PAT is
+      # supplied explicitly, and only for the one step that actually needs to push.
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-          # Commits pushed with the default GITHUB_TOKEN don't trigger other workflows (e.g. Test),
-          # which would leave the lock-file commit itself untested - same PAT-fallback pattern
-          # format.yml already uses for its own auto-commit push.
-          token: ${{ secrets.PAT || github.token }}
+          persist-credentials: false
 
       - name: Install Nix
         uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
@@ -70,6 +71,13 @@ jobs:
           nix run nixpkgs#opentofu -- init -upgrade
 
       - name: Commit lock file if changed
+        env:
+          # Commits pushed with the default GITHUB_TOKEN don't trigger other workflows (e.g. Test),
+          # which would leave this commit itself untested - same PAT-fallback pattern format.yml
+          # already uses for its own auto-commit push. Passed only to this step (see the checkout
+          # step's persist-credentials: false above), via an authenticated URL rather than
+          # `git config`, so it never touches disk.
+          GH_TOKEN: ${{ secrets.PAT || github.token }}
         run: |
           if git diff --quiet -- harmony-tf/.terraform.lock.hcl; then
             echo "Lock file already up to date."
@@ -79,4 +87,5 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add harmony-tf/.terraform.lock.hcl
           git commit -m "chore(harmony-tf): refresh provider lock file"
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" \
+            HEAD:${{ github.event.pull_request.head.ref }}
