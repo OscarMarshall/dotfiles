@@ -34,8 +34,8 @@ jobs:
     steps:
       # persist-credentials: false - this job runs `nix build`/`nix run` against PR-controlled Nix
       # code below, so the push token (a PAT, see the commit step) shouldn't sit in .git/config for
-      # that untrusted code to read. The default GITHUB_TOKEN here is read-only anyway; the PAT is
-      # supplied explicitly, and only for the one step that actually needs to push.
+      # that untrusted code to read, even though this workflow's own `contents: write` permission
+      # would let it. That token is supplied explicitly, and only for the one step that pushes.
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
@@ -72,11 +72,11 @@ jobs:
 
       - name: Commit lock file if changed
         env:
-          # Commits pushed with the default GITHUB_TOKEN don't trigger other workflows (e.g. Test),
-          # which would leave this commit itself untested - same PAT-fallback pattern format.yml
-          # already uses for its own auto-commit push. Passed only to this step (see the checkout
-          # step's persist-credentials: false above), via an authenticated URL rather than
-          # `git config`, so it never touches disk.
+          # Falls back to github.token if secrets.PAT isn't set, same as format.yml's own
+          # auto-commit push - but that fallback means the commit won't trigger other workflows
+          # (e.g. Test), leaving it untested; set the PAT secret for that to actually happen.
+          # Passed only to this step (see the checkout step's persist-credentials: false above),
+          # via an authenticated URL rather than `git config`, so it never touches disk.
           GH_TOKEN: ${{ secrets.PAT || github.token }}
         run: |
           if git diff --quiet -- harmony-tf/.terraform.lock.hcl; then
