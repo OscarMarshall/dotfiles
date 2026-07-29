@@ -18,23 +18,31 @@
     };
 
     secrets =
-      {
-        lib,
-        secrets,
-        torrent-client,
-        ...
-      }:
+      { secrets, ... }:
       let
-        # See torrent-client.nix - qbittorrent.nix is the one place that knows qBittorrent's real
-        # connection details; this just picks the entry and formats it into cross-seed's own
-        # `torrentClients` URL shape. No credentials in that URL: cross-seed runs in the default
-        # namespace, not qBittorrent's confined one, and reaches it via the namespace's own bridge
-        # address - already covered by qBittorrent's `AuthSubnetWhitelist` (see qbittorrent.nix),
-        # so its own login is skipped entirely for this connection, the same as for the
-        # Radarr/Sonarr/Bookshelf download clients.
-        qbittorrent = lib.findFirst (
-          tc: tc.kind == "qbittorrent"
-        ) (throw "cross-seed.nix: no qbittorrent torrent-client entry found") torrent-client;
+        # qbittorrentHost/qbittorrentPort below are qbittorrent.nix's hardcoded `namespaceAddress`
+        # (its VPN-Confinement namespace's veth address, the same one nginx proxies to) and `port`
+        # (8080) - kept as literals rather than read from the `torrent-client` quirk (torrent-client.nix)
+        # it's contributed under, because REQUESTING that quirk here (alongside `secrets`) makes Den
+        # attach a collision-validator module to the same evalModules pass that builds `age.secrets`,
+        # and that validator's `warnings` output collides with `age.secrets` being a flat
+        # `attrsOf submodule` - the exact same problem `config` causes here (see modules/terranix.nix's
+        # header comment on `warnings-shim`), just triggered by ANY den context arg, not only `config`.
+        # There's no shimming this away for the `secrets` class the way terranix.nix does for its own.
+        # If either changes in qbittorrent.nix, update it here too.
+        #
+        # Deliberately not 127.0.0.1: cross-seed runs in the default namespace, not qBittorrent's
+        # confined one, and a DNAT redirect from a literal 127.0.0.1 destination to a non-loopback
+        # address is silently dropped by the kernel's martian-destination check unless
+        # `net.ipv4.conf.*.route_localnet` is set (it isn't) - connecting directly to the namespace's
+        # own address sidesteps that entirely, the same way nginx already does.
+        #
+        # No credentials in the URL below: this connection lands in `192.168.15.0/24`, already
+        # covered by qBittorrent's own `AuthSubnetWhitelist` (see qbittorrent.nix), so its login is
+        # skipped entirely for it - the same reason the Radarr/Sonarr/Bookshelf download clients
+        # don't carry credentials either.
+        qbittorrentHost = "192.168.15.1";
+        qbittorrentPort = "8080";
       in
       {
         cross-seed-api-key = {
@@ -71,8 +79,8 @@
                 --arg prowlarrApiKey "$PROWLARR_API_KEY" \
                 --arg radarrApiKey "$RADARR_API_KEY" \
                 --arg sonarrApiKey "$SONARR_API_KEY" \
-                --arg qbittorrentHost ${lib.escapeShellArg qbittorrent.host} \
-                --arg qbittorrentPort ${lib.escapeShellArg (toString qbittorrent.port)} \
+                --arg qbittorrentHost "${qbittorrentHost}" \
+                --arg qbittorrentPort "${qbittorrentPort}" \
                 '{
                   apiKey: $apiKey,
                   torznab: [
