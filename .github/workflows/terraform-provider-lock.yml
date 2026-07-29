@@ -1,0 +1,91 @@
+name: Refresh Terraform provider lock
+
+# Renovate's terraform-provider customManager (see renovate.json) only rewrites the exact `version`
+# pin in the .nix source - it can't run `tofu init -upgrade` itself, so harmony-tf/.terraform.lock.hcl
+# would otherwise drift out of sync with the PR that bumped the pin. This job does that refresh and
+# pushes it back onto the same PR, so the lock-file diff review happens alongside the version bump
+# (see the "keep these PRs from automerging" decision in renovate.json's terraform-provider packageRule).
+on:
+  pull_request:
+    # `labeled` is required, not just belt-and-suspenders: Renovate applies labels via a separate
+    # API call after the PR is already open, so the `opened` event fires before the
+    # `terraform-provider` label exists - without `labeled`, this job would never run until some
+    # later `synchronize` (e.g. Renovate rebasing the PR).
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - labeled
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  refresh-lock:
+    if: >
+      github.actor == 'renovate[bot]' && github.event.pull_request.user.login == 'renovate[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(github.event.pull_request.labels.*.name, 'terraform-provider')
+    runs-on: ubuntu-latest
+    steps:
+      # persist-credentials: false - this job runs `nix build`/`nix run` against PR-controlled Nix
+      # code below, so the push token (a PAT, see the commit step) shouldn't sit in .git/config for
+      # that untrusted code to read, even though this workflow's own `contents: write` permission
+      # would let it. That token is supplied explicitly, and only for the one step that pushes.
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+
+      # No authToken: this job only needs to PULL prebuilt artifacts for speed, never push, so it
+      # doesn't need (and shouldn't be handed) a secret capable of writing to the cache.
+      - name: Setup Nix cache
+        uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
+        with:
+          name: oscarmarshall
+          extraPullNames: nix-community
+
+      # Deliberately NOT `nix run .#harmony-tf.init`/`.terraform` - both go through the same wrapped
+      # `tofu` binary, whose prefixText (modules/terranix.nix) unconditionally tries to `agenix view`
+      # secrets/generated/harmony-tf.env.age when the file exists. That file IS committed, so it's
+      # present in this checkout, but CI has no YubiKey/age identity to decrypt it with, and that
+      # step would fail. Building the generated config.tf.json directly and driving a plain
+      # `opentofu` binary bypasses the wrapper - and its secret handling - entirely; `init -upgrade`
+      # never needed provider credentials anyway (see the header comment above).
+      - name: Refresh harmony-tf lock file
+        run: |
+          config="$(nix build .#harmony-tf.config --no-link --print-out-paths)"
+          mkdir -p harmony-tf
+          ln -sf "$config" harmony-tf/config.tf.json
+          cd harmony-tf
+          nix run nixpkgs#opentofu -- init -upgrade
+
+      - name: Commit lock file if changed
+        env:
+          # Falls back to github.token if secrets.PAT isn't set, same as format.yml's own
+          # auto-commit push - but that fallback means the commit won't trigger other workflows
+          # (e.g. Test), leaving it untested; set the PAT secret for that to actually happen.
+          # Passed only to this step (see the checkout step's persist-credentials: false above),
+          # via an authenticated URL rather than `git config`, so it never touches disk.
+          GH_TOKEN: ${{ secrets.PAT || github.token }}
+        run: |
+          if git diff --quiet -- harmony-tf/.terraform.lock.hcl; then
+            echo "Lock file already up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add harmony-tf/.terraform.lock.hcl
+          git commit -m "chore(harmony-tf): refresh provider lock file"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" \
+            HEAD:${{ github.event.pull_request.head.ref }}
