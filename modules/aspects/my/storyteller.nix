@@ -81,7 +81,12 @@ in
               ...
             }:
             ''
-              printf 'STORYTELLER_SECRET_KEY="%s"\n' "$(
+              # No quotes around %s (unlike an `EnvironmentFile=`-consumed secret would use) - this
+              # file is consumed via `environmentFiles` on an oci-containers container, i.e.
+              # podman's own `--env-file`, which (unlike systemd's `EnvironmentFile=`, native
+              # services' equivalent) does NOT strip surrounding quote characters - a quoted value
+              # here would become part of STORYTELLER_SECRET_KEY literally.
+              printf 'STORYTELLER_SECRET_KEY=%s\n' "$(
                 ${decrypt} ${lib.escapeShellArg deps.storyteller-secret-key.file}
               )"
             '';
