@@ -106,7 +106,13 @@ let
               ...
             }:
             ''
-              printf 'READARR__AUTH__APIKEY="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps.${apiKeySecret}.file})"
+              # No quotes around %s (unlike radarr.env/sonarr.env's own printf) - this file is
+              # consumed via `environmentFiles` on an oci-containers container, i.e. podman's own
+              # `--env-file`, which (unlike systemd's `EnvironmentFile=`, native services'
+              # equivalent) does NOT strip surrounding quote characters - a quoted value here would
+              # become part of the API key literally, corrupting the Bookshelf frontend's own
+              # `/initialize.json` payload once it re-serializes that value into JSON.
+              printf 'READARR__AUTH__APIKEY=%s\n' "$(${decrypt} ${lib.escapeShellArg deps.${apiKeySecret}.file})"
             '';
         };
       };
