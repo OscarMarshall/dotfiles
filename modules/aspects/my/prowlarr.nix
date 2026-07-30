@@ -253,6 +253,10 @@
         label = "Prowlarr";
         name = "prowlarr";
         protected = true;
+        # Prowlarr's UI keeps a SignalR (WebSocket) connection open for live queue/activity
+        # updates - without this, nginx's recommendedProxySettings clears the Connection header
+        # (see nginx.nix's `proxyWebsockets` comment) and the upgrade is refused.
+        websockets = true;
       };
     };
 }

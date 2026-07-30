@@ -214,6 +214,11 @@ let
         icon = "https://raw.githubusercontent.com/pennydreadful/bookshelf/develop/Logo/Readarr.svg";
         label = "Bookshelf (${label})";
         protected = true;
+        # Bookshelf's UI keeps a SignalR (WebSocket) connection open for live queue/activity
+        # updates (it's a Readarr fork, same mechanism) - without this, nginx's
+        # recommendedProxySettings clears the Connection header (see nginx.nix's
+        # `proxyWebsockets` comment) and the upgrade is refused.
+        websockets = true;
       };
     };
   # Mirrors `env-var-for` (modules/terranix.nix) exactly - the `TF_VAR_` prefix a
