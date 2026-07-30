@@ -52,6 +52,12 @@ let
             # every request, but keeps that heuristic from silently reappearing if it ever weren't.
             READARR__AUTH__METHOD = "External";
             READARR__AUTH__REQUIRED = "Enabled";
+            # Bookshelf/Readarr listens on its own hardcoded default port (8787) regardless of the
+            # host-side port it's mapped to below - without this, only the ebooks instance (which
+            # happens to use 8787 itself) works by accident, and the audiobooks instance (8788)
+            # gets a connection refused (nginx 502) because nothing's actually listening on 8788
+            # inside its container.
+            READARR__SERVER__PORT = toString port;
           };
 
           environmentFiles = [ config.age.secrets."${name}.env".path ];
