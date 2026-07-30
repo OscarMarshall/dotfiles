@@ -119,6 +119,7 @@
               name = "qBittorrent";
               priority = 1;
               tv_category = "sonarr";
+              tv_imported_category = "sonarr-imported";
             };
 
             sonarr_root_folder.shows.path = "/metalminds/shows";

@@ -146,9 +146,11 @@ let
       # (torrent-client.nix) - qbittorrent.nix is the one place that knows its real connection
       # details; this aspect just picks the entry and formats it into the
       # `readarr_download_client_qbittorrent` shape (`book_category` is Readarr's own field name
-      # for this - see radarr.nix's/sonarr.nix's own `terranix` fields for their equivalents). One
-      # download-client resource per Bookshelf instance, sharing the same `book_category` (both
-      # write into the same `/books` root folder - see its comment above).
+      # for this - see radarr.nix's/sonarr.nix's own `terranix` fields for their equivalents).
+      # `book_category` is `instance`-scoped (distinct per Bookshelf instance), unlike the shared
+      # `/books` root folder above - each instance still needs its own qBittorrent category so a
+      # completed download only gets imported by the app that actually requested it, rather than
+      # both instances racing to import anything tagged "books".
       #
       #   tofu import readarr_download_client_qbittorrent.${instance} <id>  # GET /api/v1/downloadclient
       terranix =
@@ -177,7 +179,8 @@ let
               inherit (qbittorrent) host;
               inherit (qbittorrent) port;
               enable = true;
-              book_category = "books";
+              book_category = instance;
+              book_imported_category = "${instance}-imported";
               name = "qBittorrent";
               priority = 1;
               provider = "readarr.${instance}";

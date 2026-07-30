@@ -121,6 +121,7 @@ in
               inherit (qbittorrent) port;
               enable = true;
               movie_category = "radarr";
+              movie_imported_category = "radarr-imported";
               name = "qBittorrent";
               priority = 1;
             };
