@@ -79,9 +79,9 @@
       # modules/terranix.nix) and the devopsarr/prowlarr provider - so any indexer added in
       # Prowlarr (still manual for now - see the note below) keeps syncing out to both
       # automatically, instead of that pairing being done by hand in Prowlarr's own UI (Settings >
-      # Apps). `sync_level = "addOnly"` only ADDS indexers Prowlarr doesn't yet have configured on
-      # the target app - it never removes or edits ones added by hand, so this can't fight a
-      # manually-tuned indexer setup on the Radarr/Sonarr side.
+      # Apps). `sync_level = "fullSync"` matches the pre-existing hand-configured setup (Prowlarr
+      # is the source of truth: removing an indexer from Prowlarr removes it from the target app
+      # too, not just additive).
       #
       # `RADARR_API_KEY`/`SONARR_API_KEY` are read here as plain resource-attribute values (each
       # target app's OWN API key, which Prowlarr needs as data to authenticate its sync calls) -
@@ -89,9 +89,28 @@
       # flagged `settings.terraform = "variable";` rather than left as implicit provider-auth env
       # vars.
       #
-      # `sync_categories` are the standard Newznab Movies/TV category groups - adjust if your
-      # indexers actually use different ones once those are brought under management (see the
-      # `indexers` note below).
+      # `base_url`/`prowlarr_url` for Radarr and Sonarr are plain `http://localhost:<port>` -
+      # Radarr, Sonarr, and Prowlarr are all NATIVE NixOS services on the same host, sharing the
+      # same network namespace, so there's no reason to route this machine-to-machine traffic
+      # through nginx/TLS/Authentik's bypass mechanism at all - matches Homepage's own widget
+      # fetches (see virtual-host.nix's `homepage.widget.url` on each of those aspects) and the
+      # values already configured live before this was brought under Terraform.
+      #
+      # Bookshelf is different: it runs in a Podman container with its own network namespace.
+      # `base_url` (the address PROWLARR uses to reach Bookshelf) can still be `localhost` -
+      # Podman publishes its port onto the HOST's own loopback interface, and Prowlarr is a native
+      # host process. `prowlarr_url` (the address BOOKSHELF ITSELF uses to reach Prowlarr, embedded
+      # into the indexer config Prowlarr pushes to it, for when Bookshelf later runs a search)
+      # can't be `localhost` though - from inside Bookshelf's own container that's the container's
+      # loopback, not harmony's, so this one keeps the external HTTPS domain (reachable from inside
+      # the container's network namespace like any other outbound connection).
+      #
+      # `sync_categories`/`anime_sync_categories` (Sonarr only) are pinned to the actual live
+      # values (inventoried via `tofu plan` after importing) rather than a generic guess, so
+      # applying doesn't narrow what's already configured. Bookshelf's own categories are still a
+      # guess (brand new resources, no live value to match) - standard Newznab Books categories for
+      # the ebook instance, Audio/Audiobook for the audiobook one - adjust either once real
+      # indexers are inventoried (see the `indexers` note below).
       #
       # This resource already exists by hand in the running instance; applying without importing
       # first would create a duplicate (same situation `authentik_outpost.embedded` was in - see
@@ -128,9 +147,12 @@
         resource = {
           prowlarr_application_radarr.radarr = {
             api_key = "\${var.RADARR_API_KEY}";
-            base_url = "https://radarr.${host.name}.${domain}";
+            # radarr.nix's own `port` (7878), kept as a literal for the same reason
+            # cross-seed.nix's `webuiPort` is - see this field's own comment above. Update this if
+            # radarr.nix's port ever changes.
+            base_url = "http://localhost:7878";
             name = "Radarr";
-            prowlarr_url = "https://prowlarr.${host.name}.${domain}";
+            prowlarr_url = "http://localhost:${toString port}";
 
             sync_categories = [
               2000
@@ -141,9 +163,12 @@
               2045
               2050
               2060
+              2070
+              2080
+              2090
             ];
 
-            sync_level = "addOnly";
+            sync_level = "fullSync";
           };
 
           prowlarr_application_readarr = {
@@ -154,16 +179,22 @@
             # above).
             bookshelf-audiobooks = {
               api_key = "\${var.BOOKSHELF_AUDIOBOOKS_API_KEY}";
-              base_url = "https://bookshelf-audiobooks.${host.name}.${domain}";
+              # bookshelf.nix's own `port` (8788), kept as a literal for the same reason
+              # cross-seed.nix's `webuiPort` is - see this field's own comment above. Update this
+              # if bookshelf.nix's audiobooks port ever changes.
+              base_url = "http://localhost:8788";
               name = "Bookshelf (Audiobooks)";
               prowlarr_url = "https://prowlarr.${host.name}.${domain}";
               sync_categories = [ 3030 ];
-              sync_level = "addOnly";
+              sync_level = "fullSync";
             };
 
             bookshelf-ebooks = {
               api_key = "\${var.BOOKSHELF_EBOOKS_API_KEY}";
-              base_url = "https://bookshelf-ebooks.${host.name}.${domain}";
+              # bookshelf.nix's own `port` (8787), kept as a literal for the same reason
+              # cross-seed.nix's `webuiPort` is - see this field's own comment above. Update this
+              # if bookshelf.nix's ebooks port ever changes.
+              base_url = "http://localhost:8787";
               name = "Bookshelf (Ebooks)";
               prowlarr_url = "https://prowlarr.${host.name}.${domain}";
 
@@ -177,15 +208,22 @@
                 7060
               ];
 
-              sync_level = "addOnly";
+              sync_level = "fullSync";
             };
           };
 
           prowlarr_application_sonarr.sonarr = {
+            # Live-configured anime categories (Anime, per Sonarr's own separate
+            # `anime_sync_categories` field) - kept distinct from `sync_categories` below since
+            # devopsarr's schema treats them as two separate lists.
+            anime_sync_categories = [ 5070 ];
             api_key = "\${var.SONARR_API_KEY}";
-            base_url = "https://sonarr.${host.name}.${domain}";
+            # sonarr.nix's own `port` (8989), kept as a literal for the same reason
+            # cross-seed.nix's `webuiPort` is - see this field's own comment above. Update this if
+            # sonarr.nix's port ever changes.
+            base_url = "http://localhost:8989";
             name = "Sonarr";
-            prowlarr_url = "https://prowlarr.${host.name}.${domain}";
+            prowlarr_url = "http://localhost:${toString port}";
 
             sync_categories = [
               5000
@@ -195,10 +233,10 @@
               5040
               5045
               5050
-              5060
+              5090
             ];
 
-            sync_level = "addOnly";
+            sync_level = "fullSync";
           };
         };
 
