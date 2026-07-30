@@ -205,6 +205,12 @@ let
 
       virtual-host = {
         inherit global name port;
+        # Bookshelf (Readarr) serves its own REST API under /api; nginx.nix lets that through the
+        # Authentik forward-auth gate untouched since Prowlarr's Applications sync
+        # (prowlarr.nix's `prowlarr_application_readarr` resources) calls it directly with an API
+        # key, machine-to-machine, with no browser session to carry an Authentik cookie - same
+        # reasoning as radarr.nix/sonarr.nix/prowlarr.nix's own `bypassAuthPaths`.
+        bypassAuthPaths = [ "^/api" ];
         group = "Arr Stack";
         homepage = { inherit description; };
         host = host.name;
