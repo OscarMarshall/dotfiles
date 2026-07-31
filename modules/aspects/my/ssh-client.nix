@@ -34,13 +34,7 @@ in
           };
         }
       ) lanHosts;
-      aspect =
-        if user != null then
-          user.aspect
-        else if home != null then
-          home.aspect
-        else
-          null;
+      aspect = user.aspect or home.aspect or null;
     in
     {
       homeManager.programs.ssh = {
