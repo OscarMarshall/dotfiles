@@ -96,6 +96,11 @@ in
           secrets
         ];
 
+        # The one domain every aspect that needs a public hostname (dns.nix, nginx.nix,
+        # authentik.nix, etc.) builds off of via `host.domain` - a schema default rather than a
+        # per-host attribute since every host shares it today. `mkDefault` so a host could still
+        # override it if that ever changes.
+        domain = lib.mkDefault "silverlight-nex.us";
         os.system.configurationRevision = self.rev or self.dirtyRev or null;
       };
 

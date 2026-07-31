@@ -9,10 +9,10 @@
         ...
       }:
       let
+        inherit (host) domain;
         # Address of Authentik's embedded outpost, used to gate `protected` virtual hosts behind
         # forward-auth. Matches the address authentik-nix's own nginx integration proxies to.
         authentikOutpost = "https://127.0.0.1:9443";
-        domain = "silverlight-nex.us";
         # nginx only inherits a parent context's `add_header` directives into a location that
         # doesn't declare any of its own. Forward-auth locations below need `add_header
         # Set-Cookie` to propagate Authentik's session cookie, which would otherwise silently

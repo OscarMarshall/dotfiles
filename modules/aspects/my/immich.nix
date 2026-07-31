@@ -1,6 +1,5 @@
 { lib, ... }:
 let
-  domain = "silverlight-nex.us";
   port = 2283;
 in
 {
@@ -11,7 +10,7 @@ in
     }:
     { host, ... }:
     let
-      url = "immich.${host.name}.${domain}";
+      url = "immich.${host.name}.${host.domain}";
     in
     {
       # Owned by Immich's own native NixOS service user/group (`immich`, confirmed via

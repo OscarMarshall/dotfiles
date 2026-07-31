@@ -1,6 +1,3 @@
-let
-  domain = "silverlight-nex.us";
-in
 {
   my.nextcloud =
     {
@@ -8,7 +5,7 @@ in
     }:
     { host, ... }:
     let
-      url = "nextcloud.${host.name}.${domain}";
+      url = "nextcloud.${host.name}.${host.domain}";
     in
     {
       dataset = {
@@ -72,7 +69,7 @@ in
               # OIDC-provisioned accounts have no password to type in the first place (user_oidc is
               # their backend), so `admin` was already the only account a form could authenticate.
               hide_login_form = true;
-              mail_domain = domain;
+              mail_domain = host.domain;
               # `mail_smtphost`/`mail_smtpport`/`mail_smtpauth` are left at their module defaults
               # (127.0.0.1:25, unauthenticated) - that's exactly the local Postfix relay set up
               # below, which submission on loopback doesn't need SASL for. `mail_from_address` is
@@ -107,7 +104,7 @@ in
               # above anyway) to loopback, and restricts relaying to loopback callers - this box
               # isn't meant to accept mail from the network, only from Nextcloud on the same host.
               inet_interfaces = "loopback-only";
-              myhostname = "${host.name}.${domain}";
+              myhostname = "${host.name}.${host.domain}";
               mynetworks = [ "127.0.0.0/8" ];
               relayhost = [ "[smtp.protonmail.ch]:587" ];
               smtp_sasl_auth_enable = true;
@@ -206,7 +203,7 @@ in
             # (nginx.nix, always 127.0.0.1) can't reach. That leaves coolwsd IPv4-only, so this
             # discovery URL has to target 127.0.0.1, not [::1] - the latter no longer listens.
             nextcloud-occ config:app:set richdocuments wopi_url --value="http://127.0.0.1:9980"
-            nextcloud-occ config:app:set richdocuments public_wopi_url --value="https://collabora.${host.name}.${domain}"
+            nextcloud-occ config:app:set richdocuments public_wopi_url --value="https://collabora.${host.name}.${host.domain}"
             nextcloud-occ config:app:set richdocuments wopi_allowlist --value="::1,127.0.0.1"
 
             # Immich (immich.nix) is the photo library here, so Nextcloud's own Photos tab is just a
@@ -263,7 +260,7 @@ in
               ...
             }:
             ''
-              printf '[smtp.protonmail.ch]:587 nextcloud@${domain}:%s\n' "$(${decrypt} ${lib.escapeShellArg deps.nextcloud-postfix-smtp-token.file})"
+              printf '[smtp.protonmail.ch]:587 nextcloud@${host.domain}:%s\n' "$(${decrypt} ${lib.escapeShellArg deps.nextcloud-postfix-smtp-token.file})"
             '';
         };
 

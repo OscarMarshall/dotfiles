@@ -65,7 +65,7 @@
     terranix =
       { lib, virtual-host, ... }:
       let
-        domain = "silverlight-nex.us";
+        inherit (host) domain;
         globalHosts = lib.filter (vh: vh.global or false) virtual-host;
       in
       lib.optionalAttrs (host ? dns-record) {

@@ -1,6 +1,5 @@
 { lib, ... }:
 let
-  domain = "silverlight-nex.us";
   env-var-for = name: "HOMEPAGE_VAR_${lib.toUpper name}_API_KEY";
   port = 8082;
   port' = toString port;
@@ -47,7 +46,7 @@ in
         groups = lib.unique (map (vh: vh.group) homepageServices);
         homepageServices = lib.filter (vh: vh ? homepage) virtual-host;
         hosts = lib.listToAttrs (map (vh: lib.nameValuePair vh.name vh) virtual-host);
-        urlFor = vh: vh.url or "${vh.name}.${vh.host}.${domain}";
+        urlFor = vh: vh.url or "${vh.name}.${vh.host}.${host.domain}";
       in
       {
         services.homepage-dashboard = {
@@ -155,7 +154,7 @@ in
       # Homepage is the host's own root landing page, not a per-service subdomain, so it
       # deliberately doesn't follow the `${name}.${host.name}.${domain}` pattern nginx.nix derives
       # for everything else.
-      url = "${host.name}.${domain}";
+      url = "${host.name}.${host.domain}";
     };
   };
 }

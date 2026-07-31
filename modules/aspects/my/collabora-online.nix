@@ -1,5 +1,4 @@
 let
-  domain = "silverlight-nex.us";
   port = 9980;
 in
 {
@@ -9,7 +8,7 @@ in
     }:
     { host, ... }:
     let
-      url = "collabora.${host.name}.${domain}";
+      url = "collabora.${host.name}.${host.domain}";
     in
     {
       # Deliberately no homepage-entry: Collabora has no useful standalone landing page,

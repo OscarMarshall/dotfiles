@@ -1,8 +1,4 @@
-{ inputs, ... }:
-let
-  domain = "silverlight-nex.us";
-in
-{
+{ inputs, ... }: {
   flake-file.inputs.authentik-nix = {
     url = "github:nix-community/authentik-nix";
     inputs.nixpkgs.follows = "nixpkgs";
@@ -22,7 +18,7 @@ in
       # host-scoped name stops being served at all. `config.services.authentik.nginx.host`
       # (`nixos` below) is this exact value, and other aspects that need Authentik's URL
       # (immich.nix/nextcloud.nix/seerr.nix) read it from there rather than re-deriving it.
-      url = if global then "auth.${domain}" else "auth.${host.name}.${domain}";
+      url = if global then "auth.${host.domain}" else "auth.${host.name}.${host.domain}";
     in
     {
       nixos = { config, ... }: {
@@ -216,13 +212,13 @@ in
           # secrets/discord-client-secret.age`, then `agenix rekey -a`), and add
           # `https://${url}/source/oauth/callback/discord/` as that app's OAuth2 redirect URI.
           discord-client-id = "1525363641598083102";
-          hostname-of = vh: vh.url or "${vh.name}.${host.name}.${domain}";
+          hostname-of = vh: vh.url or "${vh.name}.${host.name}.${host.domain}";
           # Every hostname a `global` virtual-host actually answers on: its own (derived or
           # overridden) name, plus the canonical `<name>.<domain>` too - see virtual-host.nix's
           # `oidc` field comment for why both need a redirect URI registered, not just one.
           # `unique` because a `global` host whose `url` override IS already the canonical name
           # (storyteller.nix) would otherwise register every redirect URI twice.
-          hostnames-of = vh: lib.unique ([ (hostname-of vh) ] ++ lib.optional (vh.global or false) "${vh.name}.${domain}");
+          hostnames-of = vh: lib.unique ([ (hostname-of vh) ] ++ lib.optional (vh.global or false) "${vh.name}.${host.domain}");
           # Reuses each service's own `virtual-host.icon` (virtual-host.nix) rather than picking
           # Authentik icons separately, translating Homepage's icon shorthands into the plain URL
           # Authentik's `meta_icon` expects. Only the forms actually in use are handled - an
