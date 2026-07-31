@@ -298,7 +298,9 @@ let
               provider = "readarr.${instance}";
               rename_books = true;
               replace_illegal_characters = true;
-              standard_book_format = "{Author Name} - {Book Title}";
+              # Must contain Book Title AND PartNumber, OR Original Title (confirmed via a real
+              # `tofu apply` 400) - this is Readarr's own default format.
+              standard_book_format = "{Book Title}/{Author Name} - {Book Title}{ (PartNumber)}";
             };
 
             readarr_root_folder.${instance} = {
