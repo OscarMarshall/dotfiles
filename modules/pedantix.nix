@@ -52,11 +52,17 @@
         ];
 
         merge = true;
+        name-style = "identifier";
         sort = true;
       };
 
       formatter = "off";
-      inherits.sort = true;
+
+      inherits = {
+        name-style = "identifier";
+        sort = true;
+      };
+
       lets.sort = true;
 
       overrides = [

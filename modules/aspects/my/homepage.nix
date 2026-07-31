@@ -56,9 +56,9 @@ in
 
           bookmarks = [
             {
-              "Servers" = [
+              Servers = [
                 {
-                  "Harmony" = [
+                  Harmony = [
                     {
                       abbr = "HA";
                       href = "https://${urlFor hosts.homepage}";

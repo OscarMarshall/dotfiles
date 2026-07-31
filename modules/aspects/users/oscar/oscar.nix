@@ -124,7 +124,7 @@ in
             settings.git_protocol = "ssh";
           };
 
-          ssh.settings."github-personal" = {
+          ssh.settings.github-personal = {
             HostName = "github.com";
             IdentitiesOnly = true;
             IdentityFile = "${./id_ed25519_personal.pub}";

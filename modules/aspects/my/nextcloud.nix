@@ -100,7 +100,7 @@ in
             # Compiled to /var/lib/postfix/conf/sasl_passwd.db; the plaintext source is the secret
             # itself (see its declaration above) since its only content is credentials, not a mix of
             # public config and a secret value to template together.
-            mapFiles."sasl_passwd" = config.age.secrets.nextcloud-postfix-smtp-passwd.path;
+            mapFiles.sasl_passwd = config.age.secrets.nextcloud-postfix-smtp-passwd.path;
 
             settings.main = {
               # Restricts every postfix listener (including `submission`/`smtps`, left disabled

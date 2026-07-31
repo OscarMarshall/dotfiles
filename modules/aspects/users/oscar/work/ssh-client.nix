@@ -32,10 +32,10 @@ in
           User = "omarshal";
         };
 
-        "dev" = lib.hm.dag.entryBefore [ "meraki.com aliases" ] { HostName = "dev203.meraki.com"; };
+        dev = lib.hm.dag.entryBefore [ "meraki.com aliases" ] { HostName = "dev203.meraki.com"; };
         "gerrit.ikarem.io".User = "omarshal";
 
-        "github-meraki" = {
+        github-meraki = {
           HostName = "github.com";
           IdentitiesOnly = true;
           IdentityFile = "${./id_ed25519_meraki.pub}";
