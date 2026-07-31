@@ -14,6 +14,15 @@
       };
 
       nixos = { config, ... }: {
+        # Ensured to exist by zfs.nix's own generic `dataset`-quirk consumer
+        # (`zfs-dataset-<pool>-<name>.service`, one per dataset, host-wide) - see its own comment
+        # for why this can't be a `systemd.tmpfiles.rule`. Only the ordering against this specific
+        # container is Profilarr's own concern.
+        systemd.services.podman-profilarr = {
+          after = [ "zfs-dataset-metalminds-profilarr.service" ];
+          requires = [ "zfs-dataset-metalminds-profilarr.service" ];
+        };
+
         virtualisation.oci-containers.containers.profilarr = {
           environment.TZ = config.time.timeZone;
           image = "santiagosayshey/profilarr:v1.1.5@sha256:8033e9c6d6995f37625afeb93d7020e99566f549ae83b65f1db7e11048952d0f";

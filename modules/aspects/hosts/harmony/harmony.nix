@@ -1,4 +1,10 @@
-{ den, my, ... }: {
+{
+  lib,
+  den,
+  my,
+  ...
+}:
+{
   den.aspects.harmony = {
     includes = with my; [
       (authentik { global = true; })
@@ -43,12 +49,21 @@
 
     dataset =
       map
-        (name: {
-          inherit name;
-          guestAccess = true;
-          pool = "metalminds";
-          samba = true;
-        })
+        (
+          name:
+          {
+            inherit name;
+            guestAccess = true;
+            pool = "metalminds";
+            samba = true;
+          }
+          # Shared by both Bookshelf instances (see bookshelf.nix) - owned by the same `readarr`
+          # user/group they both run as, so whichever instance writes to it, the other can too.
+          // lib.optionalAttrs (name == "books") {
+            group = "readarr";
+            user = "readarr";
+          }
+        )
         [
           "backups"
           "books"

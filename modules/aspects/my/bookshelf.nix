@@ -31,35 +31,25 @@ let
         pool = "metalminds";
       };
 
-      nixos = { config, pkgs, ... }: {
-        # LinuxServer's own init fixes up `/config`'s ownership to match PUID/PGID automatically,
-        # but never touches other bind-mounted volumes - `/books` (shared by both instances, see
-        # its own comment below) is just whatever `zfs create` left it as (root-owned), which the
-        # container's own PUID/PGID-mapped user then can't write to without this.
-        #
-        # A plain `systemd.tmpfiles.rules` entry does NOT work here: `systemd-tmpfiles-setup.service`
-        # runs `Before = [ "sysinit.target" ]`, but ZFS datasets (this repo's `metalminds` pool is
-        # `boot.zfs.extraPools`, not the root filesystem) are mounted by `zfs-mount.service`, which
-        # is only `wantedBy = [ "zfs.target" ]` and `zfs.target` is only `wantedBy = [
-        # "multi-user.target" ]` - reached long after sysinit.target. A tmpfiles rule targeting
-        # `/metalminds/books` would run BEFORE that mount exists, creating (and chowning) a plain
-        # directory on the root filesystem that the later ZFS mount then shadows - the real
-        # dataset's root keeps whatever `zfs create` left it as, permission error unchanged.
-        # `RequiresMountsFor` is the actual fix: it resolves to whatever mount unit covers a path
-        # at runtime (no need to name `zfs-mount.service`/a synthesized per-dataset mount unit
-        # directly) and orders this unit after it.
-        systemd.services."chown-metalminds-books" = {
-          description = "Fix /metalminds/books ownership for Bookshelf";
-          before = [ "podman-${name}.service" ];
-          requiredBy = [ "podman-${name}.service" ];
+      nixos = { config, ... }: {
+        # Both this instance's own `/config` dataset (declared above) and the shared `/books` one
+        # (harmony.nix's own `dataset` entry, owned by `readarr:readarr` there) are ensured to
+        # exist - and, for `/books`, correctly chowned - by zfs.nix's own generic `dataset`-quirk
+        # consumer (`zfs-dataset-<pool>-<name>.service`, one per dataset, host-wide) rather than
+        # anything specific to Bookshelf - see zfs.nix's own comment on why that has to be a real
+        # systemd service (ordered via `zfs-import.target`) and not a `systemd.tmpfiles.rule`. Only
+        # the ORDERING against this container is Bookshelf-specific: nothing else needs it done
+        # before `/config`/`/books` are mounted, so it's declared here rather than in zfs.nix.
+        systemd.services."podman-${name}" = {
+          after = [
+            "zfs-dataset-metalminds-${name}.service"
+            "zfs-dataset-metalminds-books.service"
+          ];
 
-          serviceConfig = {
-            ExecStart = "${pkgs.coreutils}/bin/chown readarr:readarr /metalminds/books";
-            RemainAfterExit = true;
-            Type = "oneshot";
-          };
-
-          unitConfig.RequiresMountsFor = [ "/metalminds/books" ];
+          requires = [
+            "zfs-dataset-metalminds-${name}.service"
+            "zfs-dataset-metalminds-books.service"
+          ];
         };
 
         # A dedicated `readarr` user/group (shared by BOTH Bookshelf instances, same as
@@ -84,8 +74,9 @@ let
 
         virtualisation.oci-containers.containers.${name} = {
           environment = {
-            # Matches the `chown-metalminds-books` service above and the dedicated `readarr`
-            # user/group declared alongside it.
+            # Matches the shared `readarr` user/group declared alongside it, which
+            # `zfs-dataset-metalminds-books.service` (see harmony.nix's own `dataset` entry and
+            # zfs.nix's generic consumer) chowns the shared `/books` root folder to.
             PGID = toString config.users.groups.readarr.gid;
             PUID = toString config.users.users.readarr.uid;
             # Bookshelf only reaches this vhost via nginx (its port isn't opened in the firewall),

@@ -19,6 +19,15 @@ in
         allowedUDPPorts = [ gamePort ];
       };
 
+      # Ensured to exist by zfs.nix's own generic `dataset`-quirk consumer
+      # (`zfs-dataset-<pool>-<name>.service`, one per dataset, host-wide) - see its own comment for
+      # why this can't be a `systemd.tmpfiles.rule`. Only the ordering against this specific
+      # container is satisfactory-server's own concern.
+      systemd.services.podman-satisfactory-server = {
+        after = [ "zfs-dataset-metalminds-satisfactory-server.service" ];
+        requires = [ "zfs-dataset-metalminds-satisfactory-server.service" ];
+      };
+
       users = {
         groups.satisfactory-server.gid = 984;
 
