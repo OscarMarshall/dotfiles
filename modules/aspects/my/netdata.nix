@@ -89,6 +89,11 @@ in
             source "${config.age.secrets."netdata-secrets.env".path}"
             SEND_DISCORD="YES"
             DEFAULT_RECIPIENT_DISCORD="alarms"
+
+            # No local MTA on this host; Netdata Cloud already sends email
+            # notifications, so don't bother with alarm-notify.sh's own
+            # (broken, sendmail-dependent) email path.
+            SEND_EMAIL="NO"
           '';
 
           # smartmontools gives the smartctl collector S.M.A.R.T. access to individual disks
