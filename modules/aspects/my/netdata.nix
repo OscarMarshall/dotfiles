@@ -103,21 +103,33 @@ in
           rekeyFile = ../../../secrets/discord-webhook-url.age;
         };
 
-        "netdata-secrets.env".generator = {
-          dependencies = { inherit (secrets) discord-webhook-url; };
+        "netdata-secrets.env" = {
+          generator = {
+            dependencies = { inherit (secrets) discord-webhook-url; };
 
-          script =
-            {
-              lib,
-              decrypt,
-              deps,
-              ...
-            }:
-            ''
-              printf 'DISCORD_WEBHOOK_URL="%s"\n' "$(
-                ${decrypt} ${lib.escapeShellArg deps.discord-webhook-url.file}
-              )"
-            '';
+            script =
+              {
+                lib,
+                decrypt,
+                deps,
+                ...
+              }:
+              ''
+                printf 'DISCORD_WEBHOOK_URL="%s"\n' "$(
+                  ${decrypt} ${lib.escapeShellArg deps.discord-webhook-url.file}
+                )"
+              '';
+          };
+
+          # netdata.service runs as the `netdata` user, and alarm-notify.sh sources this file
+          # directly (not via systemd LoadCredential), so it needs to be readable by that user
+          # rather than the agenix default of root-only - same class of bug as
+          # netdata-api.htpasswd needing owner = "nginx" above, just for the service itself this
+          # time instead of nginx. Root-caused on the deployed harmony after most
+          # apcupsd_last_collected_secs alarm transitions showed exec_code: 1/EXEC_FAILED on their
+          # Discord notification - alarm-notify.sh couldn't read DISCORD_WEBHOOK_URL from a
+          # root-only file while running as `netdata`.
+          owner = "netdata";
         };
       };
 
