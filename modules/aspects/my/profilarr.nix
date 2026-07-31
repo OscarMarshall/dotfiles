@@ -11,6 +11,7 @@
       dataset = {
         name = "profilarr";
         pool = "metalminds";
+        units = [ "podman-profilarr" ];
       };
 
       nixos = { config, ... }: {

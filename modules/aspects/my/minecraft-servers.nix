@@ -47,6 +47,9 @@
         name = "minecraft-worlds";
         pool = "metalminds";
         samba = true;
+        # One nix-minecraft-generated `minecraft-server-<world>.service` per world - all share this
+        # one dataset (`dataDir` below), so all need to wait on it.
+        units = map (world: "minecraft-server-${world}") (lib.attrNames worlds);
       };
 
       nixos = { config, pkgs, ... }: {

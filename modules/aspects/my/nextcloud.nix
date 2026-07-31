@@ -14,6 +14,10 @@ in
       dataset = {
         name = "nextcloud";
         pool = "metalminds";
+        # `nextcloud-setup` is the one upstream's own NixOS module orders every other
+        # nextcloud-*/phpfpm-nextcloud unit after already, so ordering just this one after the
+        # dataset covers the rest transitively.
+        units = [ "nextcloud-setup" ];
       };
 
       nixos = { config, pkgs, ... }: {
