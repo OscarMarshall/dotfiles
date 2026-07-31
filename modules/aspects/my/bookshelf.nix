@@ -282,10 +282,12 @@ let
               provider = "readarr.${instance}";
               quality_profile_id = 1;
               root_folder_path = "/books";
-              # "entireAuthor" (not "all" - the provider's actual enum here is
+              # "specificBook" (not "all" - the provider's actual enum here is
               # `["none" "specificBook" "entireAuthor"]`, confirmed via `tofu validate`) monitors
-              # every book by an author this list adds, matching the "full sync" intent.
-              should_monitor = "entireAuthor";
+              # only the book(s) this list actually adds - "entireAuthor" would balloon monitoring
+              # to that author's whole back-catalog on the sibling instance the moment any one of
+              # their books syncs over, which isn't the intent (mirror what's there, not expand it).
+              should_monitor = "specificBook";
               should_monitor_existing = true;
               should_search = true;
             };
