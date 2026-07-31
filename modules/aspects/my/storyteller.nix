@@ -23,17 +23,10 @@ in
       dataset = {
         name = "storyteller";
         pool = "metalminds";
+        units = [ "podman-storyteller" ];
       };
 
       nixos = { config, ... }: {
-        # Ensured to exist by zfs.nix's own generic `dataset`-quirk consumer
-        # (`zfs-dataset-<pool>-<name>.service`, one per dataset, host-wide) - see its own comment
-        # for why this can't be a `systemd.tmpfiles.rule`. Only the ordering against this specific
-        # container is Storyteller's own concern.
-        systemd.services.podman-storyteller = {
-          after = [ "zfs-dataset-metalminds-storyteller.service" ];
-          requires = [ "zfs-dataset-metalminds-storyteller.service" ];
-        };
 
         virtualisation.oci-containers.containers.storyteller = {
           environment = {

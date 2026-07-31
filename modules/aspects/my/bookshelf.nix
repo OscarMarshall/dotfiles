@@ -29,29 +29,14 @@ let
       dataset = {
         inherit name;
         pool = "metalminds";
+        # This instance's own container needs its `/config` dataset to actually exist (and be
+        # mounted) before it starts - see zfs.nix's own `units` field comment. The shared `/books`
+        # dataset's equivalent `units` entry lives on harmony.nix's own `dataset` declaration
+        # instead, since that's where `/books` itself is declared.
+        units = [ "podman-${name}" ];
       };
 
       nixos = { config, ... }: {
-        # Both this instance's own `/config` dataset (declared above) and the shared `/books` one
-        # (harmony.nix's own `dataset` entry, owned by `readarr:readarr` there) are ensured to
-        # exist - and, for `/books`, correctly chowned - by zfs.nix's own generic `dataset`-quirk
-        # consumer (`zfs-dataset-<pool>-<name>.service`, one per dataset, host-wide) rather than
-        # anything specific to Bookshelf - see zfs.nix's own comment on why that has to be a real
-        # systemd service (ordered via `zfs-import.target`) and not a `systemd.tmpfiles.rule`. Only
-        # the ORDERING against this container is Bookshelf-specific: nothing else needs it done
-        # before `/config`/`/books` are mounted, so it's declared here rather than in zfs.nix.
-        systemd.services."podman-${name}" = {
-          after = [
-            "zfs-dataset-metalminds-${name}.service"
-            "zfs-dataset-metalminds-books.service"
-          ];
-
-          requires = [
-            "zfs-dataset-metalminds-${name}.service"
-            "zfs-dataset-metalminds-books.service"
-          ];
-        };
-
         # A dedicated `readarr` user/group (shared by BOTH Bookshelf instances, same as
         # qbittorrent.nix's own service user) rather than accepting the image's own undocumented
         # built-in "abc" (911:911) - both instances' containers run as this user via PUID/PGID

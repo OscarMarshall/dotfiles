@@ -15,6 +15,14 @@
 #                 for a dataset a container-based service needs to write into as some UID/GID other
 #                 than root (e.g. a shared library directory two containers both write into). Both
 #                 fields must be given together, or neither.
+#   units       - (optional, list of str) `systemd.services.<name>` keys (bare names, no `.service`
+#                 suffix - e.g. `"podman-profilarr"`, one of nix-minecraft's own
+#                 `"minecraft-server-<world>"` names) that read/write this dataset and must not
+#                 start before it's guaranteed to exist (and be owned, if `user`/`group` are set) -
+#                 every listed unit gets `after`/`requires` on this dataset's own ensure-service
+#                 injected automatically. This is the ONLY thing that actually needs a real
+#                 dependency: a plain `dataset` declaration on its own guarantees nothing gets
+#                 created or ordered by itself.
 { lib, ... }: {
   den.quirks.dataset.description = "ZFS datasets required by aspects, optionally shared via Samba and/or owned by a specific user";
 
@@ -25,12 +33,9 @@
         # Use the default ZFS package for compatibility checking to avoid infinite recursion
         # We can't use config.boot.zfs.package here because it depends on kernelPackages which we're trying to determine
         defaultZfsPackage = pkgs.zfs;
-        # One oneshot service per dataset - name matches `zfs-dataset-<pool>-<name>`, which any
-        # consumer needing the dataset actually mounted+owned before it starts (e.g. an
-        # oci-containers service bind-mounting it) should depend on directly, by that name, via its
-        # own `systemd.services."podman-<container>".after/requires` (see bookshelf.nix for the
-        # pattern - `dependsOn` on the container itself only accepts OTHER containers, not arbitrary
-        # systemd units).
+        # One oneshot service per dataset, named `zfs-dataset-<pool>-<name>` - `units` (see the
+        # record-shape comment above) is how a consumer gets ordered against it; nothing does so
+        # automatically otherwise.
         #
         # This can't be a plain `systemd.tmpfiles.rule`: `systemd-tmpfiles-setup.service` runs
         # `Before = [ "sysinit.target" ]`, but these pools are `boot.zfs.extraPools` (not the root
@@ -70,6 +75,23 @@
         latestKernelPackage = lib.last (
           lib.sort (a: b: (lib.versionOlder a.kernel.version b.kernel.version)) (builtins.attrValues zfsCompatibleKernelPackages)
         );
+        # One `{ unit; datasetService; }` pair per (dataset, consuming unit) - flattened first,
+        # then grouped BACK by unit below, since a single unit could plausibly need to wait on more
+        # than one dataset (not true of anything currently in this repo, but `lib.recursiveUpdate`-
+        # style merging across dataset entries would silently DROP one dataset's `after`/`requires`
+        # if two entries both named the same unit and were merged one at a time - grouping first
+        # avoids that trap entirely).
+        unitDatasetPairs = lib.concatMap (
+          d:
+          map (unit: {
+            inherit unit;
+            datasetService = "zfs-dataset-${d.pool}-${d.name}.service";
+          }) (d.units or [ ])
+        ) dataset;
+        unitOrderingServices = lib.mapAttrs (_unit: pairs: {
+          after = map (p: p.datasetService) pairs;
+          requires = map (p: p.datasetService) pairs;
+        }) (lib.groupBy (p: p.unit) unitDatasetPairs);
         # Find all ZFS-compatible kernel packages
         zfsCompatibleKernelPackages = lib.filterAttrs (
           name: kernelPackages:
@@ -97,7 +119,9 @@
           trim.enable = true;
         };
 
-        systemd.services = lib.listToAttrs (map ensureDatasetService dataset);
+        # Disjoint name spaces (`zfs-dataset-*` vs. whatever each consumer's own unit is named), so
+        # a plain `//` can't drop anything here.
+        systemd.services = lib.listToAttrs (map ensureDatasetService dataset) // unitOrderingServices;
       };
   };
 }
