@@ -1,5 +1,4 @@
 {
-  lib,
   den,
   my,
   ...
@@ -47,33 +46,18 @@
       vpn-confinement
     ];
 
+    # The shared `books` dataset (used by both Bookshelf instances) is declared in bookshelf.nix
+    # itself instead of here - see its own comment on why that's the more correct owner.
     dataset =
       map
-        (
-          name:
-          {
-            inherit name;
-            guestAccess = true;
-            pool = "metalminds";
-            samba = true;
-          }
-          # Shared by both Bookshelf instances (see bookshelf.nix) - owned by the same `readarr`
-          # user/group they both run as, so whichever instance writes to it, the other can too, and
-          # both containers wait on it via `units` (zfs.nix's own field for this - see its comment).
-          // lib.optionalAttrs (name == "books") {
-            group = "readarr";
-
-            units = [
-              "podman-bookshelf-audiobooks"
-              "podman-bookshelf-ebooks"
-            ];
-
-            user = "readarr";
-          }
-        )
+        (name: {
+          inherit name;
+          guestAccess = true;
+          pool = "metalminds";
+          samba = true;
+        })
         [
           "backups"
-          "books"
           "documents"
           "movies"
           "music"

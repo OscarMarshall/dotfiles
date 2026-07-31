@@ -26,15 +26,35 @@ let
       name = "bookshelf-${instance}";
     in
     {
-      dataset = {
-        inherit name;
-        pool = "metalminds";
-        # This instance's own container needs its `/config` dataset to actually exist (and be
-        # mounted) before it starts - see zfs.nix's own `units` field comment. The shared `/books`
-        # dataset's equivalent `units` entry lives on harmony.nix's own `dataset` declaration
-        # instead, since that's where `/books` itself is declared.
-        units = [ "podman-${name}" ];
-      };
+      # The `dataset` quirk (zfs.nix) aggregates across contributors, so this instance contributes
+      # a LIST: its own `/config` dataset, AND the `/books` one shared with the OTHER Bookshelf
+      # instance - both instances declare the exact same `books` entry (harmless: `ensureDatasetService`
+      # only reads `pool`/`name`/`user`/`group`, identical either way, so the resulting
+      # zfs-dataset-metalminds-books.service is the same regardless of which contribution "wins"
+      # the name; each instance's own `units` entry for it still gets unioned in). Living here
+      # (rather than on harmony.nix's own host-level `dataset` list, where it used to be) keeps
+      # Bookshelf's own user/group/unit names out of the host aspect, which has no other reason to
+      # know them.
+      dataset = [
+        {
+          inherit name;
+          pool = "metalminds";
+          # This instance's own container needs its `/config` dataset to actually exist (and be
+          # mounted) before it starts - see zfs.nix's own `units` field comment.
+          units = [ "podman-${name}" ];
+        }
+        {
+          # Owned by a dedicated `readarr` user/group (declared below) shared by BOTH instances, so
+          # whichever one writes to it, the other can too.
+          group = "readarr";
+          guestAccess = true;
+          name = "books";
+          pool = "metalminds";
+          samba = true;
+          units = [ "podman-${name}" ];
+          user = "readarr";
+        }
+      ];
 
       nixos = { config, ... }: {
         # A dedicated `readarr` user/group (shared by BOTH Bookshelf instances, same as
@@ -60,8 +80,8 @@ let
         virtualisation.oci-containers.containers.${name} = {
           environment = {
             # Matches the shared `readarr` user/group declared alongside it, which
-            # `zfs-dataset-metalminds-books.service` (see harmony.nix's own `dataset` entry and
-            # zfs.nix's generic consumer) chowns the shared `/books` root folder to.
+            # `zfs-dataset-metalminds-books.service` (see the shared `books` entry in `dataset`
+            # above and zfs.nix's generic consumer) chowns the shared `/books` root folder to.
             PGID = toString config.users.groups.readarr.gid;
             PUID = toString config.users.users.readarr.uid;
             # Bookshelf only reaches this vhost via nginx (its port isn't opened in the firewall),
@@ -104,9 +124,9 @@ let
             in
             [ "127.0.0.1:${port'}:${port'}" ];
 
-          # `/books` is shared by BOTH instances deliberately (see harmony.nix's `books` dataset) -
-          # the plan is for the ebook and audiobook instance to manage the same on-disk library for
-          # a given book, eventually kept in sync the way
+          # `/books` is shared by BOTH instances deliberately (see the shared `books` entry in
+          # `dataset` above) - the plan is for the ebook and audiobook instance to manage the same
+          # on-disk library for a given book, eventually kept in sync the way
           # https://trash-guides.info/Radarr/Tips/Sync-2-radarr-sonarr/ describes for Radarr/Sonarr
           # pairs - not implemented yet, tracked as a follow-up.
           volumes = [
