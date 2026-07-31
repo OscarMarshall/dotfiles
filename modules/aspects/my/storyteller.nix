@@ -1,6 +1,3 @@
-let
-  domain = "silverlight-nex.us";
-in
 {
   my.storyteller =
     {
@@ -14,10 +11,11 @@ in
       # an ALIAS alongside the host-scoped name - see virtual-host.nix), `global` here SWITCHES the
       # served hostname rather than adding to it. Storyteller pins its session cookie's `Domain` to
       # whatever hostname `AUTH_URL` names (see `AUTH_URL` below), and
-      # `storyteller.${host.name}.${domain}` is NOT a subdomain of `storyteller.${domain}` - so a
-      # browser on the name AUTH_URL doesn't cover would reject the session cookie and silently loop
-      # back to the login page. One name has to be canonical; serving the other would just be a trap.
-      url = if global then "storyteller.${domain}" else "storyteller.${host.name}.${domain}";
+      # `storyteller.${host.name}.${host.domain}` is NOT a subdomain of `storyteller.${host.domain}` -
+      # so a browser on the name AUTH_URL doesn't cover would reject the session cookie and silently
+      # loop back to the login page. One name has to be canonical; serving the other would just be a
+      # trap.
+      url = if global then "storyteller.${host.domain}" else "storyteller.${host.name}.${host.domain}";
     in
     {
       dataset = {

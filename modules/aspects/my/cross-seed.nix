@@ -1,5 +1,5 @@
 {
-  my.cross-seed = {
+  my.cross-seed = { host, ... }: {
     nixos = { config, ... }: {
       services.cross-seed = {
         enable = true;
@@ -74,20 +74,20 @@
               '{
                 apiKey: $apiKey,
                 torznab: [
-                  "https://prowlarr.harmony.silverlight-nex.us/1/api?apikey=\($prowlarrApiKey)&extended=1&t=search",
-                  "https://prowlarr.harmony.silverlight-nex.us/5/api?apikey=\($prowlarrApiKey)&extended=1&t=search",
-                  "https://prowlarr.harmony.silverlight-nex.us/9/api?apikey=\($prowlarrApiKey)&extended=1&t=search",
-                  "https://prowlarr.harmony.silverlight-nex.us/11/api?apikey=\($prowlarrApiKey)&extended=1&t=search",
-                  "https://prowlarr.harmony.silverlight-nex.us/12/api?apikey=\($prowlarrApiKey)&extended=1&t=search",
-                  "https://prowlarr.harmony.silverlight-nex.us/13/api?apikey=\($prowlarrApiKey)&extended=1&t=search",
-                  "https://prowlarr.harmony.silverlight-nex.us/14/api?apikey=\($prowlarrApiKey)&extended=1&t=search",
-                  "https://prowlarr.harmony.silverlight-nex.us/15/api?apikey=\($prowlarrApiKey)&extended=1&t=search"
+                  "https://prowlarr.harmony.${host.domain}/1/api?apikey=\($prowlarrApiKey)&extended=1&t=search",
+                  "https://prowlarr.harmony.${host.domain}/5/api?apikey=\($prowlarrApiKey)&extended=1&t=search",
+                  "https://prowlarr.harmony.${host.domain}/9/api?apikey=\($prowlarrApiKey)&extended=1&t=search",
+                  "https://prowlarr.harmony.${host.domain}/11/api?apikey=\($prowlarrApiKey)&extended=1&t=search",
+                  "https://prowlarr.harmony.${host.domain}/12/api?apikey=\($prowlarrApiKey)&extended=1&t=search",
+                  "https://prowlarr.harmony.${host.domain}/13/api?apikey=\($prowlarrApiKey)&extended=1&t=search",
+                  "https://prowlarr.harmony.${host.domain}/14/api?apikey=\($prowlarrApiKey)&extended=1&t=search",
+                  "https://prowlarr.harmony.${host.domain}/15/api?apikey=\($prowlarrApiKey)&extended=1&t=search"
                 ],
                 radarr: [
-                  "https://radarr.harmony.silverlight-nex.us?apikey=\($radarrApiKey)"
+                  "https://radarr.harmony.${host.domain}?apikey=\($radarrApiKey)"
                 ],
                 sonarr: [
-                  "https://sonarr.harmony.silverlight-nex.us?apikey=\($sonarrApiKey)"
+                  "https://sonarr.harmony.${host.domain}?apikey=\($sonarrApiKey)"
                 ],
                 torrentClients: [
                   "qbittorrent:http://oscar:\($qbittorrentPassword)@\($qbittorrentHost):\($webuiPort)"

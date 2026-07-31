@@ -116,8 +116,8 @@ in
                 # Host-header allowlist for the WebUI itself - narrows it to the one hostname it's
                 # actually reverse-proxied at. Currently inert (see `HostHeaderValidation` above),
                 # kept declared for whenever that gets sorted out.
-                ServerDomains = "qbittorrent.${host.name}.silverlight-nex.us";
-                TrustedReverseProxiesList = "qbittorrent.${host.name}.silverlight-nex.us";
+                ServerDomains = "qbittorrent.${host.name}.${host.domain}";
+                TrustedReverseProxiesList = "qbittorrent.${host.name}.${host.domain}";
                 Username = "oscar";
               };
             };

@@ -1,5 +1,5 @@
 {
-  my.unpackerr = {
+  my.unpackerr = { host, ... }: {
     nixos =
       {
         config,
@@ -15,9 +15,9 @@
 
           serviceConfig = {
             Environment = [
-              "UN_SONARR_0_URL=https://sonarr.harmony.silverlight-nex.us"
+              "UN_SONARR_0_URL=https://sonarr.harmony.${host.domain}"
               "UN_SONARR_0_PATHS_0=/metalminds/torrents/downloads"
-              "UN_RADARR_0_URL=https://radarr.harmony.silverlight-nex.us"
+              "UN_RADARR_0_URL=https://radarr.harmony.${host.domain}"
               "UN_RADARR_0_PATHS_0=/metalminds/torrents/downloads"
             ];
 

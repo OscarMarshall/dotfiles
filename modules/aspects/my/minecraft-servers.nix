@@ -32,7 +32,7 @@
     }:
     { host, ... }:
     let
-      domain = "silverlight-nex.us";
+      inherit (host) domain;
     in
     {
       includes = [
