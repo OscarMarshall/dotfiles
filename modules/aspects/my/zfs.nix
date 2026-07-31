@@ -15,6 +15,10 @@
 #                 for a dataset a container-based service needs to write into as some UID/GID other
 #                 than root (e.g. a shared library directory two containers both write into). Both
 #                 fields must be given together, or neither.
+#   options     - (optional, attrset) ZFS property name/value pairs (e.g. `{ compression = "lz4";
+#                 quota = "10G"; }`), passed as `-o property=value` flags to `zfs create`. Only
+#                 applied at CREATION time, same as `zfs create` itself - not retroactively applied
+#                 to a dataset that already exists.
 #   units       - (optional, list of str) `systemd.services.<name>` keys (bare names, no `.service`
 #                 suffix - e.g. `"podman-profilarr"`, one of nix-minecraft's own
 #                 `"minecraft-server-<world>"` names) that read/write this dataset and must not
@@ -56,10 +60,15 @@
 
             serviceConfig = {
               ExecStart = pkgs.writeShellScript "ensure-zfs-dataset-${d.pool}-${d.name}" (
+                let
+                  createOptions = lib.concatStrings (
+                    lib.mapAttrsToList (property: value: " -o ${lib.escapeShellArg "${property}=${value}"}") (d.options or { })
+                  );
+                in
                 ''
                   set -eu
                   ${defaultZfsPackage}/bin/zfs list -H ${lib.escapeShellArg "${d.pool}/${d.name}"} >/dev/null 2>&1 \
-                    || ${defaultZfsPackage}/bin/zfs create -p ${lib.escapeShellArg "${d.pool}/${d.name}"}
+                    || ${defaultZfsPackage}/bin/zfs create -p${createOptions} ${lib.escapeShellArg "${d.pool}/${d.name}"}
                 ''
                 + lib.optionalString (d ? user) ''
                   ${pkgs.coreutils}/bin/chown ${lib.escapeShellArg "${d.user}:${d.group}"} ${lib.escapeShellArg "/${d.pool}/${d.name}"}
