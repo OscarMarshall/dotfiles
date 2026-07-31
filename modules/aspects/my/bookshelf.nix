@@ -111,6 +111,12 @@ let
           };
 
           environmentFiles = [ config.age.secrets."${name}.env".path ];
+          # `--group-add` (rather than PGID above, which only sets the primary group) makes the
+          # container process a supplementary member of qbittorrent's own group, the same way
+          # radarr.nix's/sonarr.nix's own native `radarr`/`sonarr` users get
+          # `extraGroups = [ "qbittorrent" ];` - qBittorrent writes completed downloads as
+          # qbittorrent:qbittorrent, so importing them needs read access to that group.
+          extraOptions = [ "--group-add=${toString config.users.groups.qbittorrent.gid}" ];
           # Pinned to the current "hardcover" tag's digest (Hardcover-sourced metadata, higher
           # quality than the Goodreads-compatible "softcover" variant) -- re-resolve if bumping:
           #   curl -sH "Authorization: Bearer $(curl -s 'https://ghcr.io/token?scope=repository:pennydreadful/bookshelf:pull' | jq -r .token)" \
@@ -129,9 +135,17 @@ let
           # on-disk library for a given book, eventually kept in sync the way
           # https://trash-guides.info/Radarr/Tips/Sync-2-radarr-sonarr/ describes for Radarr/Sonarr
           # pairs - not implemented yet, tracked as a follow-up.
+          #
+          # `/metalminds/torrents/downloads` is mounted at the SAME absolute path (rather than a
+          # container-local alias like `/downloads`) so Bookshelf sees completed downloads at
+          # exactly the path qBittorrent itself reports them at (both radarr.nix/sonarr.nix and
+          # unpackerr.nix already rely on this same path directly, being native processes with no
+          # container boundary to translate across) - avoids needing a Remote Path Mapping in
+          # Bookshelf's own settings to reconcile two different paths for the same file.
           volumes = [
             "/metalminds/${name}:/config"
             "/metalminds/books:/books"
+            "/metalminds/torrents/downloads:/metalminds/torrents/downloads"
           ];
         };
       };
