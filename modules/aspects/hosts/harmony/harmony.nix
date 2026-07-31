@@ -1,9 +1,4 @@
-{
-  den,
-  my,
-  ...
-}:
-{
+{ den, my, ... }: {
   den.aspects.harmony = {
     includes = with my; [
       (authentik { global = true; })
