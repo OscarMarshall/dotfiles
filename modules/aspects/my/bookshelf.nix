@@ -35,18 +35,35 @@ let
         # LinuxServer's own init fixes up `/config`'s ownership to match PUID/PGID automatically,
         # but never touches other bind-mounted volumes - `/books` (shared by both instances, see
         # its own comment below) is just whatever `zfs create` left it as (root-owned), which the
-        # container's own "abc" user then can't write to. PUID/PGID are pinned explicitly (911:911,
-        # the image's own undocumented built-in default for "abc") rather than left implicit, so
-        # this chown has a fixed target to match instead of depending on the image's default ever
-        # staying what it currently is.
-        systemd.tmpfiles.rules = [ "d /metalminds/books 0770 911 911 -" ];
+        # container's own PUID/PGID-mapped user then can't write to without this.
+        systemd.tmpfiles.rules = [ "d /metalminds/books 0770 readarr readarr -" ];
+
+        # A dedicated `readarr` user/group (shared by BOTH Bookshelf instances, same as
+        # qbittorrent.nix's own service user) rather than accepting the image's own undocumented
+        # built-in "abc" (911:911) - both instances' containers run as this user via PUID/PGID
+        # below, so whichever one writes to the shared `/books` root folder, the other can too.
+        # `uid`/`gid` are pinned explicitly (983, the next one down from
+        # satisfactory-server.nix's 984 and qbittorrent.nix's 985) rather than left to NixOS's own
+        # dynamic system-user allocation, which only resolves a UID at activation time - too late
+        # to bake into the container's own PUID/PGID env vars below, which need a value at build
+        # time.
+        users = {
+          groups.readarr.gid = 983;
+
+          users.readarr = {
+            description = "Bookshelf (Readarr) service user";
+            group = "readarr";
+            isSystemUser = true;
+            uid = 983;
+          };
+        };
 
         virtualisation.oci-containers.containers.${name} = {
           environment = {
-            # Matches the `systemd.tmpfiles.rules` chown above - see its comment for why this is
-            # pinned explicitly rather than left at the image's own implicit default.
-            PGID = "911";
-            PUID = "911";
+            # Matches the `systemd.tmpfiles.rules` chown above and the dedicated `readarr`
+            # user/group declared alongside it.
+            PGID = toString config.users.groups.readarr.gid;
+            PUID = toString config.users.users.readarr.uid;
             # Bookshelf only reaches this vhost via nginx (its port isn't opened in the firewall),
             # and every such request already passed the Authentik forward-auth gate in front of it -
             # so Bookshelf's own login is pure redundancy. `READARR__AUTH__REQUIRED =
