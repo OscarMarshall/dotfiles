@@ -41,6 +41,9 @@
       vpn-confinement
     ];
 
+    # The shared `books` dataset (used by both Bookshelf instances), `movies` (radarr.nix), `shows`
+    # (sonarr.nix), and `pictures` (immich.nix) are declared in their owning aspects instead of
+    # here - see bookshelf.nix's own comment on why that's the more correct owner.
     dataset =
       map
         (name: {
@@ -52,10 +55,7 @@
         [
           "backups"
           "documents"
-          "movies"
           "music"
-          "pictures"
-          "shows"
           "torrents"
           "yarg-charts"
         ];

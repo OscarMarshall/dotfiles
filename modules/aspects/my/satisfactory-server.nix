@@ -5,8 +5,14 @@ in
 {
   my.satisfactory-server = {
     dataset = {
+      # Owned by the same dedicated `satisfactory-server` user/group declared below (matching the
+      # container's own PUID/PGID) - zfs.nix's generic `dataset`-quirk consumer chowns it once
+      # created, and `units` orders this container after that.
+      group = "satisfactory-server";
       name = "satisfactory-server";
       pool = "metalminds";
+      units = [ "podman-satisfactory-server" ];
+      user = "satisfactory-server";
     };
 
     nixos = { config, ... }: {

@@ -1,21 +1,43 @@
 {
   my.cross-seed = { host, ... }: {
-    nixos = { config, ... }: {
-      services.cross-seed = {
-        enable = true;
-        group = "qbittorrent";
+    # `torrentClients` lives in `settings` (plain, Nix-store-visible) rather than `settingsFile`
+    # (the encrypted secret) because it no longer carries a credential - qBittorrent's own
+    # `AuthSubnetWhitelist` (see qbittorrent.nix) already covers this connection, the same reason
+    # the Radarr/Sonarr/Bookshelf download clients don't carry one either. That also means this
+    # field, unlike `secrets` below, can safely request the `torrent-client` quirk
+    # (torrent-client.nix) directly: nixos/darwin/homeManager module evaluations already declare a
+    # real `warnings` option, so Den's collision-validator shim (see modules/terranix.nix's header
+    # comment) has somewhere to land - `age.secrets` doesn't, which is exactly why `secrets` below
+    # can't do the same.
+    nixos =
+      {
+        config,
+        lib,
+        torrent-client,
+        ...
+      }:
+      let
+        qbittorrent = lib.findFirst (
+          tc: tc.kind == "qbittorrent"
+        ) (throw "cross-seed.nix: no qbittorrent torrent-client entry found") torrent-client;
+      in
+      {
+        services.cross-seed = {
+          enable = true;
+          group = "qbittorrent";
 
-        settings = {
-          linkDirs = [ "/metalminds/torrents/link-dir" ];
-          matchMode = "partial";
-          port = 2468;
+          settings = {
+            linkDirs = [ "/metalminds/torrents/link-dir" ];
+            matchMode = "partial";
+            port = 2468;
+            torrentClients = [ "qbittorrent:http://${qbittorrent.host}:${toString qbittorrent.port}" ];
+          };
+
+          settingsFile = config.age.secrets."cross-seed.json".path;
+          useGenConfigDefaults = true;
+          user = "qbittorrent";
         };
-
-        settingsFile = config.age.secrets."cross-seed.json".path;
-        useGenConfigDefaults = true;
-        user = "qbittorrent";
       };
-    };
 
     secrets = { secrets, ... }: {
       cross-seed-api-key = {
@@ -23,25 +45,10 @@
         intermediary = true;
       };
 
-      # webuiPort/qbittorrentHost below are qbittorrent.nix's hardcoded `port` (8080) and
-      # `namespaceAddress` (its VPN-Confinement namespace's veth address, the same one nginx
-      # proxies to) - kept as literals rather than read from `config` because requesting `config`
-      # on this field (alongside `secrets`) makes Den attach a collision-validator module to the
-      # same evalModules pass that builds `age.secrets`, and that validator's `warnings` output
-      # collides with `age.secrets` being a flat `attrsOf submodule` (unlike terranix's allowlisted
-      # JSON schema, there's no shimming this away - see modules/terranix.nix). If either changes
-      # in qbittorrent.nix, update it here too.
-      #
-      # Deliberately not 127.0.0.1: cross-seed runs in the default namespace, not qBittorrent's
-      # confined one, and a DNAT redirect from a literal 127.0.0.1 destination to a non-loopback
-      # address is silently dropped by the kernel's martian-destination check unless
-      # `net.ipv4.conf.*.route_localnet` is set (it isn't) - connecting directly to the namespace's
-      # own address sidesteps that entirely, the same way nginx already does.
       "cross-seed.json".generator = {
         dependencies = {
           inherit (secrets)
             cross-seed-api-key
-            oscar-password
             prowlarr-api-key
             radarr-api-key
             sonarr-api-key
@@ -61,16 +68,12 @@
             PROWLARR_API_KEY="$(${decrypt} ${lib.escapeShellArg deps.prowlarr-api-key.file})"
             RADARR_API_KEY="$(${decrypt} ${lib.escapeShellArg deps.radarr-api-key.file})"
             SONARR_API_KEY="$(${decrypt} ${lib.escapeShellArg deps.sonarr-api-key.file})"
-            QBITTORRENT_PASSWORD="$(${decrypt} ${lib.escapeShellArg deps.oscar-password.file})"
 
             ${pkgs.jq}/bin/jq -n \
               --arg apiKey "$CROSS_SEED_API_KEY" \
               --arg prowlarrApiKey "$PROWLARR_API_KEY" \
               --arg radarrApiKey "$RADARR_API_KEY" \
               --arg sonarrApiKey "$SONARR_API_KEY" \
-              --arg qbittorrentPassword "$QBITTORRENT_PASSWORD" \
-              --arg webuiPort "8080" \
-              --arg qbittorrentHost "192.168.15.1" \
               '{
                 apiKey: $apiKey,
                 torznab: [
@@ -88,9 +91,6 @@
                 ],
                 sonarr: [
                   "https://sonarr.harmony.${host.domain}?apikey=\($sonarrApiKey)"
-                ],
-                torrentClients: [
-                  "qbittorrent:http://oscar:\($qbittorrentPassword)@\($qbittorrentHost):\($webuiPort)"
                 ]
               }'
           '';

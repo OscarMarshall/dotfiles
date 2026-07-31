@@ -13,6 +13,26 @@ in
       url = "immich.${host.name}.${host.domain}";
     in
     {
+      # Owned by Immich's own native NixOS service user/group (`immich`, confirmed via
+      # `config.services.immich.user`/`.group`) - zfs.nix's generic `dataset`-quirk consumer chowns
+      # it once created, and `units` orders both immich-server and immich-machine-learning after
+      # that (avoids either starting before this exists/is mounted - see zfs.nix's own comment on
+      # why that's a real risk).
+      dataset = {
+        group = "immich";
+        guestAccess = true;
+        name = "pictures";
+        pool = "metalminds";
+        samba = true;
+
+        units = [
+          "immich-machine-learning"
+          "immich-server"
+        ];
+
+        user = "immich";
+      };
+
       nixos = { config, ... }: {
         services.immich = {
           inherit port;

@@ -275,6 +275,24 @@ in
         };
       };
 
+      # Describes qBittorrent's own connection details via the `torrent-client` quirk
+      # (torrent-client.nix) - this is the ONE place that actually knows them (namespace address,
+      # port), so every consumer (radarr.nix/sonarr.nix/bookshelf.nix's own devopsarr terranix
+      # download-client resources, cross-seed.nix's own JSON config) reads this entry and formats
+      # it into whatever shape its own config needs, rather than this aspect prescribing that shape
+      # itself. `namespaceAddress` (not `127.0.0.1`) because every consumer runs in the DEFAULT
+      # network namespace, while qBittorrent itself lives inside the `proton0` VPN namespace above -
+      # this is the same bridge address nginx's own `upstreamHost` reaches it through, and lands
+      # consumers' connections in `192.168.15.0/24`, already covered by `AuthSubnetWhitelist` above
+      # (`AuthSubnetWhitelistEnabled = true` skips qBittorrent's own login entirely for it) - so,
+      # unlike when qBittorrent ran joined to gluetun's namespace and was reachable only via
+      # `127.0.0.1` from outside that same netns, no credential needs to travel through this quirk.
+      torrent-client = {
+        inherit port;
+        host = namespaceAddress;
+        kind = "qbittorrent";
+      };
+
       # No `homepage` block: deliberately not a dashboard tile, but `label`/`icon`/`group` still
       # feed its Authentik application (see virtual-host.nix).
       virtual-host = {
