@@ -32,8 +32,21 @@ let
       };
 
       nixos = { config, ... }: {
+        # LinuxServer's own init fixes up `/config`'s ownership to match PUID/PGID automatically,
+        # but never touches other bind-mounted volumes - `/books` (shared by both instances, see
+        # its own comment below) is just whatever `zfs create` left it as (root-owned), which the
+        # container's own "abc" user then can't write to. PUID/PGID are pinned explicitly (911:911,
+        # the image's own undocumented built-in default for "abc") rather than left implicit, so
+        # this chown has a fixed target to match instead of depending on the image's default ever
+        # staying what it currently is.
+        systemd.tmpfiles.rules = [ "d /metalminds/books 0770 911 911 -" ];
+
         virtualisation.oci-containers.containers.${name} = {
           environment = {
+            # Matches the `systemd.tmpfiles.rules` chown above - see its comment for why this is
+            # pinned explicitly rather than left at the image's own implicit default.
+            PGID = "911";
+            PUID = "911";
             # Bookshelf only reaches this vhost via nginx (its port isn't opened in the firewall),
             # and every such request already passed the Authentik forward-auth gate in front of it -
             # so Bookshelf's own login is pure redundancy. `READARR__AUTH__REQUIRED =
@@ -193,6 +206,13 @@ let
               default_quality_profile_id = 1;
               is_calibre_library = false;
               name = "Books";
+              # Readarr's own API validates `output_profile` as a non-empty enum even though it's
+              # only meaningful for a Calibre library (`is_calibre_library = false` above) - leaving
+              # it unset sends "" (the provider's own default for an omitted optional+computed
+              # string), which that validator rejects outright ("has a range of values which does
+              # not include ''"). "default" is a real value in Calibre's own output-profile enum and
+              # is simply inert here since this isn't a Calibre library.
+              output_profile = "default";
               path = "/books";
               provider = "readarr.${instance}";
             };
