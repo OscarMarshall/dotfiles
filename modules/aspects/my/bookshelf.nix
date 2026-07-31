@@ -217,6 +217,26 @@ let
       # both instances racing to import anything tagged "books".
       #
       #   tofu import readarr_download_client_qbittorrent.${instance} <id>  # GET /api/v1/downloadclient
+      #
+      # `readarr_naming` turns on file renaming (`rename_books`) - Terraform requires the other
+      # naming fields alongside it regardless (the resource covers Readarr's whole Media Management
+      # > naming settings, not just the toggle), so they're pinned to Readarr's own stock defaults
+      # rather than left to chance: `{Author Name}` folders, `{Author Name} - {Book Title}` files,
+      # smart colon replacement, illegal characters replaced.
+      #
+      #   tofu import readarr_naming.${instance} <id>  # GET /api/v1/config/naming
+      #
+      # `readarr_import_list_readarr` is the actual sync mechanism from
+      # https://trash-guides.info/Radarr/Tips/Sync-2-radarr-sonarr/ - despite the name, that guide
+      # is Radarr/Sonarr-specific text describing a GENERIC Servarr feature: pointing one instance's
+      # own native Import List at the OTHER instance's API (its own periodic refresh, no
+      # webhook/custom-script needed), so anything added to either side gets mirrored to the other.
+      # Both instances get one, each pointed at its sibling, for full bidirectional sync -
+      # `enable_automatic_add`/`should_search` mirror the guide's "full sync" variant (everything,
+      # automatically). `quality_profile_id`/`metadata_profile_id` are pinned to `1` for the same
+      # reason `readarr_root_folder`'s own default profile ids are above.
+      #
+      #   tofu import readarr_import_list_readarr.${instance} <id>  # GET /api/v1/importlist
       terranix =
         {
           lib,
@@ -225,6 +245,8 @@ let
           ...
         }:
         let
+          otherApiKeySecret = "bookshelf-${otherInstance}-api-key";
+          otherInstance = if instance == "audiobooks" then "ebooks" else "audiobooks";
           qbittorrent = lib.findFirst (
             tc: tc.kind == "qbittorrent"
           ) (throw "bookshelf.nix: no qbittorrent torrent-client entry found") torrent-client;
@@ -248,6 +270,33 @@ let
               name = "qBittorrent";
               priority = 1;
               provider = "readarr.${instance}";
+            };
+
+            readarr_import_list_readarr.${instance} = {
+              api_key = "\${var.${tf-var-name-of otherApiKeySecret}}";
+              base_url = "https://bookshelf-${otherInstance}.${host.name}.${domain}";
+              enable_automatic_add = true;
+              metadata_profile_id = 1;
+              monitor_new_items = "all";
+              name = "Sync from Bookshelf (${otherInstance})";
+              provider = "readarr.${instance}";
+              quality_profile_id = 1;
+              root_folder_path = "/books";
+              # "entireAuthor" (not "all" - the provider's actual enum here is
+              # `["none" "specificBook" "entireAuthor"]`, confirmed via `tofu validate`) monitors
+              # every book by an author this list adds, matching the "full sync" intent.
+              should_monitor = "entireAuthor";
+              should_monitor_existing = true;
+              should_search = true;
+            };
+
+            readarr_naming.${instance} = {
+              author_folder_format = "{Author Name}";
+              colon_replacement_format = 4; # Smart
+              provider = "readarr.${instance}";
+              rename_books = true;
+              replace_illegal_characters = true;
+              standard_book_format = "{Author Name} - {Book Title}";
             };
 
             readarr_root_folder.${instance} = {
@@ -274,7 +323,14 @@ let
             version = "~> 2.1";
           };
 
-          variable."${tf-var-name-of apiKeySecret}".sensitive = true;
+          variable = {
+            # `otherApiKeySecret`'s variable is also declared by the OTHER instance's own `terranix`
+            # field (as ITS `apiKeySecret`) - redeclared here too, defensively, matching
+            # prowlarr.nix's own reasoning for RADARR_API_KEY/SONARR_API_KEY (identical
+            # `sensitive = true;` definitions merge fine, not a conflict).
+            "${tf-var-name-of apiKeySecret}".sensitive = true;
+            "${tf-var-name-of otherApiKeySecret}".sensitive = true;
+          };
         };
 
       virtual-host = {
