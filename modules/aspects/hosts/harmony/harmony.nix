@@ -41,8 +41,9 @@
       vpn-confinement
     ];
 
-    # The shared `books` dataset (used by both Bookshelf instances) is declared in bookshelf.nix
-    # itself instead of here - see its own comment on why that's the more correct owner.
+    # The shared `books` dataset (used by both Bookshelf instances), `movies` (radarr.nix), and
+    # `shows` (sonarr.nix) are declared in their owning aspects instead of here - see bookshelf.nix's
+    # own comment on why that's the more correct owner.
     dataset =
       map
         (name: {
@@ -54,10 +55,8 @@
         [
           "backups"
           "documents"
-          "movies"
           "music"
           "pictures"
-          "shows"
           "torrents"
           "yarg-charts"
         ];

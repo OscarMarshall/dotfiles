@@ -13,6 +13,20 @@
       port = 8989;
     in
     {
+      # Owned by Sonarr's own native NixOS service user/group (`sonarr`, confirmed via
+      # `config.services.sonarr.user`/`.group`) - zfs.nix's generic `dataset`-quirk consumer chowns
+      # it once created, and `units` orders the `sonarr.service` unit after that (avoids it starting
+      # before this exists/is mounted - see zfs.nix's own comment on why that's a real risk).
+      dataset = {
+        group = "sonarr";
+        guestAccess = true;
+        name = "shows";
+        pool = "metalminds";
+        samba = true;
+        units = [ "sonarr" ];
+        user = "sonarr";
+      };
+
       nixos = { config, ... }: {
         services.sonarr = {
           enable = true;

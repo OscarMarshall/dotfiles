@@ -13,6 +13,20 @@ in
       global ? false,
     }:
     { host, ... }: {
+      # Owned by Radarr's own native NixOS service user/group (`radarr`, confirmed via
+      # `config.services.radarr.user`/`.group`) - zfs.nix's generic `dataset`-quirk consumer chowns
+      # it once created, and `units` orders the `radarr.service` unit after that (avoids it starting
+      # before this exists/is mounted - see zfs.nix's own comment on why that's a real risk).
+      dataset = {
+        group = "radarr";
+        guestAccess = true;
+        name = "movies";
+        pool = "metalminds";
+        samba = true;
+        units = [ "radarr" ];
+        user = "radarr";
+      };
+
       nixos = { config, ... }: {
         services.radarr = {
           enable = true;
