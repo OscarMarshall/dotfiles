@@ -31,6 +31,7 @@
       homepage
       lm-sensors
       locale
+      mailgun
       meraki
       networkmanager
       nginx
