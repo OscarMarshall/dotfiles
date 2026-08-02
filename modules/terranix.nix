@@ -272,9 +272,26 @@ in
             # terranix's own template (`mkdir -p ${workdir}; cd ${workdir}`, applied before
             # prefixText runs) always puts us exactly one directory below wherever `nix run` was
             # invoked from.
+            #
+            # Prefer the already-decrypted copy at `/run/agenix/<name>` when running ON the host
+            # this secret belongs to (e.g. `nix run .#harmony-tf` on harmony itself): standard
+            # NixOS agenix activation decrypts every `age.secrets` entry there automatically using
+            # the host's OWN SSH key (`age.identityPaths`, e.g. /etc/ssh/ssh_host_ed25519_key) -
+            # entirely independent of, and not requiring, the YubiKey master identity
+            # `agenix view` below resolves against. Confirmed: `harmony-tf.env` is rekeyed for
+            # harmony's own hostPubkey (age.rekey.hostPubkey in harmony.nix), same as every other
+            # secret harmony already decrypts unattended at boot - so this path exists there with
+            # zero YubiKey involvement, which a headless server can't provide anyway. Off-host
+            # (e.g. a dev laptop with no /run/agenix), falls back to the previous behavior.
             prefixText = ''
+              decrypted_env_file="/run/agenix/${host-name}-tf.env"
               env_file="$(${pkgs.coreutils}/bin/realpath ..)/${env-file}"
-              if [ -f "$env_file" ]; then
+              if [ -f "$decrypted_env_file" ]; then
+                set -a
+                # shellcheck disable=SC1090 # dynamic path is intentional - see decrypted_env_file above
+                source "$decrypted_env_file"
+                set +a
+              elif [ -f "$env_file" ]; then
                 set -a
                 # shellcheck disable=SC1090 # dynamic path is intentional - see env_file above
                 source <(${config.agenix-rekey.package}/bin/agenix view "$env_file")
