@@ -98,7 +98,14 @@ let
       tf-package-name = "${host.name}-tf";
     in
     {
-      dataset = terranix-dataset;
+      # `lib.optional`, not the bare record: gated on `has-committed-config` for the same reason
+      # the `nixos` field's own contributions are - a host's `dataset` list is consumed generically
+      # by `my.zfs` (`systemd.services = lib.listToAttrs (map ensureDatasetService dataset) // ...`
+      # in zfs.nix), with no awareness of which aspect a given entry came from or whether it's
+      # relevant to THIS host's own pool(s). Contributing it unconditionally would mean any host
+      # that ever adds `my.zfs` for some other pool also gets a `zfs-dataset-metalminds-terranix`
+      # ensure-service defined against a pool it likely doesn't have.
+      dataset = lib.optional has-committed-config terranix-dataset;
 
       nixos = { pkgs, ... }: {
         systemd.services = lib.optionalAttrs has-committed-config {
@@ -197,9 +204,19 @@ let
                 set +a
                 ${pkgs.opentofu}/bin/tofu init -input=false -lockfile=readonly
                 ${pkgs.opentofu}/bin/tofu plan -input=false -out=tfplan
-                if ${pkgs.opentofu}/bin/tofu show -json tfplan \
-                  | ${pkgs.jq}/bin/jq -e '[.resource_changes[]?.change.actions[]?] | any(. == "delete")' \
-                  >/dev/null; then
+                # Computed as a plain assignment, not tested directly in the `if` below: `set -e`
+                # doesn't abort on a failing command used as an `if`/`&&`/`||` condition, even with
+                # `pipefail` - if `tofu show`/`jq` failed for an unexpected reason (not "no
+                # matches"), testing that pipeline's exit status directly would read as a false
+                # "no destroys", falling through to `tofu apply` instead of aborting. `jq` (no
+                # `-e`) prints a literal `true`/`false` on success and still exits non-zero -
+                # correctly triggering `set -e` here, in this unconditioned assignment - if it or
+                # `tofu show` fails outright.
+                has_destroy="$(
+                  ${pkgs.opentofu}/bin/tofu show -json tfplan \
+                    | ${pkgs.jq}/bin/jq '[.resource_changes[]?.change.actions[]?] | any(. == "delete")'
+                )"
+                if [ "$has_destroy" = true ]; then
                   echo 'Plan contains destroy actions - refusing to auto-apply; review manually with `nix run .#${tf-package-name}.plan`.' >&2
                   exit 1
                 fi
@@ -271,41 +288,50 @@ let
       # this field can't see `config.age.secrets` to gate itself on - it's evaluated in terranix's
       # own module-type pass, which only den quirks bridge into (see this file's header comment), and
       # `age.secrets` isn't one.
-      terranix = {
-        # Points state at the `terranix` dataset (declared above) instead of the default
-        # cwd-relative `terraform.tfstate` the wrapper's workdir would otherwise use - state is
-        # runtime output of applying config, not config itself, so it doesn't belong in git (see the
-        # dataset declaration's own comment). Changing this on a host with existing state requires a
-        # one-time `tofu init -migrate-state` to move it, done by hand - not something to let happen
-        # implicitly on a routine apply.
-        backend.local.path = "/metalminds/terranix/terraform.tfstate";
-
-        terraform.encryption = {
-          key_provider.pbkdf2.main.passphrase = "\${var.OPEN_TOFU_STATE_PASSPHRASE}";
-          method.aes_gcm.main.keys = "\${key_provider.pbkdf2.main}";
-          # `method` is a STATIC TRAVERSAL, not a computed value - HCL's JSON spec requires this as
-          # a plain string containing raw HCL syntax (`"method.aes_gcm.main"`), NOT a `"\${...}"`
-          # template - the latter parses as a template expression and fails validate ("A single
-          # static variable reference is required ... No ... template expressions ... allowed
-          # here"), even though `"\${...}"` is exactly right for genuinely computed values elsewhere
-          # in this block (`key_provider.pbkdf2.main.passphrase`, `aes_gcm.main.keys`).
+      terranix =
+        lib.optionalAttrs has-committed-config {
+          # Points state at the `terranix` dataset (declared above) instead of the default
+          # cwd-relative `terraform.tfstate` the wrapper's workdir would otherwise use - state is
+          # runtime output of applying config, not config itself, so it doesn't belong in git (see the
+          # dataset declaration's own comment). Changing this on a host with existing state requires a
+          # one-time `tofu init -migrate-state` to move it, done by hand - not something to let happen
+          # implicitly on a routine apply.
           #
-          # No `fallback` (used to be `method.unencrypted.migrate`, a no-op key_provider that only
-          # existed to give a migration fallback something to name) - that was for reading every
-          # `<host>-tf/terraform.tfstate` committed before this feature landed (e.g. harmony's, from
-          # #516), which was still plaintext JSON. harmony's has since been migrated (confirmed: same
-          # lineage, same resources, now `encrypted_data`) and no other host has an existing state to
-          # migrate - a first-ever apply just starts encrypted. Removed rather than left in
-          # permanently: OpenTofu warns ("Unencrypted method configured ... security risk") on every
-          # plan/apply for as long as it's configured, which is only accurate while it's actually
-          # protecting a real migration. If a host ever needs it again (e.g. restoring a plaintext
-          # state from backup), re-add `method.unencrypted.migrate = { };` and
-          # `state.fallback.method = "method.unencrypted.migrate";` temporarily.
-          state.method = "method.aes_gcm.main";
-        };
+          # Gated on `has-committed-config`, unlike the rest of this `terranix` field below (which
+          # stays unconditional - see its own comment): `/metalminds` is harmony's own ZFS pool, and
+          # pointing every host's generated config at that same absolute path would make any other
+          # host's `*-tf` wrapper fail confusingly (or worse, write into a stray local directory) if
+          # ever actually run - falling back to the (harmless, never-applied-in-practice) default
+          # cwd-relative path is safer for a host with no real Terraform-managed resources.
+          backend.local.path = "/metalminds/terranix/terraform.tfstate";
+        }
+        // {
+          terraform.encryption = {
+            key_provider.pbkdf2.main.passphrase = "\${var.OPEN_TOFU_STATE_PASSPHRASE}";
+            method.aes_gcm.main.keys = "\${key_provider.pbkdf2.main}";
+            # `method` is a STATIC TRAVERSAL, not a computed value - HCL's JSON spec requires this as
+            # a plain string containing raw HCL syntax (`"method.aes_gcm.main"`), NOT a `"\${...}"`
+            # template - the latter parses as a template expression and fails validate ("A single
+            # static variable reference is required ... No ... template expressions ... allowed
+            # here"), even though `"\${...}"` is exactly right for genuinely computed values elsewhere
+            # in this block (`key_provider.pbkdf2.main.passphrase`, `aes_gcm.main.keys`).
+            #
+            # No `fallback` (used to be `method.unencrypted.migrate`, a no-op key_provider that only
+            # existed to give a migration fallback something to name) - that was for reading every
+            # `<host>-tf/terraform.tfstate` committed before this feature landed (e.g. harmony's, from
+            # #516), which was still plaintext JSON. harmony's has since been migrated (confirmed: same
+            # lineage, same resources, now `encrypted_data`) and no other host has an existing state to
+            # migrate - a first-ever apply just starts encrypted. Removed rather than left in
+            # permanently: OpenTofu warns ("Unencrypted method configured ... security risk") on every
+            # plan/apply for as long as it's configured, which is only accurate while it's actually
+            # protecting a real migration. If a host ever needs it again (e.g. restoring a plaintext
+            # state from backup), re-add `method.unencrypted.migrate = { };` and
+            # `state.fallback.method = "method.unencrypted.migrate";` temporarily.
+            state.method = "method.aes_gcm.main";
+          };
 
-        variable.OPEN_TOFU_STATE_PASSPHRASE.sensitive = true;
-      };
+          variable.OPEN_TOFU_STATE_PASSPHRASE.sensitive = true;
+        };
     };
   # State (e.g. `harmony-tf/terraform.tfstate`) is runtime output of applying config, not config
   # itself, so - unlike everything else in this repo - it doesn't belong in git history (no
