@@ -73,114 +73,207 @@ let
   # virtual-host.nix/port-forward.nix's consumers) since it's shared plumbing, not owned by any one
   # service. `os` (not `nixos`) so this works identically whichever platform a future
   # terraform-contributing host runs.
-  terraform-secrets-aspect = { host, ... }: {
-    dataset = terranix-dataset;
+  terraform-secrets-aspect =
+    { host, ... }:
+    let
+      dataset-service-name = "zfs-dataset-${terranix-dataset.pool}-${terranix-dataset.name}";
+      has-committed-config = builtins.pathExists lock-file;
+      # Only harmony has committed Terraform config (and so a lock file) today - this scopes the
+      # apply-automation service below to hosts that actually have one, rather than tracking "does
+      # this host use terranix" separately. `builtins.pathExists` on the literal repo file (not a
+      # `config.flake` lookup) so evaluating this module for a host with no `<name>-tf/` directory
+      # doesn't error out - only the `optionalAttrs has-committed-config` branches below actually
+      # reference `lock-file`, and forcing a path into a string (which is what would try to copy a
+      # nonexistent file into the store) only happens where those branches are taken.
+      lock-file = ../. + "/${tf-package-name}/.terraform.lock.hcl";
+      # Computed here, using the file's own top-level `config` - NOT `nixos`'s own per-host
+      # `config` below, which would shadow this one (same trap the `terranix-modules` comment
+      # above warns about). `packages.<system>.<name>` is `result.app`'s own passthru
+      # (terranix's flake-module.nix), giving the already-built config.tf.json derivation without
+      # needing to `nix build`/fetch the flake at apply time. Hardcoded to x86_64-linux, matching
+      # `terranix-dataset`'s own "metalminds"/harmony-only scope - no other host runs real
+      # Terraform-managed resources today.
+      terraform-config-json =
+        if has-committed-config then config.flake.packages.x86_64-linux.${tf-package-name}.config else null;
+      tf-package-name = "${host.name}-tf";
+    in
+    {
+      dataset = terranix-dataset;
 
-    # Every other `dataset` consumer in this repo pairs its declaration with a `units` entry - the
-    # systemd unit that actually needs the dataset, which is what triggers zfs.nix's
-    # `zfs-dataset-<pool>-<name>` ensure-service to run at boot (a bare `dataset` declaration
-    # guarantees nothing gets created on its own - see zfs.nix's own comment). Nothing consumes
-    # this one yet: the wrapper is invoked ad hoc via `nix run .#harmony-tf`, not a systemd
-    # service, so there's no unit to hang `units` off. `wantedBy` directly is the fallback for
-    # exactly that case - it makes the ensure-service (and so `zfs create`) run unconditionally at
-    # boot instead of never running at all.
-    nixos.systemd.services."zfs-dataset-${terranix-dataset.pool}-${terranix-dataset.name}".wantedBy = [
-      "multi-user.target"
-    ];
-
-    secrets =
-      {
-        config,
-        lib,
-        secrets,
-        ...
-      }:
-      let
-        terraform-secrets = lib.filterAttrs (_: sec: terraform-mode-of sec != null) config.age.secrets;
-      in
-      {
-        # This key's PRESENCE must be unconditional, even though `terraform-secrets` (its VALUE
-        # depends on it) is empty exactly when only `open-tofu-state-passphrase` above is
-        # flagged - making it conditional on `terraform-secrets != { }` would mean
-        # `config.age.secrets`'s own key set depends on whether THIS module contributes this SAME
-        # key, which depends on scanning `config.age.secrets`'s key set - "infinite recursion
-        # encountered". A value may safely depend on the fully-merged `config.age.secrets` (lazy
-        # evaluation handles that fine); a key's PRESENCE may not.
-        "${host.name}-tf.env".generator = {
-          dependencies = lib.mapAttrs (name: _: secrets.${name}) terraform-secrets;
-
-          script =
-            {
-              lib,
-              decrypt,
-              deps,
-              ...
-            }:
-            lib.concatMapStrings (name: ''
-              # %q (not a plain "%s") shell-quotes the decrypted value before it lands in the
-              # generated env file - this file gets `source`d (see terraformWrapper.prefixText
-              # below), so an unescaped value containing `$`, backticks, `\`, or `"` would be
-              # reinterpreted by the shell instead of reproduced literally.
-              printf '${terraform-env-var-for name terraform-secrets.${name}}=%q\n' "$(${decrypt} ${
-                lib.escapeShellArg deps.${name}.file
-              })"
-            '') (lib.attrNames terraform-secrets);
+      nixos = { config, pkgs, ... }: {
+        # Triggers a plan/apply pass on every `nixos-rebuild switch` (including one at boot) -
+        # deliberately NOT `wantedBy` on the service itself, which would make it start on every
+        # boot regardless of whether a switch actually happened, duplicating this. `--no-block`
+        # so a slow or hanging plan/apply can never delay activation finishing - this is
+        # decoupled on purpose (see the module header's design note on why).
+        system.activationScripts = lib.optionalAttrs has-committed-config {
+          "${tf-package-name}-apply" = ''
+            ${config.systemd.package}/bin/systemctl start --no-block ${tf-package-name}-apply.service
+          '';
         };
 
-        # Always present (not left to opt in) - it backs `terraform.encryption` below, which every
-        # `<host>-tf` gets unconditionally (see that field's own comment for why).
-        open-tofu-state-passphrase = {
-          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -base64 32";
-          intermediary = true;
-          settings.terraform = "variable";
+        systemd.services = lib.optionalAttrs has-committed-config {
+          # Every other `dataset` consumer in this repo pairs its declaration with a `units`
+          # entry - the systemd unit that actually needs the dataset, which is what triggers
+          # zfs.nix's `zfs-dataset-<pool>-<name>` ensure-service to run at boot (a bare
+          # `dataset` declaration guarantees nothing gets created on its own - see zfs.nix's
+          # own comment). `wantedBy` directly is the fallback for a dataset with no such
+          # consumer - it makes the ensure-service (and so `zfs create`) run unconditionally
+          # at boot instead of never running at all.
+          #
+          # Gated on `has-committed-config` (not unconditional like `dataset`/`terranix`
+          # above): unlike those, this sets a REAL `systemd.services` option directly, which
+          # NixOS materializes regardless of whether `my.zfs`'s own generator (the thing that
+          # actually gives this service name an `ExecStart`) is included on this host at all.
+          # Confirmed: on melaan (no `my.zfs`), an earlier unconditional version of this
+          # produced an orphaned, `ExecStart`-less unit - harmless-looking but broken. Every
+          # host that reaches this branch also has `my.zfs [ "metalminds" ]` today, so the
+          # real service definition is guaranteed to already exist to attach `wantedBy` to.
+          "${dataset-service-name}".wantedBy = [ "multi-user.target" ];
+
+          # Plans on every trigger (see the activation script below) and applies only if the
+          # plan is destroy-free - Authentik OIDC clients, *arr wiring, etc. aren't things to
+          # let an unattended run delete with no human in the loop. A destroy-containing plan
+          # (or any other failure) just exits non-zero: no separate alerting wired up here,
+          # relying instead on Netdata's stock "systemd unit failed" health check (already
+          # routed to Discord via my/netdata.nix's health_alarm_notify.conf) to surface it.
+          "${tf-package-name}-apply" = {
+            description = "Plan, and apply if safe, ${host.name}'s Terraform-managed infrastructure";
+            after = [ "${dataset-service-name}.service" ];
+            requires = [ "${dataset-service-name}.service" ];
+
+            serviceConfig = {
+              ExecStart = pkgs.writeShellScript "${tf-package-name}-apply" ''
+                set -euo pipefail
+                workdir=/var/lib/${tf-package-name}
+                mkdir -p "$workdir"
+                ln -sf ${terraform-config-json} "$workdir/config.tf.json"
+                ln -sf ${lock-file} "$workdir/.terraform.lock.hcl"
+                cd "$workdir"
+                # `source`d directly (like the wrapper's own prefixText) rather than loaded via
+                # systemd's `EnvironmentFile=` - this file's values are `printf %q`-quoted for a
+                # real shell to `source`, and systemd's own EnvironmentFile parser isn't guaranteed
+                # to agree with bash's `%q` output for every possible value (e.g. its ANSI-C
+                # `$'...'` form for unusual bytes) - sourcing it with the same shell that wrote it
+                # avoids relying on two parsers agreeing. No-ops (like the wrapper) for a host with
+                # no `settings.terraform`-flagged secrets, where this file never gets generated.
+                decrypted_env_file="/run/agenix/${tf-package-name}.env"
+                if [ -f "$decrypted_env_file" ]; then
+                  set -a
+                  # shellcheck disable=SC1090 # dynamic path is intentional - see decrypted_env_file above
+                  source "$decrypted_env_file"
+                  set +a
+                fi
+                ${pkgs.opentofu}/bin/tofu init -input=false -lockfile=readonly
+                ${pkgs.opentofu}/bin/tofu plan -input=false -out=tfplan
+                if ${pkgs.opentofu}/bin/tofu show -json tfplan \
+                  | ${pkgs.jq}/bin/jq -e '[.resource_changes[]?.change.actions[]?] | any(. == "delete")' \
+                  >/dev/null; then
+                  echo 'Plan contains destroy actions - refusing to auto-apply; review manually with `nix run .#${tf-package-name}.plan`.' >&2
+                  exit 1
+                fi
+                ${pkgs.opentofu}/bin/tofu apply -input=false tfplan
+              '';
+
+              Type = "oneshot";
+            };
+          };
         };
       };
 
-    # Encrypts every `<host>-tf` state/plan at rest (OpenTofu's built-in state encryption, stable
-    # since 1.8 - pinned opentofu is 1.12.3) - added repo-wide here, not per-aspect, since ANY
-    # aspect's `terranix` field can start carrying a secret-bearing resource attribute (the
-    # `settings.terraform = "variable"` convention above exists precisely for that), and state for
-    # hosts like harmony is committed to this (public) repo (see .gitignore's comment, and #516).
-    # Unconditional (not gated on whether any `settings.terraform` secret actually exists) because
-    # this field can't see `config.age.secrets` to gate itself on - it's evaluated in terranix's
-    # own module-type pass, which only den quirks bridge into (see this file's header comment), and
-    # `age.secrets` isn't one.
-    terranix = {
-      # Points state at the `terranix` dataset (declared above) instead of the default
-      # cwd-relative `terraform.tfstate` the wrapper's workdir would otherwise use - state is
-      # runtime output of applying config, not config itself, so it doesn't belong in git (see the
-      # dataset declaration's own comment). Changing this on a host with existing state requires a
-      # one-time `tofu init -migrate-state` to move it, done by hand - not something to let happen
-      # implicitly on a routine apply.
-      backend.local.path = "/metalminds/terranix/terraform.tfstate";
+      secrets =
+        {
+          config,
+          lib,
+          secrets,
+          ...
+        }:
+        let
+          terraform-secrets = lib.filterAttrs (_: sec: terraform-mode-of sec != null) config.age.secrets;
+        in
+        {
+          # This key's PRESENCE must be unconditional, even though `terraform-secrets` (its VALUE
+          # depends on it) is empty exactly when only `open-tofu-state-passphrase` above is
+          # flagged - making it conditional on `terraform-secrets != { }` would mean
+          # `config.age.secrets`'s own key set depends on whether THIS module contributes this SAME
+          # key, which depends on scanning `config.age.secrets`'s key set - "infinite recursion
+          # encountered". A value may safely depend on the fully-merged `config.age.secrets` (lazy
+          # evaluation handles that fine); a key's PRESENCE may not.
+          "${host.name}-tf.env".generator = {
+            dependencies = lib.mapAttrs (name: _: secrets.${name}) terraform-secrets;
 
-      terraform.encryption = {
-        key_provider.pbkdf2.main.passphrase = "\${var.OPEN_TOFU_STATE_PASSPHRASE}";
-        method.aes_gcm.main.keys = "\${key_provider.pbkdf2.main}";
-        # `method` is a STATIC TRAVERSAL, not a computed value - HCL's JSON spec requires this as
-        # a plain string containing raw HCL syntax (`"method.aes_gcm.main"`), NOT a `"\${...}"`
-        # template - the latter parses as a template expression and fails validate ("A single
-        # static variable reference is required ... No ... template expressions ... allowed
-        # here"), even though `"\${...}"` is exactly right for genuinely computed values elsewhere
-        # in this block (`key_provider.pbkdf2.main.passphrase`, `aes_gcm.main.keys`).
-        #
-        # No `fallback` (used to be `method.unencrypted.migrate`, a no-op key_provider that only
-        # existed to give a migration fallback something to name) - that was for reading every
-        # `<host>-tf/terraform.tfstate` committed before this feature landed (e.g. harmony's, from
-        # #516), which was still plaintext JSON. harmony's has since been migrated (confirmed: same
-        # lineage, same resources, now `encrypted_data`) and no other host has an existing state to
-        # migrate - a first-ever apply just starts encrypted. Removed rather than left in
-        # permanently: OpenTofu warns ("Unencrypted method configured ... security risk") on every
-        # plan/apply for as long as it's configured, which is only accurate while it's actually
-        # protecting a real migration. If a host ever needs it again (e.g. restoring a plaintext
-        # state from backup), re-add `method.unencrypted.migrate = { };` and
-        # `state.fallback.method = "method.unencrypted.migrate";` temporarily.
-        state.method = "method.aes_gcm.main";
+            script =
+              {
+                lib,
+                decrypt,
+                deps,
+                ...
+              }:
+              lib.concatMapStrings (name: ''
+                # %q (not a plain "%s") shell-quotes the decrypted value before it lands in the
+                # generated env file - this file gets `source`d (see terraformWrapper.prefixText
+                # below), so an unescaped value containing `$`, backticks, `\`, or `"` would be
+                # reinterpreted by the shell instead of reproduced literally.
+                printf '${terraform-env-var-for name terraform-secrets.${name}}=%q\n' "$(${decrypt} ${
+                  lib.escapeShellArg deps.${name}.file
+                })"
+              '') (lib.attrNames terraform-secrets);
+          };
+
+          # Always present (not left to opt in) - it backs `terraform.encryption` below, which every
+          # `<host>-tf` gets unconditionally (see that field's own comment for why).
+          open-tofu-state-passphrase = {
+            generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -base64 32";
+            intermediary = true;
+            settings.terraform = "variable";
+          };
+        };
+
+      # Encrypts every `<host>-tf` state/plan at rest (OpenTofu's built-in state encryption, stable
+      # since 1.8 - pinned opentofu is 1.12.3) - added repo-wide here, not per-aspect, since ANY
+      # aspect's `terranix` field can start carrying a secret-bearing resource attribute (the
+      # `settings.terraform = "variable"` convention above exists precisely for that), and state for
+      # hosts like harmony is committed to this (public) repo (see .gitignore's comment, and #516).
+      # Unconditional (not gated on whether any `settings.terraform` secret actually exists) because
+      # this field can't see `config.age.secrets` to gate itself on - it's evaluated in terranix's
+      # own module-type pass, which only den quirks bridge into (see this file's header comment), and
+      # `age.secrets` isn't one.
+      terranix = {
+        # Points state at the `terranix` dataset (declared above) instead of the default
+        # cwd-relative `terraform.tfstate` the wrapper's workdir would otherwise use - state is
+        # runtime output of applying config, not config itself, so it doesn't belong in git (see the
+        # dataset declaration's own comment). Changing this on a host with existing state requires a
+        # one-time `tofu init -migrate-state` to move it, done by hand - not something to let happen
+        # implicitly on a routine apply.
+        backend.local.path = "/metalminds/terranix/terraform.tfstate";
+
+        terraform.encryption = {
+          key_provider.pbkdf2.main.passphrase = "\${var.OPEN_TOFU_STATE_PASSPHRASE}";
+          method.aes_gcm.main.keys = "\${key_provider.pbkdf2.main}";
+          # `method` is a STATIC TRAVERSAL, not a computed value - HCL's JSON spec requires this as
+          # a plain string containing raw HCL syntax (`"method.aes_gcm.main"`), NOT a `"\${...}"`
+          # template - the latter parses as a template expression and fails validate ("A single
+          # static variable reference is required ... No ... template expressions ... allowed
+          # here"), even though `"\${...}"` is exactly right for genuinely computed values elsewhere
+          # in this block (`key_provider.pbkdf2.main.passphrase`, `aes_gcm.main.keys`).
+          #
+          # No `fallback` (used to be `method.unencrypted.migrate`, a no-op key_provider that only
+          # existed to give a migration fallback something to name) - that was for reading every
+          # `<host>-tf/terraform.tfstate` committed before this feature landed (e.g. harmony's, from
+          # #516), which was still plaintext JSON. harmony's has since been migrated (confirmed: same
+          # lineage, same resources, now `encrypted_data`) and no other host has an existing state to
+          # migrate - a first-ever apply just starts encrypted. Removed rather than left in
+          # permanently: OpenTofu warns ("Unencrypted method configured ... security risk") on every
+          # plan/apply for as long as it's configured, which is only accurate while it's actually
+          # protecting a real migration. If a host ever needs it again (e.g. restoring a plaintext
+          # state from backup), re-add `method.unencrypted.migrate = { };` and
+          # `state.fallback.method = "method.unencrypted.migrate";` temporarily.
+          state.method = "method.aes_gcm.main";
+        };
+
+        variable.OPEN_TOFU_STATE_PASSPHRASE.sensitive = true;
       };
-
-      variable.OPEN_TOFU_STATE_PASSPHRASE.sensitive = true;
     };
-  };
   # State (e.g. `harmony-tf/terraform.tfstate`) is runtime output of applying config, not config
   # itself, so - unlike everything else in this repo - it doesn't belong in git history (no
   # meaningful diff to review, especially encrypted; only ever moves forward). This dataset gives
