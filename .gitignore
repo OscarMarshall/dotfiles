@@ -7,11 +7,14 @@
 /.pre-commit-config.yaml
 
 # Terraform (terranix - see modules/terranix.nix) working directories, e.g. /harmony-tf/.
-# terraform.tfstate and .terraform.lock.hcl ARE tracked (deliberately, so state persists in the
-# repo rather than living only on whichever machine last applied) - only the regenerable/ephemeral
-# parts are ignored: config.tf.json is a symlink into the Nix store (meaningless outside the
-# machine that built it), .terraform/ is the downloaded provider plugin cache, and
-# *.tfstate.backup is redundant with git history.
+# .terraform.lock.hcl IS tracked (deliberately, so provider version pins are reviewable) -
+# everything else here is either regenerable or, as of modules/terranix.nix's `backend.local.path`,
+# no longer written into the repo checkout at all: config.tf.json is a symlink into the Nix store
+# (meaningless outside the machine that built it), .terraform/ is the downloaded provider plugin
+# cache, and *.tfstate/*.tfstate.backup are runtime state - moved to a host-local ZFS dataset
+# instead of git (see that file's own comment on why), but still ignored here in case a stray local
+# state file ever shows up (e.g. before a host's backend is repointed).
 /*-tf/.terraform/
 /*-tf/config.tf.json
+/*-tf/*.tfstate
 /*-tf/*.tfstate.backup
