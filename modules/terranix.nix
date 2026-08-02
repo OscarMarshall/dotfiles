@@ -100,18 +100,7 @@ let
     {
       dataset = terranix-dataset;
 
-      nixos = { config, pkgs, ... }: {
-        # Triggers a plan/apply pass on every `nixos-rebuild switch` (including one at boot) -
-        # deliberately NOT `wantedBy` on the service itself, which would make it start on every
-        # boot regardless of whether a switch actually happened, duplicating this. `--no-block`
-        # so a slow or hanging plan/apply can never delay activation finishing - this is
-        # decoupled on purpose (see the module header's design note on why).
-        system.activationScripts = lib.optionalAttrs has-committed-config {
-          "${tf-package-name}-apply" = ''
-            ${config.systemd.package}/bin/systemctl start --no-block ${tf-package-name}-apply.service
-          '';
-        };
-
+      nixos = { pkgs, ... }: {
         systemd.services = lib.optionalAttrs has-committed-config {
           # Every other `dataset` consumer in this repo pairs its declaration with a `units`
           # entry - the systemd unit that actually needs the dataset, which is what triggers
@@ -131,16 +120,37 @@ let
           # real service definition is guaranteed to already exist to attach `wantedBy` to.
           "${dataset-service-name}".wantedBy = [ "multi-user.target" ];
 
-          # Plans on every trigger (see the activation script below) and applies only if the
-          # plan is destroy-free - Authentik OIDC clients, *arr wiring, etc. aren't things to
-          # let an unattended run delete with no human in the loop. A destroy-containing plan
-          # (or any other failure) just exits non-zero: no separate alerting wired up here,
-          # relying instead on Netdata's stock "systemd unit failed" health check (already
-          # routed to Discord via my/netdata.nix's health_alarm_notify.conf) to surface it.
+          # Plans whenever the rendered Terraform config (or the lock file) actually changes, and
+          # applies only if the plan is destroy-free - Authentik OIDC clients, *arr wiring, etc.
+          # aren't things to let an unattended run delete with no human in the loop. A
+          # destroy-containing plan (or any other failure) just exits non-zero: no separate
+          # alerting wired up here, relying instead on Netdata's stock "failed systemd unit"
+          # health check (already routed to Discord via my/netdata.nix's
+          # health_alarm_notify.conf) to surface it.
+          #
+          # `wantedBy` + `restartTriggers` (not a custom `system.activationScripts` entry that
+          # `systemctl start`s this directly) - confirmed live: activation scripts run BEFORE
+          # `switch-to-configuration` reloads the systemd daemon and registers new/changed unit
+          # files, so a direct `systemctl start` from activation hits "Unit ... not found" on the
+          # very switch that introduces the unit. `wantedBy` starts it the first time it's ever
+          # introduced (and again on every plain boot, via multi-user.target); `restartTriggers`
+          # makes ordinary NixOS unit reconciliation - which runs AFTER daemon-reload, so it
+          # doesn't hit this bug - restart (equivalent to start, for an inactive oneshot) it on
+          # every LATER switch that changes what Terraform would actually do. Trade-off: a switch
+          # that changes nothing Terraform-relevant won't re-check for drift introduced entirely
+          # outside Nix (e.g. someone editing something by hand in Authentik's UI) - acceptable,
+          # since the goal here is "don't need a separate manual apply after a Nix change", not
+          # continuous drift detection.
           "${tf-package-name}-apply" = {
             description = "Plan, and apply if safe, ${host.name}'s Terraform-managed infrastructure";
+            wantedBy = [ "multi-user.target" ];
             after = [ "${dataset-service-name}.service" ];
             requires = [ "${dataset-service-name}.service" ];
+
+            restartTriggers = [
+              terraform-config-json
+              lock-file
+            ];
 
             serviceConfig = {
               ExecStart = pkgs.writeShellScript "${tf-package-name}-apply" ''
@@ -155,10 +165,14 @@ let
                 # real shell to `source`, and systemd's own EnvironmentFile parser isn't guaranteed
                 # to agree with bash's `%q` output for every possible value (e.g. its ANSI-C
                 # `$'...'` form for unusual bytes) - sourcing it with the same shell that wrote it
-                # avoids relying on two parsers agreeing. No-ops (like the wrapper) for a host with
-                # no `settings.terraform`-flagged secrets, where this file never gets generated.
+                # avoids relying on two parsers agreeing. `-r`, not `-f`: `open-tofu-state-passphrase`
+                # is unconditionally `settings.terraform = "variable"`-flagged (see its own
+                # comment), so this file is in practice always generated - the real gap this
+                # guards is the file existing but not yet being READABLE (e.g. this runs before
+                # agenix activation has decrypted it), where `-f` would pass and `source` would
+                # fail with a confusing permission error instead of cleanly skipping.
                 decrypted_env_file="/run/agenix/${tf-package-name}.env"
-                if [ -f "$decrypted_env_file" ]; then
+                if [ -r "$decrypted_env_file" ]; then
                   set -a
                   # shellcheck disable=SC1090 # dynamic path is intentional - see decrypted_env_file above
                   source "$decrypted_env_file"
@@ -352,9 +366,6 @@ in
           terraformWrapper = {
             package = pkgs.opentofu;
 
-            # No-ops for hosts with no `settings.terraform`-flagged secrets (nothing to generate,
-            # so the file never exists).
-            #
             # Reads the ALREADY-decrypted copy at `/run/agenix/<name>` rather than decrypting the
             # raw secret itself - standard NixOS agenix activation puts every `age.secrets` entry
             # there automatically, using the host's OWN SSH key (`age.identityPaths`, e.g.
@@ -363,9 +374,16 @@ in
             # `nix run .#harmony-tf` run on harmony itself, never off-host) - state now lives on
             # that host's own ZFS dataset too (see `terranix-dataset`/`backend.local.path` above),
             # so there's no longer a reason to support running this anywhere else.
+            #
+            # `-r`, not `-f`: `open-tofu-state-passphrase` is unconditionally
+            # `settings.terraform = "variable"`-flagged (see its own comment), so this file is in
+            # practice always generated for every host - the real gap this guards is the file
+            # existing but not yet being READABLE (e.g. run before this host's own agenix
+            # activation has decrypted it), where `-f` would pass and `source` would fail with a
+            # confusing permission error instead of cleanly skipping.
             prefixText = ''
               decrypted_env_file="/run/agenix/${host-name}-tf.env"
-              if [ -f "$decrypted_env_file" ]; then
+              if [ -r "$decrypted_env_file" ]; then
                 set -a
                 # shellcheck disable=SC1090 # dynamic path is intentional - see decrypted_env_file above
                 source "$decrypted_env_file"
