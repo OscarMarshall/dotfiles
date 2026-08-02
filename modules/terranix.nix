@@ -192,11 +192,11 @@ let
   };
   # Read from the file's own top-level `config` (closed over here, not re-requested) for the same
   # reason dns.nix's `perSystem` does the same for `config.flake.nixosConfigurations`: `config` is
-  # ALSO the name flake-parts binds to each per-system module's own (different) result, so
-  # requesting it again on the `perSystem` function below - needed there for the per-system
-  # `config.agenix-rekey.package` - would silently shadow this outer one instead of erroring,
-  # making `.flake.terranixModules` resolve to `{ }` and silently dropping every `<hostname>-tf`
-  # package. Hoisting the lookup here, before that shadow exists, keeps both readable.
+  # ALSO the name flake-parts binds to each per-system module's own (different) result, so if
+  # `perSystem` below ever needs a per-system `config` of its own again, requesting it there would
+  # silently shadow this outer one instead of erroring, making `.flake.terranixModules` resolve to
+  # `{ }` and silently dropping every `<hostname>-tf` package. Hoisting the lookup here keeps that
+  # failure mode from resurfacing if that happens.
   terranix-modules = config.flake.terranixModules or { };
   warnings-shim = {
     options.warnings = lib.mkOption {
@@ -244,12 +244,11 @@ in
   # module runs before flake.nix/flake.lock actually have a `terranix` input, so the option this
   # sets (declared by terranix's own flakeModule, imported above) doesn't exist yet either.
   perSystem =
-    { config, pkgs, ... }:
+    { pkgs, ... }:
     lib.optionalAttrs (inputs ? terranix) {
       terranix.terranixConfigurations = lib.mapAttrs (
         key: modules:
         let
-          env-file = "secrets/generated/${host-name}-tf.env.age";
           # Every entry here is keyed `"${host.name}-tf"` (see `intoAttr` above), so stripping the
           # suffix recovers the host name without needing `host` itself in this scope.
           host-name = lib.removeSuffix "-tf" key;
@@ -261,40 +260,22 @@ in
             package = pkgs.opentofu;
 
             # No-ops for hosts with no `settings.terraform`-flagged secrets (nothing to generate,
-            # so the file never exists). Both tools are called by their full store path (not left
-            # to PATH) so this works even outside the dev shell.
+            # so the file never exists).
             #
-            # agenix-rekey's own CLI (`config.agenix-rekey.package`, built from its
-            # nix/package.nix) is NOT plain agenix/ragenix - it has no `-d` flag. `view` is its
-            # decrypt-to-stdout equivalent (apps/edit-view.nix). It internally `cd`s to the flake
-            # root before resolving its FILE argument, so that argument must already be absolute -
-            # `realpath ..` resolves it relative to the terraform workdir's parent, since
-            # terranix's own template (`mkdir -p ${workdir}; cd ${workdir}`, applied before
-            # prefixText runs) always puts us exactly one directory below wherever `nix run` was
-            # invoked from.
-            #
-            # Prefer the already-decrypted copy at `/run/agenix/<name>` when running ON the host
-            # this secret belongs to (e.g. `nix run .#harmony-tf` on harmony itself): standard
-            # NixOS agenix activation decrypts every `age.secrets` entry there automatically using
-            # the host's OWN SSH key (`age.identityPaths`, e.g. /etc/ssh/ssh_host_ed25519_key) -
-            # entirely independent of, and not requiring, the YubiKey master identity
-            # `agenix view` below resolves against. Confirmed: `harmony-tf.env` is rekeyed for
-            # harmony's own hostPubkey (age.rekey.hostPubkey in harmony.nix), same as every other
-            # secret harmony already decrypts unattended at boot - so this path exists there with
-            # zero YubiKey involvement, which a headless server can't provide anyway. Off-host
-            # (e.g. a dev laptop with no /run/agenix), falls back to the previous behavior.
+            # Reads the ALREADY-decrypted copy at `/run/agenix/<name>` rather than decrypting the
+            # raw secret itself - standard NixOS agenix activation puts every `age.secrets` entry
+            # there automatically, using the host's OWN SSH key (`age.identityPaths`, e.g.
+            # /etc/ssh/ssh_host_ed25519_key), same as every other secret the host already decrypts
+            # unattended at boot. This only works ON the host the secret belongs to (e.g.
+            # `nix run .#harmony-tf` run on harmony itself, never off-host) - state now lives on
+            # that host's own ZFS dataset too (see `terranix-dataset`/`backend.local.path` above),
+            # so there's no longer a reason to support running this anywhere else.
             prefixText = ''
               decrypted_env_file="/run/agenix/${host-name}-tf.env"
-              env_file="$(${pkgs.coreutils}/bin/realpath ..)/${env-file}"
               if [ -f "$decrypted_env_file" ]; then
                 set -a
                 # shellcheck disable=SC1090 # dynamic path is intentional - see decrypted_env_file above
                 source "$decrypted_env_file"
-                set +a
-              elif [ -f "$env_file" ]; then
-                set -a
-                # shellcheck disable=SC1090 # dynamic path is intentional - see env_file above
-                source <(${config.agenix-rekey.package}/bin/agenix view "$env_file")
                 set +a
               fi
             '';
