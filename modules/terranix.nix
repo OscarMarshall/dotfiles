@@ -74,6 +74,16 @@ let
   # service. `os` (not `nixos`) so this works identically whichever platform a future
   # terraform-contributing host runs.
   terraform-secrets-aspect = { host, ... }: {
+    # State (e.g. `harmony-tf/terraform.tfstate`) is runtime output of applying config, not config
+    # itself, so - unlike everything else in this repo - it doesn't belong in git history (no
+    # meaningful diff to review, especially encrypted; only ever moves forward). This dataset gives
+    # it a stable, host-local home with the same backup/snapshot coverage as every other ZFS-backed
+    # service here, once the wrapper's backend `path` is pointed at it instead of the repo checkout.
+    dataset = {
+      name = "terranix";
+      pool = "metalminds";
+    };
+
     secrets =
       {
         config,
@@ -132,6 +142,14 @@ let
     # own module-type pass, which only den quirks bridge into (see this file's header comment), and
     # `age.secrets` isn't one.
     terranix = {
+      # Points state at the `terranix` dataset (declared above) instead of the default
+      # cwd-relative `terraform.tfstate` the wrapper's workdir would otherwise use - state is
+      # runtime output of applying config, not config itself, so it doesn't belong in git (see the
+      # dataset declaration's own comment). Changing this on a host with existing state requires a
+      # one-time `tofu init -migrate-state` to move it, done by hand - not something to let happen
+      # implicitly on a routine apply.
+      backend.local.path = "/metalminds/terranix/terraform.tfstate";
+
       terraform.encryption = {
         key_provider.pbkdf2.main.passphrase = "\${var.OPEN_TOFU_STATE_PASSPHRASE}";
         method.aes_gcm.main.keys = "\${key_provider.pbkdf2.main}";
