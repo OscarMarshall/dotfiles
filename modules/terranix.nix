@@ -144,7 +144,16 @@ let
           "${tf-package-name}-apply" = {
             description = "Plan, and apply if safe, ${host.name}'s Terraform-managed infrastructure";
             wantedBy = [ "multi-user.target" ];
-            after = [ "${dataset-service-name}.service" ];
+
+            # `network-online.target`: every provider here (Cloudflare, Meraki, Authentik, Mailgun)
+            # is a real network call - without this, a boot can reach multi-user.target (and so
+            # start this unit) before the network is actually up, failing/flapping on a cold boot
+            # even though nothing is actually wrong.
+            after = [
+              "${dataset-service-name}.service"
+              "network-online.target"
+            ];
+
             requires = [ "${dataset-service-name}.service" ];
 
             restartTriggers = [
@@ -165,19 +174,27 @@ let
                 # real shell to `source`, and systemd's own EnvironmentFile parser isn't guaranteed
                 # to agree with bash's `%q` output for every possible value (e.g. its ANSI-C
                 # `$'...'` form for unusual bytes) - sourcing it with the same shell that wrote it
-                # avoids relying on two parsers agreeing. `-r`, not `-f`: `open-tofu-state-passphrase`
-                # is unconditionally `settings.terraform = "variable"`-flagged (see its own
-                # comment), so this file is in practice always generated - the real gap this
-                # guards is the file existing but not yet being READABLE (e.g. this runs before
-                # agenix activation has decrypted it), where `-f` would pass and `source` would
-                # fail with a confusing permission error instead of cleanly skipping.
+                # avoids relying on two parsers agreeing.
+                #
+                # Fails fast with an explicit message instead of silently continuing, unlike the
+                # wrapper's own (interactively-run, human-watched) prefixText:
+                # `open-tofu-state-passphrase` is unconditionally `settings.terraform =
+                # "variable"`-flagged (see its own comment), so this file is in practice always
+                # both present and readable by the time this unit runs (agenix activation
+                # decrypts it synchronously during system activation, well before any triggered
+                # unit's ExecStart starts) - if it's NOT readable, that's a real, unexpected
+                # problem (not a normal transient state), and letting the script fall through into
+                # `tofu init`/`plan` would just fail later with a confusing "missing credentials"
+                # error instead of pointing at the actual cause.
                 decrypted_env_file="/run/agenix/${tf-package-name}.env"
-                if [ -r "$decrypted_env_file" ]; then
-                  set -a
-                  # shellcheck disable=SC1090 # dynamic path is intentional - see decrypted_env_file above
-                  source "$decrypted_env_file"
-                  set +a
+                if [ ! -r "$decrypted_env_file" ]; then
+                  echo "Cannot read $decrypted_env_file - secrets not decrypted yet?" >&2
+                  exit 1
                 fi
+                set -a
+                # shellcheck disable=SC1090 # dynamic path is intentional - see decrypted_env_file above
+                source "$decrypted_env_file"
+                set +a
                 ${pkgs.opentofu}/bin/tofu init -input=false -lockfile=readonly
                 ${pkgs.opentofu}/bin/tofu plan -input=false -out=tfplan
                 if ${pkgs.opentofu}/bin/tofu show -json tfplan \
@@ -191,6 +208,8 @@ let
 
               Type = "oneshot";
             };
+
+            wants = [ "network-online.target" ];
           };
         };
       };

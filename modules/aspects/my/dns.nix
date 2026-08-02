@@ -12,12 +12,14 @@
 # the provider reads it from the CLOUDFLARE_API_TOKEN env var, contributed below via
 # `settings.terraform = true;` (modules/terranix.nix) and collected into harmony's single
 # `secrets/generated/harmony-tf.env.age`. Run `agenix generate -a && agenix rekey -a` once to
-# materialize it. The commands above only work when run ON harmony itself (never off-host, e.g. a dev
-# laptop) - they read the already-decrypted `/run/agenix/harmony-tf.env` rather than the raw
-# secret file, and harmony's own ZFS dataset backs Terraform state too (see modules/terranix.nix's
-# own comments on both). `harmony-tf-apply.service` also runs `plan`/`apply` automatically on every
-# `nixos-rebuild switch` that changes anything Terraform-relevant, so applying by hand is normally
-# unnecessary.
+# materialize it (from any machine with the YubiKey, same as any other secret).
+#
+# The `nix run .#harmony-tf*` commands above, by contrast, only work when run ON harmony itself
+# (never off-host, e.g. a dev laptop) - they read the already-decrypted `/run/agenix/harmony-tf.env`
+# rather than the raw secret file, and harmony's own ZFS dataset backs Terraform state too (see
+# modules/terranix.nix's own comments on both). `harmony-tf-apply.service` also runs `plan`/`apply`
+# automatically on every `nixos-rebuild switch` that changes anything Terraform-relevant, so
+# applying by hand is normally unnecessary.
 #
 # One-time setup on Cloudflare's side: add silverlight-nex.us as a site (free plan), note its Zone
 # ID from the zone's Overview page (set as `host.cloudflare-zone-id` - see modules/den.nix; not a
