@@ -74,15 +74,19 @@ let
   # service. `os` (not `nixos`) so this works identically whichever platform a future
   # terraform-contributing host runs.
   terraform-secrets-aspect = { host, ... }: {
-    # State (e.g. `harmony-tf/terraform.tfstate`) is runtime output of applying config, not config
-    # itself, so - unlike everything else in this repo - it doesn't belong in git history (no
-    # meaningful diff to review, especially encrypted; only ever moves forward). This dataset gives
-    # it a stable, host-local home with the same backup/snapshot coverage as every other ZFS-backed
-    # service here, once the wrapper's backend `path` is pointed at it instead of the repo checkout.
-    dataset = {
-      name = "terranix";
-      pool = "metalminds";
-    };
+    dataset = terranix-dataset;
+
+    # Every other `dataset` consumer in this repo pairs its declaration with a `units` entry - the
+    # systemd unit that actually needs the dataset, which is what triggers zfs.nix's
+    # `zfs-dataset-<pool>-<name>` ensure-service to run at boot (a bare `dataset` declaration
+    # guarantees nothing gets created on its own - see zfs.nix's own comment). Nothing consumes
+    # this one yet: the wrapper is invoked ad hoc via `nix run .#harmony-tf`, not a systemd
+    # service, so there's no unit to hang `units` off. `wantedBy` directly is the fallback for
+    # exactly that case - it makes the ensure-service (and so `zfs create`) run unconditionally at
+    # boot instead of never running at all.
+    nixos.systemd.services."zfs-dataset-${terranix-dataset.pool}-${terranix-dataset.name}".wantedBy = [
+      "multi-user.target"
+    ];
 
     secrets =
       {
@@ -176,6 +180,15 @@ let
 
       variable.OPEN_TOFU_STATE_PASSPHRASE.sensitive = true;
     };
+  };
+  # State (e.g. `harmony-tf/terraform.tfstate`) is runtime output of applying config, not config
+  # itself, so - unlike everything else in this repo - it doesn't belong in git history (no
+  # meaningful diff to review, especially encrypted; only ever moves forward). This dataset gives
+  # it a stable, host-local home with the same backup/snapshot coverage as every other ZFS-backed
+  # service here, once the wrapper's backend `path` is pointed at it instead of the repo checkout.
+  terranix-dataset = {
+    name = "terranix";
+    pool = "metalminds";
   };
   # Read from the file's own top-level `config` (closed over here, not re-requested) for the same
   # reason dns.nix's `perSystem` does the same for `config.flake.nixosConfigurations`: `config` is
