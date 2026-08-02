@@ -15,8 +15,9 @@
 # setup) - deliberate, not an oversight.
 #
 # One-time setup: sign up for Mailgun, create an API key, `agenix edit secrets/mailgun-api-key.age`
-# with just the key, then `agenix generate -a && agenix rekey -a`. After the first
-# `nix run .#harmony-tf`, nudge domain verification (Mailgun also polls for it on its own
+# with just the key, then `agenix generate -a && agenix rekey -a`. `harmony-tf-apply.service`
+# applies this automatically on the next `nixos-rebuild switch` (see modules/terranix.nix) - after
+# that, nudge domain verification by hand if needed (Mailgun also polls for it on its own
 # eventually, just slower):
 #
 #   curl -s -X PUT -u "api:$MAILGUN_API_KEY" "https://api.mailgun.net/v4/domains/<domain>/verify"
