@@ -77,14 +77,12 @@ let
     { host, ... }:
     let
       dataset-service-name = "zfs-dataset-${terranix-dataset.pool}-${terranix-dataset.name}";
-      has-committed-config = builtins.pathExists lock-file;
-      # Only harmony has committed Terraform config (and so a lock file) today - this scopes the
-      # apply-automation service below to hosts that actually have one, rather than tracking "does
-      # this host use terranix" separately. `builtins.pathExists` on the literal repo file (not a
-      # `config.flake` lookup) so evaluating this module for a host with no `<name>-tf/` directory
-      # doesn't error out - only the `optionalAttrs has-committed-config` branches below actually
-      # reference `lock-file`, and forcing a path into a string (which is what would try to copy a
-      # nonexistent file into the store) only happens where those branches are taken.
+      # `my.terranix` is opt-in (see harmony.nix) - a host only reaches this code by asking for it,
+      # and is expected to run `nix run .#<host>-tf.init` once (generating and committing this
+      # file) before its first `nixos-rebuild switch`. No `builtins.pathExists` guard: if that
+      # step hasn't happened yet, evaluating this host's config should fail loudly on the missing
+      # file, the same way referencing a not-yet-`agenix edit`ed secret would - not silently no-op
+      # until someone notices the lock file is missing.
       lock-file = ../. + "/${tf-package-name}/.terraform.lock.hcl";
       # Computed here, using the file's own top-level `config` - NOT `nixos`'s own per-host
       # `config` below, which would shadow this one (same trap the `terranix-modules` comment
@@ -93,8 +91,7 @@ let
       # needing to `nix build`/fetch the flake at apply time. Hardcoded to x86_64-linux, matching
       # `terranix-dataset`'s own "metalminds"/harmony-only scope - no other host runs real
       # Terraform-managed resources today.
-      terraform-config-json =
-        if has-committed-config then config.flake.packages.x86_64-linux.${tf-package-name}.config else null;
+      terraform-config-json = config.flake.packages.x86_64-linux.${tf-package-name}.config;
       tf-package-name = "${host.name}-tf";
     in
     {
@@ -103,23 +100,18 @@ let
       dataset = terranix-dataset;
 
       nixos = { pkgs, ... }: {
-        systemd.services = lib.optionalAttrs has-committed-config {
+        systemd.services = {
           # Every other `dataset` consumer in this repo pairs its declaration with a `units`
           # entry - the systemd unit that actually needs the dataset, which is what triggers
           # zfs.nix's `zfs-dataset-<pool>-<name>` ensure-service to run at boot (a bare
           # `dataset` declaration guarantees nothing gets created on its own - see zfs.nix's
           # own comment). `wantedBy` directly is the fallback for a dataset with no such
-          # consumer - it makes the ensure-service (and so `zfs create`) run unconditionally
-          # at boot instead of never running at all.
-          #
-          # Gated on `has-committed-config` (not unconditional like `dataset`/`terranix`
-          # above): unlike those, this sets a REAL `systemd.services` option directly, which
-          # NixOS materializes regardless of whether `my.zfs`'s own generator (the thing that
-          # actually gives this service name an `ExecStart`) is included on this host at all.
-          # Confirmed: on melaan (no `my.zfs`), an earlier unconditional version of this
-          # produced an orphaned, `ExecStart`-less unit - harmless-looking but broken. Every
-          # host that reaches this branch also has `my.zfs [ "metalminds" ]` today, so the
-          # real service definition is guaranteed to already exist to attach `wantedBy` to.
+          # consumer - it makes the ensure-service (and so `zfs create`) run unconditionally at
+          # boot instead of never running at all. Safe to assume the real service definition
+          # (which `my.zfs`'s own generator - not this file - actually attaches `ExecStart` to)
+          # exists here: `my.zfs [ "metalminds" ]` is a prerequisite for `my.terranix` (see the
+          # `dataset` field's own comment), and `my.terranix` is opt-in, so only a host that has
+          # both ever reaches this code.
           "${dataset-service-name}".wantedBy = [ "multi-user.target" ];
 
           # Plans whenever the rendered Terraform config (or the lock file) actually changes, and
