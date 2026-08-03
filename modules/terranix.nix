@@ -164,10 +164,22 @@ let
             ];
 
             serviceConfig = {
+              # `RuntimeDirectory`, not a hand-rolled `/var/lib/<name>` (created/torn down by
+              # systemd around each run, at `$RUNTIME_DIRECTORY`): the config/lock symlinks are
+              # regenerated identically every run anyway, and - more importantly - `tfplan` below
+              # is an OpenTofu plan file, which (unlike state) OpenTofu doesn't encrypt by default;
+              # `terraform.encryption.plan` above closes that gap for its CONTENTS, but there's no
+              # reason to also let the file linger on disk indefinitely between runs regardless.
+              # `CacheDirectory` (persists, unlike RuntimeDirectory - systemd's "safe to delete,
+              # will be regenerated" directory type) is only for the downloaded provider plugin
+              # cache, kept separate so it survives being wiped every run - re-downloading
+              # providers on every switch-triggered apply would be needlessly wasteful.
+              CacheDirectory = tf-package-name;
+
               ExecStart = pkgs.writeShellScript "${tf-package-name}-apply" ''
                 set -euo pipefail
-                workdir=/var/lib/${tf-package-name}
-                mkdir -p "$workdir"
+                workdir="$RUNTIME_DIRECTORY"
+                export TF_PLUGIN_CACHE_DIR="$CACHE_DIRECTORY"
                 ln -sf ${terraform-config-json} "$workdir/config.tf.json"
                 ln -sf ${lock-file} "$workdir/.terraform.lock.hcl"
                 cd "$workdir"
@@ -218,6 +230,7 @@ let
                 ${pkgs.opentofu}/bin/tofu apply -input=false tfplan
               '';
 
+              RuntimeDirectory = tf-package-name;
               Type = "oneshot";
             };
 
@@ -295,6 +308,13 @@ let
         terraform.encryption = {
           key_provider.pbkdf2.main.passphrase = "\${var.OPEN_TOFU_STATE_PASSPHRASE}";
           method.aes_gcm.main.keys = "\${key_provider.pbkdf2.main}";
+          # Plan encryption is a SEPARATE opt-in from state encryption above - without this,
+          # `tofu plan -out=tfplan` (used by the apply-automation service) writes a fully plaintext
+          # plan file to disk, defeating the whole point of encrypting state: a plan's resource
+          # diff carries the same `settings.terraform = "variable"` secret values state does. No
+          # `fallback` for the same reason `state` has none - plans are never persisted anywhere
+          # that could hold a pre-existing plaintext one to migrate.
+          plan.method = "method.aes_gcm.main";
           # `method` is a STATIC TRAVERSAL, not a computed value - HCL's JSON spec requires this as
           # a plain string containing raw HCL syntax (`"method.aes_gcm.main"`), NOT a `"\${...}"`
           # template - the latter parses as a template expression and fails validate ("A single
