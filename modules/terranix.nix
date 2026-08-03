@@ -371,12 +371,16 @@ in
         name = "${host.name}-tf";
       })
     ];
-
-    schema.host.includes = [
-      den.policies.host-to-terranix
-      terraform-secrets-aspect
-    ];
   };
+
+  # Exposed as an opt-in `my.*` aspect (included like any other in a host's own `includes` - see
+  # harmony.nix) rather than a `den.schema.host.includes` default: `my.zfs [ "metalminds" ]` is a
+  # real prerequisite for this (the dataset/state-backend/apply-automation pieces all assume it -
+  # see their own comments), so only a host that actually opts into both should get either.
+  my.terranix.includes = [
+    den.policies.host-to-terranix
+    terraform-secrets-aspect
+  ];
 
   # Guarded on `inputs ? terranix`: the first `nix run .#write-flake` pass after adding this
   # module runs before flake.nix/flake.lock actually have a `terranix` input, so the option this

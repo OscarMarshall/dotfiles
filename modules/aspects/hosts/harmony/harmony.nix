@@ -38,6 +38,7 @@
       samba
       satisfactory-server
       ssh-server
+      terranix
       unpackerr
       vpn-confinement
     ];
