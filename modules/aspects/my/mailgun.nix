@@ -15,9 +15,12 @@
 # setup) - deliberate, not an oversight.
 #
 # One-time setup: sign up for Mailgun, create an API key, `agenix edit secrets/mailgun-api-key.age`
-# with just the key, then `agenix generate -a && agenix rekey -a`. After the first
-# `nix run .#harmony-tf`, nudge domain verification (Mailgun also polls for it on its own
-# eventually, just slower):
+# with just the key, then `agenix generate -a && agenix rekey -a`. `harmony-tf-apply.service` will
+# attempt to apply this on the next `nixos-rebuild switch` (see modules/terranix.nix) - but on a
+# from-scratch setup, expect that run to fail on `cloudflare_dns_record.mailgun-sending` (see the
+# TWO-STEP apply note on that resource below) and a later triggered run to pick up and converge it
+# once `mailgun_domain.default` is in state. After that succeeds, nudge domain verification by
+# hand if needed (Mailgun also polls for it on its own eventually, just slower):
 #
 #   curl -s -X PUT -u "api:$MAILGUN_API_KEY" "https://api.mailgun.net/v4/domains/<domain>/verify"
 {

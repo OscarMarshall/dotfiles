@@ -189,6 +189,30 @@ agenix rekey -a
 
 Each host that consumes rekeyed secrets must declare `age.rekey.hostPubkey` in its host aspect.
 
+## Infrastructure as Code (Terranix/OpenTofu)
+
+Some live services aren't configured through Nix directly, but through their own APIs — Authentik SSO clients, \*arr app
+wiring, DNS records, the Meraki router. These are managed as Terraform/OpenTofu config instead, generated from Nix via
+[terranix](https://terranix.org) (see `modules/terranix.nix`). Any aspect can contribute resources by declaring a
+`terranix` field, the same way it would declare `nixos`/`darwin`/`homeManager`.
+
+Each host that uses this gets its own `nix run .#<host>-tf*` commands (currently only `harmony-tf`):
+
+```console
+nix run .#harmony-tf.plan      # preview changes
+nix run .#harmony-tf           # apply
+nix run .#harmony-tf.destroy
+nix develop .#harmony-tf       # shell with opentofu
+nix build .#harmony-tf.config  # inspect the generated config.tf.json
+```
+
+These only work when run **on the host itself** (e.g. on harmony, never from a dev laptop): both Terraform state and the
+decrypted secrets env file live on the host's own local ZFS dataset/`/run/agenix`, not in this repo or on the YubiKey
+master identity. `harmony-tf-apply.service` also plans and applies automatically on every `nixos-rebuild switch` that
+changes anything Terraform-relevant, so running these by hand is normally only needed to preview a change or investigate
+a failure — a plan containing any destroy action is never auto-applied; it fails the service instead, surfaced through
+the same Netdata → Discord alerting used for host health.
+
 ## Updating
 
 GitHub automation:

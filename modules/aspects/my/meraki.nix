@@ -10,10 +10,16 @@
 # The Meraki Dashboard API key is never written into the generated config or into Terraform state -
 # the provider reads it from the MERAKI_DASHBOARD_API_KEY env var, contributed below via
 # `settings.terraform = true;` (modules/terranix.nix) and collected, alongside the Cloudflare token
-# (see dns.nix), into harmony's single `secrets/generated/harmony-tf.env.age`, decrypted and
-# sourced automatically by `nix run .#harmony-tf*`. Run `agenix edit
+# (see dns.nix), into harmony's single `secrets/generated/harmony-tf.env.age`. Run `agenix edit
 # secrets/meraki-dashboard-api-key.age` once to create it, then `agenix generate -a && agenix
-# rekey -a` to materialize it.
+# rekey -a` to materialize it (from any machine with the YubiKey, same as any other secret).
+#
+# The `nix run .#harmony-tf*` commands above, by contrast, only work when run ON harmony itself
+# (never off-host, e.g. a dev laptop) - they read the already-decrypted
+# `/run/agenix/harmony-tf.env` rather than the raw secret file, and harmony's own ZFS dataset
+# backs Terraform state too (see modules/terranix.nix's own comments on both).
+# `harmony-tf-apply.service` also runs `plan`/`apply` automatically on every `nixos-rebuild
+# switch` that changes anything Terraform-relevant, so applying by hand is normally unnecessary.
 #
 # One-time setup on Meraki's side: generate a Dashboard API key (Organization > Settings > Dashboard
 # API access), and find harmony's network ID (Network-wide > Settings, or via the Dashboard API),

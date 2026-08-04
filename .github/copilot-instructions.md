@@ -137,6 +137,8 @@ The **harmony** server (x86_64-linux) runs:
 - **File Sharing**: Samba shares
 - **Storage**: ZFS pool named "metalminds"
 - **Automatic Updates**: Auto-upgrade with reboot capability
+- **Infrastructure as Code**: Authentik/\*arr/DNS/Meraki config via Terraform/OpenTofu (terranix), auto-applied on
+  switch - see "Working with Terraform/OpenTofu (terranix)" below
 
 The **melaan** laptop (x86_64-linux) includes:
 
@@ -425,6 +427,35 @@ git add -A secrets/rekeyed/
 ```
 
 Each host that consumes rekeyed secrets must declare `age.rekey.hostPubkey` in its host aspect.
+
+### Working with Terraform/OpenTofu (terranix)
+
+Some live services aren't configured through Nix directly, but through their own APIs - Authentik SSO clients, \*arr app
+wiring, DNS records, the Meraki router. These are managed as Terraform/OpenTofu config generated from Nix via
+[terranix](https://terranix.org) (`modules/terranix.nix`). Any aspect can contribute resources by declaring a `terranix`
+field, merged per-host the same way `nixos`/`darwin`/`homeManager` are.
+
+Each host that uses this gets its own `nix run .#<host>-tf*` commands (currently only `harmony-tf`) - `.plan`,
+`.destroy`, `nix develop .#<host>-tf` for a shell with `opentofu`, `nix build .#<host>-tf.config` to inspect the
+generated `config.tf.json`. The bare `nix run .#<host>-tf` (no suffix) **applies**.
+
+**These only work when run on the host itself** (e.g. on harmony, never from a dev laptop or CI): both Terraform state
+and the decrypted secrets env file are host-local now, not repo- or YubiKey-backed -
+
+- **State**: lives on the host's own ZFS dataset (`backend.local.path` in `modules/terranix.nix`), not committed to git.
+  Moving it requires a one-time `tofu init -migrate-state`, done by hand.
+- **Secrets**: a `settings.terraform`-flagged secret (see that convention documented at the top of
+  `modules/terranix.nix`) is collected into `<host>-tf.env`, decrypted unattended to `/run/agenix/<host>-tf.env` by the
+  host's own agenix activation (same as any other secret on that host) - no YubiKey needed there. AI agents running
+  these commands only have this available when working directly on the host (e.g. over SSH); running them from a repo
+  checkout elsewhere will silently skip secrets and then fail on missing provider credentials.
+
+**Automated apply**: `harmony-tf-apply.service` (a systemd oneshot, `wantedBy multi-user.target` + `restartTriggers` on
+the generated config and lock file) plans and applies automatically whenever a `nixos-rebuild switch` changes anything
+Terraform-relevant - manual `nix run .#harmony-tf` is normally only needed to preview a change or investigate a failure.
+It never auto-applies a plan containing a destroy action (checked via `tofu show -json | jq`); that fails the service
+instead, surfaced through the same Netdata → Discord alerting used for host health, not through a blocked
+`nixos-rebuild switch` (the trigger is decoupled and non-blocking).
 
 ## Documentation Update Policy
 
