@@ -81,20 +81,211 @@ in
           # them entirely and every request 404s with "File does not exist, or is not accessible:".
           package = pkgs.netdata.override { withCloudUi = true; };
 
-          # Discord notifications via health_alarm_notify.conf.
-          # The file is a bash script sourced by Netdata's alarm-notify.sh;
-          # sourcing the age secret sets DISCORD_WEBHOOK_URL at runtime.
-          configDir."health_alarm_notify.conf" = pkgs.writeText "health_alarm_notify.conf" ''
-            # shellcheck disable=SC1090
-            source "${config.age.secrets."netdata-secrets.env".path}"
-            SEND_DISCORD="YES"
-            DEFAULT_RECIPIENT_DISCORD="alarms"
+          configDir = {
+            # Stock health.d/systemdunits.conf ships every "unit in the failed state" template with
+            # `chart labels: unit_name=!*` - Netdata's simple-pattern matching treats a bare `!*` as
+            # "reject every value, nothing left to accept", so by design none of these ever match any
+            # chart until a local override lists which units to actually watch. Confirmed live: the
+            # `systemd.service_unit_state` chart correctly showed harmony-tf-apply.service as
+            # "failed", but `/api/v1/alarms` had zero `*_unit_failed_state` instances - the collector
+            # works, this template just silently never attaches to anything out of the box.
+            # `unit_name=*` (matching any unit) instead, for every unit type - otherwise identical to
+            # upstream's own health.d/systemdunits.conf.
+            "health.d/systemdunits.conf" = pkgs.writeText "systemdunits.conf" ''
+              # you can disable an alarm notification by setting the 'to' line to: silent
 
-            # No local MTA on this host; Netdata Cloud already sends email
-            # notifications, so don't bother with alarm-notify.sh's own
-            # (broken, sendmail-dependent) email path.
-            SEND_EMAIL="NO"
-          '';
+              ## Service units
+                  template: systemd_service_unit_failed_state
+                        on: systemd.service_unit_state
+                     class: Errors
+                      type: Linux
+                 component: Systemd units
+              chart labels: unit_name=*
+                      calc: $failed
+                     units: state
+                     every: 10s
+                      warn: $this != nan AND $this == 1
+                     delay: down 5m multiplier 1.5 max 1h
+                   summary: systemd unit ${"$"}{label:unit_name} state
+                      info: systemd service unit in the failed state
+                        to: sysadmin
+
+              ## Socket units
+                  template: systemd_socket_unit_failed_state
+                        on: systemd.socket_unit_state
+                     class: Errors
+                      type: Linux
+                 component: Systemd units
+              chart labels: unit_name=*
+                      calc: $failed
+                     units: state
+                     every: 10s
+                      warn: $this != nan AND $this == 1
+                     delay: down 5m multiplier 1.5 max 1h
+                   summary: systemd unit ${"$"}{label:unit_name} state
+                      info: systemd socket unit in the failed state
+                        to: sysadmin
+
+              ## Target units
+                  template: systemd_target_unit_failed_state
+                        on: systemd.target_unit_state
+                     class: Errors
+                      type: Linux
+                 component: Systemd units
+              chart labels: unit_name=*
+                      calc: $failed
+                     units: state
+                     every: 10s
+                      warn: $this != nan AND $this == 1
+                     delay: down 5m multiplier 1.5 max 1h
+                   summary: systemd unit ${"$"}{label:unit_name} state
+                      info: systemd target unit in the failed state
+                        to: sysadmin
+
+              ## Path units
+                  template: systemd_path_unit_failed_state
+                        on: systemd.path_unit_state
+                     class: Errors
+                      type: Linux
+                 component: Systemd units
+              chart labels: unit_name=*
+                      calc: $failed
+                     units: state
+                     every: 10s
+                      warn: $this != nan AND $this == 1
+                     delay: down 5m multiplier 1.5 max 1h
+                   summary: systemd unit ${"$"}{label:unit_name} state
+                      info: systemd path unit in the failed state
+                        to: sysadmin
+
+              ## Device units
+                  template: systemd_device_unit_failed_state
+                        on: systemd.device_unit_state
+                     class: Errors
+                      type: Linux
+                 component: Systemd units
+              chart labels: unit_name=*
+                      calc: $failed
+                     units: state
+                     every: 10s
+                      warn: $this != nan AND $this == 1
+                     delay: down 5m multiplier 1.5 max 1h
+                   summary: systemd unit ${"$"}{label:unit_name} state
+                      info: systemd device unit in the failed state
+                        to: sysadmin
+
+              ## Mount units
+                  template: systemd_mount_unit_failed_state
+                        on: systemd.mount_unit_state
+                     class: Errors
+                      type: Linux
+                 component: Systemd units
+              chart labels: unit_name=*
+                      calc: $failed
+                     units: state
+                     every: 10s
+                      warn: $this != nan AND $this == 1
+                     delay: down 5m multiplier 1.5 max 1h
+                   summary: systemd unit ${"$"}{label:unit_name} state
+                      info: systemd mount units in the failed state
+                        to: sysadmin
+
+              ## Automount units
+                  template: systemd_automount_unit_failed_state
+                        on: systemd.automount_unit_state
+                     class: Errors
+                      type: Linux
+                 component: Systemd units
+              chart labels: unit_name=*
+                      calc: $failed
+                     units: state
+                     every: 10s
+                      warn: $this != nan AND $this == 1
+                     delay: down 5m multiplier 1.5 max 1h
+                   summary: systemd unit ${"$"}{label:unit_name} state
+                      info: systemd automount unit in the failed state
+                        to: sysadmin
+
+              ## Swap units
+                  template: systemd_swap_unit_failed_state
+                        on: systemd.swap_unit_state
+                     class: Errors
+                      type: Linux
+                 component: Systemd units
+              chart labels: unit_name=*
+                      calc: $failed
+                     units: state
+                     every: 10s
+                      warn: $this != nan AND $this == 1
+                     delay: down 5m multiplier 1.5 max 1h
+                   summary: systemd unit ${"$"}{label:unit_name} state
+                      info: systemd swap units in the failed state
+                        to: sysadmin
+
+              ## Scope units
+                  template: systemd_scope_unit_failed_state
+                        on: systemd.scope_unit_state
+                     class: Errors
+                      type: Linux
+                 component: Systemd units
+              chart labels: unit_name=*
+                      calc: $failed
+                     units: state
+                     every: 10s
+                      warn: $this != nan AND $this == 1
+                     delay: down 5m multiplier 1.5 max 1h
+                   summary: systemd unit ${"$"}{label:unit_name} state
+                      info: systemd scope units in the failed state
+                        to: sysadmin
+
+              ## Slice units
+                  template: systemd_slice_unit_failed_state
+                        on: systemd.slice_unit_state
+                     class: Errors
+                      type: Linux
+                 component: Systemd units
+              chart labels: unit_name=*
+                      calc: $failed
+                     units: state
+                     every: 10s
+                      warn: $this != nan AND $this == 1
+                     delay: down 5m multiplier 1.5 max 1h
+                   summary: systemd unit ${"$"}{label:unit_name} state
+                      info: systemd slice units in the failed state
+                        to: sysadmin
+
+              ## Timer units
+                  template: systemd_timer_unit_failed_state
+                        on: systemd.timer_unit_state
+                     class: Errors
+                      type: Linux
+                 component: Systemd units
+              chart labels: unit_name=*
+                      calc: $failed
+                     units: state
+                     every: 10s
+                      warn: $this != nan AND $this == 1
+                     delay: down 5m multiplier 1.5 max 1h
+                   summary: systemd unit ${"$"}{label:unit_name} state
+                      info: systemd timer unit in the failed state
+                        to: sysadmin
+            '';
+
+            # Discord notifications via health_alarm_notify.conf.
+            # The file is a bash script sourced by Netdata's alarm-notify.sh;
+            # sourcing the age secret sets DISCORD_WEBHOOK_URL at runtime.
+            "health_alarm_notify.conf" = pkgs.writeText "health_alarm_notify.conf" ''
+              # shellcheck disable=SC1090
+              source "${config.age.secrets."netdata-secrets.env".path}"
+              SEND_DISCORD="YES"
+              DEFAULT_RECIPIENT_DISCORD="alarms"
+
+              # No local MTA on this host; Netdata Cloud already sends email
+              # notifications, so don't bother with alarm-notify.sh's own
+              # (broken, sendmail-dependent) email path.
+              SEND_EMAIL="NO"
+            '';
+          };
 
           # smartmontools gives the smartctl collector S.M.A.R.T. access to individual disks
           # (pre-fail indicators), complementing the built-in ZFS pool-level health alerting above.
