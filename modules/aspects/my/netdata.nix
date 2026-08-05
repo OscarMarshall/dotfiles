@@ -90,7 +90,10 @@ in
             # returns an empty body (permanent "check failed: expected a valid start token, got
             # \"<\"" collector-status alerts), the other happens to return authentik's real
             # prometheus output but mislabeled as squid. There's no smaller/per-job override for
-            # this - see https://github.com/netdata/netdata/discussions/20921.
+            # this - see https://github.com/netdata/netdata/discussions/20921. Everything else in
+            # the file is an unmodified copy of upstream's matchers - a netdata package bump won't
+            # bring in any new upstream matchers added since, so re-diff against the new version's
+            # stock file if a legitimate third-party exporter stops auto-detecting after a bump.
             "go.d/sd/net_listeners.conf" = ./netdata-net-listeners.conf;
 
             # Stock health.d/systemdunits.conf ships every "unit in the failed state" template with
