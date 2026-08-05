@@ -10,18 +10,16 @@
       (authentik { global = true; })
       (auto-upgrade { allowReboot = true; })
       (autobrr { })
-      # TODO, in this order (the bucket-scoped key genuinely can't exist before the bucket
-      # does): 1) create an account-level Backblaze application key (no bucket restriction), set
-      # `accountApplicationKeyId` in backup.nix itself - it's a plain shared constant there, not
-      # a per-host parameter, since every host uses the same Backblaze account - `agenix edit
-      # secrets/b2-application-key.age` with its key, `agenix rekey -a`; 2) `nix run .#harmony-tf`
-      # to create the bucket (terranix - goes through its own module evaluation, NOT
-      # nixosConfigurations.harmony, so this works fine before step 3); 3) create a second,
-      # bucket-scoped Backblaze application key against the now-existing bucket, add
-      # `applicationKeyId = "<its ID>";` below, `agenix edit
-      # secrets/backup-b2-application-key-harmony.age` with its key, `agenix rekey -a` again -
-      # until this step, `applicationKeyId` stays unset and my.backup defines no restic jobs at
-      # all (see backup.nix's own header comment), so there's nothing to fail noisily in the
+      # TODO (the bucket-scoped key genuinely can't exist before the bucket does): step 1 is
+      # done - backup.nix's `accountApplicationKeyId` is set, and secrets/b2-application-key.age
+      # should already hold the matching key (double check it does before relying on this).
+      # Remaining: 2) `nix run .#harmony-tf` to create the bucket (terranix - goes through its
+      # own module evaluation, NOT nixosConfigurations.harmony, so this doesn't need step 3
+      # first); 3) create a second, bucket-scoped Backblaze application key against the
+      # now-existing bucket, add `applicationKeyId = "<its ID>";` below, `agenix edit
+      # secrets/backup-b2-application-key-harmony.age` with its key, `agenix rekey -a` - until
+      # this step, `applicationKeyId` stays unset and my.backup defines no restic jobs at all
+      # (see backup.nix's own header comment), so there's nothing to fail noisily in the
       # meantime; 4) only now is the first `nixos-rebuild switch` that includes this safe to run.
       (backup { bucket = "coppermind-harmony"; })
       (bookshelf-audiobooks { })

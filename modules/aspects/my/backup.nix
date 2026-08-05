@@ -11,13 +11,7 @@ let
   # documents applicationKeyId as visible/findable in the console at any time (like a username),
   # unlike applicationKey itself (shown once, at creation, like a password). Same "identifier,
   # not a credential" distinction dns.nix draws for `host.cloudflare-zone-id`.
-  #
-  # `null` - unset, not a "CHANGEME" placeholder string - until the account-level key actually
-  # exists (Backblaze -> App Keys -> Add a New Application Key, no bucket restriction - it has to
-  # be able to create one). While it's null, `provider.b2` below has no explicit
-  # application_key_id, so any `*-tf-apply` run fails authenticating to B2 - loudly, at apply
-  # time, rather than silently doing nothing.
-  accountApplicationKeyId = null;
+  accountApplicationKeyId = "004119677af80560000000001";
 in
 {
   # `bucket` is the single source of truth for both restic's repository (below) and the
