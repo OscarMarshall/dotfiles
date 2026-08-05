@@ -23,10 +23,11 @@ in
         ${
           if rev != null then
             ''
+              github_token="$(${pkgs.coreutils}/bin/cat ${config.age.secrets.nix-github-access-token.path} 2>/dev/null || true)"
               status=$(
                 ${pkgs.curl}/bin/curl -sf \
                   --connect-timeout 2 --max-time 3 \
-                  -H "Authorization: token $(${pkgs.coreutils}/bin/cat ${config.age.secrets.nix-github-access-token.path} 2>/dev/null || true)" \
+                  ''${github_token:+-H "Authorization: token $github_token"} \
                   "https://api.github.com/repos/OscarMarshall/dotfiles/compare/${rev}...main" |
                   ${pkgs.jq}/bin/jq -r '.status // empty' 2>/dev/null || true
               )
