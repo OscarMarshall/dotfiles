@@ -74,7 +74,11 @@ let
       port = 25567;
 
       server = pkgs: {
-        enable = true;
+        # Crash-loops on boot: moonlight-1.21-2.18.13-neoforge.jar's moonlight-common.mixins.json
+        # has no "refmap" field, so Mixin can't resolve the embedded moonlight-common-refmap.json
+        # and PoiMixin's (required) injection fails, aborting the JVM before the world loads. Needs
+        # a mod-jar fix in mods/ (unmanaged by Nix) - disabled until then.
+        enable = false;
         package = pkgs.neoforgeServers.neoforge-1_21_1;
 
         serverProperties = {
