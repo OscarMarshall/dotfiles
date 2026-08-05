@@ -15,10 +15,12 @@ in
       };
 
       # Skip this run - rather than failing it - when the checkout this generation was
-      # switched from isn't cleanly at main's tip: uncommitted changes (dirty), unpushed/
-      # unmerged commits (behind), or diverged history (diverged). Otherwise the timer would
-      # silently switch a host back to main mid-test. Being merely behind main (the normal
-      # case the timer exists to fix) is not blocked.
+      # switched from isn't cleanly at (or behind) main's tip: uncommitted changes (dirty),
+      # unpushed/unmerged commits (behind), diverged history (diverged), or an unknown compare
+      # result (e.g. transient API failure, rate limit, or a rev GitHub can't find). Otherwise
+      # the timer would silently switch a host back to main mid-test. Being merely behind main
+      # (the normal case the timer exists to fix) is not blocked - this is an allow-list so
+      # anything other than that confirmed-safe status fails closed.
       systemd.services.nixos-upgrade.serviceConfig.ExecCondition = pkgs.writeShellScript "nixos-upgrade-on-main" ''
         ${
           if rev != null then
@@ -37,7 +39,8 @@ in
         }
 
         case "$status" in
-          behind | diverged) exit 1 ;;
+          ahead | identical) ;;
+          *) exit 1 ;;
         esac
 
         ${lib.optionalString isDirty "exit 1"}
