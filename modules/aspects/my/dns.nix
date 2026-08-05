@@ -11,8 +11,15 @@
 # The Cloudflare API token is never written into the generated config or into Terraform state -
 # the provider reads it from the CLOUDFLARE_API_TOKEN env var, contributed below via
 # `settings.terraform = true;` (modules/terranix.nix) and collected into harmony's single
-# `secrets/generated/harmony-tf.env.age`, decrypted and sourced automatically by `nix run
-# .#harmony-tf*`. Run `agenix generate -a && agenix rekey -a` once to materialize it.
+# `secrets/generated/harmony-tf.env.age`. Run `agenix generate -a && agenix rekey -a` once to
+# materialize it (from any machine with the YubiKey, same as any other secret).
+#
+# The `nix run .#harmony-tf*` commands above, by contrast, only work when run ON harmony itself
+# (never off-host, e.g. a dev laptop) - they read the already-decrypted `/run/agenix/harmony-tf.env`
+# rather than the raw secret file, and harmony's own ZFS dataset backs Terraform state too (see
+# modules/terranix.nix's own comments on both). `harmony-tf-apply.service` also runs `plan`/`apply`
+# automatically on every `nixos-rebuild switch` that changes anything Terraform-relevant, so
+# applying by hand is normally unnecessary.
 #
 # One-time setup on Cloudflare's side: add silverlight-nex.us as a site (free plan), note its Zone
 # ID from the zone's Overview page (set as `host.cloudflare-zone-id` - see modules/den.nix; not a
@@ -120,95 +127,6 @@
               zone_id = host.cloudflare-zone-id;
             };
 
-            # DKIM signing keys - lets recipients verify mail Proton sends on ${domain}'s behalf
-            # actually came from Proton. Three, matching Proton's own custom-domain setup (it
-            # rotates through them), all pointing at the same per-account target Proton generated.
-            proton-dkim-1 = {
-              content = "protonmail.domainkey.de6twmuoanri7twyqgfpqae6nzexlkrk2374nj7blkbxfxlmtyjqq.domains.proton.ch";
-              name = "protonmail._domainkey.${domain}";
-              proxied = false;
-              ttl = 1800;
-              type = "CNAME";
-              zone_id = host.cloudflare-zone-id;
-            };
-
-            proton-dkim-2 = {
-              content = "protonmail2.domainkey.de6twmuoanri7twyqgfpqae6nzexlkrk2374nj7blkbxfxlmtyjqq.domains.proton.ch";
-              name = "protonmail2._domainkey.${domain}";
-              proxied = false;
-              ttl = 1800;
-              type = "CNAME";
-              zone_id = host.cloudflare-zone-id;
-            };
-
-            proton-dkim-3 = {
-              content = "protonmail3.domainkey.de6twmuoanri7twyqgfpqae6nzexlkrk2374nj7blkbxfxlmtyjqq.domains.proton.ch";
-              name = "protonmail3._domainkey.${domain}";
-              proxied = false;
-              ttl = 1800;
-              type = "CNAME";
-              zone_id = host.cloudflare-zone-id;
-            };
-
-            # `p=quarantine` (not `p=reject`) - recipients failing SPF/DKIM land in spam rather than
-            # being dropped outright, since this is a first DMARC policy for the domain and there's
-            # no reporting address configured yet to catch legitimate mail this misclassifies.
-            proton-dmarc = {
-              content = "v=DMARC1; p=quarantine";
-              name = "_dmarc.${domain}";
-              proxied = false;
-              ttl = 1800;
-              type = "TXT";
-              zone_id = host.cloudflare-zone-id;
-            };
-
-            # Lets Proton actually receive mail for ${domain} (nextcloud.nix's Postfix relay only
-            # covers sending) - two MX records, not one, since Proton's own setup instructions call
-            # for both a primary and a secondary (lower-priority) mail exchanger.
-            proton-mx-primary = {
-              content = "mail.protonmail.ch";
-              name = domain;
-              priority = 10;
-              proxied = false;
-              ttl = 1800;
-              type = "MX";
-              zone_id = host.cloudflare-zone-id;
-            };
-
-            proton-mx-secondary = {
-              content = "mailsec.protonmail.ch";
-              name = domain;
-              priority = 20;
-              proxied = false;
-              ttl = 1800;
-              type = "MX";
-              zone_id = host.cloudflare-zone-id;
-            };
-
-            # Authorizes Proton's servers as legitimate senders for ${domain} - without this,
-            # recipients' own SPF checks fail every message nextcloud.nix's Postfix relay sends.
-            proton-spf = {
-              content = "v=spf1 include:_spf.protonmail.ch ~all";
-              name = domain;
-              proxied = false;
-              ttl = 1800;
-              type = "TXT";
-              zone_id = host.cloudflare-zone-id;
-            };
-
-            # Proves domain ownership to Proton so nextcloud@${domain} can be verified as a custom
-            # domain address there (nextcloud.nix's Postfix relay uses it). Lives at the zone apex,
-            # unrelated to any single service, so it doesn't fit the per-host/per-service loops
-            # above - a one-off record with nothing to derive it from. TXT can't be proxied
-            # regardless of the flag.
-            proton-verification = {
-              content = "protonmail-verification=c79b190a4d3afe77f16020917ec9e11f1fc5ea4c";
-              name = domain;
-              proxied = false;
-              ttl = 1800;
-              type = "TXT";
-              zone_id = host.cloudflare-zone-id;
-            };
           };
 
         terraform.required_providers.cloudflare = {

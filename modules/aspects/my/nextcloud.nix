@@ -101,9 +101,10 @@
           };
 
           # Outbound-only relay so Nextcloud (mail_smtphost = 127.0.0.1 above, a module default) has
-          # somewhere to hand mail off to. Proton doesn't accept direct SMTP delivery from arbitrary
-          # servers, hence relaying through its own submission endpoint with a per-address SMTP
-          # token rather than attempting direct-to-recipient delivery.
+          # somewhere to hand mail off to. Mailgun (mailgun.nix owns the underlying `mailgun_domain`,
+          # secrets below own this service's own mailbox under it) doesn't accept direct SMTP
+          # delivery from arbitrary servers either, hence relaying through its own submission
+          # endpoint rather than attempting direct-to-recipient delivery.
           postfix = {
             enable = true;
             # Compiled to /var/lib/postfix/conf/sasl_passwd.db; the plaintext source is the secret
@@ -118,7 +119,7 @@
               inet_interfaces = "loopback-only";
               myhostname = "${host.name}.${host.domain}";
               mynetworks = [ "127.0.0.0/8" ];
-              relayhost = [ "[smtp.protonmail.ch]:587" ];
+              relayhost = [ "[smtp.mailgun.org]:587" ];
               smtp_sasl_auth_enable = true;
               smtp_sasl_password_maps = "hash:/var/lib/postfix/conf/sasl_passwd";
               smtp_sasl_security_options = "noanonymous";
@@ -253,6 +254,20 @@
       secrets = { secrets, ... }: {
         nextcloud-admin-password.generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -base64 24";
 
+        # Nextcloud's own Mailgun mailbox (mailgun.nix owns the `mailgun_domain` this credential is
+        # created under, via the `terranix` field below). Generated, not external - unlike the old
+        # Proton token this replaces, nothing has to be copied out of a dashboard by hand.
+        # `settings.terraform = "variable"` feeds `mailgun_domain_credential.nextcloud.password`
+        # below; NOT `intermediary`, since the Postfix generator above also reads it directly - same
+        # dual-use reasoning as `nextcloud-oidc-client-secret` above. 21 bytes, not the usual 32 -
+        # Mailgun's credential API caps passwords at 32 characters, and base64 of 21 bytes lands
+        # exactly on 28 with no padding (21 is divisible by 3); see authentik.nix's identical secret
+        # for how this was actually discovered (Mailgun's API rejecting a 44-character one outright).
+        nextcloud-mailgun-smtp-password = {
+          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -base64 21";
+          settings.terraform = "variable";
+        };
+
         # `settings.terraform = "variable";` feeds a Terraform `variable` (modules/terranix.nix's
         # two modes); also read directly below (LoadCredential) to configure user_oidc via occ,
         # so it's NOT `intermediary` - it has to be materialized as a real host secret too.
@@ -262,7 +277,7 @@
         };
 
         nextcloud-postfix-smtp-passwd.generator = {
-          dependencies = { inherit (secrets) nextcloud-postfix-smtp-token; };
+          dependencies = { inherit (secrets) nextcloud-mailgun-smtp-password; };
 
           script =
             {
@@ -272,20 +287,22 @@
               ...
             }:
             ''
-              printf '[smtp.protonmail.ch]:587 nextcloud@${host.domain}:%s\n' "$(${decrypt} ${lib.escapeShellArg deps.nextcloud-postfix-smtp-token.file})"
+              printf '[smtp.mailgun.org]:587 nextcloud@${host.domain}:%s\n' "$(${decrypt} ${lib.escapeShellArg deps.nextcloud-mailgun-smtp-password.file})"
             '';
         };
+      };
 
-        # The raw SMTP token itself - an external credential from Proton, not something this
-        # repo can generate, so there's no `generator` here. Author it by hand once via `agenix
-        # edit secrets/nextcloud-postfix-smtp-token.age` with just the token (Proton Settings ->
-        # All settings -> IMAP/SMTP -> SMTP tokens - NOT the account password), then `agenix
-        # rekey -a`. `intermediary` because nothing reads this directly - only the generator
-        # below, which folds it into Postfix's actual sasl_passwd map line.
-        nextcloud-postfix-smtp-token = {
-          intermediary = true;
-          rekeyFile = ../../../secrets/nextcloud-postfix-smtp-token.age;
+      # Cross-references `mailgun_domain.default`, defined in mailgun.nix's own `terranix` field -
+      # see that file's header comment for why each consumer (this, and authentik.nix) owns its own
+      # mailbox under Mailgun's one domain resource rather than mailgun.nix owning them all.
+      terranix = _: {
+        resource.mailgun_domain_credential.nextcloud = {
+          domain = "\${mailgun_domain.default.name}";
+          login = "nextcloud";
+          password = "\${var.NEXTCLOUD_MAILGUN_SMTP_PASSWORD}";
         };
+
+        variable.NEXTCLOUD_MAILGUN_SMTP_PASSWORD.sensitive = true;
       };
 
       virtual-host = {

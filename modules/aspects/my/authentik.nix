@@ -49,6 +49,20 @@
       };
 
       secrets = { secrets, ... }: {
+        # Authentik's own Mailgun mailbox (mailgun.nix owns the `mailgun_domain` this credential is
+        # created under) - the email-OTP stage below sends through it. Generated, not external, and
+        # `settings.terraform = "variable"` since the Mailgun API has to persist it, same reasoning
+        # as `authentik-token` above. 21 bytes (not the usual 32/60 elsewhere in this file) because
+        # Mailgun's own credential API caps passwords at 32 CHARACTERS - base64 of 32 bytes runs to
+        # ~44 with padding, which Mailgun's API rejected outright ("Password is too long"); 21 is
+        # divisible by 3, so base64 encodes it as an even 28 characters with no padding, comfortably
+        # under the cap while still well past any reasonable brute-force floor.
+        authentik-mailgun-smtp-password = {
+          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -base64 21";
+          intermediary = true;
+          settings.terraform = "variable";
+        };
+
         authentik-secret-key = {
           generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -base64 60";
           intermediary = true;
@@ -81,21 +95,15 @@
             '';
         };
 
-        # Both come from an external dashboard (Discord's, Plex's own account), so - unlike the
-        # generated secrets above - these use `rekeyFile` and need a one-time `agenix edit` (see
-        # the `terranix` field's comment for where each value comes from), same as
+        # Comes from Discord's own developer dashboard, so - unlike the generated secrets above -
+        # this uses `rekeyFile` and needs a one-time `agenix edit` (see the `terranix` field's
+        # comment for where the value comes from), same as
         # `cloudflare-api-token`/`meraki-dashboard-api-key`. `settings.terraform = "variable";`
-        # (not `= true;`) because they're only ever consumed as Terraform `variable`s, never by a
+        # (not `= true;`) because it's only ever consumed as a Terraform `variable`, never by a
         # NixOS service directly - see modules/terranix.nix's header comment on the two modes.
         discord-client-secret = {
           intermediary = true;
           rekeyFile = ../../../secrets/discord-client-secret.age;
-          settings.terraform = "variable";
-        };
-
-        plex-token = {
-          intermediary = true;
-          rekeyFile = ../../../secrets/plex-token.age;
           settings.terraform = "variable";
         };
       };
@@ -159,14 +167,23 @@
       # (see meraki.nix) - so any provider attached to this outpost through the UI, outside the
       # `protected` mechanism below, gets silently removed on the next apply.
       #
-      # Social login (`authentik_source_oauth`/`authentik_source_plex` below) is a DIFFERENT thing
-      # from the `protected` forward-auth above: it's an identity SOURCE (an extra "Log in with
-      # ..." button on Authentik's own login page), not a per-service Provider/Application. Neither
-      # Discord (discord.nix is just the desktop client, there's no self-hosted server to front) nor
-      # Plex (plex.nix's `virtual-host` is deliberately never `protected` - Plex has its own
-      # account/library-based auth) get gated behind Authentik; this only lets people who already
-      # have a Discord or Plex.tv account use it to log into Authentik itself (and, once
-      # authenticated, whatever `protected` services above already gate).
+      # Social login (`authentik_source_oauth` below) is a DIFFERENT thing from the `protected`
+      # forward-auth above: it's an identity SOURCE (an extra "Log in with ..." button on
+      # Authentik's own login page), not a per-service Provider/Application. Discord
+      # (discord.nix is just the desktop client, there's no self-hosted server to front) doesn't
+      # get gated behind Authentik; this only lets people who already have a Discord account use
+      # it to log into Authentik itself (and, once authenticated, whatever `protected` services
+      # above already gate).
+      #
+      # Plex used to be a source here too (`authentik_source_plex`) - removed: its `redeem_token`
+      # endpoint 405s in production for reasons that traced all the way down to Django's own
+      # request dispatch working fine in-process (confirmed via `ak shell`'s test client) while
+      # real ASGI traffic through the same code didn't, with nothing on this repo's end - nginx,
+      # this config, URL routing - explaining the gap. Never confirmed working even before that:
+      # the login identification stage's own `sources` list is what makes a source's button show
+      # at all, and nothing populated it until this file's own login redesign, so there's no
+      # evidence Plex login ever actually worked here. plex.nix (the Plex MEDIA SERVER's own
+      # virtual host) is unrelated and untouched by this - always was, and stays, ungated.
       #
       # Native OIDC applications (`authentik_provider_oauth2` below) are a THIRD, distinct thing:
       # some services (Immich, Nextcloud, Seerr) have their own OIDC client built in and just need
@@ -174,7 +191,7 @@
       # forward-auth at all - driven by the `oidc` field on `virtual-host` (virtual-host.nix) each
       # of those services' own aspect sets.
       #
-      # Discord/Plex's credentials and every `oidc`-tagged host's `client-secret` are RESOURCE
+      # Discord's credential and every `oidc`-tagged host's `client-secret` are RESOURCE
       # ATTRIBUTES here, not provider-level auth like AUTHENTIK_TOKEN above - Authentik's API has
       # to persist the actual value to work at all, so unlike everything else in this file, these
       # DO end up in Terraform's state file in plaintext once applied (an inherent Terraform
@@ -183,11 +200,65 @@
       # (contributed unconditionally for every host, see its own comment) is what actually keeps
       # these out of the plaintext git history; `settings.terraform = "variable";` (below, on each
       # secret) is just how their values reach the `variable`s that encryption config wraps.
+      #
+      # The LOGIN experience (as opposed to everything above, which is all about what happens
+      # AFTER a session exists) is a fourth, separate concern: which flow answers when someone
+      # actually hits https://${url}/ or gets redirected here unauthenticated, set via
+      # `authentik_brand.default.flow_authentication` below. Discord's source existing (above)
+      # isn't enough on its own for its button to show - Authentik's identification stage has
+      # its own `sources` list, populated below, that nothing else fills in.
+      #
+      # `login` is the new default: identification (a Discord button + a "Log in with a
+      # passkey" link, no password field - omitting `password_stage` is what does that, per the
+      # identification stage's own docs) -> an authenticator-validate stage restricted to the
+      # `email` device class, standing in as the only "second" factor because there's no
+      # password/first factor before it -> user-login. A user with no email-OTP device yet gets
+      # walked straight through enrolling one (`not_configured_action = "configure"`) rather than
+      # being blocked.
+      #
+      # `login-passkey` is the flow the identification stage's `passwordless_flow` link goes to -
+      # WebAuthn-only, `not_configured_action = "deny"` (no inline enrollment mid-attempt; if you
+      # don't have a passkey yet, this path just doesn't work, you fall back to the normal form).
+      # Discoverable/resident WebAuthn credentials (the setup stage's `resident_key_requirement`
+      # default of `preferred` already produces these) are what let this flow resolve the user
+      # without an identification stage of its own - the credential itself carries the identity.
+      #
+      # `webauthn-setup`/`email-otp-setup` are tiny `stage_configuration` flows whose only job is
+      # to be pointed at by their stage's own `configure_flow` - that's what makes "Set up a
+      # passkey"/"Change sign-in email" show up as self-service cards in a user's own Account
+      # settings, the same mechanism Authentik's own default TOTP setup uses.
+      #
+      # `admin-password-login` is the password break-glass the user asked to keep, deliberately
+      # NOT linked from anywhere and NOT what the brand defaults to - reachable only by bookmarking
+      # `https://${url}/if/flow/admin-password-login/` directly, and gated to the `admin` group by
+      # its own `authentik_policy_binding` (flows, like applications, are a valid `target` for
+      # policy bindings - not just an authentik_application quirk). Its own MFA validate stage
+      # uses `not_configured_action = "skip"` rather than `configure`/`deny` - an admin who hasn't
+      # enrolled a device yet still gets in on password alone rather than being locked out of their
+      # own break-glass path.
+      #
+      # None of this DELETES Authentik's own built-in `default-authentication-flow` - it just stops
+      # being the brand's default. It stays fully reachable at
+      # `https://${url}/if/flow/default-authentication-flow/` (password + whatever MFA is already
+      # enrolled there) for as long as it exists, same as the akadmin bootstrap token - two more
+      # ways back in besides `admin-password-login` if any of the above is ever misconfigured.
+      #
+      # `authentik_brand.default` itself has to be IMPORTED, same one-time dance as
+      # `authentik_outpost.embedded` above (Authentik creates its own default Brand automatically,
+      # Terraform can't compete with that by creating a second one) - find its live `domain`/uuid
+      # first and set `domain` below to match EXACTLY (an import with a mismatched `domain` would
+      # have `apply` try to change it), then import:
+      #
+      #   curl -s -H "Authorization: Bearer $AUTHENTIK_TOKEN" "https://${url}/api/v3/core/brands/?default=true" | jq '.results[0] | {pk, domain}'
+      #   tofu import authentik_brand.default "$pk"
+      #
+      # Do this LAST, after everything else above has already applied cleanly - it's the one step
+      # that actually flips real users over to the new `login` flow.
       terranix =
         { lib, virtual-host, ... }:
         let
           # WHO may reach an application. An application with NO bindings is open to every
-          # authenticated user, which - combined with the Discord/Plex sources below being able to
+          # authenticated user, which - combined with the Discord source below being able to
           # ENROLL brand-new accounts - would otherwise mean a stranger's Discord account reaching
           # every service here. So every application gets at least the `admin` binding, and only
           # `open-group` ones additionally get `user`.
@@ -240,14 +311,6 @@
           # `admins` - the same string the Homepage dashboard and Authentik's library file these
           # services under, so a service moving between sections moves its access with it.
           open-group = "Media";
-          # harmony's Plex server `machineIdentifier` (`curl http://localhost:32400/identity` on
-          # harmony) - restricts Plex login to people with access to this server; left empty, ANY
-          # Plex.tv account could log into Authentik instead.
-          plex-allowed-servers = [ "8c5824dcf35bfbe5a6f73239e4150ab2f563f624" ];
-          # Plex: unlike Discord, this ID isn't issued BY Plex - it's an arbitrary, stable string
-          # Authentik uses to identify itself to plex.tv (the `X-Plex-Client-Identifier`). Any
-          # value works and never needs to change; no action needed.
-          plex-client-id = "silverlight-nex-us-authentik";
           protected-hosts = lib.filter (vh: vh.protected or false) virtual-host;
           # Mirrors `env-var-for` (modules/terranix.nix) exactly - the `TF_VAR_` prefix a
           # `settings.terraform = "variable";` secret surfaces under is added programmatically
@@ -266,7 +329,7 @@
               default-authorization-flow.slug = "default-provider-authorization-implicit-consent";
               default-invalidation-flow.slug = "default-provider-invalidation-flow";
               # Distinct from the provider-authorization flow above - these are Authentik's built-in
-              # flows for external identity SOURCES (Discord/Plex/etc.), not Providers.
+              # flows for external identity SOURCES (Discord/etc.), not Providers.
               default-source-authentication.slug = "default-source-authentication";
               default-source-enrollment.slug = "default-source-enrollment";
             };
@@ -276,6 +339,147 @@
             provider.authentik.url = "https://${url}";
 
             resource = {
+              # Imported once - see the comment above `terranix =` for the discovery + import
+              # commands. `domain` MUST match the live default brand's own value exactly, or apply
+              # will try to change it.
+              #
+              # `flow_authentication`/`passwordless_flow`/`configure_flow` below all need a
+              # NEWLY-CREATED flow's `.uuid`, not `.id` - unlike the pre-existing `data.authentik_flow.*.id`
+              # references elsewhere in this file (those are DATA sources, looked up by slug, and
+              # apparently tolerant of either form), a `resource "authentik_flow"`'s own `.id`
+              # attribute is its SLUG, not its pk - confirmed the hard way: Authentik's API rejected
+              # the literal string "login" ("is not a valid UUID") for exactly these three fields,
+              # which are strict foreign keys server-side. `authentik_flow_stage_binding.target`
+              # already got this right (matching the provider's own example).
+              #
+              # `ignore_changes` below is load-bearing, not decoration: this resource only exists to
+              # manage `flow_authentication` on the brand Authentik already created for itself -
+              # every other field it has live (branding_favicon/branding_logo, and critically
+              # flow_invalidation/flow_user_settings - the latter is what makes the Account page,
+              # and this feature's own passkey/email-OTP self-service cards, reachable at all) is
+              # something this config never set and has no opinion on. Without `ignore_changes`,
+              # omitting them from config doesn't mean "leave alone" - Terraform reads it as "should
+              # be unset" and nulls them out on the very first apply after import, confirmed by a
+              # real plan doing exactly that.
+              authentik_brand.default = {
+                default = true;
+                domain = "authentik-default";
+                flow_authentication = "\${authentik_flow.login.uuid}";
+
+                lifecycle.ignore_changes = [
+                  "branding_favicon"
+                  "branding_logo"
+                  "flow_invalidation"
+                  "flow_user_settings"
+                ];
+              };
+
+              # See the login-design comment above `terranix =` for what each of these is for.
+              authentik_flow = {
+                admin-password-login = {
+                  designation = "authentication";
+                  name = "admin-password-login";
+                  slug = "admin-password-login";
+                  title = "Sign in with a password";
+                };
+
+                email-otp-setup = {
+                  designation = "stage_configuration";
+                  name = "email-otp-setup";
+                  slug = "email-otp-setup";
+                  title = "Set up email sign-in codes";
+                };
+
+                login = {
+                  designation = "authentication";
+                  name = "login";
+                  slug = "login";
+                  title = "Sign in";
+                };
+
+                login-passkey = {
+                  designation = "authentication";
+                  name = "login-passkey";
+                  slug = "login-passkey";
+                  title = "Sign in with a passkey";
+                };
+
+                webauthn-setup = {
+                  designation = "stage_configuration";
+                  name = "webauthn-setup";
+                  slug = "webauthn-setup";
+                  title = "Set up a passkey";
+                };
+              };
+
+              authentik_flow_stage_binding = {
+                admin-identification = {
+                  order = 10;
+                  stage = "\${authentik_stage_identification.admin.id}";
+                  target = "\${authentik_flow.admin-password-login.uuid}";
+                };
+
+                admin-mfa-validate = {
+                  order = 30;
+                  stage = "\${authentik_stage_authenticator_validate.admin-mfa.id}";
+                  target = "\${authentik_flow.admin-password-login.uuid}";
+                };
+
+                admin-password = {
+                  order = 20;
+                  stage = "\${authentik_stage_password.admin.id}";
+                  target = "\${authentik_flow.admin-password-login.uuid}";
+                };
+
+                admin-user-login = {
+                  order = 40;
+                  stage = "\${authentik_stage_user_login.default.id}";
+                  target = "\${authentik_flow.admin-password-login.uuid}";
+                };
+
+                email-otp-setup = {
+                  order = 10;
+                  stage = "\${authentik_stage_authenticator_email.otp.id}";
+                  target = "\${authentik_flow.email-otp-setup.uuid}";
+                };
+
+                login-email-otp = {
+                  order = 20;
+                  stage = "\${authentik_stage_authenticator_validate.email-otp.id}";
+                  target = "\${authentik_flow.login.uuid}";
+                };
+
+                login-identification = {
+                  order = 10;
+                  stage = "\${authentik_stage_identification.login.id}";
+                  target = "\${authentik_flow.login.uuid}";
+                };
+
+                login-user-login = {
+                  order = 30;
+                  stage = "\${authentik_stage_user_login.default.id}";
+                  target = "\${authentik_flow.login.uuid}";
+                };
+
+                passkey-user-login = {
+                  order = 20;
+                  stage = "\${authentik_stage_user_login.default.id}";
+                  target = "\${authentik_flow.login-passkey.uuid}";
+                };
+
+                passkey-validate = {
+                  order = 10;
+                  stage = "\${authentik_stage_authenticator_validate.passkey.id}";
+                  target = "\${authentik_flow.login-passkey.uuid}";
+                };
+
+                webauthn-setup = {
+                  order = 10;
+                  stage = "\${authentik_stage_authenticator_webauthn.setup.id}";
+                  target = "\${authentik_flow.webauthn-setup.uuid}";
+                };
+              };
+
               # Groups live here rather than on the services that consume them: they're a DIRECTORY
               # concept (authentik.nix owns every `authentik_*` resource, the way dns.nix owns every
               # `cloudflare_*` one), and three unrelated things key off them already - the application
@@ -295,12 +499,21 @@
               # (not to be confused with the group named `user`) is `Optional` AND `Computed` in the
               # Terraform provider, so omitting it means "leave whatever's there alone" rather than
               # "empty it" - unlike `authentik_outpost`'s `protocol_providers` above, which really
-              # does replace the whole list. Accounts arrive by Discord/Plex enrollment and don't
+              # does replace the whole list. Accounts arrive by Discord enrollment and don't
               # exist in this config, so assign people through Authentik's UI (Directory > Groups)
               # and applies won't fight you over it.
               authentik_group = lib.genAttrs [ "admin" "user" ] (name: {
                 inherit name;
               });
+
+              # Restricts the break-glass flow to the `admin` group, same as every application's
+              # own binding above - without this, anyone who finds/bookmarks the URL could attempt
+              # a password login against it.
+              authentik_policy_binding.admin-password-login-gate = {
+                group = "\${authentik_group.admin.id}";
+                order = 0;
+                target = "\${authentik_flow.admin-password-login.uuid}";
+              };
 
               authentik_source_oauth.discord = {
                 authentication_flow = "\${data.authentik_flow.default-source-authentication.id}";
@@ -312,15 +525,117 @@
                 slug = "discord";
               };
 
-              authentik_source_plex.plex = {
-                allow_friends = true;
-                allowed_servers = plex-allowed-servers;
-                authentication_flow = "\${data.authentik_flow.default-source-authentication.id}";
-                client_id = plex-client-id;
-                enrollment_flow = "\${data.authentik_flow.default-source-enrollment.id}";
-                name = "Plex";
-                plex_token = "\${var.${tf-var-name-of "plex-token"}}";
-                slug = "plex";
+              # SMTP identity is Authentik's own Mailgun mailbox (secrets above, mailgun.nix owns
+              # the underlying `mailgun_domain`) - `use_global_settings = false` since nothing
+              # configures Authentik's GLOBAL email backend (AUTHENTIK_EMAIL__* env vars) at all.
+              # `from_address`/`username` are built directly from `host.domain` rather than reading
+              # `mailgun_domain_credential.authentik-otp`'s own attributes - despite what its docs
+              # claim, the real v0.10.0 schema (confirmed via `tofu providers schema -json`) has no
+              # `email` output, only `domain`/`login`/`password`/`region`/`id`. Since `login` and
+              # `domain` are both values WE set below, not ones the API computes, reconstructing the
+              # address here is equivalent and doesn't depend on an attribute that doesn't exist.
+              #
+              # `subject`/`template` are set explicitly, NOT left at the Terraform provider's own
+              # documented defaults ("authentik" / `email/password_reset.html`) - those are simply
+              # WRONG for this resource, confirmed against Authentik's actual Django model
+              # (authentik/stages/authenticator_email/models.py: `subject` really defaults to
+              # "authentik Sign-in code", `template` to `EmailTemplates.EMAIL_OTP` =
+              # `email/email_otp.html`). The provider schema's stated default looks copy-pasted from
+              # the OLDER, unrelated `authentik_stage_email` resource, whose actual default template
+              # genuinely IS `password_reset.html`. Omitting these sent the wrong one, which is
+              # exactly the "reset password"-looking email that surfaced this.
+              authentik_stage_authenticator_email.otp = {
+                configure_flow = "\${authentik_flow.email-otp-setup.uuid}";
+                from_address = "authentik@${host.domain}";
+                host = "smtp.mailgun.org";
+                name = "email-otp";
+                password = "\${mailgun_domain_credential.authentik-otp.password}";
+                port = 587;
+                subject = "authentik Sign-in code";
+                template = "email/email_otp.html";
+                use_global_settings = false;
+                use_tls = true;
+                username = "authentik@${host.domain}";
+              };
+
+              authentik_stage_authenticator_validate = {
+                admin-mfa = {
+                  device_classes = [
+                    "webauthn"
+                    "totp"
+                    "static"
+                  ];
+
+                  name = "admin-mfa-validate";
+                  # Not `configure`/`deny` - the break-glass path stays usable on password alone
+                  # for an admin who hasn't enrolled an MFA device yet.
+                  not_configured_action = "skip";
+                };
+
+                email-otp = {
+                  configuration_stages = [ "\${authentik_stage_authenticator_email.otp.id}" ];
+                  device_classes = [ "email" ];
+                  name = "email-otp-validate";
+                  not_configured_action = "configure";
+                };
+
+                passkey = {
+                  device_classes = [ "webauthn" ];
+                  name = "passkey-validate";
+                  not_configured_action = "deny";
+                };
+              };
+
+              authentik_stage_authenticator_webauthn.setup = {
+                configure_flow = "\${authentik_flow.webauthn-setup.uuid}";
+                name = "webauthn-setup";
+              };
+
+              authentik_stage_identification = {
+                admin = {
+                  case_insensitive_matching = true;
+                  name = "admin-password-identification";
+                  # Set (unlike `login` above), so the password prompt appears inline on this stage
+                  # rather than as a separate later one.
+                  password_stage = "\${authentik_stage_password.admin.id}";
+
+                  user_fields = [
+                    "username"
+                    "email"
+                  ];
+                };
+
+                login = {
+                  case_insensitive_matching = true;
+                  name = "login-identification";
+                  # No `password_stage` - the password prompt simply doesn't appear.
+                  passwordless_flow = "\${authentik_flow.login-passkey.uuid}";
+                  # Just Discord - see the comment above `terranix =` for why Plex isn't here.
+                  sources = [ "\${authentik_source_oauth.discord.uuid}" ];
+
+                  user_fields = [
+                    "username"
+                    "email"
+                  ];
+                };
+              };
+
+              authentik_stage_password.admin = {
+                backends = [ "authentik.core.auth.InbuiltBackend" ];
+                name = "admin-password";
+              };
+
+              # A standalone object, not flow-scoped - reused via three separate
+              # `authentik_flow_stage_binding`s below rather than duplicated per flow.
+              authentik_stage_user_login.default.name = "login-user-login";
+
+              # Cross-references `mailgun_domain.default`, defined in mailgun.nix's own `terranix`
+              # field - see that file's header comment for why each consumer owns its own mailbox
+              # rather than mailgun.nix owning them all.
+              mailgun_domain_credential.authentik-otp = {
+                domain = "\${mailgun_domain.default.name}";
+                login = "authentik";
+                password = "\${var.${tf-var-name-of "authentik-mailgun-smtp-password"}}";
               };
             };
 
@@ -330,8 +645,8 @@
             };
 
             variable = {
+              AUTHENTIK_MAILGUN_SMTP_PASSWORD.sensitive = true;
               DISCORD_CLIENT_SECRET.sensitive = true;
-              PLEX_TOKEN.sensitive = true;
             };
           }
           [

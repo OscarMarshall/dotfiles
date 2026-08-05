@@ -52,12 +52,14 @@
       homepage
       lm-sensors
       locale
+      mailgun
       meraki
       networkmanager
       nginx
       samba
       satisfactory-server
       ssh-server
+      terranix
       unpackerr
       vpn-confinement
     ];

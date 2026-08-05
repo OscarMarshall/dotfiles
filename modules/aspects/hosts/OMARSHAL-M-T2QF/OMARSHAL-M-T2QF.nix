@@ -1,6 +1,9 @@
 { my, ... }: {
   den.aspects.OMARSHAL-M-T2QF = {
-    includes = with my; [ homebrew ];
+    includes = with my; [
+      homebrew
+      neardrop
+    ];
 
     darwin = {
       age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJYml5zuvVCI6yKyiCz9Jx5wv9S4OrzZRltqzEH1NQdC";
