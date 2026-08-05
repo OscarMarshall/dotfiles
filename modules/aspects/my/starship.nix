@@ -95,7 +95,7 @@ in
               ${apiPart}
               ${dirtyPart}
               if [ -n "$symbols" ]; then
-                echo "$symbols"
+                echo ".$symbols"
               fi
             '';
 
