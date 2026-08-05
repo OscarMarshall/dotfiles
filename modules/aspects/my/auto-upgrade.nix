@@ -22,6 +22,9 @@ in
       # (the normal case the timer exists to fix) is not blocked - this is an allow-list so
       # anything other than that confirmed-safe status fails closed.
       systemd.services.nixos-upgrade.serviceConfig.ExecCondition = pkgs.writeShellScript "nixos-upgrade-on-main" ''
+        ${lib.optionalString isDirty "exit 1"}
+
+        status=""
         ${
           if rev != null then
             ''
@@ -42,8 +45,6 @@ in
           ahead | identical) ;;
           *) exit 1 ;;
         esac
-
-        ${lib.optionalString isDirty "exit 1"}
       '';
     };
   };
