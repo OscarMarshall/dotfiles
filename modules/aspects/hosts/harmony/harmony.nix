@@ -1,9 +1,19 @@
-{ den, my, ... }: {
+{
+  lib,
+  den,
+  my,
+  ...
+}:
+{
   den.aspects.harmony = {
     includes = with my; [
       (authentik { global = true; })
       (auto-upgrade { allowReboot = true; })
       (autobrr { })
+      (backup {
+        applicationKeyId = "004119677af80560000000002";
+        bucket = "coppermind-harmony";
+      })
       (bookshelf-audiobooks { })
       (bookshelf-ebooks { })
       (cachyos-kernel { variant = "server"; })
@@ -48,12 +58,16 @@
     # here - see bookshelf.nix's own comment on why that's the more correct owner.
     dataset =
       map
-        (name: {
-          inherit name;
-          guestAccess = true;
-          pool = "metalminds";
-          samba = true;
-        })
+        (
+          name:
+          {
+            inherit name;
+            guestAccess = true;
+            pool = "metalminds";
+            samba = true;
+          }
+          // lib.optionalAttrs (name == "documents") { backup = true; }
+        )
         [
           "backups"
           "documents"

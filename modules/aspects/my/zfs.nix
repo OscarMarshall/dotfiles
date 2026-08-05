@@ -9,6 +9,11 @@
 #                 inheritance - nothing here overrides `mountpoint`, so this assumes the pool's own
 #                 mountpoint is `/<pool>`, true for every pool in this repo so far).
 #   pool        - (required) the ZFS pool this dataset belongs to.
+#   backup      - (optional, bool or `pkgs: {...}` function) opt this dataset into offsite backup
+#                 via my.backup (backup.nix) - `true` for defaults, or a function (same deferred-
+#                 value pattern as minecraft-servers.nix's `worlds.<name>.server`) returning restic
+#                 job option overrides (e.g. `backupPrepareCommand`) for datasets that need
+#                 pkgs-derived values.
 #   samba       - (optional, bool) share it via Samba - see samba.nix.
 #   guestAccess - (optional, bool) allow guest (unauthenticated) Samba access - see samba.nix.
 #   user/group  - (optional) chown the dataset's root directory to this user:group once created -

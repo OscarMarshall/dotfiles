@@ -43,6 +43,38 @@
       ];
 
       dataset = {
+        # ZFS COW means restic won't catch a torn write mid-save, but an in-progress autosave
+        # could still land a half-written region file in a backup - so quiesce every ENABLED
+        # world (`create-think-bigger` is currently `enable = false;`, crash-looping, see its own
+        # comment - `world.server pkgs` is re-checked here rather than assumed, since nothing
+        # else tracks which worlds are actually running) around the backup.
+        #
+        # tmux (nix-minecraft's DEFAULT management system - the one it uses for its own stop
+        # command - not rcon: `vanilla` doesn't even have rcon enabled, only `chicken-house`
+        # does, but every enabled world gets a console tmux socket at
+        # `services.minecraft-servers.runDir` (default, unoverridden here: `/run/minecraft`)
+        # regardless). `send-keys` just injects keystrokes with no synchronous ack, so `sleep 5`
+        # after `save-all` approximates "done" for worlds this size - the same fixed-wait
+        # mcrcon's own `-w` flag exists for. `|| true` on every call: a world that happens to be
+        # stopped when the daily timer fires isn't being written to anyway, so failing to
+        # quiesce it is harmless and must not abort backing up the OTHER worlds sharing this
+        # dataset.
+        backup =
+          pkgs:
+          let
+            enabledWorldNames = builtins.attrNames (lib.filterAttrs (_: world: (world.server pkgs).enable or true) worlds);
+            sendCommand =
+              command:
+              lib.concatMapStrings (world: ''
+                ${tmux} -S ${lib.escapeShellArg "/run/minecraft/${world}.sock"} send-keys ${lib.escapeShellArg command} Enter || true
+              '') enabledWorldNames;
+            tmux = "${pkgs.tmux}/bin/tmux";
+          in
+          {
+            backupCleanupCommand = sendCommand "save-on";
+            backupPrepareCommand = sendCommand "save-off" + sendCommand "save-all" + "sleep 5\n";
+          };
+
         guestAccess = true;
         name = "minecraft-worlds";
         pool = "metalminds";

@@ -42,7 +42,8 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
       - Desktop: gnome.nix, pipewire.nix, steam.nix, discord.nix, ghostty.nix
       - Utilities: auto-upgrade.nix, auto-login.nix, host-flag.nix, routes.nix
       - Applications: emacs/, git.nix, gpg.nix, ssh-client.nix, ssh-server.nix
-      - Infrastructure: zfs.nix, samba.nix, lm-sensors.nix, networkmanager.nix, secrets.nix, vpn-confinement.nix
+      - Infrastructure: zfs.nix, samba.nix, lm-sensors.nix, networkmanager.nix, secrets.nix, vpn-confinement.nix,
+        backup.nix (offsite backups - see "Working with Offsite Backups" below)
       - Darwin: homebrew.nix
       - VM: vm.nix, vm-bootable.nix, ci-no-boot.nix
 - **`secrets/`**: Directory containing ragenix/agenix-rekey-encrypted secrets (`.age` files). Primitive secrets are
@@ -139,6 +140,8 @@ The **harmony** server (x86_64-linux) runs:
 - **Automatic Updates**: Auto-upgrade with reboot capability
 - **Infrastructure as Code**: Authentik/\*arr/DNS/Meraki config via Terraform/OpenTofu (terranix), auto-applied on
   switch - see "Working with Terraform/OpenTofu (terranix)" below
+- **Offsite Backups**: Restic to Backblaze B2 for opted-in ZFS datasets - see "Working with Offsite Backups (my.backup)"
+  below
 
 The **melaan** laptop (x86_64-linux) includes:
 
@@ -330,7 +333,8 @@ Organized by category:
 - **Containers**: profilarr
 - **Desktop**: gnome, pipewire, steam, discord, ghostty, zen-browser, prusa-slicer, xfce-desktop
 - **Development**: emacs, git, gpg, ssh-client, ssh-server
-- **Infrastructure**: zfs, samba, lm-sensors, secrets, auto-upgrade, auto-login, vpn-confinement
+- **Infrastructure**: zfs, samba, lm-sensors, secrets, auto-upgrade, auto-login, vpn-confinement, backup (offsite
+  backups via Restic/Backblaze B2)
 - **Darwin**: homebrew
 - **Utilities**: host-flag, routes, vm, vm-bootable, ci-no-boot
 
@@ -456,6 +460,42 @@ Terraform-relevant - manual `nix run .#harmony-tf` is normally only needed to pr
 It never auto-applies a plan containing a destroy action (checked via `tofu show -json | jq`); that fails the service
 instead, surfaced through the same Netdata → Discord alerting used for host health, not through a blocked
 `nixos-rebuild switch` (the trigger is decoupled and non-blocking).
+
+### Working with Offsite Backups (my.backup)
+
+Any ZFS dataset opts into offsite backup by setting `backup = true;` (or a `pkgs: {...}` function, for datasets that
+need pkgs-derived overrides - e.g. nextcloud.nix's and immich.nix's own database-dump prepare/cleanup pairs, or
+minecraft-servers.nix's tmux-based world quiescing) on its `dataset` record - see the shape documented at the top of
+`modules/aspects/my/zfs.nix`. `my.backup` (`modules/aspects/my/backup.nix`) collects every opted-in dataset on a host
+into a `services.restic.backups` job against a Backblaze B2 bucket, which it also declares via the `b2` terranix
+provider (30-day Object Lock retention - see that file's own comments for why the restic prune policy has to cover at
+least that window).
+
+Two credentials, not one: an account-level B2 key (shared across every host - `accountApplicationKeyId`, a plain `let`
+constant in `backup.nix` itself, not a per-host parameter) authenticates the Terraform provider that creates buckets; a
+second, bucket-scoped key (`applicationKeyId`, a genuine per-host `my.backup` parameter, secret named
+`backup-b2-application-key-<hostname>`) is what restic uses day to day. Both key _IDs_ are plain Nix values, not
+secrets - Backblaze documents them as non-sensitive - only the keys themselves are.
+
+**Bootstrap order for a new host** (the bucket-scoped key genuinely can't exist before its bucket does):
+
+1. Wire in `(backup { bucket = "<name>"; })` with no `applicationKeyId` yet - it defaults to `null`, under which
+   `my.backup` schedules no restic jobs at all (verify with
+   `nix eval .#nixosConfigurations.<host>.config.services.restic.backups`) and doesn't even declare the `backup-b2-env`
+   secret, so there's nothing for a stray `agenix generate` to generate wrong in the meantime.
+2. **Human step**: create the account-level B2 key, if one doesn't already exist for this Backblaze account (no bucket
+   restriction - it needs to be able to create one), set `accountApplicationKeyId` in `backup.nix`,
+   `agenix edit secrets/b2-application-key.age` with it, `agenix rekey -a`. Only needed once ever, not per host.
+3. `nix run .#<host>-tf` (on the host itself - see "Working with Terraform/OpenTofu" above) to create the bucket.
+4. **Human step**: create the bucket-scoped B2 key against the now-existing bucket,
+   `agenix edit secrets/backup-b2-application-key-<hostname>.age` with it, `agenix rekey -a`.
+5. Set `applicationKeyId` for real, rebuild. `nix eval` the same `services.restic.backups` path again to confirm the
+   jobs now exist before considering this done.
+
+AI agents can verify every step above with `nix eval`/`nix build` except the two marked human steps (creating the B2
+keys, `agenix edit`, `agenix rekey` - all require the YubiKey, per "Working with Secrets" above) and confirming an
+actual backup run succeeded (`journalctl -u restic-backups-<dataset>.service` on the host, over SSH - not available to
+agents without direct host access).
 
 ## Documentation Update Policy
 

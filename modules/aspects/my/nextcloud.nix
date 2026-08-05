@@ -9,6 +9,23 @@
     in
     {
       dataset = {
+        # Nextcloud's files live in this dataset but its Postgres DB (database.createLocally
+        # below) doesn't - a files-only backup would be unrestorable without it, so dump it into
+        # the dataset right before every backup run and remove the dump again after.
+        backup = pkgs: {
+          backupCleanupCommand = "rm -f /metalminds/nextcloud/.backup/db.sql";
+
+          # `umask 077` first: the redirect below is opened by THIS shell (root, restic's default
+          # job user), not by the sudo'd pg_dump, so without it the dump - a full copy of every
+          # Nextcloud user's data - would land at the service's inherited (likely 022) umask,
+          # readable by anyone on the box for as long as it exists.
+          backupPrepareCommand = ''
+            umask 077
+            mkdir -p /metalminds/nextcloud/.backup
+            ${pkgs.sudo}/bin/sudo -u postgres ${pkgs.postgresql}/bin/pg_dump nextcloud > /metalminds/nextcloud/.backup/db.sql
+          '';
+        };
+
         name = "nextcloud";
         pool = "metalminds";
         # `nextcloud-setup` is the one upstream's own NixOS module orders every other
