@@ -82,6 +82,20 @@ in
           package = pkgs.netdata.override { withCloudUi = true; };
 
           configDir = {
+            # Stock file plus one added skip rule matching both port 9001 (authentik's embedded
+            # outpost) and port 9301 (authentik's Django metrics endpoint): go.d's generic
+            # "exporter" catch-all rule misidentifies both, guessing exporter identity from
+            # well-known third-party ports (9001 -> supervisord/jitsi-videobridge, 9301 ->
+            # squid-exporter) with no way to know it's actually authentik - one of those guesses
+            # returns an empty body (permanent "check failed: expected a valid start token, got
+            # \"<\"" collector-status alerts), the other happens to return authentik's real
+            # prometheus output but mislabeled as squid. There's no smaller/per-job override for
+            # this - see https://github.com/netdata/netdata/discussions/20921. Everything else in
+            # the file is an unmodified copy of upstream's matchers - a netdata package bump won't
+            # bring in any new upstream matchers added since, so re-diff against the new version's
+            # stock file if a legitimate third-party exporter stops auto-detecting after a bump.
+            "go.d/sd/net_listeners.conf" = ./netdata-net-listeners.conf;
+
             # Stock health.d/systemdunits.conf ships every "unit in the failed state" template with
             # `chart labels: unit_name=!*` - Netdata's simple-pattern matching treats a bare `!*` as
             # "reject every value, nothing left to accept", so by design none of these ever match any
