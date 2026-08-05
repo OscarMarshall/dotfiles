@@ -1,24 +1,40 @@
+let
+  # The account-level B2 key ID (paired with the b2-application-key secret below) that
+  # authenticates the `b2` Terraform provider - shared across every host that includes this
+  # aspect, since there's only one Backblaze account, not one per host. Unlike `applicationKeyId`
+  # (still a my.backup parameter below - it genuinely varies per host, one bucket-scoped key
+  # each), duplicating THIS at every host's own call site would just be the same literal typed N
+  # times, and a key rotation would mean hunting down N call sites instead of one - so it lives
+  # here once instead.
+  #
+  # A plain Nix value, not a secret, despite sitting right next to ones that are - Backblaze
+  # documents applicationKeyId as visible/findable in the console at any time (like a username),
+  # unlike applicationKey itself (shown once, at creation, like a password). Same "identifier,
+  # not a credential" distinction dns.nix draws for `host.cloudflare-zone-id`.
+  #
+  # `null` - unset, not a "CHANGEME" placeholder string - until the account-level key actually
+  # exists (Backblaze -> App Keys -> Add a New Application Key, no bucket restriction - it has to
+  # be able to create one). While it's null, `provider.b2` below has no explicit
+  # application_key_id, so any `*-tf-apply` run fails authenticating to B2 - loudly, at apply
+  # time, rather than silently doing nothing.
+  accountApplicationKeyId = null;
+in
 {
   # `bucket` is the single source of truth for both restic's repository (below) and the
   # Terraform-managed b2_bucket resource (in `terranix`, below) - so there's exactly one place to
   # rename it, rather than a Nix-side string and a Terraform-side string drifting apart.
   #
-  # `accountApplicationKeyId`/`applicationKeyId` are plain Nix values, not secrets, despite
-  # sitting right next to ones that are - Backblaze documents applicationKeyId as visible/
-  # findable in the console at any time (like a username), unlike applicationKey itself (shown
-  # once, at creation, like a password). Same "identifier, not a credential" distinction dns.nix
-  # draws for `host.cloudflare-zone-id`.
-  #
-  # Both default to `null` - unset, not a "CHANGEME" placeholder string - because the bucket
-  # (via `terranix`, below) has to exist before either real key can even be created (see the
-  # bootstrap TODO in harmony.nix), but there's no reason to wait on that before wiring this
-  # aspect in. While `applicationKeyId` is null, `nixos` below defines no restic jobs at all,
+  # `applicationKeyId` is a plain Nix value, not a secret, despite sitting right next to ones
+  # that are - same reasoning as `accountApplicationKeyId` above, but this one genuinely does
+  # vary per host (each host's own bucket-scoped key), so it stays a parameter. `null` by default
+  # for the same reason: the bucket (via `terranix`, below) has to exist before this key can even
+  # be created (see the bootstrap TODO in harmony.nix), but there's no reason to wait on that
+  # before wiring this aspect in. While it's null, `nixos` below defines no restic jobs at all,
   # rather than jobs that are guaranteed to fail authentication the moment a rebuild actually
   # applies them.
   my.backup =
     {
       bucket,
-      accountApplicationKeyId ? null,
       applicationKeyId ? null,
     }:
     { host, ... }:
@@ -125,7 +141,7 @@
         # bucket-scoped one below), used ONLY to authenticate the `b2` Terraform provider below.
         # Author it by hand via Backblaze -> App Keys -> Add a New Application Key (no bucket
         # restriction this time, so it can create one - paired with the plain
-        # `accountApplicationKeyId` parameter above, not a second secret), then `agenix
+        # `accountApplicationKeyId` above, not a second secret), then `agenix
         # rekey -a`. `intermediary` because nothing reads this directly - only the generator
         # below, which exposes it under B2_APPLICATION_KEY (modules/terranix.nix derives that
         # env var straight from this secret's own name).

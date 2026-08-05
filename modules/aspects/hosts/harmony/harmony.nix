@@ -11,8 +11,9 @@
       (auto-upgrade { allowReboot = true; })
       (autobrr { })
       # TODO, in this order (the bucket-scoped key genuinely can't exist before the bucket
-      # does): 1) create an account-level Backblaze application key (no bucket restriction), add
-      # `accountApplicationKeyId = "<its ID>";` below, `agenix edit
+      # does): 1) create an account-level Backblaze application key (no bucket restriction), set
+      # `accountApplicationKeyId` in backup.nix itself - it's a plain shared constant there, not
+      # a per-host parameter, since every host uses the same Backblaze account - `agenix edit
       # secrets/b2-application-key.age` with its key, `agenix rekey -a`; 2) `nix run .#harmony-tf`
       # to create the bucket (terranix - goes through its own module evaluation, NOT
       # nixosConfigurations.harmony, so this works fine before step 3); 3) create a second,
