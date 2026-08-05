@@ -60,7 +60,7 @@ in
           # minecraft-servers.nix uses for `worlds.<name>.server`, needed here because `dataset`
           # is plain data assembled before `pkgs` exists at an owning aspect's own call site.
           optsFor = d: if lib.isFunction d.backup then d.backup pkgs else { };
-          targets = lib.filter (d: d.backup or false != false) dataset;
+          targets = lib.filter (d: (d.backup or false) != false) dataset;
         in
         # No restic jobs at all until `applicationKeyId` is real - see this file's header
         # comment. The bucket itself (`terranix`, below) is unaffected; it's a separate class,
