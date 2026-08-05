@@ -8,11 +8,18 @@
   # findable in the console at any time (like a username), unlike applicationKey itself (shown
   # once, at creation, like a password). Same "identifier, not a credential" distinction dns.nix
   # draws for `host.cloudflare-zone-id`.
+  #
+  # Both default to `null` - unset, not a "CHANGEME" placeholder string - because the bucket
+  # (via `terranix`, below) has to exist before either real key can even be created (see the
+  # bootstrap TODO in harmony.nix), but there's no reason to wait on that before wiring this
+  # aspect in. While `applicationKeyId` is null, `nixos` below defines no restic jobs at all,
+  # rather than jobs that are guaranteed to fail authentication the moment a rebuild actually
+  # applies them.
   my.backup =
     {
-      accountApplicationKeyId,
-      applicationKeyId,
       bucket,
+      accountApplicationKeyId ? null,
+      applicationKeyId ? null,
     }:
     { host, ... }:
     let
@@ -45,7 +52,10 @@
           optsFor = d: if lib.isFunction d.backup then d.backup pkgs else { };
           targets = lib.filter (d: d.backup or false != false) dataset;
         in
-        {
+        # No restic jobs at all until `applicationKeyId` is real - see this file's header
+        # comment. The bucket itself (`terranix`, below) is unaffected; it's a separate class,
+        # not gated on this.
+        lib.optionalAttrs (applicationKeyId != null) {
           services.restic.backups = lib.listToAttrs (
             map (
               d:
@@ -57,6 +67,14 @@
                   paths = [ "/${d.pool}/${d.name}" ];
 
                   pruneOpts = [
+                    # Must cover at least the 30-day Object Lock retention below (31d for a day of
+                    # margin against scheduling jitter/clock skew) - otherwise `forget --prune`
+                    # would try to delete pack/snapshot objects B2 is still refusing to delete
+                    # (anything younger than 7 days that isn't a weekly/monthly keeper falls in
+                    # that gap under keep-daily/weekly/monthly alone), and prune would fail. Every
+                    # `--keep-*` rule is OR'd together, so this only ADDS retention on top of the
+                    # ones below, never removes it.
+                    "--keep-within 31d"
                     "--keep-daily 7"
                     "--keep-weekly 4"
                     "--keep-monthly 6"
