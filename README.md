@@ -126,7 +126,8 @@ Use an aspect function signature (`{ host, lib, ... }:`) when you need context-a
 - **Media**: Plex, Tautulli, Radarr, Sonarr, Prowlarr, Unpackerr, Autobrr, Cross-seed
 - **Downloads**: native qBittorrent confined with VPN-Confinement
 - **Gaming**: Minecraft servers
-- **Infrastructure**: Nginx reverse proxy with Let's Encrypt, Samba file sharing, ZFS storage
+- **Infrastructure**: Nginx reverse proxy with Let's Encrypt, Samba file sharing, ZFS storage, offsite backups
+  (Restic/Backblaze B2)
 
 The VPN input and service confinement opt-in are provided by a reusable `my.vpn-confinement` aspect, while qBittorrent
 declares the `proton0` namespace directly in its own aspect.
@@ -212,6 +213,32 @@ master identity. `harmony-tf-apply.service` also plans and applies automatically
 changes anything Terraform-relevant, so running these by hand is normally only needed to preview a change or investigate
 a failure — a plan containing any destroy action is never auto-applied; it fails the service instead, surfaced through
 the same Netdata → Discord alerting used for host health.
+
+## Offsite Backups (Restic/Backblaze B2)
+
+Any ZFS dataset can opt into offsite backup by setting `backup = true;` (or a `pkgs: {...}` function, for datasets that
+need pkgs-derived overrides like a database dump prepare/cleanup pair) on its `dataset` declaration — see
+`modules/aspects/my/zfs.nix` for the full `dataset` record shape. The `my.backup` aspect
+(`modules/aspects/my/backup.nix`) picks up every opted-in dataset on a host and turns it into a
+`services.restic.backups` job against a [Backblaze B2](https://www.backblaze.com/cloud-storage) bucket, with a 30-day
+Object Lock retention policy so even a compromised restic key can't delete recent backups.
+
+```nix
+# modules/aspects/hosts/<hostname>/<hostname>.nix
+(backup {
+  bucket = "<globally-unique-b2-bucket-name>";
+  applicationKeyId = "<bucket-scoped Backblaze application key ID>"; # omit (defaults to null) until the key exists
+})
+```
+
+Credentials: an account-level Backblaze application key (shared across every host — there's one Backblaze account, so
+its ID is a plain constant in `backup.nix` itself, not a per-host parameter) authenticates the `b2` Terraform provider
+that creates the bucket; a second, bucket-scoped key (per host, named `backup-b2-application-key-<hostname>`) is what
+restic actually uses day to day. The bucket-scoped key can't exist before its bucket does, so a new host's bootstrap
+order is: wire in `my.backup` with just `bucket` set, `nix run .#<hostname>-tf` to create the bucket (see
+[Infrastructure as Code](#infrastructure-as-code-terranixopentofu) above), create the bucket-scoped key against it, then
+set `applicationKeyId` and rebuild. Until `applicationKeyId` is set, no restic jobs are scheduled at all — see
+`backup.nix`'s own comments for why that matters.
 
 ## Updating
 
