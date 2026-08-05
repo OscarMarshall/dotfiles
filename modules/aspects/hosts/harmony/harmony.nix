@@ -1,9 +1,30 @@
-{ den, my, ... }: {
+{
+  lib,
+  den,
+  my,
+  ...
+}:
+{
   den.aspects.harmony = {
     includes = with my; [
       (authentik { global = true; })
       (auto-upgrade { allowReboot = true; })
       (autobrr { })
+      # TODO, in this order (the bucket-scoped key genuinely can't exist before the bucket
+      # does): 1) create an account-level Backblaze application key (no bucket restriction),
+      # replace CHANGEME-account-key-id below with its ID, `agenix edit
+      # secrets/b2-application-key.age` with its key, `agenix rekey -a`; 2) `nix run .#harmony-tf`
+      # to create the bucket (terranix - goes through its own module evaluation, NOT
+      # nixosConfigurations.harmony, so this works fine before step 3); 3) create a second,
+      # bucket-scoped Backblaze application key against the now-existing bucket, replace
+      # CHANGEME-backup-key-id below with its ID, `agenix edit
+      # secrets/backup-b2-application-key-harmony.age` with its key, `agenix rekey -a` again;
+      # 4) only now is the first `nixos-rebuild switch` that includes this safe to run.
+      (backup {
+        accountApplicationKeyId = "CHANGEME-account-key-id";
+        applicationKeyId = "CHANGEME-backup-key-id";
+        bucket = "coppermind-harmony";
+      })
       (bookshelf-audiobooks { })
       (bookshelf-ebooks { })
       (cachyos-kernel { variant = "server"; })
@@ -46,12 +67,16 @@
     # here - see bookshelf.nix's own comment on why that's the more correct owner.
     dataset =
       map
-        (name: {
-          inherit name;
-          guestAccess = true;
-          pool = "metalminds";
-          samba = true;
-        })
+        (
+          name:
+          {
+            inherit name;
+            guestAccess = true;
+            pool = "metalminds";
+            samba = true;
+          }
+          // lib.optionalAttrs (name == "documents") { backup = true; }
+        )
         [
           "backups"
           "documents"

@@ -9,6 +9,18 @@
     in
     {
       dataset = {
+        # Nextcloud's files live in this dataset but its Postgres DB (database.createLocally
+        # below) doesn't - a files-only backup would be unrestoreable without it, so dump it into
+        # the dataset right before every backup run and remove the dump again after.
+        backup = pkgs: {
+          backupCleanupCommand = "rm -f /metalminds/nextcloud/.backup/db.sql";
+
+          backupPrepareCommand = ''
+            mkdir -p /metalminds/nextcloud/.backup
+            ${pkgs.sudo}/bin/sudo -u postgres ${pkgs.postgresql}/bin/pg_dump nextcloud > /metalminds/nextcloud/.backup/db.sql
+          '';
+        };
+
         name = "nextcloud";
         pool = "metalminds";
         # `nextcloud-setup` is the one upstream's own NixOS module orders every other

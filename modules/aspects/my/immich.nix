@@ -19,6 +19,7 @@ in
       # that (avoids either starting before this exists/is mounted - see zfs.nix's own comment on
       # why that's a real risk).
       dataset = {
+        backup = true;
         group = "immich";
         guestAccess = true;
         name = "pictures";

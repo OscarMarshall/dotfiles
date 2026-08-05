@@ -43,6 +43,13 @@
       ];
 
       dataset = {
+        # `true` (not a prepare/cleanup pair like nextcloud.nix's) - ZFS COW means restic won't
+        # catch a torn write mid-save, but an in-progress autosave could still land a
+        # half-written region file in a backup. An rcon save-off/save-all/save-on pair around the
+        # backup (per world - this dataset holds all of `worlds`) would close that gap; left as a
+        # follow-up rather than guessed at here, since it depends on nix-minecraft's exact
+        # rcon-cli invocation.
+        backup = true;
         guestAccess = true;
         name = "minecraft-worlds";
         pool = "metalminds";
