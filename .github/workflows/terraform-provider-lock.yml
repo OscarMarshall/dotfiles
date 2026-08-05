@@ -1,21 +1,21 @@
 name: Refresh Terraform provider lock
 
-# Renovate's terraform-provider customManager (see renovate.json) only rewrites the exact `version`
-# pin in the .nix source - it can't run `tofu init -upgrade` itself, so harmony-tf/.terraform.lock.hcl
-# would otherwise drift out of sync with the PR that bumped the pin. This job does that refresh and
-# pushes it back onto the same PR, so the lock-file diff review happens alongside the version bump
-# (see the "keep these PRs from automerging" decision in renovate.json's terraform-provider packageRule).
+# Any PR that changes which Terraform providers a `*-tf` config needs (a new `required_providers`
+# entry, or a version bump) can leave harmony-tf/.terraform.lock.hcl out of sync with the source
+# that describes it - most commonly Renovate's terraform-provider customManager (see renovate.json),
+# which only rewrites the exact `version` pin and can't run `tofu init -upgrade` itself, but equally
+# a hand-written PR that adds a provider outright (see #640, which is what prompted widening this
+# from Renovate-only to every same-repo PR - its harmony-tf-apply failed on deploy because nothing
+# had refreshed the lock file for the new provider it added). This job does that refresh and pushes
+# it back onto the same PR, so the lock-file diff review happens alongside whatever provider change
+# prompted it (see the "keep these PRs from automerging" decision in renovate.json's
+# terraform-provider packageRule, which still applies to Renovate's own PRs regardless of this).
 on:
   pull_request:
-    # `labeled` is required, not just belt-and-suspenders: Renovate applies labels via a separate
-    # API call after the PR is already open, so the `opened` event fires before the
-    # `terraform-provider` label exists - without `labeled`, this job would never run until some
-    # later `synchronize` (e.g. Renovate rebasing the PR).
     types:
       - opened
       - reopened
       - synchronize
-      - labeled
 
 permissions:
   contents: write
@@ -26,10 +26,12 @@ concurrency:
 
 jobs:
   refresh-lock:
-    if: >
-      github.actor == 'renovate[bot]' && github.event.pull_request.user.login == 'renovate[bot]' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      contains(github.event.pull_request.labels.*.name, 'terraform-provider')
+    # Same-repo only - a fork PR's head could carry arbitrary Nix code, and this job builds and
+    # evaluates it (see the `nix build .#harmony-tf.config` step below) with a `contents: write`
+    # token in scope for the push step. This check is what actually gates that, independent of
+    # which actor opened the PR - unlike the old Renovate-only condition this replaced, dropping it
+    # is not on the table.
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       # persist-credentials: false - this job runs `nix build`/`nix run` against PR-controlled Nix
@@ -63,6 +65,11 @@ jobs:
       # `opentofu` binary bypasses the wrapper - and its secret handling - entirely; `init -upgrade`
       # never needed provider credentials anyway (see the header comment above).
       - name: Refresh harmony-tf lock file
+        env:
+          # terraform.encryption (modules/terranix.nix, unconditional on every `*-tf` config) needs
+          # this to statically evaluate at all, even for `init -upgrade` - which never reads or
+          # writes state, so the actual value here is irrelevant, it just has to be non-empty.
+          TF_VAR_OPEN_TOFU_STATE_PASSPHRASE: unused-init-upgrade-never-touches-state
         run: |
           config="$(nix build .#harmony-tf.config --no-link --print-out-paths)"
           mkdir -p harmony-tf
