@@ -112,61 +112,73 @@ in
           );
         };
 
-      secrets = { secrets, ... }: {
-        # The B2 application key restic itself uses - an external credential from Backblaze,
-        # not something this repo can generate. Author it by hand via `agenix edit
-        # secrets/${backupKeySecretName}.age` (Backblaze -> App Keys -> Add a New Application
-        # Key, scoped to just THIS host's backup bucket - paired with the plain
-        # `applicationKeyId` parameter above, not a second secret), then `agenix rekey -a`.
-        # `intermediary` because nothing reads this directly - only the generator below, which
-        # folds it into restic's expected B2_ACCOUNT_KEY env var (B2_ACCOUNT_ID comes straight
-        # from the plain `applicationKeyId` parameter instead, no decrypt needed for that half).
-        #
-        # Deliberately NOT the same credential as b2-application-key above - this one is scoped
-        # to just this host's backup bucket (least privilege for the thing that runs
-        # unattended, daily); that one is a broader, account-level key that only Terraform -
-        # run by hand - ever touches.
-        ${backupKeySecretName} = {
-          intermediary = true;
-          rekeyFile = ../../../secrets + "/${backupKeySecretName}.age";
+      secrets =
+        { lib, secrets, ... }:
+        {
+          # The B2 application key restic itself uses - an external credential from Backblaze,
+          # not something this repo can generate. Author it by hand via `agenix edit
+          # secrets/${backupKeySecretName}.age` (Backblaze -> App Keys -> Add a New Application
+          # Key, scoped to just THIS host's backup bucket - paired with the plain
+          # `applicationKeyId` parameter above, not a second secret), then `agenix rekey -a`.
+          # `intermediary` because nothing reads this directly - only the generator below, which
+          # folds it into restic's expected B2_ACCOUNT_KEY env var (B2_ACCOUNT_ID comes straight
+          # from the plain `applicationKeyId` parameter instead, no decrypt needed for that half).
+          #
+          # Deliberately NOT the same credential as b2-application-key above - this one is scoped
+          # to just this host's backup bucket (least privilege for the thing that runs
+          # unattended, daily); that one is a broader, account-level key that only Terraform -
+          # run by hand - ever touches.
+          ${backupKeySecretName} = {
+            intermediary = true;
+            rekeyFile = ../../../secrets + "/${backupKeySecretName}.age";
+          };
+
+          # An account-level B2 key (bucket/key management capabilities - NOT the narrow,
+          # bucket-scoped one below), used ONLY to authenticate the `b2` Terraform provider below.
+          # Author it by hand via Backblaze -> App Keys -> Add a New Application Key (no bucket
+          # restriction this time, so it can create one - paired with the plain
+          # `accountApplicationKeyId` above, not a second secret), then `agenix
+          # rekey -a`. `intermediary` because nothing reads this directly - only the generator
+          # below, which exposes it under B2_APPLICATION_KEY (modules/terranix.nix derives that
+          # env var straight from this secret's own name).
+          #
+          # Deliberately shared across every host that includes this aspect (no `-${host.name}`
+          # suffix) - see this file's header comment for why that's correct here, unlike
+          # `backupKeySecretName` below.
+          b2-application-key = {
+            intermediary = true;
+            rekeyFile = ../../../secrets/b2-application-key.age;
+            settings.terraform = true;
+          };
+
+          backup-restic-password.generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -base64 32";
+        }
+        # Declared ONLY once `applicationKeyId` is real, not just gated at the point of use
+        # (`nixos` above already does that) - `escapeShellArg applicationKeyId` would silently
+        # coerce `null` into an EMPTY quoted string rather than erroring (confirmed: `nix eval
+        # --expr 'lib.escapeShellArg null'` -> `"''"`), so if this were declared unconditionally, a
+        # stray `agenix generate -a` run while `applicationKeyId` is still null would happily
+        # generate a `backup-b2-env` with a blank B2_ACCOUNT_ID and freeze it there - agenix
+        # generate never revisits a secret that already has a value. Not declaring it at all until
+        # there's a real value to bake in means there's nothing to prematurely (and silently)
+        # generate wrong.
+        // lib.optionalAttrs (applicationKeyId != null) {
+          backup-b2-env.generator = {
+            dependencies.${backupKeySecretName} = secrets.${backupKeySecretName};
+
+            script =
+              {
+                lib,
+                decrypt,
+                deps,
+                ...
+              }:
+              ''
+                printf 'B2_ACCOUNT_ID=%s\n' ${lib.escapeShellArg applicationKeyId}
+                printf 'B2_ACCOUNT_KEY=%s\n' "$(${decrypt} ${lib.escapeShellArg deps.${backupKeySecretName}.file})"
+              '';
+          };
         };
-
-        # An account-level B2 key (bucket/key management capabilities - NOT the narrow,
-        # bucket-scoped one below), used ONLY to authenticate the `b2` Terraform provider below.
-        # Author it by hand via Backblaze -> App Keys -> Add a New Application Key (no bucket
-        # restriction this time, so it can create one - paired with the plain
-        # `accountApplicationKeyId` above, not a second secret), then `agenix
-        # rekey -a`. `intermediary` because nothing reads this directly - only the generator
-        # below, which exposes it under B2_APPLICATION_KEY (modules/terranix.nix derives that
-        # env var straight from this secret's own name).
-        #
-        # Deliberately shared across every host that includes this aspect (no `-${host.name}`
-        # suffix) - see this file's header comment for why that's correct here, unlike
-        # `backupKeySecretName` below.
-        b2-application-key = {
-          intermediary = true;
-          rekeyFile = ../../../secrets/b2-application-key.age;
-          settings.terraform = true;
-        };
-
-        backup-b2-env.generator = {
-          dependencies.${backupKeySecretName} = secrets.${backupKeySecretName};
-
-          script =
-            {
-              lib,
-              decrypt,
-              deps,
-              ...
-            }:
-            ''
-              printf 'B2_ACCOUNT_ID=%s\n' ${lib.escapeShellArg applicationKeyId}
-              printf 'B2_ACCOUNT_KEY=%s\n' "$(${decrypt} ${lib.escapeShellArg deps.${backupKeySecretName}.file})"
-            '';
-        };
-
-        backup-restic-password.generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -base64 32";
-      };
 
       # `nix run .#harmony-tf.plan` / `.#harmony-tf` - see dns.nix's own header comment for the
       # full command list; same terranix mechanism, just a different provider.
