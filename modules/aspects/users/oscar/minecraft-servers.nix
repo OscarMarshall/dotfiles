@@ -75,12 +75,7 @@ let
 
       server = pkgs: {
         enable = true;
-        # nix-minecraft's vanilla-servers.default.nix always builds `getLatest <requirement>`
-        # rather than the version 1.21.1 actually requires (Java 21), so bumping nix-minecraft
-        # silently jumped this server from JDK 21 to JDK 25 - which breaks the `moonlight` mod's
-        # `PoiMixin` injection ("Scanned 0 target(s). No refMap loaded.", crashing the server
-        # before it can start). Pinned back to the JDK this pack was actually built against.
-        package = pkgs.neoforgeServers.neoforge-1_21_1.override { jre_headless = pkgs.jdk21; };
+        package = pkgs.neoforgeServers.neoforge-1_21_1;
 
         serverProperties = {
           enable-rcon = true;
