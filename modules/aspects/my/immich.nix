@@ -19,7 +19,24 @@ in
       # that (avoids either starting before this exists/is mounted - see zfs.nix's own comment on
       # why that's a real risk).
       dataset = {
-        backup = true;
+        # Immich's blobs live in this dataset but its Postgres DB (services.immich.database,
+        # default-enabled, database name "immich") doesn't - a files-only backup would lose all
+        # metadata/albums/faces without it, so dump it into the dataset right before every backup
+        # run and remove the dump again after. Same shape as nextcloud.nix's own DB dump - see
+        # its comment for the umask reasoning. `.backup/` (hidden) rather than a plain
+        # subdirectory: Immich only scans this location via its own upload workflow, not as an
+        # External Library import path, so a dotfile here is never treated as media - but hidden
+        # anyway, in case that ever changes.
+        backup = pkgs: {
+          backupCleanupCommand = "rm -f /metalminds/pictures/.backup/db.sql";
+
+          backupPrepareCommand = ''
+            umask 077
+            mkdir -p /metalminds/pictures/.backup
+            ${pkgs.sudo}/bin/sudo -u postgres ${pkgs.postgresql}/bin/pg_dump immich > /metalminds/pictures/.backup/db.sql
+          '';
+        };
+
         group = "immich";
         guestAccess = true;
         name = "pictures";
