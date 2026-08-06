@@ -32,7 +32,7 @@ in
       includes = lib.optionals (scope.work or false) (
         builtins.attrValues den.aspects.oscar.provides.work.provides
         ++ (lib.optional (scope.graphical or false) my.slack)
-        ++ [ (my.openai { chatgpt = scope.graphical or false; }) ]
+        ++ [ my.openai ]
       );
 
       homeManager = { pkgs, ... }: {
