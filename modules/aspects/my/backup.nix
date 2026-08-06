@@ -66,50 +66,91 @@ in
         # comment. The bucket itself (`terranix`, below) is unaffected; it's a separate class,
         # not gated on this.
         lib.optionalAttrs (applicationKeyId != null) {
-          services.restic.backups = lib.listToAttrs (
-            map (
-              d:
-              lib.nameValuePair d.name (
-                {
-                  environmentFile = config.age.secrets.backup-b2-env.path;
-                  initialize = true;
-                  passwordFile = config.age.secrets.backup-restic-password.path;
-                  paths = [ "/${d.pool}/${d.name}" ];
+          services.restic.backups =
+            lib.listToAttrs (
+              map (
+                d:
+                lib.nameValuePair d.name (
+                  {
+                    environmentFile = config.age.secrets.backup-b2-env.path;
+                    initialize = true;
+                    passwordFile = config.age.secrets.backup-restic-password.path;
+                    paths = [ "/${d.pool}/${d.name}" ];
+                    repository = "b2:${bucket}:/";
+                    timerConfig.OnCalendar = "daily";
 
-                  pruneOpts = [
-                    # Must cover at least the 30-day Object Lock retention below (31d for a day of
-                    # margin against scheduling jitter/clock skew) - otherwise `forget --prune`
-                    # would try to delete pack/snapshot objects B2 is still refusing to delete
-                    # (anything younger than 7 days that isn't a weekly/monthly keeper falls in
-                    # that gap under keep-daily/weekly/monthly alone), and prune would fail. Every
-                    # `--keep-*` rule is OR'd together, so this only ADDS retention on top of the
-                    # ones below, never removes it.
-                    "--keep-within 31d"
-                    "--keep-daily 7"
-                    "--keep-weekly 4"
-                    "--keep-monthly 6"
-                  ];
+                    # Deliberately no `pruneOpts`/`runCheck` here - see the `maintenance` job
+                    # below, which does that once for the whole (shared) repository instead of
+                    # once per dataset.
+                  }
+                  // optsFor d
+                )
+              ) targets
+            )
+            // {
+              # `forget --prune` and `check` (restic's own module runs both, in this order, after
+              # `backup` - see its header comment on `pruneOpts`) act on the WHOLE repository, not
+              # on whichever dataset's own service happens to invoke them - `forget` without a
+              # `--path`/`--tag` filter here considers every dataset's snapshots, and `check`
+              # always walks the entire pack/index set regardless of what was just backed up. So
+              # giving every dataset's own service its own `pruneOpts`/`runCheck` (the previous
+              # design) didn't make those operations "per dataset" - it just ran the same
+              # whole-repository maintenance four times a night instead of once, and since `check`
+              # and `forget --prune` both need an EXCLUSIVE repository lock (unlike plain
+              # `backup`, which only needs a shared one - multiple datasets backing up to the same
+              # repo concurrently is fine), those four redundant runs would race each other for
+              # it: confirmed in production as nightly, rotating "repository is already locked"
+              # failures across whichever datasets lost the race. One shared job run once (ordered
+              # after every dataset backup below, via `systemd.services.restic-backups-maintenance
+              # .after`) does the same cleanup/verification work without the redundant B2 reads or
+              # the lock contention.
+              maintenance = {
+                environmentFile = config.age.secrets.backup-b2-env.path;
+                passwordFile = config.age.secrets.backup-restic-password.path;
 
-                  repository = "b2:${bucket}:/";
-                  runCheck = true;
-                  timerConfig.OnCalendar = "daily";
+                pruneOpts = [
+                  # Must cover at least the 30-day Object Lock retention below (31d for a day of
+                  # margin against scheduling jitter/clock skew) - otherwise `forget --prune`
+                  # would try to delete pack/snapshot objects B2 is still refusing to delete
+                  # (anything younger than 7 days that isn't a weekly/monthly keeper falls in
+                  # that gap under keep-daily/weekly/monthly alone), and prune would fail. Every
+                  # `--keep-*` rule is OR'd together, so this only ADDS retention on top of the
+                  # ones below, never removes it.
+                  "--keep-within 31d"
+                  "--keep-daily 7"
+                  "--keep-weekly 4"
+                  "--keep-monthly 6"
+                ];
+
+                repository = "b2:${bucket}:/";
+                runCheck = true;
+                timerConfig.OnCalendar = "daily";
+              };
+            };
+
+          # restic's own module doesn't order its generated services against anything:
+          #
+          # - each backed-up dataset's own zfs-dataset-<pool>-<name>.service (zfs.nix) must exist
+          #   before that dataset's own restic-backups-<name>.service runs.
+          # - restic-backups-maintenance.service (the shared `forget --prune` + `check` job,
+          #   above) needs an EXCLUSIVE repository lock, which would conflict with any
+          #   dataset backup still in flight (those only need a shared lock against each OTHER,
+          #   but even a shared lock can't be acquired while an exclusive one is held) - so it's
+          #   ordered after every dataset's backup finishes, success or not, rather than on its
+          #   own independent schedule.
+          systemd.services =
+            lib.listToAttrs (
+              map (
+                d:
+                lib.nameValuePair "restic-backups-${d.name}" {
+                  after = [ "zfs-dataset-${d.pool}-${d.name}.service" ];
+                  requires = [ "zfs-dataset-${d.pool}-${d.name}.service" ];
                 }
-                // optsFor d
-              )
-            ) targets
-          );
-
-          # restic's own module doesn't order its generated services against anything - each
-          # backed-up dataset's own zfs-dataset-<pool>-<name>.service (zfs.nix) must exist first.
-          systemd.services = lib.listToAttrs (
-            map (
-              d:
-              lib.nameValuePair "restic-backups-${d.name}" {
-                after = [ "zfs-dataset-${d.pool}-${d.name}.service" ];
-                requires = [ "zfs-dataset-${d.pool}-${d.name}.service" ];
-              }
-            ) targets
-          );
+              ) targets
+            )
+            // {
+              restic-backups-maintenance.after = map (d: "restic-backups-${d.name}.service") targets;
+            };
         };
 
       secrets =
