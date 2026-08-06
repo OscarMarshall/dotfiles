@@ -60,56 +60,135 @@ in
           # minecraft-servers.nix uses for `worlds.<name>.server`, needed here because `dataset`
           # is plain data assembled before `pkgs` exists at an owning aspect's own call site.
           optsFor = d: if lib.isFunction d.backup then d.backup pkgs else { };
+          stageServices = (map (d: "restic-backups-${d.name}.service") targets) ++ [ "restic-backups-maintenance.service" ];
           targets = lib.filter (d: (d.backup or false) != false) dataset;
         in
         # No restic jobs at all until `applicationKeyId` is real - see this file's header
         # comment. The bucket itself (`terranix`, below) is unaffected; it's a separate class,
         # not gated on this.
         lib.optionalAttrs (applicationKeyId != null) {
-          services.restic.backups = lib.listToAttrs (
-            map (
-              d:
-              lib.nameValuePair d.name (
-                {
-                  environmentFile = config.age.secrets.backup-b2-env.path;
-                  initialize = true;
-                  passwordFile = config.age.secrets.backup-restic-password.path;
-                  paths = [ "/${d.pool}/${d.name}" ];
+          services.restic.backups =
+            lib.listToAttrs (
+              map (
+                d:
+                lib.nameValuePair d.name (
+                  {
+                    environmentFile = config.age.secrets.backup-b2-env.path;
+                    initialize = true;
+                    passwordFile = config.age.secrets.backup-restic-password.path;
+                    paths = [ "/${d.pool}/${d.name}" ];
+                    repository = "b2:${bucket}:/";
+                  }
+                  // optsFor d
+                  // {
+                    # Overridden AFTER `optsFor d`, not before - these three keys are what
+                    # actually implement the "one shared timer, one shared maintenance job"
+                    # design (`restic-backups-daily`/`maintenance`, below), so a per-dataset
+                    # `backup = pkgs: {...}` override (`optsFor`, above - meant for things like
+                    # `backupPrepareCommand`/`backupCleanupCommand`) must not be able to silently
+                    # reintroduce a dataset's own timer or its own `forget --prune`/`check`.
+                    pruneOpts = [ ];
+                    runCheck = false;
+                    timerConfig = null;
+                  }
+                )
+              ) targets
+            )
+            // {
+              # `forget --prune` and `check` (restic's own module runs both, in this order, after
+              # `backup` - see its header comment on `pruneOpts`) act on the WHOLE repository, not
+              # on whichever dataset's own service happens to invoke them - `forget` without a
+              # `--path`/`--tag` filter here considers every dataset's snapshots, and `check`
+              # always walks the entire pack/index set regardless of what was just backed up. So
+              # giving every dataset's own service its own `pruneOpts`/`runCheck` (the original
+              # design) didn't make those operations "per dataset" - it just ran the same
+              # whole-repository maintenance four times a night instead of once, and since those
+              # both need an EXCLUSIVE repository lock (unlike plain `backup`, which only needs a
+              # shared one - multiple datasets backing up to the same repo concurrently is fine),
+              # those four redundant runs would race each other for it: confirmed in production
+              # as nightly, rotating "repository is already locked" failures across whichever
+              # datasets lost the race. One shared job, ordered after every dataset backup (see
+              # `systemd.services.restic-backups-maintenance.after`, below), does the same
+              # cleanup/verification work without the redundant B2 reads or the lock contention.
+              maintenance = {
+                environmentFile = config.age.secrets.backup-b2-env.path;
+                passwordFile = config.age.secrets.backup-restic-password.path;
 
-                  pruneOpts = [
-                    # Must cover at least the 30-day Object Lock retention below (31d for a day of
-                    # margin against scheduling jitter/clock skew) - otherwise `forget --prune`
-                    # would try to delete pack/snapshot objects B2 is still refusing to delete
-                    # (anything younger than 7 days that isn't a weekly/monthly keeper falls in
-                    # that gap under keep-daily/weekly/monthly alone), and prune would fail. Every
-                    # `--keep-*` rule is OR'd together, so this only ADDS retention on top of the
-                    # ones below, never removes it.
-                    "--keep-within 31d"
-                    "--keep-daily 7"
-                    "--keep-weekly 4"
-                    "--keep-monthly 6"
-                  ];
+                pruneOpts = [
+                  # Must cover at least the 30-day Object Lock retention below (31d for a day of
+                  # margin against scheduling jitter/clock skew) - otherwise `forget --prune`
+                  # would try to delete pack/snapshot objects B2 is still refusing to delete
+                  # (anything younger than 7 days that isn't a weekly/monthly keeper falls in
+                  # that gap under keep-daily/weekly/monthly alone), and prune would fail. Every
+                  # `--keep-*` rule is OR'd together, so this only ADDS retention on top of the
+                  # ones below, never removes it.
+                  "--keep-within 31d"
+                  "--keep-daily 7"
+                  "--keep-weekly 4"
+                  "--keep-monthly 6"
+                ];
 
-                  repository = "b2:${bucket}:/";
-                  runCheck = true;
-                  timerConfig.OnCalendar = "daily";
-                }
-                // optsFor d
+                repository = "b2:${bucket}:/";
+                runCheck = true;
+                timerConfig = null;
+              };
+            };
+
+          systemd = {
+            # restic's own module doesn't order its generated services against anything - each
+            # backed-up dataset's own zfs-dataset-<pool>-<name>.service (zfs.nix) must exist before
+            # that dataset's own restic-backups-<name>.service runs, and (see `restic-backups-daily`
+            # below) `maintenance` needs every dataset's own backup to have finished first, since it
+            # takes an EXCLUSIVE repository lock (`check`/`forget --prune`) that would conflict with
+            # a dataset backup still using the shared one. No ordering is needed BETWEEN the four
+            # dataset backups themselves - only `maintenance` needs the exclusive lock, so they're
+            # free to run concurrently against each other.
+            #
+            # Plain `after` (no `requires`) so one dataset's backup failing doesn't stop
+            # `maintenance` from still running (or block sibling datasets from being requested) -
+            # cleanup/verification should still happen for whatever DID succeed.
+            services =
+              lib.listToAttrs (
+                map (
+                  d:
+                  lib.nameValuePair "restic-backups-${d.name}" {
+                    after = [ "zfs-dataset-${d.pool}-${d.name}.service" ];
+                    requires = [ "zfs-dataset-${d.pool}-${d.name}.service" ];
+                  }
+                ) targets
               )
-            ) targets
-          );
+              // {
+                restic-backups-maintenance.after = map (d: "restic-backups-${d.name}.service") targets;
+              };
 
-          # restic's own module doesn't order its generated services against anything - each
-          # backed-up dataset's own zfs-dataset-<pool>-<name>.service (zfs.nix) must exist first.
-          systemd.services = lib.listToAttrs (
-            map (
-              d:
-              lib.nameValuePair "restic-backups-${d.name}" {
-                after = [ "zfs-dataset-${d.pool}-${d.name}.service" ];
-                requires = [ "zfs-dataset-${d.pool}-${d.name}.service" ];
-              }
-            ) targets
-          );
+            # A single shared timer (`restic-backups-daily.timer` -> `.target`, not any individual
+            # restic-backups-*.service - see `timerConfig = null` above) rather than one timer per
+            # restic job. This matters for the SAME reason `systemd.services` above only works: two
+            # units' `after`/`before` ordering is only honored by systemd if a job for BOTH ends up
+            # in the same transaction - it's a NO-OP otherwise ("If a unit is not going to be
+            # started, no ordering dependency is created" - systemd.unit(5)). Two units each fired
+            # by their OWN independent daily timer aren't guaranteed to land in one transaction even
+            # if they happen to elapse at the same instant, so `restic-backups-maintenance.service`
+            # racing the dataset backups for the exclusive lock (this aspect's original bug) could
+            # still happen with per-job timers, ordering hints notwithstanding. Routing every restic
+            # job's daily trigger through one shared target's `wants` (`wants`, not `requires`, so
+            # one dataset failing to even START doesn't stop the target - or its siblings - from
+            # starting) guarantees all five ARE in the same transaction, which is what makes the
+            # `after`/`requires` ordering above actually reliable.
+            targets.restic-backups-daily.wants = stageServices;
+
+            timers.restic-backups-daily = {
+              timerConfig = {
+                OnCalendar = "daily";
+                Persistent = true;
+                # Timers activate a same-named `.service` by default (systemd.timer(5)) - this one
+                # needs to activate the `.target` above instead.
+                Unit = "restic-backups-daily.target";
+              };
+
+              wantedBy = [ "timers.target" ];
+            };
+          };
         };
 
       secrets =
