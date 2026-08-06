@@ -79,6 +79,7 @@ in
       darwin = {
         homebrew.casks = [
           "arc"
+          "chatgpt"
           "domzilla-caffeine"
           "proton-mail"
         ];
