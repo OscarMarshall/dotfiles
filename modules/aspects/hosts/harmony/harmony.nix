@@ -38,6 +38,7 @@
       cross-seed
       den.aspects.oscar.provides.minecraft-servers
       dns
+      fail2ban
       homepage
       lm-sensors
       locale
