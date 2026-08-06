@@ -75,17 +75,22 @@ in
                   {
                     environmentFile = config.age.secrets.backup-b2-env.path;
                     initialize = true;
-                    # Deliberately no `pruneOpts`/`runCheck` here - see the `maintenance` job
-                    # below, which does that once for the whole (shared) repository instead of
-                    # once per dataset.
                     passwordFile = config.age.secrets.backup-restic-password.path;
                     paths = [ "/${d.pool}/${d.name}" ];
                     repository = "b2:${bucket}:/";
-                    # No `timerConfig` here - see `restic-backups-daily`, below, which is the
-                    # ONLY timer for this whole repository's restic jobs.
-                    timerConfig = null;
                   }
                   // optsFor d
+                  // {
+                    # Overridden AFTER `optsFor d`, not before - these three keys are what
+                    # actually implement the "one shared timer, one shared maintenance job"
+                    # design (`restic-backups-daily`/`maintenance`, below), so a per-dataset
+                    # `backup = pkgs: {...}` override (`optsFor`, above - meant for things like
+                    # `backupPrepareCommand`/`backupCleanupCommand`) must not be able to silently
+                    # reintroduce a dataset's own timer or its own `forget --prune`/`check`.
+                    pruneOpts = [ ];
+                    runCheck = false;
+                    timerConfig = null;
+                  }
                 )
               ) targets
             )
