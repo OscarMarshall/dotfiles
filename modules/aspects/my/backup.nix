@@ -60,10 +60,7 @@ in
           # minecraft-servers.nix uses for `worlds.<name>.server`, needed here because `dataset`
           # is plain data assembled before `pkgs` exists at an owning aspect's own call site.
           optsFor = d: if lib.isFunction d.backup then d.backup pkgs else { };
-          # The chain each dataset's own restic-backups-<name>.service triggers via
-          # `onSuccess`/`onFailure` once IT finishes, ending in `maintenance` (below) - see the
-          # `services.restic.backups` comment for why a trigger chain, not `after` ordering.
-          stageNames = map (d: d.name) targets ++ [ "maintenance" ];
+          stageServices = (map (d: "restic-backups-${d.name}.service") targets) ++ [ "restic-backups-maintenance.service" ];
           targets = lib.filter (d: (d.backup or false) != false) dataset;
         in
         # No restic jobs at all until `applicationKeyId` is real - see this file's header
@@ -72,8 +69,8 @@ in
         lib.optionalAttrs (applicationKeyId != null) {
           services.restic.backups =
             lib.listToAttrs (
-              lib.imap0 (
-                i: d:
+              map (
+                d:
                 lib.nameValuePair d.name (
                   {
                     environmentFile = config.age.secrets.backup-b2-env.path;
@@ -84,10 +81,9 @@ in
                     passwordFile = config.age.secrets.backup-restic-password.path;
                     paths = [ "/${d.pool}/${d.name}" ];
                     repository = "b2:${bucket}:/";
-                    # Only the first stage has a real timer - see the `systemd.services` comment
-                    # below (`onFailure`/`onSuccess`) for why every later stage (including
-                    # `maintenance`) is instead triggered purely by the previous stage finishing.
-                    timerConfig = if i == 0 then { OnCalendar = "daily"; } else null;
+                    # No `timerConfig` here - see `restic-backups-daily`, below, which is the
+                    # ONLY timer for this whole repository's restic jobs.
+                    timerConfig = null;
                   }
                   // optsFor d
                 )
@@ -102,12 +98,13 @@ in
               # giving every dataset's own service its own `pruneOpts`/`runCheck` (the original
               # design) didn't make those operations "per dataset" - it just ran the same
               # whole-repository maintenance four times a night instead of once, and since those
-              # both need an exclusive lock (see above), those four redundant runs would race
-              # each other for it: confirmed in production as nightly, rotating "repository is
-              # already locked" failures across whichever datasets lost the race. One shared job
-              # run once, only ever triggered at the end of the dataset chain above (`timerConfig
-              # = null` - no independent schedule of its own), does the same cleanup/verification
-              # work without the redundant B2 reads or the lock contention.
+              # both need an EXCLUSIVE repository lock (unlike plain `backup`, which only needs a
+              # shared one - multiple datasets backing up to the same repo concurrently is fine),
+              # those four redundant runs would race each other for it: confirmed in production
+              # as nightly, rotating "repository is already locked" failures across whichever
+              # datasets lost the race. One shared job, ordered after every dataset backup (see
+              # `systemd.services.restic-backups-maintenance.after`, below), does the same
+              # cleanup/verification work without the redundant B2 reads or the lock contention.
               maintenance = {
                 environmentFile = config.age.secrets.backup-b2-env.path;
                 passwordFile = config.age.secrets.backup-restic-password.path;
@@ -132,41 +129,61 @@ in
               };
             };
 
-          # restic's own module doesn't order its generated services against anything, nor does
-          # it expose `onSuccess`/`onFailure` as backup-submodule options (those are plain
-          # systemd unit options, set here instead) - each backed-up dataset's own
-          # zfs-dataset-<pool>-<name>.service (zfs.nix) must exist before that dataset's own
-          # restic-backups-<name>.service runs, and `onFailure`/`onSuccess` is how the trigger
-          # chain from `services.restic.backups`'s `timerConfig` comment is actually wired: each
-          # stage activates the NEXT one (ending in `maintenance`) only once IT reaches a final
-          # state, success or failure.
-          #
-          # `forget --prune`/`check` (`maintenance`, above) need an EXCLUSIVE repository lock;
-          # plain `backup` only needs a shared one. This chain - rather than giving every dataset
-          # its own independent daily timer - guarantees each restic invocation for this
-          # repository only ever starts once the previous one has actually finished:
-          # `onSuccess`/`onFailure` fire only as a direct consequence of the triggering unit
-          # reaching its final state, so there's no window where two stages' timers could both
-          # elapse and race for the lock. An EARLIER version of this fix instead gave
-          # `restic-backups-maintenance.service` its own daily timer plus a plain `after`
-          # ordering against the dataset services - that doesn't actually work: `After=` alone
-          # (no `Wants=`/`Requires=`) only orders jobs that end up in the SAME transaction, and
-          # two units each fired by their own independent timer at (or near) the same instant
-          # aren't guaranteed to be merged into one - so the "ordered" job could still start
-          # first and race for the exclusive lock exactly like the original bug. `maintenance`
-          # itself needs no zfs dependency (it touches no dataset path, only the B2 repository)
-          # and is the last link in the chain, so it triggers nothing further.
-          systemd.services = lib.listToAttrs (
-            lib.imap0 (
-              i: d:
-              lib.nameValuePair "restic-backups-${d.name}" {
-                after = [ "zfs-dataset-${d.pool}-${d.name}.service" ];
-                onFailure = [ "restic-backups-${lib.elemAt stageNames (i + 1)}.service" ];
-                onSuccess = [ "restic-backups-${lib.elemAt stageNames (i + 1)}.service" ];
-                requires = [ "zfs-dataset-${d.pool}-${d.name}.service" ];
-              }
-            ) targets
-          );
+          systemd = {
+            # restic's own module doesn't order its generated services against anything - each
+            # backed-up dataset's own zfs-dataset-<pool>-<name>.service (zfs.nix) must exist before
+            # that dataset's own restic-backups-<name>.service runs, and (see `restic-backups-daily`
+            # below) `maintenance` needs every dataset's own backup to have finished first, since it
+            # takes an EXCLUSIVE repository lock (`check`/`forget --prune`) that would conflict with
+            # a dataset backup still using the shared one. No ordering is needed BETWEEN the four
+            # dataset backups themselves - only `maintenance` needs the exclusive lock, so they're
+            # free to run concurrently against each other.
+            #
+            # Plain `after` (no `requires`) so one dataset's backup failing doesn't stop
+            # `maintenance` from still running (or block sibling datasets from being requested) -
+            # cleanup/verification should still happen for whatever DID succeed.
+            services =
+              lib.listToAttrs (
+                map (
+                  d:
+                  lib.nameValuePair "restic-backups-${d.name}" {
+                    after = [ "zfs-dataset-${d.pool}-${d.name}.service" ];
+                    requires = [ "zfs-dataset-${d.pool}-${d.name}.service" ];
+                  }
+                ) targets
+              )
+              // {
+                restic-backups-maintenance.after = map (d: "restic-backups-${d.name}.service") targets;
+              };
+
+            # A single shared timer (`restic-backups-daily.timer` -> `.target`, not any individual
+            # restic-backups-*.service - see `timerConfig = null` above) rather than one timer per
+            # restic job. This matters for the SAME reason `systemd.services` above only works: two
+            # units' `after`/`before` ordering is only honored by systemd if a job for BOTH ends up
+            # in the same transaction - it's a NO-OP otherwise ("If a unit is not going to be
+            # started, no ordering dependency is created" - systemd.unit(5)). Two units each fired
+            # by their OWN independent daily timer aren't guaranteed to land in one transaction even
+            # if they happen to elapse at the same instant, so `restic-backups-maintenance.service`
+            # racing the dataset backups for the exclusive lock (this aspect's original bug) could
+            # still happen with per-job timers, ordering hints notwithstanding. Routing every restic
+            # job's daily trigger through one shared target's `wants` (`wants`, not `requires`, so
+            # one dataset failing to even START doesn't stop the target - or its siblings - from
+            # starting) guarantees all five ARE in the same transaction, which is what makes the
+            # `after`/`requires` ordering above actually reliable.
+            targets.restic-backups-daily.wants = stageServices;
+
+            timers.restic-backups-daily = {
+              timerConfig = {
+                OnCalendar = "daily";
+                Persistent = true;
+                # Timers activate a same-named `.service` by default (systemd.timer(5)) - this one
+                # needs to activate the `.target` above instead.
+                Unit = "restic-backups-daily.target";
+              };
+
+              wantedBy = [ "timers.target" ];
+            };
+          };
         };
 
       secrets =
