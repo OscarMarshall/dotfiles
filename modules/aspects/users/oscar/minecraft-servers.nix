@@ -96,7 +96,7 @@ let
       server = pkgs: {
         enable = true;
         package = pkgs.fabricServers.fabric-1_21_11;
-        serverProperties.white-list = false;
+        serverProperties.white-list = true;
       };
     };
   };
