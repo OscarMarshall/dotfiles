@@ -59,6 +59,34 @@ in
 
             startup_timeout_sec = 30;
           };
+
+          pagerduty = {
+            bearer_token_env_var = "PAGERDUTY_USER_API_KEY";
+
+            enabled_tools = [
+              "get_alert_from_incident"
+              "get_escalation_policy"
+              "get_incident"
+              "get_past_incidents"
+              "get_related_incidents"
+              "get_service"
+              "get_team"
+              "get_user_data"
+              "list_alerts_from_incident"
+              "list_escalation_policies"
+              "list_incident_change_events"
+              "list_incident_notes"
+              "list_incidents"
+              "list_log_entries"
+              "list_oncalls"
+              "list_services"
+              "list_team_members"
+              "list_users"
+            ];
+
+            startup_timeout_sec = 30;
+            url = "https://mcp.pagerduty.com/mcp";
+          };
         };
       };
     };
