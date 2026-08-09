@@ -18,6 +18,7 @@
       (bookshelf-ebooks { })
       (cachyos-kernel { variant = "server"; })
       (collabora-online { })
+      (home-assistant { global = true; })
       (immich {
         administrators = [ "oscar" ];
         global = true;

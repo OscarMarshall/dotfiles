@@ -126,6 +126,7 @@ Use an aspect function signature (`{ host, lib, ... }:`) when you need context-a
 - **Media**: Plex, Tautulli, Radarr, Sonarr, Prowlarr, Unpackerr, Autobrr, Cross-seed
 - **Downloads**: native qBittorrent confined with VPN-Confinement
 - **Gaming**: Minecraft servers
+- **Home Automation**: Home Assistant, with SSO via Authentik's `auth_oidc` integration
 - **Infrastructure**: Nginx reverse proxy with Let's Encrypt, Samba file sharing, ZFS storage, offsite backups
   (Restic/Backblaze B2)
 
