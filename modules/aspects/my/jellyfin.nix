@@ -18,12 +18,11 @@
     }:
     { host, ... }:
     let
-      # Matches virtual-host.nix's own derived hostname (`${name}.${host.name}.<domain>`) - no
-      # shared domain constant exists in this repo (authentik.nix/dns.nix/nginx.nix each carry this
-      # same literal), so this matches that convention rather than introducing one.
-      domain = "silverlight-nex.us";
+      introSkipperManifestUrl = "https://intro-skipper.org/manifest.json";
       moonfinManifestUrl = "https://raw.githubusercontent.com/Moonfin-Client/Plugin/refs/heads/master/manifest.json";
+      officialManifestUrl = "https://repo.jellyfin.org/files/plugin/manifest.json";
       port = 8096;
+      ssoAuthManifestUrl = "https://raw.githubusercontent.com/9p4/jellyfin-plugin-sso/manifest-release/manifest.json";
     in
     {
       nixos = { pkgs, ... }: {
@@ -53,25 +52,93 @@
         };
       };
 
-      secrets.jellyfin-api-key = {
-        intermediary = true;
-        rekeyFile = ../../../secrets/jellyfin-api-key.age;
-        settings.terraform = true;
+      secrets = {
+        jellyfin-api-key = {
+          intermediary = true;
+          rekeyFile = ../../../secrets/jellyfin-api-key.age;
+          settings.terraform = true;
+        };
+
+        # Not consumed yet (see the `terranix`/`virtual-host` comments below on why the OIDC wiring
+        # itself is deferred) - declared now so `agenix generate -a && agenix rekey -a` only needs
+        # running once, covering both this and `jellyfin-api-key` in the same pass.
+        jellyfin-oidc-client-secret = {
+          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
+          intermediary = true;
+          settings.terraform = "variable";
+        };
       };
 
       terranix = { host, ... }: {
-        provider.jellyfin.endpoint = "https://jellyfin.${host.name}.${domain}";
+        provider.jellyfin.endpoint = "https://jellyfin.${host.name}.${host.domain}";
 
         resource = {
-          jellyfin_plugin.moonbase = {
-            name = "Moonbase";
-            repository_url = moonfinManifestUrl;
+          jellyfin_plugin = {
+            fanart = {
+              name = "Fanart";
+              repository_url = officialManifestUrl;
+            };
+
+            intro_skipper = {
+              name = "Intro Skipper";
+              repository_url = introSkipperManifestUrl;
+            };
+
+            moonbase = {
+              name = "Moonbase";
+              repository_url = moonfinManifestUrl;
+            };
+
+            open_subtitles = {
+              name = "Open Subtitles";
+              repository_url = officialManifestUrl;
+            };
+
+            # `EnableAuthorization = false;`/`EnableAllFolders = true;` (no RBAC): mapping
+            # authentik groups to Jellyfin roles needs a custom "Group Membership" Authentik scope
+            # mapping (github.com/9p4/jellyfin-plugin-sso/blob/main/providers.md#authentik) that
+            # authentik.nix's generic `oidc` field doesn't set up - every authenticated Authentik
+            # user just gets a normal (non-admin) account with full library access, which is fine
+            # for a family server. Revisit if finer-grained access ever matters.
+            sso_authentication = {
+              name = "SSO Authentication";
+              repository_url = ssoAuthManifestUrl;
+            };
           };
 
-          jellyfin_plugin_repository.moonfin = {
-            enabled = true;
-            name = "Moonfin";
-            url = moonfinManifestUrl;
+          # No `provider "authentik"`-side resources here (that's authentik.nix's own `oidc-hosts`
+          # consumer, driven by `virtual-host.oidc` below) or `jellyfin_plugin_configuration` for
+          # the SSO Authentication plugin yet - both would reference
+          # `${var.JELLYFIN_OIDC_CLIENT_SECRET}`, and `jellyfin-oidc-client-secret` is still an
+          # ungenerated placeholder. Learned this the hard way with `jellyfin-api-key` earlier in
+          # this same PR: EVERY resource in a `tofu plan` has to succeed for ANY of them to apply -
+          # a plugin_configuration referencing an undefined variable would fail the whole apply,
+          # including totally unrelated resources (DNS records, other hosts' secrets, etc.), not
+          # just this one. Add the `oidc` block back to `virtual-host` below and a
+          # `jellyfin_plugin_configuration.sso_authentication` resource (OidConfigs.authentik =
+          # { OidEndpoint = "https://auth.${host.domain}/application/o/jellyfin/"; OidClientId =
+          # "jellyfin"; OidSecret = "\${var.JELLYFIN_OIDC_CLIENT_SECRET}"; Enabled = true;
+          # EnableAuthorization = false; EnableAllFolders = true; }, referencing
+          # `plugin_id = "\${jellyfin_plugin.sso_authentication.id}"`) once `agenix generate -a &&
+          # agenix rekey -a` has actually run.
+          jellyfin_plugin_repository = {
+            intro-skipper = {
+              enabled = true;
+              name = "Intro Skipper";
+              url = introSkipperManifestUrl;
+            };
+
+            moonfin = {
+              enabled = true;
+              name = "Moonfin";
+              url = moonfinManifestUrl;
+            };
+
+            sso-auth = {
+              enabled = true;
+              name = "SSO-Auth";
+              url = ssoAuthManifestUrl;
+            };
           };
         };
 
@@ -93,6 +160,14 @@
         icon = "jellyfin.svg";
         label = "Jellyfin";
         name = "jellyfin";
+
+        # No `oidc` block yet - see the `terranix` field's comment above on why the SSO
+        # Authentication plugin's config is deferred until `jellyfin-oidc-client-secret` is a real
+        # value. Once it is, add: `oidc = { client-secret = "jellyfin-oidc-client-secret";
+        # redirect-paths = [ "/sso/OID/redirect/authentik" ]; };` (the SSO Authentication plugin
+        # handles its own OIDC login - github.com/9p4/jellyfin-plugin-sso/blob/main/providers.md -
+        # so this is `oidc`, a native application, rather than `protected`/forward-auth; see
+        # virtual-host.nix's own comment on the two being mutually exclusive).
       };
     };
 }
