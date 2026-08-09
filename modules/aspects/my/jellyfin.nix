@@ -79,6 +79,29 @@
         provider.jellyfin.endpoint = "https://jellyfin.${host.name}.${host.domain}";
 
         resource = {
+          # Names/paths are a best-effort guess (Radarr's/Sonarr's own `movies`/`shows` datasets -
+          # radarr.nix/sonarr.nix), NOT confirmed against the real library names already configured
+          # by hand through Jellyfin's setup wizard - `tofu import` needs an EXACT name match (see
+          # each resource's own import command below), and only `name`/`collection_type`/`paths`
+          # are declared (no `library_options`) to minimize the chance of a post-import `tofu plan`
+          # wanting to "correct" real per-library settings this config never asked about. Review
+          # the plan by hand (`nix run .#harmony-tf.plan`) after importing, before letting the
+          # switch-triggered apply service run it unattended - it only refuses DESTROY-containing
+          # plans automatically, not ordinary attribute changes.
+          jellyfin_library = {
+            movies = {
+              collection_type = "movies";
+              name = "Movies";
+              paths = [ "/metalminds/movies" ];
+            };
+
+            tv-shows = {
+              collection_type = "tvshows";
+              name = "TV Shows";
+              paths = [ "/metalminds/shows" ];
+            };
+          };
+
           jellyfin_plugin = {
             fanart = {
               name = "Fanart";
