@@ -11,6 +11,17 @@
 # reads it from the JELLYFIN_API_KEY env var (`settings.terraform = true;` below), same mechanism as
 # the Cloudflare/Meraki providers (dns.nix/meraki.nix) - never written into the generated Terraform
 # config or state.
+#
+# The actual `provider "jellyfin" {}` block and its resources (plugin repo + Moonbase install) are
+# deliberately NOT declared yet, even though `jellyfin-api-key` and `required_providers.jellyfin`
+# are - every declared provider gets configured during `tofu plan` regardless of whether any
+# resource references it, and this one doesn't yet have a real API key (still a
+# harmless-but-invalid `settings.terraform = true;` placeholder). A `tofu plan` that fails to
+# configure/authenticate ANY provider fails the whole apply - including totally unrelated
+# resources, like the Cloudflare DNS record this vhost's ACME order needs (#657's first go at this
+# hit exactly that: one broken provider took down DNS record creation with it). Add the provider
+# block + `jellyfin_plugin`/`jellyfin_plugin_repository` resources back (see PR #657 history for the
+# exact shape) once the real key is in place.
 {
   my.jellyfin =
     {
@@ -18,11 +29,6 @@
     }:
     { host, ... }:
     let
-      # Matches virtual-host.nix's own derived hostname (`${name}.${host.name}.<domain>`) - no
-      # shared domain constant exists in this repo (authentik.nix/dns.nix/nginx.nix each carry this
-      # same literal), so this matches that convention rather than introducing one.
-      domain = "silverlight-nex.us";
-      moonfinManifestUrl = "https://raw.githubusercontent.com/Moonfin-Client/Plugin/refs/heads/master/manifest.json";
       port = 8096;
     in
     {
@@ -59,30 +65,13 @@
         settings.terraform = true;
       };
 
-      terranix = { host, ... }: {
-        provider.jellyfin.endpoint = "https://jellyfin.${host.name}.${domain}";
-
-        resource = {
-          jellyfin_plugin.moonbase = {
-            name = "Moonbase";
-            repository_url = moonfinManifestUrl;
-          };
-
-          jellyfin_plugin_repository.moonfin = {
-            enabled = true;
-            name = "Moonfin";
-            url = moonfinManifestUrl;
-          };
-        };
-
-        terraform.required_providers.jellyfin = {
-          # Full hostname required: unlike the devopsarr/goauthentik/etc. providers elsewhere in
-          # this repo, ThePhaseless/jellyfin is only published to registry.terraform.io (Hashicorp's
-          # registry) - OpenTofu's own default registry.opentofu.org doesn't mirror it, and a bare
-          # "ThePhaseless/jellyfin" source resolves against that default, not terraform.io.
-          source = "registry.terraform.io/ThePhaseless/jellyfin";
-          version = "~> 0.3";
-        };
+      terranix.terraform.required_providers.jellyfin = {
+        # Full hostname required: unlike the devopsarr/goauthentik/etc. providers elsewhere in
+        # this repo, ThePhaseless/jellyfin is only published to registry.terraform.io (Hashicorp's
+        # registry) - OpenTofu's own default registry.opentofu.org doesn't mirror it, and a bare
+        # "ThePhaseless/jellyfin" source resolves against that default, not terraform.io.
+        source = "registry.terraform.io/ThePhaseless/jellyfin";
+        version = "~> 0.3";
       };
 
       virtual-host = {
