@@ -82,26 +82,68 @@
           # Names/paths are a best-effort guess (Radarr's/Sonarr's own `movies`/`shows` datasets -
           # radarr.nix/sonarr.nix), NOT confirmed against the real library names already configured
           # by hand through Jellyfin's setup wizard - `tofu import` needs an EXACT name match (see
-          # each resource's own import command below), and only `name`/`collection_type`/`paths`
-          # are declared (no `library_options`) to minimize the chance of a post-import `tofu plan`
-          # wanting to "correct" real per-library settings this config never asked about. Review
-          # the plan by hand (`nix run .#harmony-tf.plan`) after importing, before letting the
-          # switch-triggered apply service run it unattended - it only refuses DESTROY-containing
-          # plans automatically, not ordinary attribute changes.
-          jellyfin_library = {
-            movies = {
-              collection_type = "movies";
-              name = "Movies";
-              paths = [ "/metalminds/movies" ];
+          # each resource's own import command below).
+          #
+          # `library_options` is NOT optional in practice despite the schema saying so: omitting it
+          # entirely crashes the provider outright ("Value Conversion Error ... Received unknown
+          # value, however the target type cannot handle unknown values" - confirmed live, a real
+          # provider bug, not a config mistake). The values below are Jellyfin's own stock defaults
+          # for a freshly-created library, chosen to match reality as closely as possible - but
+          # they're still a GUESS, same as `name`/`paths` above. Unlike `name`/`paths` (only checked
+          # at import), a wrong guess HERE keeps mattering after import: every later `tofu plan`
+          # diffs against it, and the switch-triggered apply auto-applies any UPDATE action (it only
+          # refuses plans containing DESTROY). Review `nix run .#harmony-tf.plan` by hand after
+          # importing and fix any field that doesn't match before letting an unattended apply run.
+          jellyfin_library =
+            let
+              # Every top-level `library_options` field explicitly set (not just the ones that
+              # seemed relevant) - the provider bug this works around is per-field, not just at the
+              # `library_options` level, so a partial block risks hitting the exact same crash on
+              # whichever field is still left to default to "unknown". `type_options` (a LIST, not a
+              # nested object) is the one field left out - lists default to empty rather than
+              # "unknown" when omitted, so it isn't known to need this same workaround.
+              stockDefaults = {
+                cache_images_in_library = false;
+                disabled = false;
+                download_images_in_advance = false;
+                enable_chapter_image_extraction = false;
+                enable_photos = true;
+                enable_realtime_monitor = true;
+                extract_chapters_during_library_scan = false;
+                extract_media_information_during_library_scan = true;
+                import_missing_episodes = false;
+                metadata_country_code = "US";
+                metadata_refresh_mode = "Default";
+                preferred_metadata_language = "en";
+                save_local_metadata = false;
+                save_local_thumbnail_sets = false;
+                season_zero_display_name = "Specials";
+              };
+            in
+            {
+              movies = {
+                collection_type = "movies";
+                library_options = stockDefaults;
+                name = "Movies";
+                paths = [ "/metalminds/movies" ];
+              };
+
+              tv-shows = {
+                collection_type = "tvshows";
+                library_options = stockDefaults;
+                name = "TV Shows";
+                paths = [ "/metalminds/shows" ];
+              };
             };
 
-            tv-shows = {
-              collection_type = "tvshows";
-              name = "TV Shows";
-              paths = [ "/metalminds/shows" ];
-            };
-          };
-
+          # `depends_on` on every THIRD-PARTY plugin (repository_url isn't a resource reference -
+          # it's a plain string, giving Terraform no implicit ordering against the matching
+          # `jellyfin_plugin_repository` below) - confirmed live: without it, Terraform created a
+          # repository and tried installing its plugin in the same parallel apply, and Jellyfin's
+          # own package catalog hadn't picked up the brand-new repository yet ("GET /Packages
+          # returned status 500", "No package named X found ... register the plugin repository
+          # first"). Fanart/Open Subtitles don't need this - they resolve against Jellyfin's own
+          # pre-registered official repository, not one this config creates.
           jellyfin_plugin = {
             fanart = {
               name = "Fanart";
@@ -109,11 +151,13 @@
             };
 
             intro_skipper = {
+              depends_on = [ "jellyfin_plugin_repository.intro-skipper" ];
               name = "Intro Skipper";
               repository_url = introSkipperManifestUrl;
             };
 
             moonbase = {
+              depends_on = [ "jellyfin_plugin_repository.moonfin" ];
               name = "Moonbase";
               repository_url = moonfinManifestUrl;
             };
@@ -130,6 +174,7 @@
             # user just gets a normal (non-admin) account with full library access, which is fine
             # for a family server. Revisit if finer-grained access ever matters.
             sso_authentication = {
+              depends_on = [ "jellyfin_plugin_repository.sso-auth" ];
               name = "SSO Authentication";
               repository_url = ssoAuthManifestUrl;
             };
