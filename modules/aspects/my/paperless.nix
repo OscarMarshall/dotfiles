@@ -6,6 +6,12 @@
     }:
     { host, ... }:
     let
+      # The first administrator becomes PAPERLESS_ADMIN_USER below (see its own comment) - asserted
+      # non-empty here so a misconfigured `administrators = [ ];` fails with a clear message instead
+      # of `lib.head`'s own opaque "empty list" error deep in this aspect's settings.
+      adminUser =
+        assert lib.assertMsg (administrators != [ ]) "my.paperless: `administrators` must be non-empty.";
+        lib.head administrators;
       url = "paperless.${host.name}.${host.domain}";
     in
     {
@@ -68,7 +74,7 @@
           passwordFile = config.age.secrets.paperless-admin-password.path;
 
           settings = {
-            PAPERLESS_ADMIN_USER = lib.head administrators;
+            PAPERLESS_ADMIN_USER = adminUser;
             # Authentik is the only way in - nginx.nix's `protected` forward-auth mechanism (this
             # vhost's own `protected = true;` below) sets this exact header on every request that's
             # already passed its auth gate, and Paperless (via Django's RemoteUserMiddleware) trusts
