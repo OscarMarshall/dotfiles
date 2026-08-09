@@ -143,9 +143,28 @@ let
             # is a real network call - without this, a boot can reach multi-user.target (and so
             # start this unit) before the network is actually up, failing/flapping on a cold boot
             # even though nothing is actually wrong.
+            #
+            # `nginx.service`/`authentik.service`: every ON-BOX service any provider here talks to
+            # (Sonarr, Radarr, Prowlarr, Jellyfin, Home Assistant, ...) is reached through nginx's
+            # reverse proxy, never a raw service port directly - and authentik.service backs both
+            # the Authentik provider's own resources AND every service sitting behind Authentik
+            # forward-auth. A switch that restarts either (e.g. an authentik.nix config change, or
+            # simply the new nginx vhosts a switch like this one adds) used to race this unit:
+            # confirmed live on 2026-08-09 - this unit started at 13:01:03, six seconds BEFORE
+            # authentik.service even began its own restart (`Started authentik.service` at
+            # 13:01:09), so every Authentik-backed resource failed with a 502. Deliberately NOT
+            # extended to every individual on-box service's own unit (sonarr.service, jellyfin.service,
+            # ...) - that would need updating every time a new terraform-consuming aspect is added;
+            # nginx/authentik are the two fixed choke points everything else already routes through.
+            # Ordering alone doesn't fully close the gap (a unit reporting "started" doesn't mean
+            # its listener is actually accepting connections yet - authentik.service's own gunicorn
+            # workers were still booting 4s after systemd called it started) - the retry loop around
+            # `tofu plan` below covers the remainder.
             after = [
               "${dataset-service-name}.service"
               "network-online.target"
+              "nginx.service"
+              "authentik.service"
             ];
 
             requires = [ "${dataset-service-name}.service" ];
@@ -202,7 +221,23 @@ let
                 source "$decrypted_env_file"
                 set +a
                 ${pkgs.opentofu}/bin/tofu init -input=false -lockfile=readonly
-                ${pkgs.opentofu}/bin/tofu plan -input=false -out=tfplan
+
+                # Retries rather than a single attempt: the `after`/ordering above (this unit's own
+                # comment) only guarantees nginx.service/authentik.service have been TOLD to start,
+                # not that they're actually accepting connections yet - a plan run moments after
+                # either restarts can still hit a live 502/connection-refused window. `until` (not
+                # `if`/`&&`) so a failing `tofu plan` doesn't trip `set -e` on its own.
+                plan_attempt=1
+                plan_max_attempts=5
+                until ${pkgs.opentofu}/bin/tofu plan -input=false -out=tfplan; do
+                  if [ "$plan_attempt" -ge "$plan_max_attempts" ]; then
+                    echo "tofu plan failed after $plan_max_attempts attempts" >&2
+                    exit 1
+                  fi
+                  echo "tofu plan failed (attempt $plan_attempt/$plan_max_attempts) - retrying in 10s..." >&2
+                  plan_attempt=$((plan_attempt + 1))
+                  sleep 10
+                done
                 # Computed as a plain assignment, not tested directly in the `if` below: `set -e`
                 # doesn't abort on a failing command used as an `if`/`&&`/`||` condition, even with
                 # `pipefail` - if `tofu show`/`jq` failed for an unexpected reason (not "no
