@@ -56,7 +56,11 @@
         jellyfin-api-key = {
           intermediary = true;
           rekeyFile = ../../../secrets/jellyfin-api-key.age;
-          settings.terraform = true;
+
+          settings = {
+            homepage = "jellyfin";
+            terraform = true;
+          };
         };
 
         # Shared between authentik.nix's own `authentik_provider_oauth2` (fed via the `oidc` field
@@ -167,7 +171,25 @@
       virtual-host = {
         inherit global port;
         group = "Media";
-        homepage.description = "Media server";
+
+        homepage = {
+          description = "Media server";
+
+          widget = {
+            api-key = true;
+            enableBlocks = true;
+            enableUser = true;
+            showEpisodeNumber = true;
+            type = "jellyfin";
+            # Hit Jellyfin directly rather than through nginx, since Homepage's server-side widget
+            # fetch has no browser session to carry anything the SSO Authentication plugin might
+            # otherwise care about (see sonarr.nix's own comment on the same pattern).
+            url = "http://127.0.0.1:${toString port}";
+            # `version = 2;` once harmony's Jellyfin is upgraded past 10.12 (currently 10.11.x) -
+            # see https://gethomepage.dev/widgets/services/jellyfin/.
+          };
+        };
+
         host = host.name;
         icon = "jellyfin.svg";
         label = "Jellyfin";
