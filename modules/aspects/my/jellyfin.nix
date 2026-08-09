@@ -4,9 +4,26 @@
       global ? false,
     }:
     { host, ... }: {
-      nixos.services.jellyfin = {
-        enable = true;
-        openFirewall = true;
+      nixos = { pkgs, ... }: {
+        # UHD 770 (Raptor Lake iGPU, harmony's i9-13900K) - intel-media-driver (iHD) is Intel's
+        # recommended VAAPI driver for Broadwell and newer.
+        hardware.graphics = {
+          enable = true;
+          extraPackages = [ pkgs.intel-media-driver ];
+        };
+
+        services.jellyfin = {
+          enable = true;
+
+          hardwareAcceleration = {
+            enable = true;
+            device = "/dev/dri/renderD128";
+            type = "vaapi";
+          };
+
+          openFirewall = true;
+          transcoding.enableHardwareEncoding = true;
+        };
       };
 
       port-forward = {
