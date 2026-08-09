@@ -76,7 +76,11 @@
         };
 
         terraform.required_providers.jellyfin = {
-          source = "ThePhaseless/jellyfin";
+          # Full hostname required: unlike the devopsarr/goauthentik/etc. providers elsewhere in
+          # this repo, ThePhaseless/jellyfin is only published to registry.terraform.io (Hashicorp's
+          # registry) - OpenTofu's own default registry.opentofu.org doesn't mirror it, and a bare
+          # "ThePhaseless/jellyfin" source resolves against that default, not terraform.io.
+          source = "registry.terraform.io/ThePhaseless/jellyfin";
           version = "~> 0.3";
         };
       };
