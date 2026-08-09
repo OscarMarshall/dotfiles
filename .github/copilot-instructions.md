@@ -36,8 +36,8 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
       - **`adelline/`**: adelline.nix
     - **`my/`**: Reusable aspects in the `my` namespace (~43 aspects)
       - Core: boot.nix, locale.nix, nix.nix, fonts.nix
-      - Services: nginx.nix, minecraft-servers.nix, plex.nix, prowlarr.nix, qbittorrent.nix, radarr.nix, sonarr.nix,
-        unpackerr.nix
+      - Services: nginx.nix, minecraft-servers.nix, plex.nix, jellyfin.nix, prowlarr.nix, qbittorrent.nix, radarr.nix,
+        sonarr.nix, unpackerr.nix, home-assistant.nix
       - Containers: profilarr.nix
       - Desktop: gnome.nix, pipewire.nix, steam.nix, discord.nix, ghostty.nix
       - Utilities: auto-upgrade.nix, auto-login.nix, host-flag.nix, routes.nix
@@ -130,9 +130,10 @@ Use direct context flag checks in aspect code (hosted users or standalone homes)
 
 The **harmony** server (x86_64-linux) runs:
 
-- **Media Stack**: Plex, Tautulli, Radarr, Sonarr, Prowlarr, Autobrr, Cross-seed
+- **Media Stack**: Plex, Jellyfin, Tautulli, Radarr, Sonarr, Prowlarr, Autobrr, Cross-seed
 - **Downloads**: native qBittorrent under VPN-Confinement
 - **Minecraft**: Multiple servers via nix-minecraft
+- **Home Automation**: Home Assistant, with SSO via Authentik's `auth_oidc` integration
 - **Reverse Proxy**: nginx with Let's Encrypt SSL certificates
 - **Monitoring**: homepage-dashboard
 - **File Sharing**: Samba shares
@@ -329,7 +330,8 @@ Organized by category:
 
 - **Core**: boot, locale, nix, fonts
 - **Networking**: networkmanager, nginx
-- **Services**: minecraft-servers, plex, prowlarr, qbittorrent, radarr, sonarr, unpackerr, autobrr, cross-seed, homepage
+- **Services**: minecraft-servers, plex, jellyfin, prowlarr, qbittorrent, radarr, sonarr, unpackerr, autobrr,
+  cross-seed, homepage, home-assistant
 - **Containers**: profilarr
 - **Desktop**: gnome, pipewire, steam, discord, ghostty, zen-browser, prusa-slicer, xfce-desktop
 - **Development**: emacs, git, gpg, ssh-client, ssh-server

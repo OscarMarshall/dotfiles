@@ -34,6 +34,12 @@
           extraPackages = [ pkgs.intel-media-driver ];
         };
 
+        # No `openFirewall`/`port-forward` (unlike plex.nix): Plex genuinely wants direct inbound
+        # reachability for its own remote-access/relay-avoidance logic, but Jellyfin has no such
+        # requirement - it's reached exclusively through nginx's loopback proxy_pass, same as
+        # Sonarr/Radarr/Prowlarr (see sonarr.nix's own comment on this). Opening 8096 - a plaintext
+        # HTTP port, since TLS termination happens at nginx - on the LAN firewall or WAN via Meraki
+        # would just be unnecessary attack surface with no upside.
         services.jellyfin = {
           enable = true;
 
@@ -43,14 +49,8 @@
             type = "vaapi";
           };
 
-          openFirewall = true;
           transcoding.enableHardwareEncoding = true;
         };
-      };
-
-      port-forward = {
-        inherit port;
-        name = "jellyfin";
       };
 
       secrets.jellyfin-api-key = {

@@ -18,6 +18,7 @@
       (bookshelf-ebooks { })
       (cachyos-kernel { variant = "server"; })
       (collabora-online { })
+      (home-assistant { global = true; })
       (immich {
         administrators = [ "oscar" ];
         global = true;
@@ -34,6 +35,9 @@
       (sonarr { administrators = [ "oscar" ]; })
       (storyteller { global = true; })
       (tautulli { })
+      # Global (not LAN-only like tautulli/profilarr/etc.) since its whole purpose is inviting
+      # people who don't have LAN/VPN access yet to join Plex.
+      (wizarr { global = true; })
       (zfs [ "metalminds" ])
       boot
       cross-seed
