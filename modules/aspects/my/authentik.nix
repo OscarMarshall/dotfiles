@@ -627,7 +627,15 @@
 
               # A standalone object, not flow-scoped - reused via three separate
               # `authentik_flow_stage_binding`s below rather than duplicated per flow.
-              authentik_stage_user_login.default.name = "login-user-login";
+              #
+              # `session_duration` overrides the provider default of `seconds=0` ("keep the
+              # session until the browser session ends" - i.e. no explicit expiry at all, just
+              # whatever the browser itself decides, which is what made logins feel like they
+              # expired unpredictably fast). A month gives a real, explicit ceiling instead.
+              authentik_stage_user_login.default = {
+                name = "login-user-login";
+                session_duration = "days=30";
+              };
 
               # Cross-references `mailgun_domain.default`, defined in mailgun.nix's own `terranix`
               # field - see that file's header comment for why each consumer owns its own mailbox
@@ -679,6 +687,11 @@
 
                     value = {
                       inherit (vh) name;
+                      # Default is `minutes=10` - the outpost re-checks/refreshes against this
+                      # cadence, and any friction in that silent refresh reads to a user as
+                      # getting logged out constantly. Matches `authentik_stage_user_login`'s
+                      # own bump above, capped by whichever expires first.
+                      access_token_validity = "days=30";
                       authorization_flow = "\${data.authentik_flow.default-authorization-flow.id}";
                       external_host = "https://${hostname-of vh}";
                       invalidation_flow = "\${data.authentik_flow.default-invalidation-flow.id}";
@@ -766,6 +779,14 @@
 
                     value = {
                       inherit (vh) name;
+                      # Default is `minutes=10` - same reasoning as `authentik_provider_proxy`'s
+                      # own bump above, so a native OIDC app (Immich/Nextcloud/Seerr) doesn't
+                      # force a re-login every 10 minutes either. Equal to (not under)
+                      # `refresh_token_validity`'s own default of `days=30` - harmless since
+                      # nothing here refreshes past the underlying authentik session anyway
+                      # (also capped at `days=30` above), but worth knowing if that default
+                      # ever changes independently.
+                      access_token_validity = "days=30";
 
                       allowed_redirect_uris = lib.concatMap (
                         hostname:
