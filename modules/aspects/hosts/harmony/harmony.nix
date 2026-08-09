@@ -22,6 +22,7 @@
         administrators = [ "oscar" ];
         global = true;
       })
+      (jellyfin { global = true; })
       (netdata { })
       (nextcloud { global = true; })
       (plex { global = true; })
