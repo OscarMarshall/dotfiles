@@ -36,8 +36,8 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
       - **`adelline/`**: adelline.nix
     - **`my/`**: Reusable aspects in the `my` namespace (~43 aspects)
       - Core: boot.nix, locale.nix, nix.nix, fonts.nix
-      - Services: nginx.nix, minecraft-servers.nix, plex.nix, jellyfin.nix, prowlarr.nix, qbittorrent.nix, radarr.nix,
-        sonarr.nix, unpackerr.nix, home-assistant.nix
+      - Services: nginx.nix, minecraft-servers.nix, paperless.nix, plex.nix, jellyfin.nix, prowlarr.nix,
+        qbittorrent.nix, radarr.nix, sonarr.nix, unpackerr.nix, home-assistant.nix
       - Containers: profilarr.nix
       - Desktop: gnome.nix, pipewire.nix, steam.nix, discord.nix, ghostty.nix
       - Utilities: auto-upgrade.nix, auto-login.nix, host-flag.nix, routes.nix

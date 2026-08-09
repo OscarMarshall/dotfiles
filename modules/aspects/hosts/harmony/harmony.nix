@@ -1,10 +1,4 @@
-{
-  lib,
-  den,
-  my,
-  ...
-}:
-{
+{ den, my, ... }: {
   den.aspects.harmony = {
     includes = with my; [
       (authentik { global = true; })
@@ -26,6 +20,10 @@
       (jellyfin { global = true; })
       (netdata { })
       (nextcloud { global = true; })
+      (paperless {
+        administrators = [ "oscar" ];
+        global = true;
+      })
       (plex { global = true; })
       (profilarr { })
       (prowlarr { })
@@ -60,23 +58,19 @@
     ];
 
     # The shared `books` dataset (used by both Bookshelf instances), `movies` (radarr.nix), `shows`
-    # (sonarr.nix), and `pictures` (immich.nix) are declared in their owning aspects instead of
-    # here - see bookshelf.nix's own comment on why that's the more correct owner.
+    # (sonarr.nix), `pictures` (immich.nix), and `documents` (paperless.nix) are declared in their
+    # owning aspects instead of here - see bookshelf.nix's own comment on why that's the more
+    # correct owner.
     dataset =
       map
-        (
-          name:
-          {
-            inherit name;
-            guestAccess = true;
-            pool = "metalminds";
-            samba = true;
-          }
-          // lib.optionalAttrs (name == "documents") { backup = true; }
-        )
+        (name: {
+          inherit name;
+          guestAccess = true;
+          pool = "metalminds";
+          samba = true;
+        })
         [
           "backups"
-          "documents"
           "music"
           "torrents"
           "yarg-charts"
