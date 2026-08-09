@@ -102,11 +102,22 @@
               # whichever field is still left to default to "unknown". `type_options` (a LIST, not a
               # nested object) is the one field left out - lists default to empty rather than
               # "unknown" when omitted, so it isn't known to need this same workaround.
+              #
+              # `enable_chapter_image_extraction`/`save_local_metadata` are confirmed real values
+              # (`tofu plan` after import showed both actually `true` on harmony, not the stock
+              # `false` guessed here originally) - every other field below is still an unconfirmed
+              # guess. A `+` (not `~`) on one of those in a future plan doesn't necessarily mean
+              # applying will change anything real - it can just as easily mean the provider's own
+              # `Read` never populated that field into state at all (the same immaturity as the
+              # `library_options`-omission bug above), so Terraform has no prior value to diff
+              # against. None of these fields are destructive either way (no field here can delete
+              # media), so isn't worth chasing further unless something actually looks wrong in
+              # Jellyfin's dashboard after applying.
               stockDefaults = {
                 cache_images_in_library = false;
                 disabled = false;
                 download_images_in_advance = false;
-                enable_chapter_image_extraction = false;
+                enable_chapter_image_extraction = true;
                 enable_photos = true;
                 enable_realtime_monitor = true;
                 extract_chapters_during_library_scan = false;
@@ -115,7 +126,7 @@
                 metadata_country_code = "US";
                 metadata_refresh_mode = "Default";
                 preferred_metadata_language = "en";
-                save_local_metadata = false;
+                save_local_metadata = true;
                 save_local_thumbnail_sets = false;
                 season_zero_display_name = "Specials";
               };
