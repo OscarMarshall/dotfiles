@@ -20,7 +20,9 @@ in
             # public invite ones (`bypassAuthPaths`) - Wizarr's own login would be pure redundancy
             # for the admin panel and would otherwise block the whole point of the public invite
             # flow, so it's turned off entirely rather than left to coexist with forward-auth.
-            DISABLE_BUILTIN_AUTH = "true";
+            # Capitalized "True" (not "true") - Wizarr's own SSO docs specify this exact casing,
+            # and its env parsing is case-sensitive.
+            DISABLE_BUILTIN_AUTH = "True";
             TZ = config.time.timeZone;
           };
 
@@ -45,15 +47,17 @@ in
 
         # Invite links have to work for people who don't have an Authentik account yet (the whole
         # point of Wizarr), so its public join/onboarding routes and the static assets they need
-        # bypass the forward-auth gate below - matching the "important!" whitelist Wizarr's own
-        # reverse-proxy docs call out for exactly this setup (Authelia/Authentik in front).
+        # bypass the forward-auth gate below - the exact "Authentik/Other" patterns Wizarr's own
+        # reverse-proxy docs call out for this setup (`($|/.*)`, not `(/.*)?`, so e.g. `/setupfoo`
+        # doesn't also slip through).
         bypassAuthPaths = [
-          "^/j(oin)?(/.*)?"
-          "^/static(/.*)?"
-          "^/setup(/.*)?"
-          "^/wizard(/.*)?"
-          "^/image-proxy(/.*)?"
-          "^/cinema-posters(/.*)?"
+          "^/join($|/.*)"
+          "^/j($|/.*)"
+          "^/static($|/.*)"
+          "^/setup($|/.*)"
+          "^/wizard($|/.*)"
+          "^/image-proxy($|/.*)"
+          "^/cinema-posters($|/.*)"
         ];
 
         group = "Infra";
