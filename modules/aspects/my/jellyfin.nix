@@ -131,7 +131,7 @@
               tv-shows = {
                 collection_type = "tvshows";
                 library_options = stockDefaults;
-                name = "TV Shows";
+                name = "Shows";
                 paths = [ "/metalminds/shows" ];
               };
             };
