@@ -59,9 +59,11 @@
           settings.terraform = true;
         };
 
-        # Not consumed yet (see the `terranix`/`virtual-host` comments below on why the OIDC wiring
-        # itself is deferred) - declared now so `agenix generate -a && agenix rekey -a` only needs
-        # running once, covering both this and `jellyfin-api-key` in the same pass.
+        # Shared between authentik.nix's own `authentik_provider_oauth2` (fed via the `oidc` field
+        # below) and the `jellyfin_plugin_configuration` resource's `OidSecret` - both sides of the
+        # same OIDC handshake need the identical value, which is exactly what referencing the same
+        # `settings.terraform = "variable"` secret from two different `terranix` fields gets for
+        # free (see seerr.nix's own `seerr-oidc-client-secret` for the same pattern).
         jellyfin-oidc-client-secret = {
           generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
           intermediary = true;
@@ -106,21 +108,31 @@
             };
           };
 
-          # No `provider "authentik"`-side resources here (that's authentik.nix's own `oidc-hosts`
-          # consumer, driven by `virtual-host.oidc` below) or `jellyfin_plugin_configuration` for
-          # the SSO Authentication plugin yet - both would reference
-          # `${var.JELLYFIN_OIDC_CLIENT_SECRET}`, and `jellyfin-oidc-client-secret` is still an
-          # ungenerated placeholder. Learned this the hard way with `jellyfin-api-key` earlier in
-          # this same PR: EVERY resource in a `tofu plan` has to succeed for ANY of them to apply -
-          # a plugin_configuration referencing an undefined variable would fail the whole apply,
-          # including totally unrelated resources (DNS records, other hosts' secrets, etc.), not
-          # just this one. Add the `oidc` block back to `virtual-host` below and a
-          # `jellyfin_plugin_configuration.sso_authentication` resource (OidConfigs.authentik =
-          # { OidEndpoint = "https://auth.${host.domain}/application/o/jellyfin/"; OidClientId =
-          # "jellyfin"; OidSecret = "\${var.JELLYFIN_OIDC_CLIENT_SECRET}"; Enabled = true;
-          # EnableAuthorization = false; EnableAllFolders = true; }, referencing
-          # `plugin_id = "\${jellyfin_plugin.sso_authentication.id}"`) once `agenix generate -a &&
-          # agenix rekey -a` has actually run.
+          jellyfin_plugin_configuration.sso_authentication = {
+            # `\${...}` (not a plain Nix interpolation) - Terraform's JSON syntax interpolates
+            # `${...}` sequences found ANYWHERE inside a string attribute, including ones nested a
+            # level deep inside another string (`OidSecret`'s value here) - so this one substring
+            # gets replaced with the real secret at apply time while the rest of the
+            # `builtins.toJSON`-rendered document around it is passed through as literal text.
+            configuration_json = builtins.toJSON {
+              OidConfigs.authentik = {
+                EnableAllFolders = true;
+                EnableAuthorization = false;
+                Enabled = true;
+                OidClientId = "jellyfin";
+                # Matches authentik.nix's own `url = if global then "auth.${host.domain}" ...`
+                # (Authentik is deployed `global = true` on harmony) - can't read
+                # `config.services.authentik.nginx.host` directly the way immich.nix/nextcloud.nix/
+                # seerr.nix do, since that's a NixOS `config` value and `terranix` is evaluated
+                # through a completely separate module system with no access to it.
+                OidEndpoint = "https://auth.${host.domain}/application/o/jellyfin/";
+                OidSecret = "\${var.JELLYFIN_OIDC_CLIENT_SECRET}";
+              };
+            };
+
+            plugin_id = "\${jellyfin_plugin.sso_authentication.id}";
+          };
+
           jellyfin_plugin_repository = {
             intro-skipper = {
               enabled = true;
@@ -161,13 +173,14 @@
         label = "Jellyfin";
         name = "jellyfin";
 
-        # No `oidc` block yet - see the `terranix` field's comment above on why the SSO
-        # Authentication plugin's config is deferred until `jellyfin-oidc-client-secret` is a real
-        # value. Once it is, add: `oidc = { client-secret = "jellyfin-oidc-client-secret";
-        # redirect-paths = [ "/sso/OID/redirect/authentik" ]; };` (the SSO Authentication plugin
-        # handles its own OIDC login - github.com/9p4/jellyfin-plugin-sso/blob/main/providers.md -
-        # so this is `oidc`, a native application, rather than `protected`/forward-auth; see
-        # virtual-host.nix's own comment on the two being mutually exclusive).
+        # The SSO Authentication plugin handles its own OIDC login (redirect path is the plugin's
+        # own convention, github.com/9p4/jellyfin-plugin-sso/blob/main/providers.md), so this is
+        # `oidc` (a native application) rather than `protected` (forward-auth) - see
+        # virtual-host.nix's own comment on the two being mutually exclusive.
+        oidc = {
+          client-secret = "jellyfin-oidc-client-secret";
+          redirect-paths = [ "/sso/OID/redirect/authentik" ];
+        };
       };
     };
 }
