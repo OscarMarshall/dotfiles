@@ -14,7 +14,10 @@ let
   # No-ops on NixOS hosts - `darwin`-class content there is never merged into the option tree.
   guiPath = {
     darwin = { config, ... }: {
-      launchd.user.envVariables.PATH = "${config.system.primaryUserHome}/.nix-profile/bin:/run/current-system/sw/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+      # Ordered to match the interactive shell's own PATH (fish -c 'echo $PATH') - Nix profiles
+      # first, then the standard macOS dirs, then Homebrew last (my.homebrew is enabled on this
+      # host; GUI apps need its /opt/homebrew/{bin,sbin} too, not just Nix's).
+      launchd.user.envVariables.PATH = "${config.system.primaryUserHome}/.nix-profile/bin:/run/current-system/sw/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/opt/homebrew/sbin";
     };
   };
   hmPlatforms =
