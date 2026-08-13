@@ -66,6 +66,40 @@ in
                 }
               ];
             }
+            # External consoles for services harmony manages as code via terranix (see
+            # modules/terranix.nix) but that don't run ON harmony, so they have no `virtual-host`
+            # entry of their own to derive a tile from.
+            {
+              "External Services" = [
+                {
+                  Cloudflare = [
+                    {
+                      abbr = "CF";
+                      href = "https://dash.cloudflare.com/";
+                      icon = "cloudflare.svg";
+                    }
+                  ];
+                }
+                {
+                  Mailgun = [
+                    {
+                      abbr = "MG";
+                      href = "https://app.mailgun.com/";
+                      icon = "mailgun.svg";
+                    }
+                  ];
+                }
+                {
+                  Meraki = [
+                    {
+                      abbr = "MK";
+                      href = "https://dashboard.meraki.com/";
+                      icon = "meraki.svg";
+                    }
+                  ];
+                }
+              ];
+            }
           ];
 
           environmentFiles = [ config.age.secrets."homepage-dashboard.env".path ];
