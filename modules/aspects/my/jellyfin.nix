@@ -80,39 +80,28 @@
 
         resource = {
           # Names/paths are a best-effort guess (Radarr's/Sonarr's own `movies`/`shows` datasets -
-          # radarr.nix/sonarr.nix), NOT confirmed against the real library names already configured
-          # by hand through Jellyfin's setup wizard - `tofu import` needs an EXACT name match (see
-          # each resource's own import command below).
+          # radarr.nix/sonarr.nix), confirmed against reality via `tofu import` (movies -> "Movies",
+          # tv-shows -> "Shows" - NOT "TV Shows", the first guess).
           #
-          # `library_options` is NOT optional in practice despite the schema saying so: omitting it
-          # entirely crashes the provider outright ("Value Conversion Error ... Received unknown
-          # value, however the target type cannot handle unknown values" - confirmed live, a real
-          # provider bug, not a config mistake). The values below are Jellyfin's own stock defaults
-          # for a freshly-created library, chosen to match reality as closely as possible - but
-          # they're still a GUESS, same as `name`/`paths` above. Unlike `name`/`paths` (only checked
-          # at import), a wrong guess HERE keeps mattering after import: every later `tofu plan`
-          # diffs against it, and the switch-triggered apply auto-applies any UPDATE action (it only
-          # refuses plans containing DESTROY). Review `nix run .#harmony-tf.plan` by hand after
-          # importing and fix any field that doesn't match before letting an unattended apply run.
+          # `library_options` has TWO confirmed, compounding provider bugs, not just one:
+          #   1. Omitting the attribute entirely crashes on CREATE ("Value Conversion Error ...
+          #      Received unknown value, however the target type cannot handle unknown values").
+          #   2. Declaring it (any value) crashes on UPDATE once imported: the provider's own
+          #      `Read` never populates 8 of its 15 fields into state, so they show up as "+"
+          #      (addition) in every `tofu plan` regardless of what's declared here - and the
+          #      resulting `UpdateLibraryOptions` API call fails server-side with `Guid can't be
+          #      empty (Parameter 'id')` (confirmed in Jellyfin's own logs: the provider isn't
+          #      threading the library's internal item GUID through the update request). There's no
+          #      value to pick here that avoids this - state is structurally incomplete, so an
+          #      update gets attempted (and fails) every single apply.
+          # `lifecycle.ignore_changes` on `library_options` below is the actual fix: Terraform stops
+          # diffing/updating that field entirely after this one-time import, sidestepping bug #2
+          # completely. The values themselves matter only for the CREATE path (a fresh, not-yet-
+          # imported library, where bug #1 still applies) - which won't happen again for these two,
+          # already-imported resources, but keeps a third jellyfin_library added later from hitting
+          # bug #1 on its own first apply.
           jellyfin_library =
             let
-              # Every top-level `library_options` field explicitly set (not just the ones that
-              # seemed relevant) - the provider bug this works around is per-field, not just at the
-              # `library_options` level, so a partial block risks hitting the exact same crash on
-              # whichever field is still left to default to "unknown". `type_options` (a LIST, not a
-              # nested object) is the one field left out - lists default to empty rather than
-              # "unknown" when omitted, so it isn't known to need this same workaround.
-              #
-              # `enable_chapter_image_extraction`/`save_local_metadata` are confirmed real values
-              # (`tofu plan` after import showed both actually `true` on harmony, not the stock
-              # `false` guessed here originally) - every other field below is still an unconfirmed
-              # guess. A `+` (not `~`) on one of those in a future plan doesn't necessarily mean
-              # applying will change anything real - it can just as easily mean the provider's own
-              # `Read` never populated that field into state at all (the same immaturity as the
-              # `library_options`-omission bug above), so Terraform has no prior value to diff
-              # against. None of these fields are destructive either way (no field here can delete
-              # media), so isn't worth chasing further unless something actually looks wrong in
-              # Jellyfin's dashboard after applying.
               stockDefaults = {
                 cache_images_in_library = false;
                 disabled = false;
@@ -135,6 +124,7 @@
               movies = {
                 collection_type = "movies";
                 library_options = stockDefaults;
+                lifecycle.ignore_changes = [ "library_options" ];
                 name = "Movies";
                 paths = [ "/metalminds/movies" ];
               };
@@ -142,6 +132,7 @@
               tv-shows = {
                 collection_type = "tvshows";
                 library_options = stockDefaults;
+                lifecycle.ignore_changes = [ "library_options" ];
                 name = "Shows";
                 paths = [ "/metalminds/shows" ];
               };

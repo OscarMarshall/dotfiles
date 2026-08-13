@@ -227,9 +227,12 @@ let
                 # not that they're actually accepting connections yet - a plan run moments after
                 # either restarts can still hit a live 502/connection-refused window. `until` (not
                 # `if`/`&&`) so a failing `tofu plan` doesn't trip `set -e` on its own.
+                # `-parallelism=1`: Jellyfin's own API isn't concurrency-safe for plugin-management
+                # calls - see the interactive wrapper's own `prefixText` (this file, `perSystem`
+                # below) for the confirmed-live failure this avoids.
                 plan_attempt=1
                 plan_max_attempts=5
-                until ${pkgs.opentofu}/bin/tofu plan -input=false -out=tfplan; do
+                until ${pkgs.opentofu}/bin/tofu plan -input=false -parallelism=1 -out=tfplan; do
                   if [ "$plan_attempt" -ge "$plan_max_attempts" ]; then
                     echo "tofu plan failed after $plan_max_attempts attempts" >&2
                     exit 1
@@ -254,7 +257,7 @@ let
                   echo 'Plan contains destroy actions - refusing to auto-apply; review manually with `nix run .#${tf-package-name}.plan`.' >&2
                   exit 1
                 fi
-                ${pkgs.opentofu}/bin/tofu apply -input=false tfplan
+                ${pkgs.opentofu}/bin/tofu apply -input=false -parallelism=1 tfplan
               '';
 
               RuntimeDirectory = tf-package-name;
@@ -464,6 +467,19 @@ in
             # activation has decrypted it), where `-f` would pass and `source` would fail with a
             # confusing permission error instead of cleanly skipping.
             prefixText = ''
+              # Jellyfin's own API isn't concurrency-safe for plugin-management calls - confirmed
+              # live: two plugin installs running in the same parallel plan/apply raced Jellyfin's
+              # OWN file I/O reading another plugin's icon file ("The process cannot access the
+              # file '.../Fanart_14.0.0.0/jellyfin-plugin-fanart.png' because it is being used by
+              # another process", surfaced as a `GET /Packages` 500). `TF_CLI_ARGS_plan`/`_apply`
+              # are OpenTofu/Terraform's own env vars for auto-appending flags to those subcommands
+              # - serializing ALL resource operations (not just Jellyfin's) is coarser than
+              # necessary, but this repo's whole config is small enough that the slowdown is
+              # negligible, and it closes off the same class of bug for any other on-box API this
+              # config talks to concurrently in the future.
+              export TF_CLI_ARGS_apply="-parallelism=1"
+              export TF_CLI_ARGS_plan="-parallelism=1"
+
               decrypted_env_file="/run/agenix/${host-name}-tf.env"
               if [ -r "$decrypted_env_file" ]; then
                 set -a
