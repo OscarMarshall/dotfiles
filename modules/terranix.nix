@@ -471,14 +471,18 @@ in
               # live: two plugin installs running in the same parallel plan/apply raced Jellyfin's
               # OWN file I/O reading another plugin's icon file ("The process cannot access the
               # file '.../Fanart_14.0.0.0/jellyfin-plugin-fanart.png' because it is being used by
-              # another process", surfaced as a `GET /Packages` 500). `TF_CLI_ARGS_plan`/`_apply`
-              # are OpenTofu/Terraform's own env vars for auto-appending flags to those subcommands
-              # - serializing ALL resource operations (not just Jellyfin's) is coarser than
-              # necessary, but this repo's whole config is small enough that the slowdown is
-              # negligible, and it closes off the same class of bug for any other on-box API this
-              # config talks to concurrently in the future.
-              export TF_CLI_ARGS_apply="-parallelism=1"
-              export TF_CLI_ARGS_plan="-parallelism=1"
+              # another process", surfaced as a `GET /Packages` 500). `TF_CLI_ARGS_plan`/`_apply`/
+              # `_destroy` are OpenTofu/Terraform's own env vars for auto-appending flags to those
+              # subcommands - serializing ALL resource operations, including destroy (not just
+              # Jellyfin's) is coarser than necessary, but this repo's whole config is small enough
+              # that the slowdown is negligible, and it closes off the same class of bug for any
+              # other on-box API this config talks to concurrently in the future. Appended (not
+              # assigned outright) in case a caller already set one of these themselves - dropping
+              # whatever flags they asked for out from under them would be a worse surprise than
+              # this being merely coarse.
+              export TF_CLI_ARGS_apply="''${TF_CLI_ARGS_apply:-} -parallelism=1"
+              export TF_CLI_ARGS_destroy="''${TF_CLI_ARGS_destroy:-} -parallelism=1"
+              export TF_CLI_ARGS_plan="''${TF_CLI_ARGS_plan:-} -parallelism=1"
 
               decrypted_env_file="/run/agenix/${host-name}-tf.env"
               if [ -r "$decrypted_env_file" ]; then
