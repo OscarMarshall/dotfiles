@@ -21,6 +21,11 @@
       age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILqFHtkApjVtbJj4hR4sEyHJhwrZ74+gR3OviJk9VxYb";
 
       services = {
+        avahi = {
+          enable = true;
+          nssmdns4 = true;
+        };
+
         flatpak.enable = true;
         openssh.enable = true;
         printing.enable = true;
