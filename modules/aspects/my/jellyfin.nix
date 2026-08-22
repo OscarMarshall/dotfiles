@@ -158,8 +158,24 @@
               repository_url = introSkipperManifestUrl;
             };
 
+            # `lifecycle.ignore_changes`: Jellyfin registers a LOADED plugin under its own
+            # assembly/project name, which can differ from the "friendly" name its manifest
+            # advertises for catalog installs - confirmed live in Jellyfin's own logs ("Loaded
+            # assembly Moonfin.Server ... Loaded plugin: Moonfin 2.0.3.0"), even though the
+            # Moonfin repository's manifest, and the install call that actually worked, both call
+            # it "Moonbase". Both `name` and `repository_url` force replacement on any mismatch,
+            # and neither one is populated correctly by `tofu import` (which is how this resource
+            # ended up in state after the plain `apply` path got stuck in an endless
+            # install-always-needs-a-restart loop against the WRONG name) - same "no value here
+            # avoids this" class of bug as `sso_authentication` below and `library_options` above.
             moonbase = {
               depends_on = [ "jellyfin_plugin_repository.moonfin" ];
+
+              lifecycle.ignore_changes = [
+                "name"
+                "repository_url"
+              ];
+
               name = "Moonbase";
               repository_url = moonfinManifestUrl;
             };
@@ -176,15 +192,14 @@
             # user just gets a normal (non-admin) account with full library access, which is fine
             # for a family server. Revisit if finer-grained access ever matters.
             #
-            # `lifecycle.ignore_changes = [ "name" ]`: yet another confirmed provider bug (the
-            # fourth in this file) - after the real plugin (GUID 505ce9d1d91642fa86ca673ef241d7df,
-            # confirmed live as the genuine, already-installed SSO Authentication plugin) was
-            # created successfully, its state ended up recording `name = "SSO-Auth"` - the
-            # REPOSITORY's own display name (jellyfin_plugin_repository.sso-auth's `name` below),
-            # not the plugin's. Since `name` forces replacement on any mismatch, the next plan
-            # wanted to destroy and recreate a plugin that's already correctly installed and
-            # working, purely because of that spurious drift - exactly the class of "no value here
-            # avoids this, the state itself is wrong" bug `library_options` had above.
+            # `lifecycle.ignore_changes = [ "name" ]`: same root cause as `moonbase`'s own comment
+            # above - confirmed in Jellyfin's own logs ("Loaded assembly SSO-Auth ... Loaded
+            # plugin: SSO-Auth 4.0.0.4"), the LOADED plugin is registered as "SSO-Auth" (its
+            # assembly/project name), not "SSO Authentication" (the manifest's friendly name, and
+            # what actually installs it). `name` forces replacement on any mismatch, which without
+            # this would destroy and recreate an already-working, correctly-installed plugin every
+            # single apply - "no value here avoids this, the state itself is wrong", same class of
+            # bug as `library_options` above.
             sso_authentication = {
               depends_on = [ "jellyfin_plugin_repository.sso-auth" ];
               lifecycle.ignore_changes = [ "name" ];
