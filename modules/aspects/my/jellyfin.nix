@@ -314,6 +314,12 @@
           client-secret = "jellyfin-oidc-client-secret";
           redirect-paths = [ "/sso/OID/redirect/authentik" ];
         };
+
+        # Jellyfin's web client keeps a WebSocket open to `/socket` for real-time features (now
+        # playing, remote control, SyncPlay) - without this, nginx's recommendedProxySettings
+        # clears the Connection header (see nginx.nix's own `proxyWebsockets` comment, and
+        # sonarr.nix's identical situation with its SignalR connection) and the upgrade is refused.
+        websockets = true;
       };
     };
 }

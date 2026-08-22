@@ -245,18 +245,23 @@ let
                     plan_attempt=$((plan_attempt + 1))
                     sleep 10
                   done
-                  # Computed as a plain assignment, not tested directly in the `if` below: `set -e`
-                  # doesn't abort on a failing command used as an `if`/`&&`/`||` condition, even
-                  # with `pipefail` - if `tofu show`/`jq` failed for an unexpected reason (not "no
-                  # matches"), testing that pipeline's exit status directly would read as a false
-                  # "no destroys", falling through to `tofu apply` instead of aborting. `jq` (no
-                  # `-e`) prints a literal `true`/`false` on success and still exits non-zero -
-                  # correctly triggering `set -e` here, in this unconditioned assignment - if it or
-                  # `tofu show` fails outright.
-                  has_destroy="$(
+                  # Explicitly checked, NOT a plain assignment relying on `set -e` to catch a
+                  # `tofu show`/`jq` failure: this function is called as `plan_and_apply ||
+                  # cycle_status=$?` below, and bash disables `-e` for a compound command's ENTIRE
+                  # execution - including everything inside a function it calls - whenever that
+                  # compound command sits on the left of `||` (or `&&`, or an `if`/`while`
+                  # condition). A bare `has_destroy="$(...)"` here would silently swallow a
+                  # show/jq failure as `has_destroy=""`, read as a false "no destroys", and fall
+                  # through to `tofu apply` on a plan this never actually inspected - defeating the
+                  # entire guard below. `if ! has_destroy=...; then` tests the substitution's exit
+                  # status directly instead.
+                  if ! has_destroy="$(
                     ${pkgs.opentofu}/bin/tofu show -json tfplan \
                       | ${pkgs.jq}/bin/jq '[.resource_changes[]?.change.actions[]?] | any(. == "delete")'
-                  )"
+                  )"; then
+                    echo "tofu show/jq failed while checking the plan for destroy actions" >&2
+                    return 1
+                  fi
                   if [ "$has_destroy" = true ]; then
                     echo 'Plan contains destroy actions - refusing to auto-apply; review manually with `nix run .#${tf-package-name}.plan`.' >&2
                     return 2
