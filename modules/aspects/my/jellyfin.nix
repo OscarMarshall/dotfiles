@@ -175,8 +175,19 @@
             # authentik.nix's generic `oidc` field doesn't set up - every authenticated Authentik
             # user just gets a normal (non-admin) account with full library access, which is fine
             # for a family server. Revisit if finer-grained access ever matters.
+            #
+            # `lifecycle.ignore_changes = [ "name" ]`: yet another confirmed provider bug (the
+            # fourth in this file) - after the real plugin (GUID 505ce9d1d91642fa86ca673ef241d7df,
+            # confirmed live as the genuine, already-installed SSO Authentication plugin) was
+            # created successfully, its state ended up recording `name = "SSO-Auth"` - the
+            # REPOSITORY's own display name (jellyfin_plugin_repository.sso-auth's `name` below),
+            # not the plugin's. Since `name` forces replacement on any mismatch, the next plan
+            # wanted to destroy and recreate a plugin that's already correctly installed and
+            # working, purely because of that spurious drift - exactly the class of "no value here
+            # avoids this, the state itself is wrong" bug `library_options` had above.
             sso_authentication = {
               depends_on = [ "jellyfin_plugin_repository.sso-auth" ];
+              lifecycle.ignore_changes = [ "name" ];
               name = "SSO Authentication";
               repository_url = ssoAuthManifestUrl;
             };
