@@ -222,42 +222,80 @@ let
                 set +a
                 ${pkgs.opentofu}/bin/tofu init -input=false -lockfile=readonly
 
-                # Retries rather than a single attempt: the `after`/ordering above (this unit's own
-                # comment) only guarantees nginx.service/authentik.service have been TOLD to start,
-                # not that they're actually accepting connections yet - a plan run moments after
-                # either restarts can still hit a live 502/connection-refused window. `until` (not
-                # `if`/`&&`) so a failing `tofu plan` doesn't trip `set -e` on its own.
-                # `-parallelism=1`: Jellyfin's own API isn't concurrency-safe for plugin-management
-                # calls - see the interactive wrapper's own `prefixText` (this file, `perSystem`
-                # below) for the confirmed-live failure this avoids.
-                plan_attempt=1
-                plan_max_attempts=5
-                until ${pkgs.opentofu}/bin/tofu plan -input=false -parallelism=1 -out=tfplan; do
-                  if [ "$plan_attempt" -ge "$plan_max_attempts" ]; then
-                    echo "tofu plan failed after $plan_max_attempts attempts" >&2
+                # One full plan -> destroy-check -> apply cycle. Return codes: 0 success, 1 a
+                # genuine/possibly-transient failure (safe to retry from a fresh plan), 2 a
+                # destroy-containing plan (never retried - see the outer loop below).
+                plan_and_apply() {
+                  # Retries rather than a single attempt: the `after`/ordering above (this unit's
+                  # own comment) only guarantees nginx.service/authentik.service have been TOLD to
+                  # start, not that they're actually accepting connections yet - a plan run moments
+                  # after either restarts can still hit a live 502/connection-refused window.
+                  # `until` (not `if`/`&&`) so a failing `tofu plan` doesn't trip `set -e` on its
+                  # own. `-parallelism=1`: Jellyfin's own API isn't concurrency-safe for
+                  # plugin-management calls - see the interactive wrapper's own `prefixText` (this
+                  # file, `perSystem` below) for the confirmed-live failure this avoids.
+                  plan_attempt=1
+                  plan_max_attempts=5
+                  until ${pkgs.opentofu}/bin/tofu plan -input=false -parallelism=1 -out=tfplan; do
+                    if [ "$plan_attempt" -ge "$plan_max_attempts" ]; then
+                      echo "tofu plan failed after $plan_max_attempts attempts" >&2
+                      return 1
+                    fi
+                    echo "tofu plan failed (attempt $plan_attempt/$plan_max_attempts) - retrying in 10s..." >&2
+                    plan_attempt=$((plan_attempt + 1))
+                    sleep 10
+                  done
+                  # Computed as a plain assignment, not tested directly in the `if` below: `set -e`
+                  # doesn't abort on a failing command used as an `if`/`&&`/`||` condition, even
+                  # with `pipefail` - if `tofu show`/`jq` failed for an unexpected reason (not "no
+                  # matches"), testing that pipeline's exit status directly would read as a false
+                  # "no destroys", falling through to `tofu apply` instead of aborting. `jq` (no
+                  # `-e`) prints a literal `true`/`false` on success and still exits non-zero -
+                  # correctly triggering `set -e` here, in this unconditioned assignment - if it or
+                  # `tofu show` fails outright.
+                  has_destroy="$(
+                    ${pkgs.opentofu}/bin/tofu show -json tfplan \
+                      | ${pkgs.jq}/bin/jq '[.resource_changes[]?.change.actions[]?] | any(. == "delete")'
+                  )"
+                  if [ "$has_destroy" = true ]; then
+                    echo 'Plan contains destroy actions - refusing to auto-apply; review manually with `nix run .#${tf-package-name}.plan`.' >&2
+                    return 2
+                  fi
+                  ${pkgs.opentofu}/bin/tofu apply -input=false -parallelism=1 tfplan
+                }
+
+                # Outer retry around the WHOLE cycle, not just `apply`: a saved plan goes stale the
+                # moment ANY of its resources actually applies (OpenTofu refuses to re-apply a plan
+                # file once state has moved past what it was computed against), so recovering from
+                # a mid-apply failure needs a brand new plan reflecting whatever DID get created,
+                # not a re-run of the same plan file. Confirmed live: jellyfin_plugin.moonbase timed
+                # out waiting 30s for Jellyfin to register a just-installed plugin ("plugin
+                # \"Moonbase\" did not appear within 30s") while two sibling resources in the SAME
+                # apply succeeded seconds later - ordinary transient slowness (Jellyfin background
+                # work, a slow fetch), not a structural bug, so simply trying again from a fresh
+                # plan is the right recovery. `plan_and_apply || cycle_status=$?` (not testing the
+                # call directly) is the standard way to capture a function's real exit code without
+                # tripping `set -e` - see the loop's own body for why `if ! ...` wouldn't preserve
+                # the distinction between return codes 1 and 2 here.
+                apply_attempt=1
+                apply_max_attempts=3
+                while true; do
+                  cycle_status=0
+                  plan_and_apply || cycle_status=$?
+                  if [ "$cycle_status" -eq 0 ]; then
+                    break
+                  fi
+                  if [ "$cycle_status" -eq 2 ]; then
                     exit 1
                   fi
-                  echo "tofu plan failed (attempt $plan_attempt/$plan_max_attempts) - retrying in 10s..." >&2
-                  plan_attempt=$((plan_attempt + 1))
-                  sleep 10
+                  if [ "$apply_attempt" -ge "$apply_max_attempts" ]; then
+                    echo "plan/apply cycle failed after $apply_max_attempts attempts" >&2
+                    exit 1
+                  fi
+                  echo "plan/apply cycle failed (attempt $apply_attempt/$apply_max_attempts) - retrying with a fresh plan in 15s..." >&2
+                  apply_attempt=$((apply_attempt + 1))
+                  sleep 15
                 done
-                # Computed as a plain assignment, not tested directly in the `if` below: `set -e`
-                # doesn't abort on a failing command used as an `if`/`&&`/`||` condition, even with
-                # `pipefail` - if `tofu show`/`jq` failed for an unexpected reason (not "no
-                # matches"), testing that pipeline's exit status directly would read as a false
-                # "no destroys", falling through to `tofu apply` instead of aborting. `jq` (no
-                # `-e`) prints a literal `true`/`false` on success and still exits non-zero -
-                # correctly triggering `set -e` here, in this unconditioned assignment - if it or
-                # `tofu show` fails outright.
-                has_destroy="$(
-                  ${pkgs.opentofu}/bin/tofu show -json tfplan \
-                    | ${pkgs.jq}/bin/jq '[.resource_changes[]?.change.actions[]?] | any(. == "delete")'
-                )"
-                if [ "$has_destroy" = true ]; then
-                  echo 'Plan contains destroy actions - refusing to auto-apply; review manually with `nix run .#${tf-package-name}.plan`.' >&2
-                  exit 1
-                fi
-                ${pkgs.opentofu}/bin/tofu apply -input=false -parallelism=1 tfplan
               '';
 
               RuntimeDirectory = tf-package-name;
