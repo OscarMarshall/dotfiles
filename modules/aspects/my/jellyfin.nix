@@ -214,6 +214,20 @@
             # level deep inside another string (`OidSecret`'s value here) - so this one substring
             # gets replaced with the real secret at apply time while the rest of the
             # `builtins.toJSON`-rendered document around it is passed through as literal text.
+            #
+            # `lifecycle.ignore_changes = [ "configuration_json" ]`: yet another provider bug, this
+            # time Terraform's own core catching it rather than Jellyfin's API - confirmed live,
+            # every single apply attempt (3 retries, all identical): "Provider produced
+            # inconsistent result after apply ... .configuration_json: inconsistent values for
+            # sensitive attribute ... This is a bug in the provider" (Terraform's own error text).
+            # The update request itself does reach Jellyfin - `/sso/OID/{start,redirect}/authentik`
+            # both return 400 (a recognized provider slug rejecting a bare unauthenticated request),
+            # not 404 (an unrecognized one) - but the provider's `Update` then reports back a
+            # DIFFERENT `configuration_json` string than what was sent, most likely because Jellyfin
+            # round-trips this plugin's config through its own XML-backed store and re-serializes it
+            # differently on read-back. Since Terraform's consistency check fails the WHOLE
+            # operation (not just a warning) and never commits the update to state, every apply
+            # would retry - and fail - this identical step forever without this.
             configuration_json = builtins.toJSON {
               OidConfigs.authentik = {
                 EnableAllFolders = true;
@@ -230,6 +244,7 @@
               };
             };
 
+            lifecycle.ignore_changes = [ "configuration_json" ];
             plugin_id = "\${jellyfin_plugin.sso_authentication.id}";
           };
 
