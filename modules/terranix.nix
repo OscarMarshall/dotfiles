@@ -143,9 +143,28 @@ let
             # is a real network call - without this, a boot can reach multi-user.target (and so
             # start this unit) before the network is actually up, failing/flapping on a cold boot
             # even though nothing is actually wrong.
+            #
+            # `nginx.service`/`authentik.service`: every ON-BOX service any provider here talks to
+            # (Sonarr, Radarr, Prowlarr, Jellyfin, Home Assistant, ...) is reached through nginx's
+            # reverse proxy, never a raw service port directly - and authentik.service backs both
+            # the Authentik provider's own resources AND every service sitting behind Authentik
+            # forward-auth. A switch that restarts either (e.g. an authentik.nix config change, or
+            # simply the new nginx vhosts a switch like this one adds) used to race this unit:
+            # confirmed live on 2026-08-09 - this unit started at 13:01:03, six seconds BEFORE
+            # authentik.service even began its own restart (`Started authentik.service` at
+            # 13:01:09), so every Authentik-backed resource failed with a 502. Deliberately NOT
+            # extended to every individual on-box service's own unit (sonarr.service, jellyfin.service,
+            # ...) - that would need updating every time a new terraform-consuming aspect is added;
+            # nginx/authentik are the two fixed choke points everything else already routes through.
+            # Ordering alone doesn't fully close the gap (a unit reporting "started" doesn't mean
+            # its listener is actually accepting connections yet - authentik.service's own gunicorn
+            # workers were still booting 4s after systemd called it started) - the retry loop around
+            # `tofu plan` below covers the remainder.
             after = [
               "${dataset-service-name}.service"
               "network-online.target"
+              "nginx.service"
+              "authentik.service"
             ];
 
             requires = [ "${dataset-service-name}.service" ];
@@ -202,24 +221,86 @@ let
                 source "$decrypted_env_file"
                 set +a
                 ${pkgs.opentofu}/bin/tofu init -input=false -lockfile=readonly
-                ${pkgs.opentofu}/bin/tofu plan -input=false -out=tfplan
-                # Computed as a plain assignment, not tested directly in the `if` below: `set -e`
-                # doesn't abort on a failing command used as an `if`/`&&`/`||` condition, even with
-                # `pipefail` - if `tofu show`/`jq` failed for an unexpected reason (not "no
-                # matches"), testing that pipeline's exit status directly would read as a false
-                # "no destroys", falling through to `tofu apply` instead of aborting. `jq` (no
-                # `-e`) prints a literal `true`/`false` on success and still exits non-zero -
-                # correctly triggering `set -e` here, in this unconditioned assignment - if it or
-                # `tofu show` fails outright.
-                has_destroy="$(
-                  ${pkgs.opentofu}/bin/tofu show -json tfplan \
-                    | ${pkgs.jq}/bin/jq '[.resource_changes[]?.change.actions[]?] | any(. == "delete")'
-                )"
-                if [ "$has_destroy" = true ]; then
-                  echo 'Plan contains destroy actions - refusing to auto-apply; review manually with `nix run .#${tf-package-name}.plan`.' >&2
-                  exit 1
-                fi
-                ${pkgs.opentofu}/bin/tofu apply -input=false tfplan
+
+                # One full plan -> destroy-check -> apply cycle. Return codes: 0 success, 1 a
+                # genuine/possibly-transient failure (safe to retry from a fresh plan), 2 a
+                # destroy-containing plan (never retried - see the outer loop below).
+                plan_and_apply() {
+                  # Retries rather than a single attempt: the `after`/ordering above (this unit's
+                  # own comment) only guarantees nginx.service/authentik.service have been TOLD to
+                  # start, not that they're actually accepting connections yet - a plan run moments
+                  # after either restarts can still hit a live 502/connection-refused window.
+                  # `until` (not `if`/`&&`) so a failing `tofu plan` doesn't trip `set -e` on its
+                  # own. `-parallelism=1`: Jellyfin's own API isn't concurrency-safe for
+                  # plugin-management calls - see the interactive wrapper's own `prefixText` (this
+                  # file, `perSystem` below) for the confirmed-live failure this avoids.
+                  plan_attempt=1
+                  plan_max_attempts=5
+                  until ${pkgs.opentofu}/bin/tofu plan -input=false -parallelism=1 -out=tfplan; do
+                    if [ "$plan_attempt" -ge "$plan_max_attempts" ]; then
+                      echo "tofu plan failed after $plan_max_attempts attempts" >&2
+                      return 1
+                    fi
+                    echo "tofu plan failed (attempt $plan_attempt/$plan_max_attempts) - retrying in 10s..." >&2
+                    plan_attempt=$((plan_attempt + 1))
+                    sleep 10
+                  done
+                  # Explicitly checked, NOT a plain assignment relying on `set -e` to catch a
+                  # `tofu show`/`jq` failure: this function is called as `plan_and_apply ||
+                  # cycle_status=$?` below, and bash disables `-e` for a compound command's ENTIRE
+                  # execution - including everything inside a function it calls - whenever that
+                  # compound command sits on the left of `||` (or `&&`, or an `if`/`while`
+                  # condition). A bare `has_destroy="$(...)"` here would silently swallow a
+                  # show/jq failure as `has_destroy=""`, read as a false "no destroys", and fall
+                  # through to `tofu apply` on a plan this never actually inspected - defeating the
+                  # entire guard below. `if ! has_destroy=...; then` tests the substitution's exit
+                  # status directly instead.
+                  if ! has_destroy="$(
+                    ${pkgs.opentofu}/bin/tofu show -json tfplan \
+                      | ${pkgs.jq}/bin/jq '[.resource_changes[]?.change.actions[]?] | any(. == "delete")'
+                  )"; then
+                    echo "tofu show/jq failed while checking the plan for destroy actions" >&2
+                    return 1
+                  fi
+                  if [ "$has_destroy" = true ]; then
+                    echo 'Plan contains destroy actions - refusing to auto-apply; review manually with `nix run .#${tf-package-name}.plan`.' >&2
+                    return 2
+                  fi
+                  ${pkgs.opentofu}/bin/tofu apply -input=false -parallelism=1 tfplan
+                }
+
+                # Outer retry around the WHOLE cycle, not just `apply`: a saved plan goes stale the
+                # moment ANY of its resources actually applies (OpenTofu refuses to re-apply a plan
+                # file once state has moved past what it was computed against), so recovering from
+                # a mid-apply failure needs a brand new plan reflecting whatever DID get created,
+                # not a re-run of the same plan file. Confirmed live: jellyfin_plugin.moonbase timed
+                # out waiting 30s for Jellyfin to register a just-installed plugin ("plugin
+                # \"Moonbase\" did not appear within 30s") while two sibling resources in the SAME
+                # apply succeeded seconds later - ordinary transient slowness (Jellyfin background
+                # work, a slow fetch), not a structural bug, so simply trying again from a fresh
+                # plan is the right recovery. `plan_and_apply || cycle_status=$?` (not testing the
+                # call directly) is the standard way to capture a function's real exit code without
+                # tripping `set -e` - see the loop's own body for why `if ! ...` wouldn't preserve
+                # the distinction between return codes 1 and 2 here.
+                apply_attempt=1
+                apply_max_attempts=3
+                while true; do
+                  cycle_status=0
+                  plan_and_apply || cycle_status=$?
+                  if [ "$cycle_status" -eq 0 ]; then
+                    break
+                  fi
+                  if [ "$cycle_status" -eq 2 ]; then
+                    exit 1
+                  fi
+                  if [ "$apply_attempt" -ge "$apply_max_attempts" ]; then
+                    echo "plan/apply cycle failed after $apply_max_attempts attempts" >&2
+                    exit 1
+                  fi
+                  echo "plan/apply cycle failed (attempt $apply_attempt/$apply_max_attempts) - retrying with a fresh plan in 15s..." >&2
+                  apply_attempt=$((apply_attempt + 1))
+                  sleep 15
+                done
               '';
 
               RuntimeDirectory = tf-package-name;
@@ -429,6 +510,23 @@ in
             # activation has decrypted it), where `-f` would pass and `source` would fail with a
             # confusing permission error instead of cleanly skipping.
             prefixText = ''
+              # Jellyfin's own API isn't concurrency-safe for plugin-management calls - confirmed
+              # live: two plugin installs running in the same parallel plan/apply raced Jellyfin's
+              # OWN file I/O reading another plugin's icon file ("The process cannot access the
+              # file '.../Fanart_14.0.0.0/jellyfin-plugin-fanart.png' because it is being used by
+              # another process", surfaced as a `GET /Packages` 500). `TF_CLI_ARGS_plan`/`_apply`/
+              # `_destroy` are OpenTofu/Terraform's own env vars for auto-appending flags to those
+              # subcommands - serializing ALL resource operations, including destroy (not just
+              # Jellyfin's) is coarser than necessary, but this repo's whole config is small enough
+              # that the slowdown is negligible, and it closes off the same class of bug for any
+              # other on-box API this config talks to concurrently in the future. Appended (not
+              # assigned outright) in case a caller already set one of these themselves - dropping
+              # whatever flags they asked for out from under them would be a worse surprise than
+              # this being merely coarse.
+              export TF_CLI_ARGS_apply="''${TF_CLI_ARGS_apply:-} -parallelism=1"
+              export TF_CLI_ARGS_destroy="''${TF_CLI_ARGS_destroy:-} -parallelism=1"
+              export TF_CLI_ARGS_plan="''${TF_CLI_ARGS_plan:-} -parallelism=1"
+
               decrypted_env_file="/run/agenix/${host-name}-tf.env"
               if [ -r "$decrypted_env_file" ]; then
                 set -a
