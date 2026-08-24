@@ -1,47 +1,42 @@
 name: Refresh Terraform provider lock
 
-# Any PR that changes which Terraform providers a `*-tf` config needs (a new `required_providers`
-# entry, or a version bump) can leave harmony-tf/.terraform.lock.hcl out of sync with the source
-# that describes it - most commonly Renovate's terraform-provider customManager (see renovate.json),
+# Any change to which Terraform providers a `*-tf` config needs (a new `required_providers` entry,
+# or a version bump) can leave harmony-tf/.terraform.lock.hcl out of sync with the source that
+# describes it - most commonly Renovate's terraform-provider customManager (see renovate.json),
 # which only rewrites the exact `version` pin and can't run `tofu init -upgrade` itself, but equally
-# a hand-written PR that adds a provider outright (see #640, which is what prompted widening this
-# from Renovate-only to every same-repo PR - its harmony-tf-apply failed on deploy because nothing
-# had refreshed the lock file for the new provider it added). This job does that refresh and pushes
-# it back onto the same PR, so the lock-file diff review happens alongside whatever provider change
-# prompted it (see the "keep these PRs from automerging" decision in renovate.json's
-# terraform-provider packageRule, which still applies to Renovate's own PRs regardless of this).
+# a hand-written change that adds a provider outright (see #640, which is what prompted this job's
+# existence - harmony-tf-apply failed on deploy because nothing had refreshed the lock file for the
+# new provider it added).
+#
+# This used to run per-PR and push the refresh back onto whichever PR changed a provider, so the
+# lock-file diff was reviewed alongside the change that prompted it. That broke once Renovate's own
+# `terraform-provider` PRs started tripping it too: GitHub auto-runs Dependabot's and Renovate's own
+# commits, but a follow-up commit from `github-actions[bot]` stacked on top of one of their PRs isn't
+# similarly trusted, isn't a repo collaborator, and gets its `synchronize`-triggered checks (on that
+# PR and every other workflow on it) stuck behind manual approval instead of running. Running on a
+# schedule and opening a standalone PR instead sidesteps that: it never pushes onto someone else's
+# branch. The trade-off is a lag of up to a day between a provider bump landing on main and the lock
+# file catching up; deploys here are manual, so that's acceptable (see the "keep these PRs from
+# automerging" decision in renovate.json's terraform-provider packageRule, which still applies
+# regardless of this).
 on:
-  pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
 
 jobs:
   refresh-lock:
-    # Same-repo only - a fork PR's head could carry arbitrary Nix code, and this job builds and
-    # evaluates it (see the `nix build .#harmony-tf.config` step below) with a `contents: write`
-    # token in scope for the push step. This check is what actually gates that, independent of
-    # which actor opened the PR - unlike the old Renovate-only condition this replaced, dropping it
-    # is not on the table.
-    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
-      # persist-credentials: false - this job runs `nix build`/`nix run` against PR-controlled Nix
-      # code below, so the push token (a PAT, see the commit step) shouldn't sit in .git/config for
-      # that untrusted code to read, even though this workflow's own `contents: write` permission
-      # would let it. That token is supplied explicitly, and only for the one step that pushes.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          persist-credentials: false
 
       - name: Install Nix
         uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
@@ -77,22 +72,16 @@ jobs:
           cd harmony-tf
           nix run nixpkgs#opentofu -- init -upgrade
 
-      - name: Commit lock file if changed
-        env:
-          # Falls back to github.token if secrets.PAT isn't set, same as format.yml's own
-          # auto-commit push - but that fallback means the commit won't trigger other workflows
-          # (e.g. Test), leaving it untested; set the PAT secret for that to actually happen.
-          # Passed only to this step (see the checkout step's persist-credentials: false above),
-          # via an authenticated URL rather than `git config`, so it never touches disk.
-          GH_TOKEN: ${{ secrets.PAT || github.token }}
-        run: |
-          if git diff --quiet -- harmony-tf/.terraform.lock.hcl; then
-            echo "Lock file already up to date."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add harmony-tf/.terraform.lock.hcl
-          git commit -m "chore(harmony-tf): refresh provider lock file"
-          git push "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" \
-            HEAD:${{ github.event.pull_request.head.ref }}
+      - name: Open PR if lock file changed
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          # Falls back to github.token if secrets.PAT isn't set - but a PR opened with the default
+          # GITHUB_TOKEN doesn't fire a `pull_request` event, so Test/Format/etc wouldn't run against
+          # it; set the PAT secret for that to actually happen.
+          token: ${{ secrets.PAT || github.token }}
+          add-paths: harmony-tf/.terraform.lock.hcl
+          commit-message: "chore(harmony-tf): refresh provider lock file"
+          title: "chore(harmony-tf): refresh provider lock file"
+          body: Refreshes `harmony-tf/.terraform.lock.hcl` to match current provider requirements.
+          branch: refresh-harmony-tf-lock
+          delete-branch: true
