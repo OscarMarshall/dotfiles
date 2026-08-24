@@ -11,6 +11,7 @@ in
         darwinDefaultsId = "app.zen-browser.zen";
 
         policies = {
+          AutofillAddressEnabled = false;
           # Updates come from `nix flake update` + rebuild; the browser's own
           # updater can't write into the read-only /nix/store install anyway.
           DisableAppUpdate = true;
