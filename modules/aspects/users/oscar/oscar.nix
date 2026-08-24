@@ -117,6 +117,33 @@ in
             prismlauncher
           ];
 
+        nixpkgs.overlays = [
+          (final: prev: {
+            pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
+              (_pyFinal: pyPrev: {
+                # curl-cffi's compiled extension links against curl-impersonate's
+                # dylib but nixpkgs never gives it an LC_RPATH on Darwin, so
+                # importing it (and therefore mpv, which pulls it in through
+                # yt-dlp) fails at build time with "Library not loaded:
+                # @rpath/libcurl-impersonate.4.dylib". Add the missing rpath
+                # ourselves; doCheck is dropped because curl-cffi's own test
+                # suite has unrelated TLS/cookie failures on Darwin.
+                curl-cffi = pyPrev.curl-cffi.overridePythonAttrs (old: {
+                  doCheck = false;
+
+                  postFixup =
+                    (old.postFixup or "")
+                    + prev.lib.optionalString prev.stdenv.isDarwin ''
+                      for f in $(find "$out" -name "*.so"); do
+                        install_name_tool -add_rpath "${prev.curl-impersonate}/lib" "$f" || true
+                      done
+                    '';
+                });
+              })
+            ];
+          })
+        ];
+
         programs = {
           fzf.enable = true;
 
