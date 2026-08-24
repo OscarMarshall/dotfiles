@@ -1,10 +1,19 @@
 { my, ... }:
 let
+  whitelist = {
+    AshamedMunchkin = "330378c0-3b95-44ad-a16f-63c51c87997a";
+    birdonapalmtree = "81c5ebad-8cd8-46b1-8267-93fe7ace11dc";
+    rawriana2200 = "9b34899e-073a-49e5-8123-f60a8ae4965d";
+    sunsetfunset = "ba9c558c-3546-4cdb-876d-e4a7853b76c9";
+    tishara_T = "3831d61e-3a13-499c-badb-ec2babf30374";
+  };
+
   worlds = {
     chicken-house = {
       port = 25566;
 
       server = pkgs: {
+        inherit whitelist;
         enable = true;
         package = pkgs.fabricServers.fabric-1_21_8;
 
@@ -74,6 +83,7 @@ let
       port = 25567;
 
       server = pkgs: {
+        inherit whitelist;
         # Crash-loops on boot: moonlight-1.21-2.18.13-neoforge.jar's moonlight-common.mixins.json
         # has no "refmap" field, so Mixin can't resolve the embedded moonlight-common-refmap.json
         # and PoiMixin's (required) injection fails, aborting the JVM before the world loads. Needs
@@ -94,15 +104,17 @@ let
       port = 25565;
 
       server = pkgs: {
+        inherit whitelist;
         enable = true;
-        package = pkgs.fabricServers.fabric-1_21_11;
+        package = pkgs.fabricServers.fabric;
+        enableReload = true;
         serverProperties.white-list = true;
       };
     };
   };
 in
 {
-  den.aspects.oscar.provides.minecraft-servers.includes = [
+  den.aspects.harmony.provides.minecraft-servers.includes = [
     (my.minecraft-servers {
       inherit worlds;
       administrators = [ "oscar" ];

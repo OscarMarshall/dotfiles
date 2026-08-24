@@ -39,7 +39,7 @@
       (zfs [ "metalminds" ])
       boot
       cross-seed
-      den.aspects.oscar.provides.minecraft-servers
+      den.aspects.harmony.provides.minecraft-servers
       dns
       fail2ban
       homepage
