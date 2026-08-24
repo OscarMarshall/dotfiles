@@ -106,8 +106,8 @@ let
       server = pkgs: {
         inherit whitelist;
         enable = true;
-        enableReload = true;
         package = pkgs.fabricServers.fabric;
+        enableReload = true;
         serverProperties.white-list = true;
       };
     };
