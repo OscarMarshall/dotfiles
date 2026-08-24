@@ -126,8 +126,9 @@ in
                 # importing it (and therefore mpv, which pulls it in through
                 # yt-dlp) fails at build time with "Library not loaded:
                 # @rpath/libcurl-impersonate.4.dylib". Add the missing rpath
-                # ourselves; doCheck is dropped because curl-cffi's own test
-                # suite has unrelated TLS/cookie failures on Darwin.
+                # ourselves, only on Darwin - doCheck is likewise only dropped
+                # there, because curl-cffi's own test suite has unrelated
+                # TLS/cookie failures specific to that platform.
                 curl-cffi = pyPrev.curl-cffi.overridePythonAttrs (
                   old:
                   # Pinned so a curl-cffi version bump forces a check of whether
@@ -136,13 +137,18 @@ in
                   # overlay; if not, bump the version pinned here.
                   assert old.version == "0.15.0" || throw "curl-cffi ${old.version}: re-check the Darwin rpath workaround in oscar.nix";
                   {
-                    doCheck = false;
+                    doCheck = (old.doCheck or true) && !prev.stdenv.isDarwin;
 
                     postFixup =
                       (old.postFixup or "")
                       + prev.lib.optionalString prev.stdenv.isDarwin ''
                         for f in $(find "$out" -name "*.so"); do
-                          install_name_tool -add_rpath "${prev.curl-impersonate}/lib" "$f" || true
+                          if ! otool -L "$f" | grep -q "@rpath/libcurl-impersonate"; then
+                            continue
+                          fi
+                          if ! otool -l "$f" | grep -q "${prev.curl-impersonate}/lib"; then
+                            install_name_tool -add_rpath "${prev.curl-impersonate}/lib" "$f"
+                          fi
                         done
                       '';
                   }
