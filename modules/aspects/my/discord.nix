@@ -6,6 +6,7 @@
         "discord-unwrapped"
       ])
     ];
+
     darwin.homebrew.casks = [ "discord" ];
     hmLinux = { pkgs, ... }: { home.packages = [ pkgs.discord ]; };
   };
