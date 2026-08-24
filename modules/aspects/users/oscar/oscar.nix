@@ -128,17 +128,25 @@ in
                 # @rpath/libcurl-impersonate.4.dylib". Add the missing rpath
                 # ourselves; doCheck is dropped because curl-cffi's own test
                 # suite has unrelated TLS/cookie failures on Darwin.
-                curl-cffi = pyPrev.curl-cffi.overridePythonAttrs (old: {
-                  doCheck = false;
+                curl-cffi = pyPrev.curl-cffi.overridePythonAttrs (
+                  old:
+                  # Pinned so a curl-cffi version bump forces a check of whether
+                  # nixpkgs has started setting an LC_RPATH for
+                  # libcurl-impersonate on Darwin itself - if so, delete this
+                  # overlay; if not, bump the version pinned here.
+                  assert old.version == "0.15.0" || throw "curl-cffi ${old.version}: re-check the Darwin rpath workaround in oscar.nix";
+                  {
+                    doCheck = false;
 
-                  postFixup =
-                    (old.postFixup or "")
-                    + prev.lib.optionalString prev.stdenv.isDarwin ''
-                      for f in $(find "$out" -name "*.so"); do
-                        install_name_tool -add_rpath "${prev.curl-impersonate}/lib" "$f" || true
-                      done
-                    '';
-                });
+                    postFixup =
+                      (old.postFixup or "")
+                      + prev.lib.optionalString prev.stdenv.isDarwin ''
+                        for f in $(find "$out" -name "*.so"); do
+                          install_name_tool -add_rpath "${prev.curl-impersonate}/lib" "$f" || true
+                        done
+                      '';
+                  }
+                );
               })
             ];
           })
