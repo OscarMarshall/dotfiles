@@ -26,12 +26,16 @@ in
       };
 
       users = {
-        groups.satisfactory-server.gid = 984;
+        # See bookshelf.nix's comment on readarr's own pinned id for why 31001 (rather than a
+        # number under 1000, which is what this used to be pinned to and how it collided with both
+        # nix-minecraft's dynamically-allocated `minecraft` group and the unrelated `mandb` system
+        # user).
+        groups.satisfactory-server.gid = 31001;
 
         users.satisfactory-server = {
           group = "satisfactory-server";
           isSystemUser = true;
-          uid = 984;
+          uid = 31001;
         };
       };
 
