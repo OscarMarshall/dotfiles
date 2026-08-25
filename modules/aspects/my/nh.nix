@@ -1,12 +1,16 @@
 {
-  my.nh.homeManager.programs.nh = {
-    enable = true;
+  my.nh.homeManager = {
+    home.sessionVariables.NH_SHOW_ACTIVATION_LOGS = "1";
 
-    clean = {
+    programs.nh = {
       enable = true;
-      extraArgs = "--keep-since 7d";
-    };
 
-    flake = "github:OscarMarshall/dotfiles";
+      clean = {
+        enable = true;
+        extraArgs = "--keep-since 7d";
+      };
+
+      flake = "github:OscarMarshall/dotfiles";
+    };
   };
 }
