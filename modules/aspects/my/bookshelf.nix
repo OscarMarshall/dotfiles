@@ -38,10 +38,14 @@ let
       dataset = [
         {
           inherit name;
+          # Owned by the same dedicated `readarr` user/group declared below - the container runs as
+          # readarr via PUID/PGID, and needs write access to its own `/config`.
+          group = "readarr";
           pool = "metalminds";
           # This instance's own container needs its `/config` dataset to actually exist (and be
           # mounted) before it starts - see zfs.nix's own `units` field comment.
           units = [ "podman-${name}" ];
+          user = "readarr";
         }
         {
           # Owned by a dedicated `readarr` user/group (declared below) shared by BOTH instances, so
@@ -61,19 +65,26 @@ let
         # qbittorrent.nix's own service user) rather than accepting the image's own undocumented
         # built-in "abc" (911:911) - both instances' containers run as this user via PUID/PGID
         # below, so whichever one writes to the shared `/books` root folder, the other can too.
-        # `uid`/`gid` are pinned explicitly (983, the next one down from
-        # satisfactory-server.nix's 984 and qbittorrent.nix's 985) rather than left to NixOS's own
-        # dynamic system-user allocation, which only resolves a UID at activation time - too late
-        # to bake into the container's own PUID/PGID env vars below, which need a value at build
-        # time.
+        # `uid`/`gid` are pinned explicitly rather than left to NixOS's own dynamic system-user
+        # allocation, which only resolves an id at activation time - too late to bake into the
+        # container's own PUID/PGID env vars below, which need a value at build time. Pinned to
+        # 31000 (alongside satisfactory-server.nix's 31001 and qbittorrent.nix's 31002) rather than
+        # some number under 1000: NixOS's dynamic allocator (nixos/modules/config/update-users-groups.pl)
+        # only ever draws from 400-999 (system users/groups) and 1000-29999 (normal users), so
+        # anything >= 30000 can never collide with an id it hands out - unlike this trio's previous
+        # 983/984/985, which happened to land inside that first range and collided in practice: both
+        # nix-minecraft's dynamically-allocated `minecraft` group and the unrelated `mandb` system
+        # user ended up sharing 984 with satisfactory-server.nix's old pin. 30000-30032 is ALSO
+        # reserved (statically, not dynamically) for Nix's own `nixbld`/`nixbld1..32` build users
+        # (`ids.uids.nixbld`) - hence starting this block at 31000 rather than 30000 itself.
         users = {
-          groups.readarr.gid = 983;
+          groups.readarr.gid = 31000;
 
           users.readarr = {
             description = "Bookshelf (Readarr) service user";
             group = "readarr";
             isSystemUser = true;
-            uid = 983;
+            uid = 31000;
           };
         };
 

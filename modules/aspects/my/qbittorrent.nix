@@ -21,6 +21,22 @@ in
       global ? false,
     }:
     { host, ... }: {
+      # Moved here from harmony.nix's own host-level `dataset` list (see its comment) - `user`/
+      # `group` here means zfs.nix's generic dataset-quirk consumer chowns `/metalminds/torrents`
+      # itself to qbittorrent on every activation, the same way books/satisfactory-server.nix's own
+      # datasets self-heal. Non-recursive though (just the dataset root) - doesn't reach into
+      # existing subdirectories/files, so a uid/gid change (like this one) still needs a one-time
+      # manual `chown -R` to fix already-written content.
+      dataset = {
+        group = "qbittorrent";
+        guestAccess = true;
+        name = "torrents";
+        pool = "metalminds";
+        samba = true;
+        units = [ "qbittorrent" ];
+        user = "qbittorrent";
+      };
+
       nixos =
         {
           config,
@@ -219,14 +235,18 @@ in
           };
 
           users = {
-            groups.qbittorrent.gid = 985;
+            # See bookshelf.nix's comment on readarr's own pinned id for why 31002 (rather than a
+            # number under 1000, which is what this used to be pinned to and how it collided with
+            # both nix-minecraft's dynamically-allocated `minecraft` group and the unrelated
+            # `mandb` system user).
+            groups.qbittorrent.gid = 31002;
 
             users = {
               qbittorrent = {
                 description = "qBittorrent service user";
                 group = "qbittorrent";
                 isSystemUser = true;
-                uid = 985;
+                uid = 31002;
               };
             }
             // (lib.genAttrs administrators (user: {
