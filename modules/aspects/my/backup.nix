@@ -175,7 +175,29 @@ in
             # one dataset failing to even START doesn't stop the target - or its siblings - from
             # starting) guarantees all five ARE in the same transaction, which is what makes the
             # `after`/`requires` ordering above actually reliable.
-            targets.restic-backups-daily.wants = stageServices;
+            targets.restic-backups-daily = {
+              # Without this, every `nixos-rebuild switch` (`nh os switch`) reruns every backup
+              # immediately, not just at the scheduled time. switch-to-configuration-ng
+              # unconditionally puts every currently-ACTIVE `.target` unit on its start list on
+              # every switch - unlike services, it doesn't even diff the unit's content first (see
+              # its `main.rs`, the `unit.ends_with(".target")` branch: "Cause all active target
+              # units to be restarted below"). And this target, once first triggered by the timer
+              # below, stays `active` forever - a target has no running process to exit, so unlike
+              # a oneshot service it never falls back to `inactive` on its own. So from the first
+              # backup onward, EVERY subsequent switch restarts this target, and restarting a
+              # target re-activates everything it `wants` right then - every
+              # restic-backups-*.service and maintenance.
+              #
+              # `X-OnlyManualStart` is a NixOS-only convention (an `X-`-prefixed key, so plain
+              # systemd ignores it) that switch-to-configuration-ng reads to skip exactly that
+              # unconditional restart - it doesn't affect systemd itself, so the timer below can
+              # still start this target normally on its own schedule. This is the exact mechanism
+              # the restic module already sets on the PER-JOB timers it would otherwise generate
+              # (see restic.nix upstream, `unitConfig.X-OnlyManualStart = true;`); this just
+              # extends it to the shared target this aspect adds on top, for the same reason.
+              unitConfig.X-OnlyManualStart = true;
+              wants = stageServices;
+            };
 
             timers.restic-backups-daily = {
               timerConfig = {
@@ -186,6 +208,16 @@ in
                 Unit = "restic-backups-daily.target";
               };
 
+              # Belt-and-suspenders alongside the target's `X-OnlyManualStart` above, for the
+              # `Persistent = true` above: if switch-to-configuration-ng ever DID restart this
+              # timer (unlike targets, `.timer` units only restart when their content actually
+              # changed, so this is more defense-in-depth than the active bug the target fix
+              # addresses), `Persistent` would fire an immediate catch-up run right then if
+              # today's `OnCalendar` point already elapsed since the last recorded trigger - true
+              # for most of every day, since these are once-a-day jobs. Matches the same
+              # `X-OnlyManualStart` restic's own per-job timers already carry (see restic.nix
+              # upstream).
+              unitConfig.X-OnlyManualStart = true;
               wantedBy = [ "timers.target" ];
             };
           };
