@@ -25,7 +25,6 @@
       {
         services.cross-seed = {
           enable = true;
-          group = "qbittorrent";
 
           # better-sqlite3 (pinned to 11.5.0 by cross-seed) segfaults on GC under the default
           # nodejs (24.x) - see https://github.com/NixOS/nixpkgs/issues/553680. Upstream fixed
@@ -44,9 +43,9 @@
             assert
               defaultNodejs.version != pkgs.nodejs_22.version
               || throw "my.cross-seed: nixpkgs' unoverridden cross-seed now builds against nodejs ${defaultNodejs.version} (matching nodejs_22) - the nodejs override is no longer needed, remove it.";
-            pkgs.cross-seed.override {
-              buildNpmPackage = pkgs.buildNpmPackage.override { nodejs = pkgs.nodejs_22; };
-            };
+            pkgs.cross-seed.override { buildNpmPackage = pkgs.buildNpmPackage.override { nodejs = pkgs.nodejs_22; }; };
+
+          group = "qbittorrent";
 
           settings = {
             linkDirs = [ "/metalminds/torrents/link-dir" ];
