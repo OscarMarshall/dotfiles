@@ -13,6 +13,7 @@
       {
         config,
         lib,
+        pkgs,
         torrent-client,
         ...
       }:
@@ -24,6 +25,26 @@
       {
         services.cross-seed = {
           enable = true;
+
+          # better-sqlite3 (pinned to 11.5.0 by cross-seed) segfaults on GC under the default
+          # nodejs (24.x) - see https://github.com/NixOS/nixpkgs/issues/553680. Upstream fixed
+          # this in https://github.com/NixOS/nixpkgs/pull/556114 by pinning cross-seed's build to
+          # nodejs_22, but that fix hasn't reached nixpkgs-unstable yet, so pin it here too.
+          #
+          # Fires once nixpkgs' unoverridden `cross-seed` itself builds against nodejs_22 (the fix
+          # this override works around lands upstream): at that point the override above is dead
+          # weight, so drop it (and this assertion) back down to `pkgs.cross-seed`.
+          package =
+            let
+              defaultNodejs = lib.findFirst (
+                p: (p.pname or "") == "nodejs" || (p.pname or "") == "nodejs-slim"
+              ) (throw "cross-seed.nix: couldn't find cross-seed's nodejs nativeBuildInput") pkgs.cross-seed.nativeBuildInputs;
+            in
+            assert
+              defaultNodejs.version != pkgs.nodejs_22.version
+              || throw "my.cross-seed: nixpkgs' unoverridden cross-seed now builds against nodejs ${defaultNodejs.version} (matching nodejs_22) - the nodejs override is no longer needed, remove it.";
+            pkgs.cross-seed.override { buildNpmPackage = pkgs.buildNpmPackage.override { nodejs = pkgs.nodejs_22; }; };
+
           group = "qbittorrent";
 
           settings = {
