@@ -1,4 +1,4 @@
-{ my, ... }:
+{ lib, my, ... }:
 let
   whitelist = {
     AshamedMunchkin = "330378c0-3b95-44ad-a16f-63c51c87997a";
@@ -106,7 +106,34 @@ let
       server = pkgs: {
         inherit whitelist;
         enable = true;
-        package = pkgs.fabricServers.fabric;
+
+        # nix-minecraft's fabric-servers `mkTextileServer` wrapper doesn't inherit the JDK
+        # from the vanilla-servers package it's built on (`vanillaServers.<version>.java`,
+        # picked per-version from versions.json's `javaVersion` field) - it defaults
+        # `jre_headless` to plain nixpkgs' ambient `jre_headless` instead. Tracking `fabric`
+        # (latest) is fine until Mojang requires a newer JDK than nixpkgs' current default -
+        # then the server exits instantly with UnsupportedClassVersionError, no restart will
+        # ever fix it, and nix-minecraft's own tmux wrapper swallows the JVM's stderr (see
+        # `journalctl -u minecraft-server-vanilla`, which shows nothing past the last normal
+        # stop). Happened 2026-08-24: Minecraft 26.2 needs Java 25, nixpkgs' ambient default
+        # was still Java 21. Look up the correct JDK from the matching vanillaServers entry
+        # (same lookup nix-minecraft's own fabric-servers/default.nix does internally) rather
+        # than hardcoding a JDK version, so this keeps working next time Mojang bumps it.
+        package =
+          let
+            escapedVersion = lib.replaceStrings [ "." " " ] [ "_" "_" ] gameVersion;
+            gameVersion = pkgs.fabricServers.fabric.passthru.loader.gameVersion;
+            requiredJre = pkgs.vanillaServers."vanilla-${escapedVersion}".java;
+          in
+          # Fires once nixpkgs' ambient `jre_headless` (what `fabricServers.fabric` uses
+          # unoverridden - the bug this override works around) catches up to whatever JDK
+          # Minecraft ${gameVersion} actually needs: at that point the override above is
+          # dead weight, so drop it (and this assertion) back down to `pkgs.fabricServers.fabric`.
+          assert
+            pkgs.jre_headless.version != requiredJre.version
+            || throw "my.harmony.minecraft-servers vanilla: nixpkgs' ambient jre_headless (${pkgs.jre_headless.version}) now matches Minecraft ${gameVersion}'s required JDK (${requiredJre.version}) - the jre_headless override is no longer needed, remove it.";
+          pkgs.fabricServers.fabric.override { jre_headless = requiredJre; };
+
         enableReload = true;
         serverProperties.white-list = true;
       };
