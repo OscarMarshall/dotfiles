@@ -22,11 +22,13 @@ in
     }:
     { host, ... }: {
       # Moved here from harmony.nix's own host-level `dataset` list (see its comment) - `user`/
-      # `group` here means zfs.nix's generic dataset-quirk consumer chowns `/metalminds/torrents`
-      # itself to qbittorrent on every activation, the same way books/satisfactory-server.nix's own
-      # datasets self-heal. Non-recursive though (just the dataset root) - doesn't reach into
-      # existing subdirectories/files, so a uid/gid change (like this one) still needs a one-time
-      # manual `chown -R` to fix already-written content.
+      # `group` here means zfs.nix's generic dataset-quirk consumer recursively chowns
+      # `/metalminds/torrents` to qbittorrent on every activation, the same way
+      # books/satisfactory-server.nix's own datasets self-heal - no manual `chown -R` needed even
+      # after a uid/gid change like this one. `torrents` is a fine candidate for that despite
+      # holding 15T: it's a torrent client's data, so almost all of that is a handful of large
+      # files rather than a huge file count - the actual cost the recursive walk (see zfs.nix's own
+      # `user`/`group` field comment) warns to watch out for.
       dataset = {
         group = "qbittorrent";
         guestAccess = true;
