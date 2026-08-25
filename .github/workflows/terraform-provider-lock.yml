@@ -36,7 +36,15 @@ jobs:
   refresh-lock:
     runs-on: ubuntu-latest
     steps:
+      # ref: main - `workflow_dispatch` defaults to whatever branch it's run from, which would
+      # otherwise let a manual dispatch off a non-default branch refresh the lock file against that
+      # branch's Terraform config instead of main's. persist-credentials: false - the push step
+      # supplies its own token (see below), so the default GITHUB_TOKEN doesn't need to sit in
+      # .git/config while `nix build` evaluates this repo's Nix code.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
 
       - name: Install Nix
         uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
