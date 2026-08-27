@@ -312,6 +312,26 @@
         "type": "github"
       }
     },
+    "disko": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1781152676,
+        "narHash": "sha256-RxWs5ND31KzTG7wvMM+PMfUjyNpmIEr999lqNARaM5o=",
+        "owner": "nix-community",
+        "repo": "disko",
+        "rev": "ff8702b4de27f72b4c78573dfb89ec74e36abdf1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "disko",
+        "type": "github"
+      }
+    },
     "doomemacs": {
       "flake": false,
       "locked": {
@@ -1227,6 +1247,46 @@
         "type": "github"
       }
     },
+    "noctalia": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1787858564,
+        "narHash": "sha256-WijEuINvjcXMO/e/zMqwG1lyGiWNosnVt1QY+ko0Rw8=",
+        "owner": "noctalia-dev",
+        "repo": "noctalia",
+        "rev": "74e6c2790dd8f39bf496e90e479a9ae370846eed",
+        "type": "github"
+      },
+      "original": {
+        "owner": "noctalia-dev",
+        "repo": "noctalia",
+        "type": "github"
+      }
+    },
+    "noctalia-greeter": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1787856212,
+        "narHash": "sha256-MMhia1PBaQoQ4iv5f09bGOT00Ni41z8awxXBl97T404=",
+        "owner": "noctalia-dev",
+        "repo": "noctalia-greeter",
+        "rev": "eefd43230b34ffbaa9267fede4d8aef1a784294a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "noctalia-dev",
+        "repo": "noctalia-greeter",
+        "type": "github"
+      }
+    },
     "nur": {
       "inputs": {
         "flake-parts": [
@@ -1386,6 +1446,21 @@
         "type": "github"
       }
     },
+    "preservation": {
+      "locked": {
+        "lastModified": 1757436102,
+        "narHash": "sha256-mMI9IanU+Xw+pVogD2oT0I2kTmvz2Un/Apc5+CwUpEY=",
+        "owner": "nix-community",
+        "repo": "preservation",
+        "rev": "93416f4614ad2dfed5b0dcf12f27e57d27a5ab11",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "preservation",
+        "type": "github"
+      }
+    },
     "pyproject-build-systems": {
       "inputs": {
         "nixpkgs": [
@@ -1469,6 +1544,7 @@
         "codex-cli-nix": "codex-cli-nix",
         "darwin": "darwin",
         "den": "den",
+        "disko": "disko",
         "flake-compat": "flake-compat_3",
         "flake-file": "flake-file",
         "flake-parts": "flake-parts_3",
@@ -1482,12 +1558,16 @@
         "nix-minecraft": "nix-minecraft",
         "nixos-hardware": "nixos-hardware",
         "nixpkgs": "nixpkgs_3",
+        "noctalia": "noctalia",
+        "noctalia-greeter": "noctalia-greeter",
         "pedantix": "pedantix",
+        "preservation": "preservation",
         "ragenix": "ragenix",
         "stylix": "stylix",
         "systems": "systems_8",
         "terranix": "terranix",
         "treefmt-nix": "treefmt-nix_3",
+        "umbriel": "umbriel",
         "vpn-confinement": "vpn-confinement",
         "zen-browser": "zen-browser"
       }
@@ -1831,6 +1911,29 @@
         "type": "github"
       }
     },
+    "umbriel": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "xdg-desktop-portal-umbriel": "xdg-desktop-portal-umbriel"
+      },
+      "locked": {
+        "lastModified": 1787859248,
+        "narHash": "sha256-pPlv+EVOuTtXsW+T7wFnUtX1NeDr+ItrpQCqzeANSEY=",
+        "ref": "refs/heads/main",
+        "rev": "4473db4773225e5fb5c7f792afd5a756e4cb9016",
+        "revCount": 619,
+        "submodules": true,
+        "type": "git",
+        "url": "https://github.com/noctalia-dev/umbriel"
+      },
+      "original": {
+        "submodules": true,
+        "type": "git",
+        "url": "https://github.com/noctalia-dev/umbriel"
+      }
+    },
     "uv2nix": {
       "inputs": {
         "nixpkgs": [
@@ -1868,6 +1971,27 @@
       "original": {
         "owner": "Maroka-chan",
         "repo": "VPN-Confinement",
+        "type": "github"
+      }
+    },
+    "xdg-desktop-portal-umbriel": {
+      "inputs": {
+        "nixpkgs": [
+          "umbriel",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1787580138,
+        "narHash": "sha256-fqU58lZeFchlY5aqyQgIfrN5ec/jqbhXNwNxyL2lp/g=",
+        "owner": "noctalia-dev",
+        "repo": "xdg-desktop-portal-umbriel",
+        "rev": "515c9f70f13ba4b4b9e19930b3e899c4ac8a50a4",
+        "type": "github"
+      },
+      "original": {
+        "owner": "noctalia-dev",
+        "repo": "xdg-desktop-portal-umbriel",
         "type": "github"
       }
     },

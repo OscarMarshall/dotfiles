@@ -13,6 +13,8 @@ let
         experimental-features = [
           "nix-command"
           "flakes"
+          # Umbriel's flake (my.umbriel) uses `inputs.self.submodules`, which Lix gates behind this.
+          "flake-self-attrs"
         ];
       }
       // flakeFileNixConfig;
@@ -21,6 +23,12 @@ let
 in
 {
   flake-file.nixConfig = {
+    # Umbriel's flake (an input via my.umbriel) sets `inputs.self.submodules = true` to pull its
+    # patched SceneFX fork. Lix gates that attr behind this experimental feature, so evaluating -
+    # and therefore locking - the input fails without it. Deployed systems also pick this up because
+    # `flakeFileNixConfig` is merged into `nix.settings` below.
+    extra-experimental-features = [ "flake-self-attrs" ];
+
     extra-substituters = [
       "https://nix-community.cachix.org"
       "https://oscarmarshall.cachix.org"

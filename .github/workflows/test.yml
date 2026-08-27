@@ -52,6 +52,9 @@ jobs:
       - name: Build melaan
         run: nix build .#nixosConfigurations.melaan.config.system.build.toplevel
 
+      - name: Build tensoon
+        run: nix build .#nixosConfigurations.tensoon.config.system.build.toplevel
+
       - name: Build omarshal@dev203.meraki.com
         run: nix build '.#homeConfigurations."omarshal@dev203.meraki.com".activationPackage'
 
