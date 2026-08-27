@@ -27,8 +27,13 @@
         requires = [ "systemd-cryptsetup@cryptroot.service" ];
 
         script = ''
+          set -euo pipefail
+
           mkdir -p /btrfs_tmp
           mount -o subvol=/ /dev/mapper/cryptroot /btrfs_tmp
+          # Always release the temporary top-level mount, even if a btrfs op below fails and
+          # aborts the script (better an emergency shell than a half-wiped @home).
+          trap 'umount /btrfs_tmp' EXIT
 
           if [ -e /btrfs_tmp/@home ]; then
             btrfs subvolume list -o /btrfs_tmp/@home | cut -f9- -d' ' | while read -r sub; do
@@ -38,7 +43,6 @@
           fi
 
           btrfs subvolume snapshot /btrfs_tmp/@home-blank /btrfs_tmp/@home
-          umount /btrfs_tmp
         '';
 
         serviceConfig.Type = "oneshot";
