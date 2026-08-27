@@ -54,7 +54,7 @@
       # https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
       #
       # Set during the initial install - confirm against `nixos-version` on the installer and match.
-      system.stateVersion = "25.11";
+      system.stateVersion = "26.11";
     };
 
     # This value determines the Home Manager release that your configuration is compatible with. This helps avoid
@@ -74,7 +74,7 @@
       in
       {
         oscar = hmSentinels // {
-          homeManager.home.stateVersion = "25.11";
+          homeManager.home.stateVersion = "26.11";
         };
       };
   };
