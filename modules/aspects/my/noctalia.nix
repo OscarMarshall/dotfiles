@@ -15,20 +15,28 @@
   };
 
   my.noctalia = {
-    hmLinux.programs.noctalia = {
-      enable = true;
+    hmLinux = {
+      programs.noctalia = {
+        enable = true;
 
-      # Match this repo's stylix Catppuccin Mocha. Everything else is best set in Noctalia's own
-      # settings UI first, then promoted here once it settles.
-      settings.theme = {
-        builtin = "Catppuccin";
-        mode = "dark";
-        source = "builtin";
+        # Noctalia's bundled Catppuccin, dark. Everything else is best set in Noctalia's own
+        # settings UI first, then promoted here once it settles.
+        settings.theme = {
+          builtin = "Catppuccin";
+          mode = "dark";
+          source = "builtin";
+        };
+
+        # User service, PartOf graphical-session.target - Umbriel brings it up via autostart too;
+        # the service keeps it supervised and restarted on failure.
+        systemd.enable = true;
       };
 
-      # User service, PartOf graphical-session.target - Umbriel brings it up via autostart too; the
-      # service keeps it supervised and restarted on failure.
-      systemd.enable = true;
+      # stylix ships a noctalia target that pins `settings.theme` to a custom base16 palette and
+      # (with the repo's polarity left at "either") sets `mode = "light"` - which collides with the
+      # explicit theme below. Disable it and theme Noctalia directly, the same way my.fish opts out
+      # of stylix.targets.fish.
+      stylix.targets.noctalia.enable = false;
     };
 
     nixos = {
