@@ -1,6 +1,7 @@
 {
   lib,
   den,
+  inputs,
   my,
   ...
 }:
@@ -23,6 +24,11 @@ let
       args;
 in
 {
+  flake-file.inputs.ponytail = {
+    url = "github:DietrichGebert/ponytail/2ed6c52c9d7e5e56942508591085fd45dea277d3";
+    flake = false;
+  };
+
   den.aspects.oscar.provides.work =
     args:
     let
@@ -38,54 +44,58 @@ in
       homeManager = { pkgs, ... }: {
         home.packages = with pkgs; [ glab ];
 
-        programs.codex.settings.mcp_servers = lib.optionalAttrs (scope.work or false) {
-          grafana = {
-            args = [
-              "mcp-grafana"
-              "--enabled-tools"
-              "search,datasources,dashboard,elasticsearch,runpanelquery"
-              "--disable-write"
-              "--log-level"
-              "info"
-            ];
+        programs.codex = {
+          plugins = [ inputs.ponytail ];
 
-            command = "${pkgs.uv}/bin/uvx";
+          settings.mcp_servers = lib.optionalAttrs (scope.work or false) {
+            grafana = {
+              args = [
+                "mcp-grafana"
+                "--enabled-tools"
+                "search,datasources,dashboard,elasticsearch,runpanelquery"
+                "--disable-write"
+                "--log-level"
+                "info"
+              ];
 
-            env_vars = [
-              "GRAFANA_URL"
-              "GRAFANA_USERNAME"
-              "GRAFANA_PASSWORD"
-            ];
+              command = "${pkgs.uv}/bin/uvx";
 
-            startup_timeout_sec = 30;
-          };
+              env_vars = [
+                "GRAFANA_URL"
+                "GRAFANA_USERNAME"
+                "GRAFANA_PASSWORD"
+              ];
 
-          pagerduty = {
-            bearer_token_env_var = "PAGERDUTY_USER_API_KEY";
+              startup_timeout_sec = 30;
+            };
 
-            enabled_tools = [
-              "get_alert_from_incident"
-              "get_escalation_policy"
-              "get_incident"
-              "get_past_incidents"
-              "get_related_incidents"
-              "get_service"
-              "get_team"
-              "get_user_data"
-              "list_alerts_from_incident"
-              "list_escalation_policies"
-              "list_incident_change_events"
-              "list_incident_notes"
-              "list_incidents"
-              "list_log_entries"
-              "list_oncalls"
-              "list_services"
-              "list_team_members"
-              "list_users"
-            ];
+            pagerduty = {
+              bearer_token_env_var = "PAGERDUTY_USER_API_KEY";
 
-            startup_timeout_sec = 30;
-            url = "https://mcp.pagerduty.com/mcp";
+              enabled_tools = [
+                "get_alert_from_incident"
+                "get_escalation_policy"
+                "get_incident"
+                "get_past_incidents"
+                "get_related_incidents"
+                "get_service"
+                "get_team"
+                "get_user_data"
+                "list_alerts_from_incident"
+                "list_escalation_policies"
+                "list_incident_change_events"
+                "list_incident_notes"
+                "list_incidents"
+                "list_log_entries"
+                "list_oncalls"
+                "list_services"
+                "list_team_members"
+                "list_users"
+              ];
+
+              startup_timeout_sec = 30;
+              url = "https://mcp.pagerduty.com/mcp";
+            };
           };
         };
       };
