@@ -3,10 +3,10 @@ let
   # Seerr has no released OIDC support yet (seerr-team/seerr#2715 is still open). Build from
   # michaelhthomas's PR branch until it lands in a release, then drop this override.
   oidcFork = {
-    hash = "sha256-JchL4DJk/DrveZthiawtNJW2tDtr66e3k+EaS+iPJp8=";
+    hash = "sha256-6HR1OMqwaDds0B8u6iA/LTcxF9qtuywzhYsdJ0e3Mkw=";
     owner = "michaelhthomas";
     repo = "seerr";
-    rev = "0078a482c9e2a1144069af5d196660e392940ea0";
+    rev = "aebd4433738ff01a471642210537bb4e1020d1c2";
   };
   port = 5055;
 in
@@ -62,27 +62,36 @@ in
               mv "$settings.tmp" "$settings"
             '';
           };
-          package = pkgs.seerr.overrideAttrs (old: rec {
-            pname = "seerr";
+          package = pkgs.seerr.overrideAttrs (
+            old:
+            # Pinned so a seerr version bump forces a check of whether upstream has released OIDC
+            # support (seerr-team/seerr#2715, still an open, unmerged PR as of 2026-08-24) - if so,
+            # drop the oidcFork override above and go back to the stock package.
+            assert
+              old.version == "3.4.1"
+              || throw "seerr.nix: pkgs.seerr is now ${old.version} (was 3.4.1) - re-check whether seerr-team/seerr#2715 (OIDC support) has merged/released; if so, drop the oidcFork override.";
+            rec {
+              pname = "seerr";
 
-            pnpmDeps = pkgs.fetchPnpmDeps {
-              inherit pname src version;
-              fetcherVersion = 3;
-              hash = "sha256-7nBkeXGJfDRSvNesOjOK+Mtzp6SlBvbytyfsQl9eh/Y=";
-              pnpm = pkgs.pnpm_10.override { nodejs-slim = pkgs.nodejs-slim_22; };
-            };
+              pnpmDeps = pkgs.fetchPnpmDeps {
+                inherit pname src version;
+                fetcherVersion = 3;
+                hash = "sha256-sraOsE7jPhSpidcV5X6l8xvHkPGUPoNSN2/6UTMymTs=";
+                pnpm = pkgs.pnpm_10.override { nodejs-slim = pkgs.nodejs-slim_22; };
+              };
 
-            src = pkgs.fetchFromGitHub {
-              inherit (oidcFork)
-                hash
-                owner
-                repo
-                rev
-                ;
-            };
+              src = pkgs.fetchFromGitHub {
+                inherit (oidcFork)
+                  hash
+                  owner
+                  repo
+                  rev
+                  ;
+              };
 
-            version = "unstable-2026-07-12";
-          });
+              version = "unstable-2026-07-31";
+            }
+          );
         in
         {
           services.seerr = {

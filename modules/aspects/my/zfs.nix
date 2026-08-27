@@ -16,10 +16,14 @@
 #                 pkgs-derived values.
 #   samba       - (optional, bool) share it via Samba - see samba.nix.
 #   guestAccess - (optional, bool) allow guest (unauthenticated) Samba access - see samba.nix.
-#   user/group  - (optional) chown the dataset's root directory to this user:group once created -
+#   user/group  - (optional) recursively chown the dataset to this user:group on every activation -
 #                 for a dataset a container-based service needs to write into as some UID/GID other
 #                 than root (e.g. a shared library directory two containers both write into). Both
-#                 fields must be given together, or neither.
+#                 fields must be given together, or neither. Recursive (not just the dataset root)
+#                 so a uid/gid repin self-heals existing content too, not just newly-created files -
+#                 the tradeoff is a full tree walk on every activation, not just when the dataset is
+#                 first created, so avoid this for datasets expected to hold a very large number of
+#                 files.
 #   options     - (optional, attrset) ZFS property name/value pairs (e.g. `{ compression = "lz4";
 #                 quota = "10G"; }`), passed as `-o property=value` flags to `zfs create`. Only
 #                 applied at CREATION time, same as `zfs create` itself - not retroactively applied
@@ -76,7 +80,7 @@
                     || ${defaultZfsPackage}/bin/zfs create -p${createOptions} ${lib.escapeShellArg "${d.pool}/${d.name}"}
                 ''
                 + lib.optionalString (d ? user) ''
-                  ${pkgs.coreutils}/bin/chown ${lib.escapeShellArg "${d.user}:${d.group}"} ${lib.escapeShellArg "/${d.pool}/${d.name}"}
+                  ${pkgs.coreutils}/bin/chown -R ${lib.escapeShellArg "${d.user}:${d.group}"} ${lib.escapeShellArg "/${d.pool}/${d.name}"}
                 ''
               );
 

@@ -58,9 +58,9 @@
     ];
 
     # The shared `books` dataset (used by both Bookshelf instances), `movies` (radarr.nix), `shows`
-    # (sonarr.nix), `pictures` (immich.nix), and `documents` (paperless.nix) are declared in their
-    # owning aspects instead of here - see bookshelf.nix's own comment on why that's the more
-    # correct owner.
+    # (sonarr.nix), `pictures` (immich.nix), `documents` (paperless.nix), and `torrents`
+    # (qbittorrent.nix) are declared in their owning aspects instead of here - see bookshelf.nix's
+    # own comment on why that's the more correct owner.
     dataset =
       map
         (name: {
@@ -72,7 +72,6 @@
         [
           "backups"
           "music"
-          "torrents"
           "yarg-charts"
         ];
 

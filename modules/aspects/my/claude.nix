@@ -39,21 +39,6 @@
         uv
       ];
 
-      nixpkgs.overlays = [
-        (_final: prev: {
-          # mcp-nixos's test suite has a non-hermetic test that scans
-          # whatever real file happens to come first in /nix/store (build-
-          # closure-dependent) and asserts its literal content never
-          # contains "Error" - trips on ordinary minified JS (e.g. a
-          # vendored highlight.js) and breaks the build unpredictably as
-          # nixpkgs revisions change the derivation's dependency closure.
-          # Reported upstream: https://github.com/utensils/mcp-nixos/issues/198
-          mcp-nixos = prev.mcp-nixos.overrideAttrs (old: {
-            disabledTests = (old.disabledTests or [ ]) ++ [ "test_read_text_file" ];
-          });
-        })
-      ];
-
       programs.claude-code = {
         enable = true;
 

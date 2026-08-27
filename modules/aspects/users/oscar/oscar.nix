@@ -137,11 +137,11 @@ in
                   # overlay; if not, bump the version pinned here.
                   assert old.version == "0.15.0" || throw "curl-cffi ${old.version}: re-check the Darwin rpath workaround in oscar.nix";
                   {
-                    doCheck = (old.doCheck or true) && !prev.stdenv.isDarwin;
+                    doCheck = (old.doCheck or true) && !prev.stdenv.hostPlatform.isDarwin;
 
                     postFixup =
                       (old.postFixup or "")
-                      + prev.lib.optionalString prev.stdenv.isDarwin ''
+                      + prev.lib.optionalString prev.stdenv.hostPlatform.isDarwin ''
                         for f in $(find "$out" -name "*.so"); do
                           if ! otool -L "$f" | grep -q "@rpath/libcurl-impersonate"; then
                             continue
