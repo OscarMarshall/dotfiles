@@ -97,9 +97,10 @@
           type = "gpt";
         };
 
-        # VERIFY on the machine: `readlink -f` this must resolve to /dev/nvme0n1 (the whole
-        # namespace) - not /dev/nvme0 (controller) and not a partition.
-        device = "/dev/disk/by-id/nvme-WB_BLACK_SN7100_2TB_2548EQ400207_1";
+        # VERIFY on the machine before running disko: `readlink -f` this must resolve to
+        # /dev/nvme0n1 (the whole namespace) - not /dev/nvme0 (controller) and not a partition.
+        # (Model prefix is WD_BLACK - Western Digital; the serial still needs checking on the box.)
+        device = "/dev/disk/by-id/nvme-WD_BLACK_SN7100_2TB_2548EQ400207_1";
         type = "disk";
       };
 
