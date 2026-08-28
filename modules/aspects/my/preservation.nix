@@ -13,6 +13,18 @@
   my.preservation.nixos = { pkgs, ... }: {
     imports = [ inputs.preservation.nixosModules.default ];
 
+    # preservation forces systemd-in-initrd, which makes agenix decrypt during
+    # `initrd-nixos-activation` - before `/etc/ssh/ssh_host_ed25519_key` (a stage-2 tmpfs symlink)
+    # exists, so it finds "no readable identities" and every secret fails. `/persist` is
+    # `neededForBoot` and mounted by then, so add the persisted host keys as identities; the
+    # `/etc/ssh` defaults still cover the stage-2 run.
+    age.identityPaths = [
+      "/persist/etc/ssh/ssh_host_ed25519_key"
+      "/persist/etc/ssh/ssh_host_rsa_key"
+      "/etc/ssh/ssh_host_ed25519_key"
+      "/etc/ssh/ssh_host_rsa_key"
+    ];
+
     boot.initrd.systemd = {
       enable = true;
       initrdBin = [ pkgs.btrfs-progs ];
