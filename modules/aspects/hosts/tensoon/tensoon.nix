@@ -59,7 +59,7 @@
       # `/` is tmpfs and `/etc/shadow` is not persisted, so a manual `passwd root` would be lost
       # on reboot. Give root the same declarative password as oscar (the age secret), so there's
       # always a working recovery login without persisting mutable user state.
-      users.users.root.hashedPasswordFile = toString config.age.secrets.oscar-hashed-password.file;
+      users.users.root.hashedPasswordFile = config.age.secrets.oscar-hashed-password.path;
     };
 
     # This value determines the Home Manager release that your configuration is compatible with. This helps avoid
