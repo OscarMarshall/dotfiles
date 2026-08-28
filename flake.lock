@@ -1350,11 +1350,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1785851015,
-        "narHash": "sha256-zemqpfpXkHPGefuF8lgNrupH2RmB4GarQpIn5yVGiow=",
+        "lastModified": 1787640470,
+        "narHash": "sha256-jOJjN0K5VUztlNzWXY/ZHuNN7nhB5r8KdlNRXe7xnxE=",
         "owner": "Swarsel",
         "repo": "pedantix",
-        "rev": "57fb5794182b7574f48ff0d391485ab6af70bc8a",
+        "rev": "2df37d64510faf6fda710d3c7ca8530496f45db1",
         "type": "github"
       },
       "original": {
