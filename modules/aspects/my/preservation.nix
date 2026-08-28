@@ -137,13 +137,10 @@
             ".steam"
           ];
 
-          files = [
-            {
-              configureParent = true;
-              file = ".claude.json";
-              how = "symlink";
-            } # Claude Code auth + config
-          ];
+          # Bind-mounted (not symlinked, no configureParent): preservation already creates
+          # /persist/home/oscar via its home-dir rule, and adding a configureParent rule for the
+          # same path collides with that rule's mode (homeMode "700" vs parent default "0755").
+          files = [ ".claude.json" ]; # Claude Code auth + config
         };
       };
     };
