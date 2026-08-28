@@ -32,16 +32,29 @@
           mkdir -p /btrfs_tmp
           mount -o subvol=/ /dev/mapper/cryptroot /btrfs_tmp
           # Always release the temporary top-level mount, even if a btrfs op below fails and
-          # aborts the script (better an emergency shell than a half-wiped @home).
+          # aborts the script.
           trap 'umount /btrfs_tmp' EXIT
 
-          if [ -e /btrfs_tmp/@home ]; then
-            btrfs subvolume list -o /btrfs_tmp/@home | cut -f9- -d' ' | while read -r sub; do
-              btrfs subvolume delete "/btrfs_tmp/$sub"
-            done
-            btrfs subvolume delete /btrfs_tmp/@home
+          # First boot / recovery: nothing can have written to @home yet (this runs before /home is
+          # ever mounted), so if it's missing, recreate it empty and seed @home-blank from it. This
+          # makes the manual "snapshot @home-blank during install" step unnecessary and lets a lost
+          # @home self-heal instead of dropping to emergency.
+          if [ ! -e /btrfs_tmp/@home ]; then
+            btrfs subvolume create /btrfs_tmp/@home
+            [ -e /btrfs_tmp/@home-blank ] || btrfs subvolume snapshot -r /btrfs_tmp/@home /btrfs_tmp/@home-blank
           fi
 
+          # If the blank snapshot is gone but @home already exists (and may hold data), leave it
+          # alone rather than wiping to nothing.
+          if [ ! -e /btrfs_tmp/@home-blank ]; then
+            echo "rollback-home: @home-blank missing; leaving @home as-is" >&2
+            exit 0
+          fi
+
+          btrfs subvolume list -o /btrfs_tmp/@home | cut -f9- -d' ' | while read -r sub; do
+            btrfs subvolume delete "/btrfs_tmp/$sub"
+          done
+          btrfs subvolume delete /btrfs_tmp/@home
           btrfs subvolume snapshot /btrfs_tmp/@home-blank /btrfs_tmp/@home
         '';
 
