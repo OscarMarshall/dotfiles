@@ -58,7 +58,10 @@ in
         my.bat
         my.claude
         my.direnv
-        my.emacs
+        # Temporarily disabled - emacs-overlay's `consult-dash` snapshot fetches from codeberg,
+        # which keeps failing (`git exit 254`) and isn't cached. Re-enable once emacs-overlay is
+        # bumped past it.
+        # my.emacs
         my.fish
         my.gpg
         my.nh
