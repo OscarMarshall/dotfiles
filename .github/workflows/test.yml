@@ -52,9 +52,8 @@ jobs:
       - name: Build melaan
         run: nix build .#nixosConfigurations.melaan.config.system.build.toplevel
 
-      # tensoon is not built here yet: its config can only be evaluated once the host has been
-      # installed and `agenix rekey -a` has committed secrets/rekeyed/tensoon* (a YubiKey step on
-      # the physical machine). Re-add this once those land.
+      - name: Build tensoon
+        run: nix build .#nixosConfigurations.tensoon.config.system.build.toplevel
 
       - name: Build omarshal@dev203.meraki.com
         run: nix build '.#homeConfigurations."omarshal@dev203.meraki.com".activationPackage'
