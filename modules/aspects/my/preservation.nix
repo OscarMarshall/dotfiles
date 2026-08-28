@@ -175,14 +175,26 @@
       # machine-id) has nothing to do and would fail.
       suppressedSystemUnits = [ "systemd-machine-id-commit.service" ];
 
-      # preservation already recreates /home/oscar and the parent dirs of every persisted path
-      # (owned by oscar). ~/.cache isn't a parent of anything persisted, so create it here so
-      # first-run cache writes (fontconfig, mesa, thumbnails) don't race against a missing dir.
-      tmpfiles.settings.preservation."/home/oscar/.cache".d = {
-        group = "users";
-        mode = "0700";
-        user = "oscar";
-      };
+      # @home is recreated from an empty root-owned @home-blank every boot. preservation only
+      # owns the persistent side (/persist/home/oscar); the volatile /home/oscar ends up root:root
+      # when systemd-tmpfiles auto-creates it as the parent of a persisted subdir, so home-manager
+      # (running as oscar) can't write to it. Create it - and ~/.cache, which isn't a parent of
+      # anything persisted - explicitly, owned by oscar. Shorter paths are processed first, so
+      # /home/oscar gets the right owner before its children.
+      tmpfiles.settings.preservation =
+        let
+          oscarDir = mode: {
+            d = {
+              inherit mode;
+              group = "users";
+              user = "oscar";
+            };
+          };
+        in
+        {
+          "/home/oscar" = oscarDir "0700";
+          "/home/oscar/.cache" = oscarDir "0700";
+        };
     };
   };
 }
