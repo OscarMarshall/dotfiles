@@ -52,7 +52,10 @@ in
           inherit name;
           email = "3111765+OscarMarshall@users.noreply.github.com";
         })
-        (my.logseq { cli-only = !(scope.graphical or false); })
+        # Temporarily disabled alongside my.emacs - nix-logseq-git-flake builds from git HEAD and
+        # hits the same `git exit 254` fetch failure, uncached. Re-enable when the upstream fetch
+        # is healthy again.
+        # (my.logseq { cli-only = !(scope.graphical or false); })
         den._.primary-user
         den.aspects.oscar.provides.work
         my.bat
