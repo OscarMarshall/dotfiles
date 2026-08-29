@@ -80,15 +80,18 @@
           source = "builtin";
         };
 
-        # Since Stylix was removed, Noctalia's own templates theme external apps: the gtk3/gtk4
-        # templates drop a noctalia.css next to gtk.css and flip `gsettings color-scheme` +
-        # adw-gtk3 on mode change; the qt template writes a qt6ct colour scheme. The nixos block
-        # below installs adw-gtk3, dconf and qt6ct so those steps land.
+        # Since Stylix was removed, Noctalia's own templates theme external apps. gtk3/gtk4 drop a
+        # noctalia.css next to gtk.css and flip `gsettings color-scheme` + adw-gtk3 on mode change;
+        # qt writes a qt6ct colour scheme; umbriel writes ~/.config/umbriel/noctalia.toml, which
+        # my.umbriel pulls in via `[include]`. The nixos block below installs adw-gtk3, dconf and
+        # qt6ct. Not enabled: ghostty/starship/emacs - their apply.sh edits config files that are
+        # read-only Home Manager symlinks here.
         theme.templates = {
           builtin_ids = [
             "gtk3"
             "gtk4"
             "qt"
+            "umbriel"
           ];
 
           enable_builtin_templates = true;

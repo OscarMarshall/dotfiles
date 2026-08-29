@@ -177,6 +177,12 @@ in
 
       settings = {
         general.autostart = [ "noctalia" ];
+        # Merge Noctalia's theme sidecar. Its `umbriel` template writes the palette to
+        # ~/.config/umbriel/noctalia.toml and its apply.sh wants `[include] files` in the main
+        # config; declaring it here means the hook finds it already present (byte-identical) and
+        # never has to write the HM-managed, read-only config.toml. Included files are parsed
+        # first, so anything set below still wins.
+        include.files = [ "noctalia.toml" ];
 
         input = {
           # Programmer Dvorak as a second layout; plain US stays primary. Switch with the
