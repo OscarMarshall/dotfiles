@@ -30,10 +30,6 @@
       url = "github:nix-community/authentik-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    catppuccin-wallpapers = {
-      url = "github:zhichaoh/catppuccin-wallpapers";
-      flake = false;
-    };
     claude-code-nix = {
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -120,10 +116,6 @@
         };
         nixpkgs.follows = "nixpkgs";
       };
-    };
-    stylix = {
-      url = "github:nix-community/stylix";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
     systems.url = "github:nix-systems/default";
     terranix = {

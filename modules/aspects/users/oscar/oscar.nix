@@ -74,8 +74,8 @@ in
         userAspect
       ]
       ++ lib.optionals (scope.graphical or false) [
-        (my.catppuccin { })
         den.aspects.oscar.provides.zen-browser
+        my.catppuccin
         my.discord
         my.doc-browser
         my.ghostty
@@ -191,18 +191,6 @@ in
           "--vault-name"
           "Personal"
         ];
-
-        stylix.fonts = {
-          monospace = {
-            package = pkgs.maple-mono.NF;
-            name = "Maple Mono NF";
-          };
-
-          sansSerif = {
-            package = pkgs.inter;
-            name = "Inter";
-          };
-        };
       };
 
       nixosSecrets = { secrets, ... }: {
