@@ -256,6 +256,7 @@ in
       runtimeInputs = [
         pkgs.age
         pkgs.age-plugin-yubikey
+        pkgs.openssh
       ];
 
       text = ''
@@ -273,7 +274,9 @@ in
           -o "$key_path" \
           ${../../../../secrets/oscar-ssh-private-key.age}
         chmod 600 "$key_path"
-        echo "install-ssh-key: wrote $key_path"
+        ssh-keygen -y -f "$key_path" > "$key_path.pub"
+        chmod 644 "$key_path.pub"
+        echo "install-ssh-key: wrote $key_path and $key_path.pub"
       '';
     };
   };
