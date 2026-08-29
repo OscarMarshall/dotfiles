@@ -24,7 +24,8 @@
       # editor geometry, and wallpaper.{default,last} (a /nix/store path that rots on update).
       settings = {
         # Bar layout: audio visualiser + media on the left, date/weather/notifications in the
-        # centre, keyboard-layout + caffeine among the right-side widgets (no brightness widget).
+        # centre; right side is keyboard-layout + caffeine + system indicators (the clipboard,
+        # wallpaper and brightness buttons were removed via the UI).
         bar.default = {
           center = [
             "date"
@@ -37,8 +38,6 @@
             "tray"
             "keyboard_layout"
             "caffeine"
-            "clipboard"
-            "wallpaper"
             "network"
             "bluetooth"
             "volume"
@@ -56,11 +55,23 @@
         };
 
         location.auto_locate = true;
+        # Custom lockscreen widgets are off. Their editor geometry (per-output pixel coords) is
+        # deliberately left in the runtime settings.toml rather than promoted here.
+        lockscreen_widgets.enabled = false;
         nightlight.enabled = true;
-        # "Setup wizard done" is tracked by a marker in ~/.local/state/noctalia, which tensoon's
-        # tmpfs root drops every boot - so the "Welcome to Noctalia" panel pops on every login.
-        # Every real setting is already declared here, so switch the wizard off.
-        shell.setup_wizard_enabled = false;
+
+        shell = {
+          # Short tags for the keyboard-layout widget in place of the full XKB description.
+          keyboard_layout.custom_labels = {
+            "English (US)" = "US";
+            "English (programmer Dvorak)" = "DV";
+          };
+
+          # "Setup wizard done" is tracked by a marker in ~/.local/state/noctalia, which tensoon's
+          # tmpfs root drops every boot - so the "Welcome to Noctalia" panel pops on every login.
+          # Every real setting is already declared here, so switch the wizard off.
+          setup_wizard_enabled = false;
+        };
 
         # Bundled Catppuccin; `auto` follows the system/location light-dark schedule.
         theme = {
@@ -88,6 +99,7 @@
         widget = {
           clock.anchor = true;
           date.format = "{:%F}";
+          keyboard_layout.show_glyph = false;
           media.hide_when_no_media = true;
           network.show_label = false;
           notifications.hide_when_no_unread = true;
