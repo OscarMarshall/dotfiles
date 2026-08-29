@@ -187,7 +187,13 @@ in
           };
 
           # tensoon is a Framework 13 laptop - natural (content-follows-finger) touchpad scrolling.
-          touchpad.natural_scroll = true;
+          # scroll_factor (0.1-10.0, default 1) multiplies the smooth two-finger scroll delta sent
+          # to the focused window; 0.6 tames the stock speed on this panel. Doesn't touch overview
+          # navigation, 3-finger swipes, or discrete notches.
+          touchpad = {
+            natural_scroll = true;
+            scroll_factor = 0.6;
+          };
         };
 
         keybinds =
