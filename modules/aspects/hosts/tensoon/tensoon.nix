@@ -18,6 +18,7 @@
       preservation
       ssh-server
       umbriel
+      yubikey
     ];
 
     nixos = { config, ... }: {
@@ -26,6 +27,21 @@
       # during install. `agenix generate -a && agenix rekey -a` (YubiKey) rekeys against this and
       # writes secrets/rekeyed/tensoon* + secrets/rekeyed/tensoon-home-oscar*.
       age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDYa0oNYU887KosG7tsNrbTU8c49QiKaJdB1X6TWZyUh root@tensoon";
+
+      # The PIXA3854 clickpad defaults to libinput's "button-areas" click method: a physical press
+      # is a right-click only in the bottom-right corner, finger count ignored. Umbriel exposes no
+      # click-method setting, so force "clickfinger" (1 finger = left, 2 = right, 3 = middle) at the
+      # libinput layer. ModelAppleTouchpad is the only override that flips libinput's default; it
+      # also drops the software button areas, which is the point. Matched by I2C vendor/product so
+      # nothing else is touched. (GNOME hosts get clickfinger from Mutter and need no quirk.)
+      environment.etc."libinput/local-overrides.quirks".text = ''
+        [Framework 13 PIXA3854 clickpad - clickfinger]
+        MatchUdevType=touchpad
+        MatchBus=i2c
+        MatchVendor=0x093A
+        MatchProduct=0x1343
+        ModelAppleTouchpad=1
+      '';
 
       services = {
         avahi = {
