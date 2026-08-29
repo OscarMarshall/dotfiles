@@ -28,8 +28,19 @@
       };
     };
 
-    # The greeter module reads this to know which account owns /var/lib/noctalia-greeter; greetd's
-    # nixpkgs module creates the `greeter` user/group.
-    services.greetd.settings.default_session.user = "greeter";
+    # Umbriel/Noctalia isn't GNOME, so nothing otherwise provides a secret-service (libsecret)
+    # keyring. pass-cli, proton-pass-agent, and every other libsecret client stores credentials
+    # there and fail hard without it ("Local encryption key not found -> force logout"). Enable
+    # gnome-keyring and let pam_gnome_keyring create and unlock the login keyring with the sign-in
+    # password. It goes on the `login` service, not `greetd`: nixpkgs only injects the keyring PAM
+    # module where `unixAuth` is set, and greetd delegates both auth and session to `substack login`.
+    security.pam.services.login.enableGnomeKeyring = true;
+
+    services = {
+      gnome.gnome-keyring.enable = true;
+      # The greeter module reads this to know which account owns /var/lib/noctalia-greeter; greetd's
+      # nixpkgs module creates the `greeter` user/group.
+      greetd.settings.default_session.user = "greeter";
+    };
   };
 }
