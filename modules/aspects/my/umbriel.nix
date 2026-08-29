@@ -188,13 +188,13 @@ in
 
           # tensoon is a Framework 13 laptop - natural (content-follows-finger) touchpad scrolling.
           # scroll_factor (0.1-10.0, default 1) multiplies the smooth two-finger scroll delta sent
-          # to the focused window; 0.2 is the tuned speed on this panel. Doesn't touch overview
-          # navigation, 3-finger swipes, or discrete notches. Ghostty re-quantises the scaled delta
-          # into its own detents, so my.ghostty trims mouse-scroll-multiplier to match in-terminal;
-          # the Noctalia launcher has no such knob and scrolls a little slow as a result.
+          # to the focused window; doesn't touch overview navigation, 3-finger swipes, or discrete
+          # notches. 0.6 is a compromise: a lower value made the Noctalia launcher (no scroll knob
+          # of its own) crawl. Apps that re-quantise the delta get their own trim on top - see
+          # my.ghostty's mouse-scroll-multiplier and Zen's mousewheel.default.delta_multiplier.
           touchpad = {
             natural_scroll = true;
-            scroll_factor = 0.2;
+            scroll_factor = 0.6;
           };
         };
 
