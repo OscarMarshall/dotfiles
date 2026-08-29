@@ -15,41 +15,117 @@
   };
 
   my.noctalia = {
-    hmLinux = {
-      programs.noctalia = {
-        enable = true;
+    hmLinux.programs.noctalia = {
+      enable = true;
 
-        # Noctalia's bundled Catppuccin, dark. Everything else is best set in Noctalia's own
-        # settings UI first, then promoted here once it settles.
-        settings.theme = {
+      # Promoted from the Noctalia settings menu (~/.local/state/noctalia/settings.toml).
+      # Runtime edits through the UI still take precedence; this is the declarative baseline.
+      # Left in the runtime file on purpose: config_version (metadata), the lockscreen_widgets
+      # editor geometry, and wallpaper.{default,last} (a /nix/store path that rots on update).
+      settings = {
+        # Bar layout: audio visualiser + media on the left, date/weather/notifications in the
+        # centre, keyboard-layout + caffeine among the right-side widgets (no brightness widget).
+        bar.default = {
+          center = [
+            "date"
+            "clock"
+            "weather"
+            "notifications"
+          ];
+
+          end = [
+            "tray"
+            "keyboard_layout"
+            "caffeine"
+            "clipboard"
+            "wallpaper"
+            "network"
+            "bluetooth"
+            "volume"
+            "battery"
+            "session"
+          ];
+
+          start = [
+            "control-center"
+            "launcher"
+            "workspaces"
+            "media"
+            "audio_visualizer"
+          ];
+        };
+
+        location.auto_locate = true;
+        nightlight.enabled = true;
+
+        # Bundled Catppuccin; `auto` follows the system/location light-dark schedule.
+        theme = {
           builtin = "Catppuccin";
-          mode = "dark";
+          mode = "auto";
           source = "builtin";
         };
 
-        # User service, PartOf graphical-session.target - Umbriel brings it up via autostart too;
-        # the service keeps it supervised and restarted on failure.
-        systemd.enable = true;
+        # Since Stylix was removed, Noctalia's own templates theme external apps: the gtk3/gtk4
+        # templates drop a noctalia.css next to gtk.css and flip `gsettings color-scheme` +
+        # adw-gtk3 on mode change; the qt template writes a qt6ct colour scheme. The nixos block
+        # below installs adw-gtk3, dconf and qt6ct so those steps land.
+        theme.templates = {
+          builtin_ids = [
+            "gtk3"
+            "gtk4"
+            "qt"
+          ];
+
+          enable_builtin_templates = true;
+        };
+
+        weather.unit = "imperial";
+
+        widget = {
+          clock.anchor = true;
+          date.format = "{:%F}";
+          media.hide_when_no_media = true;
+          network.show_label = false;
+          notifications.hide_when_no_unread = true;
+          volume.show_label = false;
+          weather.show_condition = false;
+        };
       };
 
-      # stylix ships a noctalia target that pins `settings.theme` to a custom base16 palette and
-      # (with the repo's polarity left at "either") sets `mode = "light"` - which collides with the
-      # explicit theme below. Disable it and theme Noctalia directly, the same way my.fish opts out
-      # of stylix.targets.fish.
-      stylix.targets.noctalia.enable = false;
+      # User service, PartOf graphical-session.target - Umbriel brings it up via autostart too;
+      # the service keeps it supervised and restarted on failure.
+      systemd.enable = true;
     };
 
-    nixos = {
+    nixos = { pkgs, ... }: {
       imports = [ inputs.noctalia.nixosModules.default ];
+
+      # Runtime support for the Noctalia gtk/qt theme templates (see settings.theme.templates):
+      # adw-gtk3 is the light/dark GTK theme the gtk template switches to; qt6ct reads the
+      # colour scheme the qt template drops in ~/.config/qt6ct/colors/.
+      environment.systemPackages = [
+        pkgs.adw-gtk3
+        pkgs.qt6Packages.qt6ct
+      ];
+
       home-manager.sharedModules = [ inputs.noctalia.homeModules.default ];
 
-      programs.noctalia = {
-        # The NixOS `enable` is separate from the home-manager one; without it the module's whole
-        # config block (recommendedServices included) is inert.
+      programs = {
+        dconf.enable = true;
+
+        noctalia = {
+          # The NixOS `enable` is separate from the home-manager one; without it the module's whole
+          # config block (recommendedServices included) is inert.
+          enable = true;
+          # NetworkManager, bluetooth, UPower and power-profiles-daemon - the services Noctalia's
+          # control center drives.
+          recommendedServices.enable = true;
+        };
+      };
+
+      qt = {
         enable = true;
-        # NetworkManager, bluetooth, UPower and power-profiles-daemon - the services Noctalia's
-        # control center drives.
-        recommendedServices.enable = true;
+        platformTheme = "qt5ct";
       };
     };
   };
