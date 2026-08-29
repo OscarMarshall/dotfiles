@@ -159,19 +159,14 @@ in
         ];
 
         programs = {
-          fzf.enable = true;
-
-          gh = {
+          eza = {
             enable = true;
-            settings.git_protocol = "ssh";
+            git = true;
+            icons = "auto";
           };
 
-          ssh.settings.github-personal = {
-            HostName = "github.com";
-            IdentitiesOnly = true;
-            IdentityFile = "${./id_ed25519_personal.pub}";
-            User = "git";
-          };
+          fzf.enable = true;
+          gh.enable = true;
         };
 
         # On work machines, the agent needs SSH keys from both the Personal and Meraki
