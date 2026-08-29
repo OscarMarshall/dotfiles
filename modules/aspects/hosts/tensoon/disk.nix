@@ -7,8 +7,8 @@
 #
 # `/` is tmpfs (nothing on it survives a reboot). `/home` is a btrfs subvolume that the
 # rollback-home initrd service (my.preservation) resets to the empty `@home-blank` snapshot on
-# every boot. Anything that must persist is listed in my.preservation and bind-mounted from
-# `/persist`.
+# every boot, after taking a read-only snapshot of the outgoing `@home` under `@home-snapshots/`.
+# Anything that must persist is listed in my.preservation and bind-mounted from `/persist`.
 #
 # Both LUKS containers take the same passphrase at install (via /tmp/luks.key) so systemd's
 # password agent unlocks both from one prompt at boot. Enroll the YubiKey afterwards with
