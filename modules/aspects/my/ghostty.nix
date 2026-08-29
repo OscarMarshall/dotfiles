@@ -1,6 +1,13 @@
 {
   my.ghostty = {
     hmDarwin = { pkgs, ... }: { programs.ghostty.package = pkgs.ghostty-bin; };
+    # tensoon runs Umbriel with a global [input.touchpad] scroll_factor of 0.2, but Ghostty
+    # re-quantises the scaled delta into its own wheel detents using mouse-scroll-multiplier,
+    # whose touchpad ("precision") default is 1 - so scrolling inside a full-screen TUI (claude)
+    # still runs far faster than everything else. Cut the precision multiplier to bring the
+    # terminal back in line; discrete mice keep the default 3. Linux-only: macOS has no such
+    # compounding, and slowing scroll there would just feel sluggish.
+    hmLinux.programs.ghostty.settings.mouse-scroll-multiplier = "precision:0.3,discrete:3";
 
     homeManager.programs.ghostty = {
       enable = true;
