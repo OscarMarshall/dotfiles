@@ -43,6 +43,11 @@
         ModelAppleTouchpad=1
       '';
 
+      # The sudo "lecture" is shown once per user, tracked by a marker under /var/db/sudo that
+      # this host's tmpfs root drops every boot - so it lectures on the first sudo after each
+      # reboot. Turn it off.
+      security.sudo.extraConfig = "Defaults lecture = never";
+
       services = {
         avahi = {
           enable = true;

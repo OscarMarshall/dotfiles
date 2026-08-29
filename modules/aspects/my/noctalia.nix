@@ -57,6 +57,10 @@
 
         location.auto_locate = true;
         nightlight.enabled = true;
+        # "Setup wizard done" is tracked by a marker in ~/.local/state/noctalia, which tensoon's
+        # tmpfs root drops every boot - so the "Welcome to Noctalia" panel pops on every login.
+        # Every real setting is already declared here, so switch the wizard off.
+        shell.setup_wizard_enabled = false;
 
         # Bundled Catppuccin; `auto` follows the system/location light-dark schedule.
         theme = {
