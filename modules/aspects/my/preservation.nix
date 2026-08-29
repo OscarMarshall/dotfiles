@@ -240,7 +240,7 @@
               ".config/noctalia" # Noctalia GUI-mutable settings + custom palettes
               ".config/discord"
               ".claude" # Claude Code: project memory, history, todos
-              ".zen" # zen-browser profile
+              ".config/zen" # zen-browser profile (moved off ~/.zen via MOZ_LEGACY_PROFILES="")
               ".local/share/proton-pass" # Proton Pass agent DB + key (verify path on first run)
 
               # Large; drop if you will not game on this machine.
