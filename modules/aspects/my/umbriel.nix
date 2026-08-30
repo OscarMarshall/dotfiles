@@ -219,11 +219,37 @@ in
       # Spawn targets for the media/brightness keybinds above (wpctl comes from wireplumber).
       environment.systemPackages = with pkgs; [
         brightnessctl
+        hyprpolkitagent
         playerctl
       ];
 
       home-manager.sharedModules = [ inputs.umbriel.homeModules.default ];
       programs.umbriel.enable = true;
+
+      # A polkit authentication agent for the session. Umbriel is a bare wlroots compositor and
+      # the only autostart is `noctalia`, so - unlike a GNOME host, where gnome-shell embeds one -
+      # nothing here answers polkit's auth prompts. Without an agent every action whose policy is
+      # allow_active = auth_self / auth_admin is denied outright: `fprintd-enroll` is how this
+      # surfaced (net.reactivated.fprint.device.enroll is auth_self_keep), but disk mounts and
+      # NetworkManager edits hit it too. hyprpolkitagent is the Qt/QML agent, matching the
+      # Quickshell stack Noctalia is built on; it registers with polkitd on start (no D-Bus
+      # activation). Modelled on noctalia.service - wanted by graphical-session.target, which the
+      # Umbriel session brings up. `security.polkit.enable` is already set upstream of here.
+      systemd.user.services.hyprpolkitagent = {
+        after = [ "graphical-session.target" ];
+        description = "Polkit authentication agent (Umbriel session)";
+        partOf = [ "graphical-session.target" ];
+
+        serviceConfig = {
+          ExecStart = "${pkgs.hyprpolkitagent}/libexec/hyprpolkitagent";
+          Restart = "on-failure";
+          Slice = "session.slice";
+          TimeoutStopSec = 5;
+        };
+
+        unitConfig.ConditionEnvironment = "WAYLAND_DISPLAY";
+        wantedBy = [ "graphical-session.target" ];
+      };
     };
   };
 }
