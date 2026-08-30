@@ -104,6 +104,10 @@
       url = "github:Swarsel/pedantix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    ponytail = {
+      url = "github:DietrichGebert/ponytail/2ed6c52c9d7e5e56942508591085fd45dea277d3";
+      flake = false;
+    };
     preservation.url = "github:nix-community/preservation";
     ragenix = {
       url = "github:yaxitech/ragenix";
