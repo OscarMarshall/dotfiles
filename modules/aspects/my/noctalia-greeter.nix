@@ -17,6 +17,13 @@
       greeter-args = "--session Umbriel";
 
       settings = {
+        # Match the Noctalia shell (my.noctalia) and the mocha-dark cursor above: the greeter's
+        # built-in "Catppuccin" palette, dark (Mocha) variant.
+        appearance = {
+          scheme = "Catppuccin";
+          theme_mode = "dark";
+        };
+
         cursor = {
           path = "${pkgs.catppuccin-cursors.mochaDark}/share/icons";
           size = 24;
