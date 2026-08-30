@@ -27,49 +27,40 @@ in
               apiPart =
                 if rev != null then
                   ''
-                    # Compare our pinned revision against main on GitHub to determine
-                    # whether we are behind, diverged, or up-to-date.  Results are
-                    # cached in ~/.cache/starship/ with a 60-minute TTL so that we
-                    # do not hit the GitHub API on every prompt render.
+                    # Whether main on GitHub has moved ahead of our pinned revision, cached under
+                    # ~/.cache/starship/. The prompt only ever *reads* the cache (instant); when it
+                    # is missing or stale a detached background job refreshes it for next time, so a
+                    # slow, offline, rate-limited, or not-yet-pushed revision never blocks the
+                    # prompt. A real answer holds for 60 min; a failed fetch is stored as "unknown"
+                    # and retried after 5.
                     cache_dir="''${XDG_CACHE_HOME:-$HOME/.cache}/starship"
                     cache_file="$cache_dir/nix-config-${rev}"
 
-                    if [ -f "$cache_file" ] && [ -z "$(${pkgs.findutils}/bin/find "$cache_file" -mmin +60 2>/dev/null)" ]; then
-                      status=$(cat "$cache_file")
-                    else
+                    status=""
+                    [ -f "$cache_file" ] && status=$(${pkgs.coreutils}/bin/cat "$cache_file" 2>/dev/null)
+
+                    ttl=60
+                    [ "$status" = unknown ] && ttl=5
+                    if [ ! -f "$cache_file" ] || [ -n "$(${pkgs.findutils}/bin/find "$cache_file" -mmin +"$ttl" 2>/dev/null)" ]; then
                       github_token=${
                         if tokenPath != null then ''"$(${pkgs.coreutils}/bin/cat ${tokenPath} 2>/dev/null || true)"'' else ''""''
                       }
-                      status=$(
-                        retries=2
-                        delay=0.5
-                        while [ "$retries" -ge 0 ]; do
-                          result=$(
-                            ${pkgs.curl}/bin/curl -sf \
-                              --connect-timeout 2 --max-time 3 \
-                              ''${github_token:+-H "Authorization: token $github_token"} \
-                              "https://api.github.com/repos/OscarMarshall/dotfiles/compare/${rev}...main" |
-                              ${pkgs.jq}/bin/jq -r '.status // empty' 2>/dev/null || true
-                          )
-                          if [ -n "$result" ]; then
-                            printf '%s' "$result"
-                            break
-                          fi
-                          retries=$((retries - 1))
-                          sleep "$delay"
-                        done
-                      )
-                      if [ -n "$status" ]; then
-                        mkdir -p "$cache_dir"
-                        printf '%s' "$status" > "$cache_file"
-                      fi
+                      (
+                        result=$(
+                          ${pkgs.curl}/bin/curl -sf \
+                            --connect-timeout 2 --max-time 4 \
+                            ''${github_token:+-H "Authorization: token $github_token"} \
+                            "https://api.github.com/repos/OscarMarshall/dotfiles/compare/${rev}...main" |
+                            ${pkgs.jq}/bin/jq -r '.status // empty' 2>/dev/null || true
+                        )
+                        ${pkgs.coreutils}/bin/mkdir -p "$cache_dir"
+                        printf '%s' "''${result:-unknown}" > "$cache_file"
+                      ) >/dev/null 2>&1 &
                     fi
 
                     case "$status" in
-                      # main is ahead of our revision: newer commits are available.
+                      # main has commits our pinned revision doesn't.
                       ahead) symbols="''${symbols}⇣" ;;
-                      # our revision is not reachable from main.
-                      behind | diverged) symbols="''${symbols}" ;;
                     esac
                   ''
                 else
