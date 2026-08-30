@@ -238,6 +238,10 @@
               ".local/share/direnv" # direnv allow-list
               ".local/share/nix" # trusted-settings.json
               ".config/noctalia" # Noctalia GUI-mutable settings + custom palettes
+              # Keep Noctalia's generated theme sidecar (noctalia.toml, pulled in by
+              # programs.umbriel's [include]) across boots. Without it, Umbriel starts before
+              # Noctalia regenerates the file and logs a missing-include warning every login.
+              ".config/umbriel"
               ".config/discord"
               ".claude" # Claude Code: project memory, history, todos
               ".config/zen" # zen-browser profile (moved off ~/.zen via MOZ_LEGACY_PROFILES="")
