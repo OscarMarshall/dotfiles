@@ -74,6 +74,10 @@ let
     "Shift+Print" = "spawn:noctalia msg screenshot-fullscreen";
   };
   windowKeybinds = {
+    # Noctalia's fullscreen grid switcher. It takes a keyboard grab the moment it opens, so this
+    # single bind is the whole interaction: keep Alt held and tap Tab to advance (Shift+Tab to go
+    # back), arrow keys walk the grid, releasing Alt raises the highlighted window, Escape cancels.
+    "Alt+Tab" = "spawn:noctalia msg window-switcher";
     "Mod+C" = "column-center";
     "Mod+F" = "window-toggle-fullscreen";
     "Mod+M" = "window-toggle-maximize";
