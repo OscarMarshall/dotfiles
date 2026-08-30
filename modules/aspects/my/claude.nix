@@ -14,6 +14,7 @@
     includes = [
       (den._.unfree [ "claude-code" ])
       my.mcp-servers
+      my.ponytail
     ];
 
     darwin.homebrew.casks = [ "claude" ];

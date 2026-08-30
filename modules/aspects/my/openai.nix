@@ -5,7 +5,10 @@
   };
 
   my.openai = {
-    includes = [ my.mcp-servers ];
+    includes = [
+      my.mcp-servers
+      my.ponytail
+    ];
 
     homeManager = { pkgs, ... }: {
       programs.codex = {
