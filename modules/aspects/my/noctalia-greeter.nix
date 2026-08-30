@@ -34,7 +34,38 @@
     # gnome-keyring and let pam_gnome_keyring create and unlock the login keyring with the sign-in
     # password. It goes on the `login` service, not `greetd`: nixpkgs only injects the keyring PAM
     # module where `unixAuth` is set, and greetd delegates both auth and session to `substack login`.
-    security.pam.services.login.enableGnomeKeyring = true;
+    # pass-cli (and other Rust `keyring`-crate clients on its keyutils backend) stashes its
+    # local-DB key in the kernel session keyring with possessor-only permissions - so it is only
+    # reachable by processes that *possess* that keyring. Without pam_keyinit the session falls
+    # back to the shared _uid_ses.<uid>, where a key added by one `pass-cli` process isn't
+    # searchable by the next and every call after the first dies with NoStorageAccess(AccessDenied).
+    #
+    # start-umbriel does `systemctl --user start umbriel.service`, so the whole graphical session
+    # (compositor, Noctalia, terminals, and anything launched from them) lives under
+    # user@<uid>.service, not the greetd session scope. That manager runs the `systemd-user` PAM
+    # stack, so pam_keyinit has to go there to give the graphical tree its own anonymous session
+    # keyring. `login` (which greetd substacks) covers plain TTY/console logins too. No `revoke` on
+    # user@.service: it's long-lived and shared, so let the keyring die with the manager instead of
+    # tearing it down mid-session. Ordered after pam_loginuid, before pam_systemd (order 12000).
+    security.pam.services =
+      let
+        keyinit = extraArgs: {
+          rules.session.keyinit = {
+            args = [ "force" ] ++ extraArgs;
+            control = "optional";
+            modulePath = "${pkgs.pam}/lib/security/pam_keyinit.so";
+            order = 10350;
+          };
+        };
+      in
+      {
+        login = {
+          enableGnomeKeyring = true;
+        }
+        // keyinit [ "revoke" ];
+
+        systemd-user = keyinit [ ];
+      };
 
     services = {
       gnome.gnome-keyring.enable = true;
