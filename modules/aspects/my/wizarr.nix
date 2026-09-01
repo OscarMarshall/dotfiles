@@ -30,7 +30,7 @@ in
           #   curl -sH "Authorization: Bearer $(curl -s 'https://ghcr.io/token?scope=repository:wizarrrr/wizarr:pull' | jq -r .token)" \
           #     -H "Accept: application/vnd.oci.image.index.v1+json" \
           #     https://ghcr.io/v2/wizarrrr/wizarr/manifests/<tag> | jq -r '.manifests[] | select(.platform.architecture == "amd64") | .digest'
-          image = "ghcr.io/wizarrrr/wizarr:v2026.7.1@sha256:be7087954f92badb16248073a347aadc771577a98c9c0c16b4cc010b143bbf50";
+          image = "ghcr.io/wizarrrr/wizarr:v2026.9.0@sha256:b3816420caa8d0be6ce3888396b47b3afd12ec0fa681529359e2591408ba8c0d";
 
           ports =
             let
