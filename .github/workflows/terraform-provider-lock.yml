@@ -55,7 +55,7 @@ jobs:
       # No authToken: this job only needs to PULL prebuilt artifacts for speed, never push, so it
       # doesn't need (and shouldn't be handed) a secret capable of writing to the cache.
       - name: Setup Nix cache
-        uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
+        uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
         with:
           name: oscarmarshall
           extraPullNames: nix-community
