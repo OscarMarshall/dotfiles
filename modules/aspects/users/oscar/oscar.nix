@@ -135,7 +135,7 @@ in
                   # nixpkgs has started setting an LC_RPATH for
                   # libcurl-impersonate on Darwin itself - if so, delete this
                   # overlay; if not, bump the version pinned here.
-                  assert old.version == "0.15.0" || throw "curl-cffi ${old.version}: re-check the Darwin rpath workaround in oscar.nix";
+                  assert old.version == "0.16.0" || throw "curl-cffi ${old.version}: re-check the Darwin rpath workaround in oscar.nix";
                   {
                     doCheck = (old.doCheck or true) && !prev.stdenv.hostPlatform.isDarwin;
 
