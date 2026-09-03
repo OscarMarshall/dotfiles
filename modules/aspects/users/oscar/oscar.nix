@@ -63,7 +63,6 @@ in
         my.gpg
         my.nh
         my.nix-index
-        my.proton-pass
         my.ssh-client
         userAspect
       ]
@@ -83,7 +82,6 @@ in
       darwin = {
         homebrew.casks = [
           "arc"
-          "chatgpt"
           "domzilla-caffeine"
           "proton-mail"
         ];
@@ -112,6 +110,7 @@ in
           [
             fd
             gnupg
+            proton-pass-cli
             ripgrep
             rsync
           ]
