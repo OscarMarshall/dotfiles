@@ -68,6 +68,14 @@
       {
         login = {
           enableGnomeKeyring = true;
+          # nixos-hardware's framework module enables services.fprintd, which defaults
+          # fprintAuth = true on every PAM service. In `login`'s auth stack pam_fprintd sorts
+          # *before* pam_gnome_keyring and is `sufficient`, so a fingerprint match short-circuits
+          # the stack and pam_gnome_keyring never gets the password - the login keyring stays
+          # locked and a separate unlock prompt follows the greeter. Keep greeter/console login
+          # password-only. Fingerprint still covers sudo/su/polkit, the Noctalia lock screen
+          # (direct fprintd D-Bus, no PAM), and `fprintd-enroll`.
+          fprintAuth = false;
         }
         // keyinit [ "revoke" ];
 
