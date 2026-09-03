@@ -12,7 +12,10 @@
 #
 # Both LUKS containers take the same passphrase at install (via /tmp/luks.key) so systemd's
 # password agent unlocks both from one prompt at boot. Enroll the YubiKey afterwards with
-# `systemd-cryptenroll --fido2-device=auto <part2>` / `<part3>`.
+# `systemd-cryptenroll --fido2-device=auto <part2>` / `<part3>`; the `fido2-device=auto` crypttab
+# option below is what makes stage-1 systemd-cryptsetup actually offer it (and drags libfido2 +
+# USB-HID into the initrd). At the boot prompt: insert the key, touch it when it blinks; no key
+# -> the passphrase prompt still works.
 {
   den.aspects.tensoon.nixos = {
     disko.devices = {
@@ -70,7 +73,12 @@
 
                 name = "cryptroot";
                 passwordFile = "/tmp/luks.key";
-                settings.allowDiscards = true;
+
+                settings = {
+                  allowDiscards = true;
+                  crypttabExtraOpts = [ "fido2-device=auto" ]; # offer the enrolled YubiKey at the boot prompt
+                };
+
                 type = "luks";
               };
 
@@ -86,7 +94,12 @@
 
                 name = "cryptswap";
                 passwordFile = "/tmp/luks.key";
-                settings.allowDiscards = true;
+
+                settings = {
+                  allowDiscards = true;
+                  crypttabExtraOpts = [ "fido2-device=auto" ]; # offer the enrolled YubiKey at the boot prompt
+                };
+
                 type = "luks";
               };
 
