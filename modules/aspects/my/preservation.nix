@@ -245,7 +245,6 @@
               ".config/discord"
               ".claude" # Claude Code: project memory, history, todos
               ".config/zen" # zen-browser profile (moved off ~/.zen via MOZ_LEGACY_PROFILES="")
-              ".local/share/proton-pass" # proton-pass-agent state
               # pass-cli's encrypted session DB (session.json, user_keys.enc, pass-cli.db). The DB
               # key lives in gnome-keyring (PROTON_PASS_LINUX_KEYRING=dbus, see my.proton-pass) and
               # persists via .local/share/keyrings; this is the other half - without it pass-cli
