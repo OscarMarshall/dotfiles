@@ -27,7 +27,6 @@
         krita
         prismlauncher
         rnote
-        stirling-pdf-desktop
       ];
 
       programs = {
