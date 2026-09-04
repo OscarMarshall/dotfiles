@@ -15,6 +15,7 @@
       settings = {
         auto-update = "off";
         background-opacity = 0.95;
+        keybind = [ "global:super+Backquote=toggle_quick_terminal" ];
         macos-option-as-alt = true;
         # Ghostty follows the system light/dark appearance on its own.
         theme = "light:Catppuccin Latte,dark:Catppuccin Mocha";
