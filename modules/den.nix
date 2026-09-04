@@ -46,6 +46,11 @@
             oscar = { };
           };
         };
+
+        tensoon = {
+          graphical = true;
+          users.oscar = { };
+        };
       };
     };
   };

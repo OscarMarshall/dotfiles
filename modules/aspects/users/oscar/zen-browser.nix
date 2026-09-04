@@ -6,7 +6,7 @@ in
   den.aspects.oscar.provides.zen-browser = {
     includes = [ my.zen-browser ];
 
-    homeManager = {
+    homeManager = { lib, pkgs, ... }: {
       programs.zen-browser = {
         darwinDefaultsId = "app.zen-browser.zen";
 
@@ -56,21 +56,28 @@ in
           "zen.view.compact.enable-at-startup" = true;
           "zen.workspaces.continue-where-left-off" = true;
           "zen.workspaces.force-container-workspace" = true;
+        }
+        // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+          # Zen's own wheel/touchpad scroll delta runs fast on the Framework 13 panel even under
+          # Umbriel's scroll_factor; 50 = 0.5x the Firefox default of 100. Linux-only - macOS
+          # trackpad scrolling in Zen is not part of this compounding.
+          "mousewheel.default.delta_multiplier_x" = 50;
+          "mousewheel.default.delta_multiplier_y" = 50;
         };
 
         # No-op on Darwin (it only wires up xdg.mimeApps); already the actual
         # default browser here via macOS's LaunchServices, set outside Nix.
         setAsDefaultBrowser = true;
-      };
-
-      stylix.targets.zen-browser = {
-        # Zen already follows the system light/dark appearance on its own, which
-        # conflicts with Stylix's injected (single-flavor) userChrome/userContent
-        # CSS. Disable the CSS injection and let Zen handle its own theming.
-        enableCss = false;
-        # Required for theming to apply: the module system can't both detect
-        # declared zen-browser profile names and use them, so it's repeated here.
-        profileNames = [ profileName ];
+      }
+      // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+        # The nixpkgs Firefox wrapper (which this flake reuses) hard-sets
+        # MOZ_LEGACY_PROFILES=1, forcing the profile root to ~/.zen. But this flake's HM module
+        # writes profiles.ini / user.js under $XDG_CONFIG_HOME/zen, so none of `profiles.*` ever
+        # took effect. Blanking the var (Gecko treats empty as unset) moves Zen onto ~/.config/zen
+        # where the module already writes. `env` is injected after the wrapper's own --set, so it
+        # wins; it is also a Linux-only option. Existing ~/.zen profile is abandoned - extensions
+        # return via the force_installed policy, logins via Proton Pass.
+        env.MOZ_LEGACY_PROFILES = "";
       };
     };
   };

@@ -9,7 +9,11 @@ let
   userAspect = { user, ... }: {
     nixos = { config, ... }: {
       users.users.${user.userName} = {
-        hashedPasswordFile = toString config.age.secrets.oscar-hashed-password.file;
+        # `.path` (the decrypted /run/agenix/... location), not `.file` (the encrypted .age in the
+        # store) - otherwise `/etc/shadow` gets the age ciphertext as the "hash". On a persistent
+        # `/etc` this is masked by whatever shadow already held; on tensoon's tmpfs root it locks
+        # the account on every boot.
+        hashedPasswordFile = config.age.secrets.oscar-hashed-password.path;
         openssh.authorizedKeys.keys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGt95coA4j19+fPxpOLRfIFb7AvAXdSmf1MyOPibmhe/" ];
       };
     };
@@ -64,8 +68,8 @@ in
         userAspect
       ]
       ++ lib.optionals (scope.graphical or false) [
-        (my.catppuccin { })
         den.aspects.oscar.provides.zen-browser
+        my.catppuccin
         my.discord
         my.doc-browser
         my.ghostty
@@ -79,7 +83,6 @@ in
       darwin = {
         homebrew.casks = [
           "arc"
-          "chatgpt"
           "domzilla-caffeine"
           "proton-mail"
         ];
@@ -176,18 +179,6 @@ in
           "--vault-name"
           "Personal"
         ];
-
-        stylix.fonts = {
-          monospace = {
-            package = pkgs.maple-mono.NF;
-            name = "Maple Mono NF";
-          };
-
-          sansSerif = {
-            package = pkgs.inter;
-            name = "Inter";
-          };
-        };
       };
 
       nixosSecrets = { secrets, ... }: {

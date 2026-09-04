@@ -6,6 +6,7 @@
 
   my.openai = {
     includes = [ my.mcp-servers ];
+    darwin.homebrew.casks = [ "chatgpt" ];
 
     homeManager = { pkgs, ... }: {
       programs.codex = {

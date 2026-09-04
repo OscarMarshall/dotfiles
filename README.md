@@ -7,6 +7,8 @@ This repository contains my personal system configurations for multiple machines
 
 - **harmony** (x86_64-linux): Home server running media services, Minecraft servers, and infrastructure
 - **melaan** (x86_64-linux): Framework laptop with GNOME desktop
+- **tensoon** (x86_64-linux): Framework 13 laptop running the Noctalia/Umbriel Wayland shell, on a disko + LUKS +
+  preservation (ephemeral root) disk layout
 - **OMARSHAL-M-T2QF** (aarch64-darwin): MacBook with development environment
 - **omarshal@dev203.meraki.com** (x86_64-linux): Standalone Home Manager config reusing the `oscar` aspect for a work
   machine
@@ -27,7 +29,7 @@ cd dotfiles
 
 ### Apply Configuration
 
-**NixOS systems (harmony, melaan):**
+**NixOS systems (harmony, melaan, tensoon):**
 
 ```console
 sudo nixos-rebuild switch --flake .#<hostname>
@@ -52,6 +54,7 @@ home-manager switch --flake .#"omarshal@dev203.meraki.com"
 # Use platform-specific builds instead:
 nix build .#nixosConfigurations.harmony.config.system.build.toplevel
 nix build .#nixosConfigurations.melaan.config.system.build.toplevel
+nix build .#nixosConfigurations.tensoon.config.system.build.toplevel
 nix build .#darwinConfigurations.OMARSHAL-M-T2QF.config.system.build.toplevel
 
 # Show available outputs
@@ -137,6 +140,8 @@ declares the `proton0` namespace directly in its own aspect.
 ### Desktop
 
 - **GNOME** on melaan (Wayland, via NixOS)
+- **Noctalia/Umbriel**: a native Wayland shell (bar, launcher, control center, notifications, lock screen) on a
+  wlroots/SceneFX compositor, on tensoon
 - **macOS desktop**: Fonts, Homebrew-based applications, and Nix-managed development environment on OMARSHAL-M-T2QF
 - **Applications**: Emacs, Ghostty terminal, Zen Browser, Discord, Steam, Krita, PrusaSlicer
 - **Framework laptop** support via nixos-hardware

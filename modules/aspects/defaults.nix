@@ -78,7 +78,6 @@ in
       den.batteries.hostname
       hmPlatforms
       my.secrets
-      my.stylix
     ];
 
     schema = {

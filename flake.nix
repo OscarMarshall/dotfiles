@@ -4,6 +4,7 @@
   outputs = inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);
 
   nixConfig = {
+    extra-experimental-features = [ "flake-self-attrs" ];
     extra-substituters = [
       "https://nix-community.cachix.org"
       "https://oscarmarshall.cachix.org"
@@ -29,10 +30,6 @@
       url = "github:nix-community/authentik-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    catppuccin-wallpapers = {
-      url = "github:zhichaoh/catppuccin-wallpapers";
-      flake = false;
-    };
     claude-code-nix = {
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -46,6 +43,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     den.url = "github:denful/den";
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     flake-compat.url = "github:NixOS/flake-compat";
     flake-file.url = "github:vic/flake-file";
     flake-parts = {
@@ -91,6 +92,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    noctalia = {
+      url = "github:noctalia-dev/noctalia";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    noctalia-greeter = {
+      url = "github:noctalia-dev/noctalia-greeter";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     pedantix = {
       url = "github:Swarsel/pedantix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -99,6 +108,7 @@
       url = "github:DietrichGebert/ponytail/2ed6c52c9d7e5e56942508591085fd45dea277d3";
       flake = false;
     };
+    preservation.url = "github:nix-community/preservation";
     ragenix = {
       url = "github:yaxitech/ragenix";
       inputs = {
@@ -111,10 +121,6 @@
         nixpkgs.follows = "nixpkgs";
       };
     };
-    stylix = {
-      url = "github:nix-community/stylix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     systems.url = "github:nix-systems/default";
     terranix = {
       url = "github:terranix/terranix";
@@ -122,6 +128,10 @@
     };
     treefmt-nix = {
       url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    umbriel = {
+      url = "git+https://github.com/noctalia-dev/umbriel?submodules=1";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     vpn-confinement.url = "github:Maroka-chan/VPN-Confinement";

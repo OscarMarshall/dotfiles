@@ -8,6 +8,8 @@ services, and user environments using Nix flakes, Den/Dendritic, and Home Manage
 - **OMARSHAL-M-T2QF**: MacBook (aarch64-darwin) with development environment
 - **harmony**: Home server (x86_64-linux) with media services, Minecraft servers, and more
 - **melaan**: Framework laptop (x86_64-linux) running GNOME desktop
+- **tensoon**: Framework 13 laptop (x86_64-linux) running the Noctalia/Umbriel Wayland shell, on a disko + LUKS +
+  preservation (ephemeral root) disk layout
 - **omarshal@dev203.meraki.com**: Standalone Home Manager config (x86_64-linux) using the `oscar` aspect on a work
   machine
 
@@ -30,6 +32,7 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
     - **`hosts/`**: Host-specific aspects (one directory per host)
       - **`harmony/`**: harmony.nix, hardware-configuration.nix
       - **`melaan/`**: melaan.nix, hardware-configuration.nix
+      - **`tensoon/`**: tensoon.nix, hardware-configuration.nix, disk.nix (disko layout)
       - **`OMARSHAL-M-T2QF/`**: OMARSHAL-M-T2QF.nix
     - **`users/`**: User-specific aspects (one directory per user)
       - **`oscar/`**: oscar.nix, work/ (work-specific config)
@@ -39,11 +42,13 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
       - Services: nginx.nix, minecraft-servers.nix, paperless.nix, plex.nix, jellyfin.nix, prowlarr.nix,
         qbittorrent.nix, radarr.nix, sonarr.nix, unpackerr.nix, home-assistant.nix
       - Containers: profilarr.nix
-      - Desktop: gnome.nix, pipewire.nix, steam.nix, discord.nix, ghostty.nix
+      - Desktop: gnome.nix, pipewire.nix, steam.nix, discord.nix, ghostty.nix, umbriel.nix (wlroots/SceneFX compositor),
+        noctalia.nix (Wayland shell), noctalia-greeter.nix (greetd greeter)
       - Utilities: auto-upgrade.nix, auto-login.nix, host-flag.nix, routes.nix
       - Applications: emacs/, git.nix, gpg.nix, ssh-client.nix, ssh-server.nix
       - Infrastructure: zfs.nix, samba.nix, lm-sensors.nix, networkmanager.nix, secrets.nix, vpn-confinement.nix,
-        backup.nix (offsite backups - see "Working with Offsite Backups" below)
+        backup.nix (offsite backups - see "Working with Offsite Backups" below), disko.nix, preservation.nix (ephemeral
+        root + `/persist` bind mounts), yubikey.nix (pcscd for the PIV/age-plugin-yubikey smartcard interface)
       - Darwin: homebrew.nix
       - VM: vm.nix, vm-bootable.nix, ci-no-boot.nix
 - **`secrets/`**: Directory containing ragenix/agenix-rekey-encrypted secrets (`.age` files). Primitive secrets are
@@ -151,6 +156,15 @@ The **melaan** laptop (x86_64-linux) includes:
 - **Framework-specific**: Hardware support via nixos-hardware
 - **Users**: Oscar and Adelline
 
+The **tensoon** laptop (x86_64-linux) includes:
+
+- **Desktop Environment**: Noctalia (Wayland shell) on Umbriel (wlroots/SceneFX compositor), via a noctalia-greeter
+  greetd session
+- **Disk**: disko-managed LUKS + btrfs layout with an ephemeral (`tmpfs`) root; `my.preservation` bind-mounts/symlinks
+  everything that must survive a reboot from `/persist`; both LUKS containers can also be unlocked with a FIDO2-enrolled
+  YubiKey (`my.yubikey` provides the pcscd smartcard interface)
+- **Applications**: Ghostty, Zen Browser, Discord, Steam
+
 The **OMARSHAL-M-T2QF** MacBook (aarch64-darwin) includes:
 
 - **Homebrew**: Package manager with automatic updates and cleanup
@@ -162,7 +176,7 @@ The **OMARSHAL-M-T2QF** MacBook (aarch64-darwin) includes:
 This repository uses flake-file/Dendritic which auto-generates `flake.nix`. Changes are applied differently depending on
 the system type:
 
-### NixOS Systems (harmony, melaan)
+### NixOS Systems (harmony, melaan, tensoon)
 
 1. **Testing configuration**: `sudo nixos-rebuild test --flake .#<system>`
 2. **Building configuration**: `nixos-rebuild build --flake .#<system>`
@@ -200,7 +214,7 @@ Note: Build/switch commands typically require appropriate permissions and are ru
 - **Build check (Home)**: `home-manager build --flake .#<home>` builds a home configuration
 - **Formatting**: `nix fmt` formats Nix code (configured via treefmt-nix)
 
-CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan) on Ubuntu, Darwin hosts
+CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan, tensoon) on Ubuntu, Darwin hosts
 (OMARSHAL-M-T2QF) on macOS.
 
 ## Best Practices
@@ -302,10 +316,11 @@ CI builds specific hosts on appropriate platforms: Linux hosts (harmony, melaan)
 
 The configuration uses Den aspects organized into three main categories:
 
-### Host Aspects (3 hosts)
+### Host Aspects (4 hosts)
 
 - **harmony** (x86_64-linux): Server configuration with media services, Minecraft, nginx, ZFS, etc.
 - **melaan** (x86_64-linux): Desktop laptop with GNOME, Framework hardware support, multiple users
+- **tensoon** (x86_64-linux): Framework 13 laptop with Noctalia/Umbriel, disko + LUKS + preservation (ephemeral root)
 - **OMARSHAL-M-T2QF** (aarch64-darwin): MacBook with homebrew, work configuration
 - Each host aspect:
   - Includes relevant `my.*` aspects for services and features
@@ -333,10 +348,12 @@ Organized by category:
 - **Services**: minecraft-servers, plex, jellyfin, prowlarr, qbittorrent, radarr, sonarr, unpackerr, autobrr,
   cross-seed, homepage, home-assistant
 - **Containers**: profilarr
-- **Desktop**: gnome, pipewire, steam, discord, ghostty, zen-browser, prusa-slicer, xfce-desktop
+- **Desktop**: gnome, pipewire, steam, discord, ghostty, zen-browser, prusa-slicer, xfce-desktop, umbriel
+  (wlroots/SceneFX compositor), noctalia (Wayland shell), noctalia-greeter (greetd greeter)
 - **Development**: emacs, git, gpg, ssh-client, ssh-server
 - **Infrastructure**: zfs, samba, lm-sensors, secrets, auto-upgrade, auto-login, vpn-confinement, backup (offsite
-  backups via Restic/Backblaze B2)
+  backups via Restic/Backblaze B2), disko, preservation (ephemeral root + `/persist` bind mounts), yubikey (pcscd for
+  the PIV/age-plugin-yubikey smartcard interface)
 - **Darwin**: homebrew
 - **Utilities**: host-flag, routes, vm, vm-bootable, ci-no-boot
 
@@ -358,7 +375,7 @@ Each `my.*` aspect is a self-contained module that can be included by hosts or u
 - Cannot execute `nixos-rebuild`, `darwin-rebuild`, or `home-manager` commands (requires target system access)
 - Cannot test actual service functionality (no runtime environment)
 - Cannot decrypt or modify ragenix secrets
-- Cannot access the actual systems (harmony, melaan, OMARSHAL-M-T2QF)
+- Cannot access the actual systems (harmony, melaan, tensoon, OMARSHAL-M-T2QF)
 - Focus on configuration file correctness, Den aspect patterns, and NixOS/Darwin best practices
 - When making changes to flake inputs in modules, regenerate flake.nix with `nix run .#write-flake`
 
