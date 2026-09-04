@@ -72,6 +72,9 @@ let
     "Mod+X" = "spawn:noctalia msg bar-toggle";
     Print = "spawn:noctalia msg screenshot-region";
     "Shift+Print" = "spawn:noctalia msg screenshot-fullscreen";
+    # The hardware power button. logind's HandlePowerKey is "ignore" (tensoon.nix) so the press
+    # reaches us here; a long press still powers off via logind's HandlePowerKeyLongPress.
+    XF86PowerOff = "spawn:noctalia msg panel-toggle session";
   };
   windowKeybinds = {
     # Noctalia's fullscreen grid switcher. It takes a keyboard grab the moment it opens, so this

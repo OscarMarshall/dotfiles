@@ -57,6 +57,16 @@
         printing.enable = true;
       };
 
+      # A short power-button press opens Noctalia's session panel (bound as XF86PowerOff in
+      # my.umbriel) instead of an instant poweroff; hold it to force off. Closing the lid
+      # suspends, then hibernates after 30 min in S3 (resume device = the LUKS swap partition,
+      # boot.resumeDevice). The panel's Suspend button does the same via power.suspend.
+      services.logind.settings.Login = {
+        HandleLidSwitch = "suspend-then-hibernate";
+        HandlePowerKey = "ignore";
+        HandlePowerKeyLongPress = "poweroff";
+      };
+
       # This option defines the first version of NixOS you have installed on this particular machine, and is used to
       # maintain compatibility with application data (e.g. databases) created on older NixOS versions.
       #
@@ -77,6 +87,8 @@
       #
       # Set during the initial install - confirm against `nixos-version` on the installer and match.
       system.stateVersion = "26.11";
+      # How long suspend-then-hibernate (services.logind above) stays in S3 before hibernating.
+      systemd.sleep.settings.Sleep.HibernateDelaySec = "30min";
       # `/` is tmpfs and `/etc/shadow` is not persisted, so a manual `passwd root` would be lost
       # on reboot. Give root the same declarative password as oscar (the age secret), so there's
       # always a working recovery login without persisting mutable user state.

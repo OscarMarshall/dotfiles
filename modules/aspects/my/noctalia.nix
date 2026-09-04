@@ -67,6 +67,19 @@
             "English (programmer Dvorak)" = "DV";
           };
 
+          # Session panel: only these four buttons (replaces Noctalia's default set). Suspend runs
+          # suspend-then-hibernate - S3 now, hibernate after the HibernateDelaySec in tensoon.nix.
+          session = {
+            actions = [
+              { action = "logout"; }
+              { action = "suspend"; }
+              { action = "reboot"; }
+              { action = "shutdown"; }
+            ];
+
+            power.suspend = "systemctl suspend-then-hibernate";
+          };
+
           # "Setup wizard done" is tracked by a marker in ~/.local/state/noctalia, which tensoon's
           # tmpfs root drops every boot - so the "Welcome to Noctalia" panel pops on every login.
           # Every real setting is already declared here, so switch the wizard off.
