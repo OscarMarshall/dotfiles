@@ -1,9 +1,3 @@
-# PLACEHOLDER - REGENERATE ON THE MACHINE.
-#
-# Run `nixos-generate-config --no-filesystems --root /mnt` during install and copy the non-
-# filesystem bits (initrd modules, kernel modules, microcode) here, keeping the
-# `den.aspects.tensoon.nixos = …` wrapper. Disk layout, `fileSystems`, `swapDevices` and the LUKS
-# initrd entries all come from disko (see disk.nix) - do NOT add a `fileSystems` block here.
 {
   den.aspects.tensoon.nixos =
     {
