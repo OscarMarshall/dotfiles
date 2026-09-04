@@ -159,19 +159,14 @@ in
         ];
 
         programs = {
-          fzf.enable = true;
-
-          gh = {
+          eza = {
             enable = true;
-            settings.git_protocol = "ssh";
+            git = true;
+            icons = "auto";
           };
 
-          ssh.settings.github-personal = {
-            HostName = "github.com";
-            IdentitiesOnly = true;
-            IdentityFile = "${./id_ed25519_personal.pub}";
-            User = "git";
-          };
+          fzf.enable = true;
+          gh.enable = true;
         };
 
         # On work machines, the agent needs SSH keys from both the Personal and Meraki
@@ -256,6 +251,7 @@ in
       runtimeInputs = [
         pkgs.age
         pkgs.age-plugin-yubikey
+        pkgs.openssh
       ];
 
       text = ''
@@ -273,7 +269,9 @@ in
           -o "$key_path" \
           ${../../../../secrets/oscar-ssh-private-key.age}
         chmod 600 "$key_path"
-        echo "install-ssh-key: wrote $key_path"
+        ssh-keygen -y -f "$key_path" > "$key_path.pub"
+        chmod 644 "$key_path.pub"
+        echo "install-ssh-key: wrote $key_path and $key_path.pub"
       '';
     };
   };
