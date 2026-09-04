@@ -54,6 +54,33 @@
           ];
         };
 
+        # Idle staging (Noctalia drives this off the compositor's idle-notify). Each named block
+        # is one stage; `timeout` is seconds of inactivity, `locked_timeout` applies once the
+        # session is already locked. `suspend` runs shell.session.power.suspend
+        # (systemctl suspend-then-hibernate), so: 5 min -> lock, 6 -> screen off, 15 -> suspend,
+        # +30 more in S3 -> hibernate (HibernateDelaySec, tensoon.nix). Bump the timeouts if this
+        # is too eager.
+        idle.behavior = {
+          lock = {
+            action = "lock";
+            enabled = true;
+            timeout = 300;
+          };
+
+          screen-off = {
+            action = "screen_off";
+            enabled = true;
+            locked_timeout = 60;
+            timeout = 360;
+          };
+
+          suspend = {
+            action = "suspend";
+            enabled = true;
+            timeout = 900;
+          };
+        };
+
         location.auto_locate = true;
         # Custom lockscreen widgets are off. Their editor geometry (per-output pixel coords) is
         # deliberately left in the runtime settings.toml rather than promoted here.
