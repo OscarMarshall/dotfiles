@@ -63,6 +63,7 @@ in
         my.gpg
         my.nh
         my.nix-index
+        my.proton-pass
         my.ssh-client
         userAspect
       ]
@@ -110,7 +111,6 @@ in
           [
             fd
             gnupg
-            proton-pass-cli
             ripgrep
             rsync
           ]
