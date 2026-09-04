@@ -48,7 +48,7 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
       - Applications: emacs/, git.nix, gpg.nix, ssh-client.nix, ssh-server.nix
       - Infrastructure: zfs.nix, samba.nix, lm-sensors.nix, networkmanager.nix, secrets.nix, vpn-confinement.nix,
         backup.nix (offsite backups - see "Working with Offsite Backups" below), disko.nix, preservation.nix (ephemeral
-        root + `/persist` bind mounts)
+        root + `/persist` bind mounts), yubikey.nix (pcscd for the PIV/age-plugin-yubikey smartcard interface)
       - Darwin: homebrew.nix
       - VM: vm.nix, vm-bootable.nix, ci-no-boot.nix
 - **`secrets/`**: Directory containing ragenix/agenix-rekey-encrypted secrets (`.age` files). Primitive secrets are
@@ -161,7 +161,8 @@ The **tensoon** laptop (x86_64-linux) includes:
 - **Desktop Environment**: Noctalia (Wayland shell) on Umbriel (wlroots/SceneFX compositor), via a noctalia-greeter
   greetd session
 - **Disk**: disko-managed LUKS + btrfs layout with an ephemeral (`tmpfs`) root; `my.preservation` bind-mounts/symlinks
-  everything that must survive a reboot from `/persist`
+  everything that must survive a reboot from `/persist`; both LUKS containers can also be unlocked with a FIDO2-enrolled
+  YubiKey (`my.yubikey` provides the pcscd smartcard interface)
 - **Applications**: Ghostty, Zen Browser, Discord, Steam
 
 The **OMARSHAL-M-T2QF** MacBook (aarch64-darwin) includes:
@@ -351,7 +352,8 @@ Organized by category:
   (wlroots/SceneFX compositor), noctalia (Wayland shell), noctalia-greeter (greetd greeter)
 - **Development**: emacs, git, gpg, ssh-client, ssh-server
 - **Infrastructure**: zfs, samba, lm-sensors, secrets, auto-upgrade, auto-login, vpn-confinement, backup (offsite
-  backups via Restic/Backblaze B2), disko, preservation (ephemeral root + `/persist` bind mounts)
+  backups via Restic/Backblaze B2), disko, preservation (ephemeral root + `/persist` bind mounts), yubikey (pcscd for
+  the PIV/age-plugin-yubikey smartcard interface)
 - **Darwin**: homebrew
 - **Utilities**: host-flag, routes, vm, vm-bootable, ci-no-boot
 
