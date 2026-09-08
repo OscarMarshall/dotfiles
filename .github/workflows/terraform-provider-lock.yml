@@ -86,6 +86,11 @@ jobs:
           # Falls back to github.token if secrets.PAT isn't set - but a PR opened with the default
           # GITHUB_TOKEN doesn't fire a `pull_request` event, so Test/Format/etc wouldn't run against
           # it; set the PAT secret for that to actually happen.
+          #
+          # Unlike write-flake.yml / format.yml (which only push), this job also *creates* a PR, so
+          # the PAT needs `Pull requests: write` on top of `Contents: write`. Without it the branch
+          # push still succeeds but PR creation 403s with "Resource not accessible by personal access
+          # token" and no PR ever appears (see #775).
           token: ${{ secrets.PAT || github.token }}
           add-paths: harmony-tf/.terraform.lock.hcl
           commit-message: "chore(harmony-tf): refresh provider lock file"
