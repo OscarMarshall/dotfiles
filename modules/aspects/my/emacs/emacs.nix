@@ -22,31 +22,31 @@
       programs.doom-emacs.emacs =
         with pkgs;
         emacs-pgtk.overrideAttrs (old: {
+          # macOS-only cosmetic/behavioural patches, lifted from d12frosted's
+          # homebrew-emacs-plus emacs-plus@31 formula (all of its emacs-31
+          # patches, in formula order). Pinned to the last commit that touched
+          # patches/emacs-31/. `fix-window-role` and `fix-macos-tahoe-scrolling`
+          # are gone: both are fixed upstream in Emacs 31.
           patches = (old.patches or [ ]) ++ [
-            # fix-window-role
-            (fetchpatch {
-              sha256 = "sha256-+z/KfsBm1lvZTZNiMbxzXQGRTjkCFO4QPlEK35upjsE=";
-              url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/d60d824b3d622f423c822b487a567805a195ac91/patches/emacs-28/fix-window-role.patch";
-            })
-            # system-appearance
-            (fetchpatch {
-              sha256 = "sha256-3QLq91AQ6E921/W9nfDjdOUWR8YVsqBAT/W9c1woqAw=";
-              url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/d60d824b3d622f423c822b487a567805a195ac91/patches/emacs-30/system-appearance.patch";
-            })
-            # round-undecorated-frame
-            (fetchpatch {
-              sha256 = "sha256-fesZ0H3LO6T2AiRV8ASozKxZBpvVzwLEcLDy6rctR6c=";
-              url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/d60d824b3d622f423c822b487a567805a195ac91/patches/emacs-30/round-undecorated-frame.patch";
-            })
-            # fix-macos-tahoe-scrolling
-            (fetchpatch {
-              sha256 = "sha256-Hf9oZ5ImBnxTLa6yS02UDzBEgJEGAwNq/svJ3S35uKw=";
-              url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/d60d824b3d622f423c822b487a567805a195ac91/patches/emacs-30/fix-macos-tahoe-scrolling.patch";
-            })
             # fix-ns-x-colors
             (fetchpatch {
               sha256 = "sha256-oe3DFgEXwp0cZJl+ufWqTonaeWSliikTRsVDNbcy4Yw=";
-              url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/d60d824b3d622f423c822b487a567805a195ac91/patches/emacs-30/fix-ns-x-colors.patch";
+              url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/ef1ccd601b865ab9422a30ec711ea0f9fc8fbf9a/patches/emacs-31/fix-ns-x-colors.patch";
+            })
+            # system-appearance
+            (fetchpatch {
+              sha256 = "sha256-4+2U+4+2tpuaThNJfZOjy1JPnneGcsoge9r+WpgNDko=";
+              url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/ef1ccd601b865ab9422a30ec711ea0f9fc8fbf9a/patches/emacs-31/system-appearance.patch";
+            })
+            # round-undecorated-frame
+            (fetchpatch {
+              sha256 = "sha256-KCMEvJzN1OkwFYoMLpZghvdeoO1Ckcxk3Mo19YAf850=";
+              url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/ef1ccd601b865ab9422a30ec711ea0f9fc8fbf9a/patches/emacs-31/round-undecorated-frame.patch";
+            })
+            # fix-ns-scroll-crash
+            (fetchpatch {
+              sha256 = "sha256-syC9un5Vy1+bmBWIc+TEwTCM/nfPIxd4IhWYdEfP4qE=";
+              url = "https://raw.githubusercontent.com/d12frosted/homebrew-emacs-plus/ef1ccd601b865ab9422a30ec711ea0f9fc8fbf9a/patches/emacs-31/fix-ns-scroll-crash.patch";
             })
           ];
         });
