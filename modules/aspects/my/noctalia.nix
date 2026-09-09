@@ -86,6 +86,15 @@
         # deliberately left in the runtime settings.toml rather than promoted here.
         lockscreen_widgets.enabled = false;
         nightlight.enabled = true;
+        # Community plugin: VPN Manager (github.com/noctalia-dev/community-plugins). Adds a bar
+        # indicator, panel and `vpn` launcher provider for NetworkManager VPN connections of any
+        # protocol, plus auto connect/disconnect keyed on a trusted-network list. Noctalia fetches
+        # it from the built-in "community" source on first start and re-materialises it after
+        # tensoon's per-boot state wipe (ensureEnabledMaterialized); the nixos block below adds its
+        # optional GUI helpers and my.preservation keeps its ~/.local/state/noctalia/plugins data
+        # (trusted networks, default VPN) across reboots. Per-plugin toggles (auto_connect_enabled,
+        # poll_interval_seconds, ...) are left to the UI.
+        plugins.enabled = [ "andrewdems/vpn-manager" ];
 
         shell = {
           # Short tags for the keyboard-layout widget in place of the full XKB description.
@@ -159,12 +168,20 @@
     nixos = { pkgs, ... }: {
       imports = [ inputs.noctalia.nixosModules.default ];
 
-      # Runtime support for the Noctalia gtk/qt theme templates (see settings.theme.templates):
-      # adw-gtk3 is the light/dark GTK theme the gtk template switches to; qt6ct reads the
-      # colour scheme the qt template drops in ~/.config/qt6ct/colors/.
+      # adw-gtk3 / qt6ct: runtime support for the Noctalia gtk/qt theme templates (see
+      # settings.theme.templates) - adw-gtk3 is the light/dark GTK theme the gtk template switches
+      # to; qt6ct reads the colour scheme the qt template drops in ~/.config/qt6ct/colors/.
+      #
+      # networkmanagerapplet / zenity: optional helpers for the VPN Manager plugin
+      # (settings.plugins.enabled). nmcli and nmtui-edit already come from my.networkmanager; with
+      # nm-connection-editor present the plugin opens the graphical connection editor instead of
+      # nmtui-edit in a terminal, and zenity gives its config-import action a GUI file picker
+      # (otherwise it falls back to a typed path / pasted config).
       environment.systemPackages = [
         pkgs.adw-gtk3
+        pkgs.networkmanagerapplet
         pkgs.qt6Packages.qt6ct
+        pkgs.zenity
       ];
 
       home-manager.sharedModules = [ inputs.noctalia.homeModules.default ];
