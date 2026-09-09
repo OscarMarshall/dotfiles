@@ -265,6 +265,7 @@
               ".local/state/nix" # per-user nix profile (incl. home-manager generations)
               ".local/state/home-manager" # hm gcroots / news-read state
               ".local/state/wireplumber" # per-device audio volume/routing
+              ".local/state/wluma" # wluma's learned adaptive-brightness model (per output)
               ".local/share/direnv" # direnv allow-list
               ".local/share/nix" # trusted-settings.json
               ".config/noctalia" # Noctalia GUI-mutable settings + custom palettes

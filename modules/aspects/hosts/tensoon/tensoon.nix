@@ -19,6 +19,7 @@
       preservation
       ssh-server
       umbriel
+      wluma
       yubikey
     ];
 
