@@ -11,6 +11,7 @@
       boot
       disko
       locale
+      nautilus
       networkmanager
       noctalia
       noctalia-greeter
