@@ -15,7 +15,7 @@
     };
   };
 
-  my.emacs = {
+  my.emacs = { user, ... }: {
     includes = [ (den._.unfree [ "aspell-dict-en-science" ]) ];
 
     hmDarwin = { pkgs, ... }: {
@@ -110,5 +110,12 @@
 
       services.emacs.enable = true;
     };
+
+    # nix-doom-emacs-unstraightened keeps DOOMDIR / the Emacs profile in the store; the only
+    # writable state is DOOMLOCALDIR, which the home-manager module defaults to
+    # ~/.local/share/nix-doom. It holds recentf / savehist / bookmarks / projectile / persp
+    # sessions and the native-comp eln-cache (minutes to rebuild). `preserve`
+    # (modules/aspects/my/preserve.nix) is inert without my.preservation.
+    preserve.users.${user.userName}.directories = [ ".local/share/nix-doom" ];
   };
 }

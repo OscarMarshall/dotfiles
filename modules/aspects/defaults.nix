@@ -76,6 +76,7 @@ in
     default.includes = [
       den.batteries.define-user
       den.batteries.hostname
+      den.policies.expose-preserve # lift per-user `preserve` quirk entries to the host - see my/preserve.nix
       hmPlatforms
       my.secrets
     ];

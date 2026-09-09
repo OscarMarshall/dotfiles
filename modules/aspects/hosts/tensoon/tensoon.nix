@@ -96,6 +96,15 @@
       users.users.root.hashedPasswordFile = config.age.secrets.oscar-hashed-password.path;
     };
 
+    # `services.printing` above: CUPS writes runtime-configured printers and their generated PPDs
+    # into its ServerRoot (`/etc/cups/printers.conf`, `/etc/cups/ppd/`), which is on the tmpfs
+    # root - so a printer added through the UI is gone after a reboot even though my.preservation
+    # keeps `/var/lib/cups` (spool, certs). Bind-mount the whole directory: NixOS re-generates the
+    # store-symlinked files in it (`cupsd.conf`, ...) on every activation regardless, so shadowing
+    # them into `/persist` is harmless. The `preserve` quirk (modules/aspects/my/preserve.nix) is
+    # a no-op without my.preservation, which only tensoon includes.
+    preserve.directories = [ "/etc/cups" ];
+
     # This value determines the Home Manager release that your configuration is compatible with. This helps avoid
     # breakage when a new Home Manager release introduces backwards incompatible changes.
     #
