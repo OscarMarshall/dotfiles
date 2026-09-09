@@ -238,6 +238,12 @@
               ".local/share/direnv" # direnv allow-list
               ".local/share/nix" # trusted-settings.json
               ".config/noctalia" # Noctalia GUI-mutable settings + custom palettes
+              # Noctalia plugin state: the git checkout + materialised runtime of the enabled
+              # community plugins (re-fetched on start if missing, so this is just to skip the
+              # network round trip) and, more importantly, plugins/data/ - VPN Manager keeps its
+              # trusted-network list and default-VPN choice there (noctalia.pluginDataDir()), which
+              # would otherwise reset every boot.
+              ".local/state/noctalia/plugins"
               # Keep Noctalia's generated theme sidecar (noctalia.toml, pulled in by
               # programs.umbriel's [include]) across boots. Without it, Umbriel starts before
               # Noctalia regenerates the file and logs a missing-include warning every login.
