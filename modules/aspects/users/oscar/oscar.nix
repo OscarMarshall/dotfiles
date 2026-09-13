@@ -70,12 +70,16 @@ in
       ++ lib.optionals (scope.graphical or false) [
         den.aspects.oscar.provides.zen-browser
         my.catppuccin
-        my.discord
         my.doc-browser
         my.ghostty
+        my.programmer-dvorak
+      ]
+      # Hobby apps (gaming, 3D printing, media) have no place on a work machine, so they're
+      # additionally gated off whenever `work` is set - see `scope` comment above.
+      ++ lib.optionals ((scope.graphical or false) && !(scope.work or false)) [
+        my.discord
         my.mkvtoolnix
         my.orca-slicer
-        my.programmer-dvorak
         my.prusa-slicer
         my.steam
       ];
@@ -84,8 +88,10 @@ in
         homebrew.casks = [
           "arc"
           "domzilla-caffeine"
-          "proton-mail"
-        ];
+        ]
+        ++ lib.optionals (scope.work or false) [ "google-chrome" ]
+        # Personal email has no place on a work machine.
+        ++ lib.optionals (!(scope.work or false)) [ "proton-mail" ];
 
         users = {
           knownUsers = [ "oscar" ];
@@ -114,7 +120,8 @@ in
             ripgrep
             rsync
           ]
-          ++ lib.optionals (scope.graphical or false) [
+          # Hobby packages (design, media, gaming) have no place on a work machine.
+          ++ lib.optionals ((scope.graphical or false) && !(scope.work or false)) [
             inkscape
             mpv
             prismlauncher
