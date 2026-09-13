@@ -29,7 +29,10 @@
 # flowing up to the parent host). A system contribution comes from a host-scoped aspect (or the
 # host aspect itself) and lands in the host scope directly, no exposure needed.
 #
-# A value may be a `{ config, ... }:` thunk when a path depends on a NixOS option.
+# Consumed via a bare `lib.mkMerge preserve` (see my.preservation), so a contribution is always an
+# attrset value, never a `{ config, ... }:` thunk - conditional entries use `lib.mkIf` /
+# `lib.optionalAttrs` inside the attrset, or the producing aspect module itself is a function that
+# computes the attrset.
 { den, ... }: {
   den = {
     # Lift user-scope `preserve` contributions up to the host scope, where my.preservation consumes
