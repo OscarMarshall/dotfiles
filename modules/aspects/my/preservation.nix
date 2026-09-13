@@ -11,7 +11,12 @@
   flake-file.inputs.preservation.url = "github:nix-community/preservation";
 
   my.preservation.nixos =
-    { pkgs, ... }:
+    {
+      lib,
+      pkgs,
+      preserve,
+      ...
+    }:
     let
       # A preserved directory sitting directly under $HOME. Two glib quirks to paper over:
       #
@@ -89,7 +94,16 @@
       keepHomeSnapshots = 5;
     in
     {
-      imports = [ inputs.preservation.nixosModules.default ];
+      imports = [
+        inputs.preservation.nixosModules.default
+
+        # Fold in every `preserve` quirk contribution (modules/aspects/my/preserve.nix): system
+        # paths from host-scoped aspects land here directly, per-user home paths from
+        # hmLinux/homeManager aspects arrive via the `expose-preserve` pipe policy. Each entry is
+        # already a `preserveAt."/persist"` fragment, so a bare mkMerge is the whole consumer.
+        # `mkMerge [ ]` (no producers) is a no-op, so this stays inert until an aspect opts in.
+        { preservation.preserveAt."/persist" = lib.mkMerge preserve; }
+      ];
 
       # preservation forces systemd-in-initrd, which makes agenix decrypt during
       # `initrd-nixos-activation` - before `/etc/ssh/ssh_host_ed25519_key` (a stage-2 tmpfs symlink)
