@@ -172,13 +172,14 @@ in
       # No `generator` on this one - it's a personal credential only a human can obtain (a free
       # Hardcover account's own API token, per https://hardcover.app/account/api), so it's a
       # PRIMITIVE secret: create it with `agenix edit secrets/${hardcoverAuthSecret}.age`,
-      # content exactly `Bearer <token>` (verbatim what Hardcover's own site shows to copy - see
-      # its own "Copy the entire token including Bearer" instruction). Then `agenix rekey -a`.
-      # Note the token expires every January 1st and needs regenerating.
+      # content exactly the bare token (Hardcover's own site tells you to copy "the entire token
+      # including Bearer", but the "Bearer " scheme prefix is boilerplate same as `HARDCOVER_AUTH=`
+      # below - strip it, just paste what comes after). Then `agenix rekey -a`. Note the token
+      # expires every January 1st and needs regenerating.
       #
-      # The `HARDCOVER_AUTH=` env-file boilerplate itself is generated (below), same two-layer
-      # split as `apiKeySecret` -> `"${name}.env"` in bookshelf.nix - keeps the human-entered
-      # secret to just the credential, not also the formatting around it.
+      # Both the `HARDCOVER_AUTH=` env-file key AND the `Bearer ` auth-scheme prefix are generated
+      # (below), same two-layer split as `apiKeySecret` -> `"${name}.env"` in bookshelf.nix - keeps
+      # the human-entered secret to just the credential, not also the formatting around it.
       ${hardcoverAuthSecret} = {
         intermediary = true;
         rekeyFile = ../../../secrets/${hardcoverAuthSecret}.age;
@@ -197,7 +198,7 @@ in
             ...
           }:
           ''
-            printf 'HARDCOVER_AUTH=%s\n' "$(${decrypt} ${lib.escapeShellArg deps.${hardcoverAuthSecret}.file})"
+            printf 'HARDCOVER_AUTH=Bearer %s\n' "$(${decrypt} ${lib.escapeShellArg deps.${hardcoverAuthSecret}.file})"
           '';
       };
 
