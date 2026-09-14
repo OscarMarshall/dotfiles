@@ -130,7 +130,7 @@ in
 
           environmentFiles = [
             config.age.secrets."${name}.env".path
-            config.age.secrets.${hardcoverAuthSecret}.path
+            config.age.secrets."${hardcoverAuthSecret}.env".path
           ];
 
           # README: "The app will use as much memory as it has available for in-memory
@@ -169,14 +169,37 @@ in
         intermediary = true;
       };
 
-      # No `generator` - this is a personal credential only a human can obtain (a free
+      # No `generator` on this one - it's a personal credential only a human can obtain (a free
       # Hardcover account's own API token, per https://hardcover.app/account/api), so it's a
       # PRIMITIVE secret: create it with `agenix edit secrets/${hardcoverAuthSecret}.age`,
-      # content exactly `HARDCOVER_AUTH=Bearer <token>` (the literal env-file line this gets
-      # loaded as via `environmentFiles` above - no surrounding quotes, see bookshelf.nix's own
-      # `.env` generator comment for why: podman's `--env-file` doesn't strip them). Then
-      # `agenix rekey -a`. Note the token expires every January 1st and needs regenerating.
-      ${hardcoverAuthSecret}.rekeyFile = ../../../secrets/${hardcoverAuthSecret}.age;
+      # content exactly `Bearer <token>` (verbatim what Hardcover's own site shows to copy - see
+      # its own "Copy the entire token including Bearer" instruction). Then `agenix rekey -a`.
+      # Note the token expires every January 1st and needs regenerating.
+      #
+      # The `HARDCOVER_AUTH=` env-file boilerplate itself is generated (below), same two-layer
+      # split as `apiKeySecret` -> `"${name}.env"` in bookshelf.nix - keeps the human-entered
+      # secret to just the credential, not also the formatting around it.
+      ${hardcoverAuthSecret} = {
+        intermediary = true;
+        rekeyFile = ../../../secrets/${hardcoverAuthSecret}.age;
+      };
+
+      "${hardcoverAuthSecret}.env".generator = {
+        dependencies = {
+          ${hardcoverAuthSecret} = secrets.${hardcoverAuthSecret};
+        };
+
+        script =
+          {
+            lib,
+            decrypt,
+            deps,
+            ...
+          }:
+          ''
+            printf 'HARDCOVER_AUTH=%s\n' "$(${decrypt} ${lib.escapeShellArg deps.${hardcoverAuthSecret}.file})"
+          '';
+      };
 
       "${name}.env".generator = {
         dependencies = {
