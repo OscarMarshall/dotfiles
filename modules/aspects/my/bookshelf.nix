@@ -61,6 +61,14 @@ let
       ];
 
       nixos = { config, ... }: {
+        # The `networks` join above needs the network to already exist - see
+        # rreading-glasses.nix's own `podman-network-${network}` oneshot comment for why NixOS's
+        # oci-containers module doesn't create it automatically.
+        systemd.services."podman-${name}" = {
+          after = [ "podman-network-rreading-glasses.service" ];
+          requires = [ "podman-network-rreading-glasses.service" ];
+        };
+
         # A dedicated `readarr` user/group (shared by BOTH Bookshelf instances, same as
         # qbittorrent.nix's own service user) rather than accepting the image's own undocumented
         # built-in "abc" (911:911) - both instances' containers run as this user via PUID/PGID
@@ -90,6 +98,14 @@ let
 
         virtualisation.oci-containers.containers.${name} = {
           environment = {
+            # Points Bookshelf at the self-hosted rreading-glasses instance (rreading-glasses.nix)
+            # instead of its own baked-in default (the shared, currently rate-limited
+            # `hardcover.bookinfo.pro` - see that aspect's own header comment) - Bookshelf's README
+            # documents this exact env var ("Supports selfhosted metadata (UI or `METADATA_URL` env
+            # var)"), so no need to also set it through Settings > Development in the UI.
+            # `rreading-glasses` resolves via podman's own DNS because this container joins its
+            # network below - same name as that aspect's own `name`/`network` constants.
+            METADATA_URL = "http://rreading-glasses:8788";
             # Matches the shared `readarr` user/group declared alongside it, which
             # `zfs-dataset-metalminds-books.service` (see the shared `books` entry in `dataset`
             # above and zfs.nix's generic consumer) chowns the shared `/books` root folder to.
@@ -134,6 +150,13 @@ let
           #     -H "Accept: application/vnd.docker.distribution.manifest.v2+json" -D - -o /dev/null \
           #     https://ghcr.io/v2/pennydreadful/bookshelf/manifests/hardcover
           image = "ghcr.io/pennydreadful/bookshelf:hardcover@sha256:67498dd5ece516867d72ee642abd6c1a66b36a135c8f7da0127109564372beb1";
+          # Joins rreading-glasses.nix's own dedicated podman network so this container can reach
+          # `rreading-glasses` (METADATA_URL above) by name - see that network's own comment for why
+          # a shared podman network is needed here instead of the usual loopback `ports` publish.
+          # This REPLACES (rather than adds to) podman's own implicit default bridge network, which
+          # is fine: that network is also a normal (non-`--internal`) bridge, so outbound internet
+          # access (indexers, notifications, etc.) and the `ports` publish below are unaffected.
+          networks = [ "rreading-glasses" ];
 
           ports =
             let

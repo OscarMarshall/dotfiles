@@ -49,6 +49,7 @@
       meraki
       networkmanager
       nginx
+      rreading-glasses
       samba
       satisfactory-server
       ssh-server
