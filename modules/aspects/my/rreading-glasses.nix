@@ -106,9 +106,12 @@ in
           };
 
           environmentFiles = [ config.age.secrets."${dbName}.env".path ];
+          # Fully-qualified (unlike a plain "postgres:17") because harmony's podman has no
+          # unqualified-search registries configured - a short name here 125s on
+          # `did not resolve to an alias and no unqualified-search registries are defined`.
           # Re-resolve with:
           #   skopeo inspect --override-os linux --override-arch amd64 docker://docker.io/library/postgres:17
-          image = "postgres:17@sha256:67f41722b7a8cbdb868a44a4995c846eddfdc2973bccb291ce937dce88ad5675";
+          image = "docker.io/library/postgres:17@sha256:67f41722b7a8cbdb868a44a4995c846eddfdc2973bccb291ce937dce88ad5675";
           networks = [ network ];
           volumes = [ "/metalminds/${dbName}:/var/lib/postgresql/data" ];
         };
@@ -137,9 +140,10 @@ in
           # caching, so it's recommended to run the container with a `--memory` limit" -
           # matches its own reference docker-compose-hardcover.yml's `mem_limit: 128m`.
           extraOptions = [ "--memory=128m" ];
+          # Fully-qualified - see the `postgres` image's own comment above for why.
           # Re-resolve with:
           #   skopeo inspect --override-os linux --override-arch amd64 docker://docker.io/blampe/rreading-glasses:hardcover
-          image = "blampe/rreading-glasses:hardcover@sha256:3f017a51d9007b715303a20f481c822e4df66485fc9e5f57f6fdf1de840dc02f";
+          image = "docker.io/blampe/rreading-glasses:hardcover@sha256:3f017a51d9007b715303a20f481c822e4df66485fc9e5f57f6fdf1de840dc02f";
           networks = [ network ];
         };
       };
