@@ -365,6 +365,13 @@ let
         icon = "https://raw.githubusercontent.com/pennydreadful/bookshelf/develop/Logo/Readarr.svg";
         label = "Bookshelf (${label})";
         protected = true;
+        # Bookshelf's "Add New Book" search (/api/v1/search) calls out to the Hardcover metadata
+        # API synchronously per request (this instance runs the "hardcover" image tag, see the
+        # container's own `image` comment above) - an uncommon title can take nginx's default 60s
+        # proxy_read_timeout to resolve, producing a 504 Gateway Timeout from nginx itself well
+        # before Bookshelf would have replied. 300s covers that without leaving a search hung
+        # indefinitely if Hardcover is actually down.
+        proxyTimeout = 300;
         # Bookshelf's UI keeps a SignalR (WebSocket) connection open for live queue/activity
         # updates (it's a Readarr fork, same mechanism) - without this, nginx's
         # recommendedProxySettings clears the Connection header (see nginx.nix's

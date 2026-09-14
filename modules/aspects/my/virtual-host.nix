@@ -33,6 +33,11 @@
 #                         `protected` above applies.
 #   preserveCookieFlags - (optional, bool) skip nginx's blanket cookie-security rewrite, for
 #                         backends that set their own correct Set-Cookie flags.
+#   proxyTimeout        - (optional, int seconds) override nginx's default 60s
+#                         proxy_{connect,send,read}_timeout trio (from recommendedProxySettings)
+#                         for a backend whose own request handling can legitimately take longer -
+#                         e.g. one that calls out to a slow external API synchronously. Same
+#                         `port`-only caveat as `protected` above applies.
 #   global              - (optional, bool) also serve at the bare `<name>.<domain>` alias (an
 #                         nginx `serverAlias`) and generate a `cloudflare_dns_record` for it.
 #   url                 - (optional) explicit override for the derived hostname.

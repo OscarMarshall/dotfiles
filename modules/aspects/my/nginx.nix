@@ -115,7 +115,18 @@
                   locations = {
                     "/" = {
                       extraConfig =
-                        lib.optionalString (vh.protected or false) ''
+                        # Overrides recommendedProxySettings' 60s proxy_{connect,send,read}_timeout
+                        # trio for a backend whose own request handling can legitimately outlast
+                        # that - e.g. Bookshelf's search, which calls out to an external metadata
+                        # provider synchronously (see bookshelf.nix's own `proxyTimeout`). Without
+                        # this, nginx cuts the connection and returns its OWN 504 before the backend
+                        # ever gets a chance to finish and reply.
+                        lib.optionalString (vh ? proxyTimeout) ''
+                          proxy_connect_timeout ${toString vh.proxyTimeout}s;
+                          proxy_send_timeout ${toString vh.proxyTimeout}s;
+                          proxy_read_timeout ${toString vh.proxyTimeout}s;
+                        ''
+                        + lib.optionalString (vh.protected or false) ''
                           auth_request /outpost.goauthentik.io/auth/nginx;
                           error_page 401 = @goauthentik_proxy_signin;
 
