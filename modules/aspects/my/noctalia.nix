@@ -177,9 +177,19 @@
       # nm-connection-editor present the plugin opens the graphical connection editor instead of
       # nmtui-edit in a terminal, and zenity gives its config-import action a GUI file picker
       # (otherwise it falls back to a typed path / pasted config).
+      #
+      # networkmanagerapplet also ships nm-applet, an unrelated systray daemon the VPN Manager
+      # plugin never invokes - Noctalia's own bar already has a `network` widget. Its
+      # nm-applet.desktop autostart entry only sets NotShowIn=KDE;GNOME;COSMIC, so under Umbriel
+      # (none of those) it starts anyway and duplicates that bar widget. Strip just the autostart
+      # entry so nm-connection-editor (what the plugin actually shells out to) stays put.
       environment.systemPackages = [
         pkgs.adw-gtk3
-        pkgs.networkmanagerapplet
+        (pkgs.networkmanagerapplet.overrideAttrs (old: {
+          postInstall = (old.postInstall or "") + ''
+            rm -f $out/etc/xdg/autostart/nm-applet.desktop
+          '';
+        }))
         pkgs.qt6Packages.qt6ct
         pkgs.zenity
       ];
