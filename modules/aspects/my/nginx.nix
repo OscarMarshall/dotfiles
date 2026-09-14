@@ -182,6 +182,17 @@
                       map (
                         path:
                         lib.nameValuePair "~ ${path}" {
+                          # `proxyTimeout` needs repeating here (not just the `"/"` location above) -
+                          # a bypassAuthPath is a SEPARATE location block, matched instead of `"/"`
+                          # for any request under it (e.g. Bookshelf's own `/api/v1/search`, the
+                          # actual endpoint `proxyTimeout` exists to cover), and nginx locations
+                          # don't inherit each other's directives.
+                          extraConfig = lib.optionalString (vh ? proxyTimeout) ''
+                            proxy_connect_timeout ${toString vh.proxyTimeout}s;
+                            proxy_send_timeout ${toString vh.proxyTimeout}s;
+                            proxy_read_timeout ${toString vh.proxyTimeout}s;
+                          '';
+
                           # No URI on proxyPass: regex locations can't auto-rewrite the matched path, so this
                           # forwards the original path+query untouched, without the auth_request config below.
                           proxyPass = "http://${vh.upstreamHost or "127.0.0.1"}:${toString vh.port}";
