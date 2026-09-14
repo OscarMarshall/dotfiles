@@ -271,6 +271,24 @@ let
       # reason `readarr_root_folder`'s own default profile ids are above.
       #
       #   tofu import readarr_import_list_readarr.${instance} <id>  # GET /api/v1/importlist
+      #
+      # `readarr_media_management` turns off `hardlinks_copy` - the actual root cause behind the
+      # "can see but not access... likely permissions error" import failure this instance hit: the
+      # shared `/books` root folder (above) and qbittorrent.nix's `torrents` dataset are separate
+      # ZFS datasets - separate filesystems, even though both sit under the same `metalminds` pool
+      # - and a hardlink can never cross a filesystem boundary. Readarr's default import strategy
+      # tries one anyway, gets EXDEV, and surfaces that as a permissions error instead of naming
+      # the real cause. Applied to radarr.nix/sonarr.nix too, preemptively, since they have the
+      # identical separate-dataset shape (`movies`/`shows` vs `torrents`) even though neither has
+      # actually hit this yet. Every OTHER field below is the provider's own stock example value,
+      # UNVERIFIED against either instance's actual live settings - unlike the resources above
+      # (created fresh, nothing to conflict with), this one already exists on every Readarr
+      # install, so importing it will overwrite these other fields to whatever's written here.
+      # Reconcile them against the real values first with
+      # `tofu plan -generate-config-out=media-management.tf.json` (see prowlarr.nix's own comment
+      # on this exact technique) rather than trusting the stock defaults below blindly.
+      #
+      #   tofu import readarr_media_management.${instance} ""  # GET /api/v1/config/mediamanagement
       terranix =
         {
           lib,
@@ -324,6 +342,28 @@ let
               should_monitor = "specificBook";
               should_monitor_existing = true;
               should_search = true;
+            };
+
+            readarr_media_management.${instance} = {
+              allow_fingerprinting = "never";
+              chmod_folder = "755";
+              chown_group = "";
+              create_empty_author_folders = false;
+              delete_empty_folders = false;
+              download_propers_repacks = "doNotPrefer";
+              extra_file_extensions = "info";
+              file_date = "none";
+              hardlinks_copy = false;
+              import_extra_files = true;
+              minimum_free_space = 100;
+              provider = "readarr.${instance}";
+              recycle_bin_days = 7;
+              recycle_bin_path = "";
+              rescan_after_refresh = "afterManual";
+              set_permissions = false;
+              skip_free_space_check = false;
+              unmonitor_previous_books = false;
+              watch_ibrary_for_changes = true;
             };
 
             readarr_naming.${instance} = {

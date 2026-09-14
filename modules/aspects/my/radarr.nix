@@ -104,6 +104,23 @@ in
       # this - Sonarr's/Readarr's equivalents call it something else, see their own `terranix`
       # fields).
       #
+      # `radarr_media_management` turns off `copy_using_hardlinks` - `movies` (this aspect's own
+      # dataset, above) and `torrents` (qbittorrent.nix's) are separate ZFS datasets, i.e. separate
+      # filesystems even though both sit under the same `metalminds` pool, and a hardlink can never
+      # cross a filesystem boundary. Radarr's default import strategy tries one anyway, gets EXDEV,
+      # and *arr apps generally surface that as a misleading "can see but not access... likely
+      # permissions error" rather than naming the real cause - confirmed as the actual failure mode
+      # for Bookshelf (rreading-glasses.nix's own sibling issue), which has the identical
+      # separate-dataset shape (`torrents` vs `books`); applying here preemptively since Sonarr has
+      # it too. Every OTHER field below is the provider's own stock example value, NOT verified
+      # against this instance's actual live settings - unlike `radarr_root_folder`/
+      # `radarr_download_client_qbittorrent` below (created fresh, nothing to conflict with), THIS
+      # resource always already exists (every Radarr install has media-management settings from
+      # first boot), so importing it will overwrite these other fields to whatever's written here.
+      # Reconcile them against the real values first with
+      # `tofu plan -generate-config-out=media-management.tf.json` (see prowlarr.nix's own comment
+      # on this exact technique) rather than trusting the stock defaults below blindly.
+      #
       # These resources already exist by hand in the running instance; applying without importing
       # first would create duplicates (same situation `authentik_outpost.embedded` was in - see
       # authentik.nix's comment on that resource). One-time, via `nix develop .#<host>-tf`
@@ -111,6 +128,7 @@ in
       #
       #   tofu import radarr_root_folder.movies <id>                     # GET /api/v3/rootfolder
       #   tofu import radarr_download_client_qbittorrent.qbittorrent <id> # GET /api/v3/downloadclient
+      #   tofu import radarr_media_management.default ""                 # GET /api/v3/config/mediamanagement
       terranix =
         {
           lib,
@@ -138,6 +156,30 @@ in
               movie_imported_category = "radarr-imported";
               name = "qBittorrent";
               priority = 1;
+            };
+
+            radarr_media_management.default = {
+              auto_rename_folders = false;
+              auto_unmonitor_previously_downloaded_movies = false;
+              chmod_folder = "755";
+              chown_group = "";
+              copy_using_hardlinks = false;
+              create_empty_movie_folders = false;
+              delete_empty_folders = false;
+              download_propers_and_repacks = "doNotPrefer";
+              enable_media_info = true;
+              extra_file_extensions = "srt";
+              file_date = "none";
+              import_extra_files = true;
+              minimum_free_space_when_importing = 100;
+              paths_default_static = false;
+              recycle_bin = "";
+              recycle_bin_cleanup_days = 7;
+              rescan_after_refresh = "afterManual";
+              script_import_path = "";
+              set_permissions_linux = false;
+              skip_free_space_check_when_importing = false;
+              use_script_import = false;
             };
 
             radarr_root_folder.movies.path = "/metalminds/movies";

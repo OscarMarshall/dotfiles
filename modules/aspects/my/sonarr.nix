@@ -100,6 +100,14 @@
       # `sonarr_download_client_qbittorrent` shape (`tv_category` is Sonarr's own field name for
       # this - see radarr.nix's/bookshelf.nix's own `terranix` fields for their equivalents).
       #
+      # `sonarr_media_management` turns off `hardlinks_copy` - see radarr.nix's own comment on its
+      # identical `radarr_media_management` resource for why (separate ZFS datasets, hardlinks
+      # can't cross them, confirmed as Bookshelf's actual failure mode in rreading-glasses.nix's
+      # sibling issue) and for why every OTHER field below is an UNVERIFIED stock default that
+      # needs reconciling against this instance's real live settings (via
+      # `tofu plan -generate-config-out=...`, see prowlarr.nix's own comment) before applying,
+      # since - unlike the resources below it - this one already exists on every Sonarr install.
+      #
       # These resources already exist by hand in the running instance; applying without importing
       # first would create duplicates (same situation `authentik_outpost.embedded` was in - see
       # authentik.nix's comment on that resource). One-time, via `nix develop .#<host>-tf`
@@ -107,6 +115,7 @@
       #
       #   tofu import sonarr_root_folder.shows <id>                     # GET /api/v3/rootfolder
       #   tofu import sonarr_download_client_qbittorrent.qbittorrent <id> # GET /api/v3/downloadclient
+      #   tofu import sonarr_media_management.default ""                # GET /api/v3/config/mediamanagement
       terranix =
         {
           lib,
@@ -134,6 +143,27 @@
               priority = 1;
               tv_category = "sonarr";
               tv_imported_category = "sonarr-imported";
+            };
+
+            sonarr_media_management.default = {
+              chmod_folder = "755";
+              chown_group = "";
+              create_empty_folders = false;
+              delete_empty_folders = false;
+              download_propers_repacks = "doNotPrefer";
+              enable_media_info = true;
+              episode_title_required = "always";
+              extra_file_extensions = "srt";
+              file_date = "none";
+              hardlinks_copy = false;
+              import_extra_files = true;
+              minimum_free_space = 100;
+              recycle_bin_days = 7;
+              recycle_bin_path = "";
+              rescan_after_refresh = "afterManual";
+              set_permissions = false;
+              skip_free_space_check = false;
+              unmonitor_previous_episodes = false;
             };
 
             sonarr_root_folder.shows.path = "/metalminds/shows";
