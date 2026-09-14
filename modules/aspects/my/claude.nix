@@ -20,15 +20,16 @@
 
     homeManager = { config, pkgs, ... }: {
       age.secrets = {
+        # Same generated secrets beszel.nix's beszel-api vhost and hub admin account already
+        # produce (secrets/generated/, not a hand-authored secrets/ primitive) - rekeyed here too
+        # so they reach every host running Claude Code, not just harmony.
+        beszel-api-key.rekeyFile = ../../../secrets/generated/beszel-api-key.age;
+        beszel-password.rekeyFile = ../../../secrets/generated/beszel-password.age;
         # Declared here (not in a top-level secrets block) so it lands in the
         # home-manager config's age.secrets, which is what config.age.secrets
         # refers to inside homeManager modules. The secrets block in user-level
         # aspects isn't forwarded to age.secrets per defaults.nix.
         github-mcp-server-github-access-token.rekeyFile = ../../../secrets/github-mcp-server-github-access-token.age;
-        # Same generated secret netdata.nix's netdata-api vhost already produces
-        # (secrets/generated/, not a hand-authored secrets/ primitive) - rekeyed here too so it
-        # reaches every host running Claude Code, not just harmony.
-        netdata-api-key.rekeyFile = ../../../secrets/generated/netdata-api-key.age;
       };
 
       home.packages = with pkgs; [
@@ -45,8 +46,13 @@
         # Wraps the real binary (rather than using `settings.env`, which has no secret-file
         # indirection - `programs.claude-code.settings` is plain freeform JSON, so any value there
         # is baked into the Nix store in plaintext) to give every Claude Code session, including
-        # its own Bash tool calls, $NETDATA_API_KEY for the netdata-api vhost (nginx.nix's
-        # `basicAuthSecret`) without an interactive Authentik login.
+        # its own Bash tool calls, credentials for the beszel-api vhost (nginx.nix's
+        # `basicAuthSecret`) without an interactive Authentik login. Unlike Netdata (no auth of
+        # its own), Beszel's hub needs a real login on top of that vhost's Basic Auth gate -
+        # $BESZEL_API_KEY is the Basic Auth password, $BESZEL_PASSWORD is the actual hub
+        # account's password (same name leo-lem/terraform-provider-beszel itself reads - see
+        # that secret's own comment in beszel.nix) - email is the fixed, non-secret
+        # `admin@beszel.local` from beszel.nix, safe to hardcode since it's never a real mailbox.
         #
         # A plain `writeShellScriptBin "claude" ...` wrapper has no version metadata, and the
         # module uses `lib.getVersion cfg.package` to pick between its modern and "legacy"
@@ -66,7 +72,8 @@
 
             postBuild = ''
               wrapProgram $out/bin/claude \
-                --run 'export NETDATA_API_KEY="$(cat ${config.age.secrets.netdata-api-key.path})"'
+                --run 'export BESZEL_API_KEY="$(cat ${config.age.secrets.beszel-api-key.path})"' \
+                --run 'export BESZEL_PASSWORD="$(cat ${config.age.secrets.beszel-password.path})"'
             '';
           }
           // {
