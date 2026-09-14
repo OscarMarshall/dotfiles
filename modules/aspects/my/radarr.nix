@@ -176,10 +176,8 @@ in
               recycle_bin = "";
               recycle_bin_cleanup_days = 7;
               rescan_after_refresh = "afterManual";
-              script_import_path = "";
               set_permissions_linux = false;
               skip_free_space_check_when_importing = false;
-              use_script_import = false;
             };
 
             radarr_root_folder.movies.path = "/metalminds/movies";
