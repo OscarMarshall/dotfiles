@@ -35,6 +35,23 @@
 #                 comment) failed to delete the original: qbittorrent.nix's own `torrents` dataset had
 #                 `qbittorrent:qbittorrent` ownership but `rwxr-xr-x` (755) permissions the whole time,
 #                 which starves even qbittorrent's OWN group of write.
+#   aclUsers    - (optional, list of str) recursively grant each listed username `rwX` via a POSIX
+#                 ACL, in addition to (not instead of) `user`/`group`. For an identity that reaches
+#                 this dataset as neither the owning user nor (effectively) the owning group - needed
+#                 for a container whose entrypoint does its own PUID/PGID privilege-drop internally
+#                 and discards whatever supplementary groups `--group-add` requested at the
+#                 OCI-runtime level in the process: confirmed live via `/proc/<pid>/status` for
+#                 bookshelf.nix's own Readarr process, which never actually carries qbittorrent's
+#                 group despite `--group-add=${gid}` in its `extraOptions` (see qbittorrent.nix's own
+#                 `torrents` dataset comment for the full story - `user`/`group`'s own `chmod g+rwX`
+#                 was never going to help THIS identity, since it was never really a group member to
+#                 begin with). Sets `acltype=posixacl` on the dataset (not retroactive to a dataset's
+#                 already-existing entries if it was ever `off`, but every ACL operation below applies
+#                 regardless, same call) and applies each user's grant as BOTH a real ACL entry
+#                 (covers existing content) and a DEFAULT ACL entry in one `setfacl` invocation (so
+#                 newly-created files/dirs inherit it too, regardless of the writing process's own
+#                 umask - stronger, for this specific purpose, than `qbittorrent.nix`'s own `UMask`,
+#                 though that stays too as a reasonable baseline independent of this).
 #   options     - (optional, attrset) ZFS property name/value pairs (e.g. `{ compression = "lz4";
 #                 quota = "10G"; }`), passed as `-o property=value` flags to `zfs create`. Only
 #                 applied at CREATION time, same as `zfs create` itself - not retroactively applied
@@ -94,6 +111,14 @@
                   ${pkgs.coreutils}/bin/chown -R ${lib.escapeShellArg "${d.user}:${d.group}"} ${lib.escapeShellArg "/${d.pool}/${d.name}"}
                   ${pkgs.coreutils}/bin/chmod -R g+rwX ${lib.escapeShellArg "/${d.pool}/${d.name}"}
                 ''
+                + lib.optionalString ((d.aclUsers or [ ]) != [ ]) (
+                  ''
+                    ${defaultZfsPackage}/bin/zfs set acltype=posixacl ${lib.escapeShellArg "${d.pool}/${d.name}"}
+                  ''
+                  + lib.concatMapStrings (aclUser: ''
+                    ${pkgs.acl}/bin/setfacl -R -m ${lib.escapeShellArg "u:${aclUser}:rwX,d:u:${aclUser}:rwX"} ${lib.escapeShellArg "/${d.pool}/${d.name}"}
+                  '') d.aclUsers
+                )
               );
 
               RemainAfterExit = true;

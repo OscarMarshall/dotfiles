@@ -29,7 +29,20 @@ in
       # holding 15T: it's a torrent client's data, so almost all of that is a handful of large
       # files rather than a huge file count - the actual cost the recursive walk (see zfs.nix's own
       # `user`/`group` field comment) warns to watch out for.
+      #
+      # `aclUsers = [ "readarr" ]` grants Bookshelf's own shared `readarr` user (bookshelf.nix)
+      # direct ACL access, on top of the plain chown/chmod above - radarr.nix's/sonarr.nix's native
+      # `radarr`/`sonarr` users get by fine as real members of the `qbittorrent` GROUP (a genuine,
+      # kernel-level `extraGroups` membership, honored by every syscall), but Bookshelf's own Readarr
+      # process runs inside a container whose base image does its own internal PUID/PGID privilege
+      # drop - and that drop silently discards whatever supplementary groups `--group-add` requested
+      # at the OCI-runtime level. Confirmed live via `/proc/<pid>/status` on the actual running
+      # Readarr process: `Groups: 1000 31000` - no `31002` (qbittorrent) despite bookshelf.nix's own
+      # `--group-add=${qbittorrent gid}`. A plain group grant can never reach this identity; the ACL
+      # targets its real UID directly instead, sidestepping the whole question of what groups the
+      # container's own entrypoint decides to keep.
       dataset = {
+        aclUsers = [ "readarr" ];
         group = "qbittorrent";
         guestAccess = true;
         name = "torrents";
