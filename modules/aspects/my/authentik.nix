@@ -255,13 +255,27 @@
       # Do this LAST, after everything else above has already applied cleanly - it's the one step
       # that actually flips real users over to the new `login` flow.
       terranix =
-        {
-          lib,
-          pkgs,
-          virtual-host,
-          ...
-        }:
+        { lib, virtual-host, ... }:
         let
+          # The ACTUAL deployed Authentik server version - NOT `pkgs.authentik.version` (nixpkgs'
+          # own unrelated built-in package; this repo deploys via authentik-nix instead, see this
+          # file's own `imports` above). authentik-nix builds Authentik from source, pinned via its
+          # OWN `authentik-src` input to a `github:goauthentik/authentik/version/<X>` ref - that
+          # version string isn't exposed as a flake OUTPUT (it's a private `let`-binding inside
+          # authentik-nix's own flake.nix, unreachable from here), so this reads it straight out of
+          # THIS repo's own committed flake.lock instead: `nodes.authentik-nix.inputs.authentik-src`
+          # is the LOCKED node name for that transitive input, and `nodes.<that>.original.ref` is
+          # the exact ref string authentik-nix's own flake.lock pinned it to - the same standard
+          # pattern used to read any transitive flake input's locked metadata as plain data, rather
+          # than trying to reach it as a Nix expression (which, for a `flake = false` input, only
+          # gets you the fetched source tree, not its own metadata as attributes).
+          authentikVersion =
+            let
+              authentikSrcNodeName = flakeLock.nodes.authentik-nix.inputs.authentik-src;
+              flakeLock = builtins.fromJSON (builtins.readFile ../../../flake.lock);
+            in
+            lib.removePrefix "version/" flakeLock.nodes.${authentikSrcNodeName}.original.ref;
+
           # WHO may reach an application. An application with NO bindings is open to every
           # authenticated user, which - combined with the Discord source below being able to
           # ENROLL brand-new accounts - would otherwise mean a stranger's Discord account reaching
@@ -662,16 +676,16 @@
               # time), and EVERY `authentik_application`/`authentik_policy_binding` read then failed
               # ("no value given for required property pbm_uuid"/"expires") - the newer provider
               # expects response fields a 2026.5.x server doesn't return. Derived from
-              # `pkgs.authentik.version` (the SAME nixpkgs-resolved server version `nixos`
-              # deploys - `pkgs` here is terranix's own per-system instance, same input/pin as every
-              # NixOS config in this flake) rather than hand-copied, so this can never drift out of
-              # sync with whatever server version is actually running: a nixpkgs bump that changes
-              # `pkgs.authentik.version`'s major.minor automatically re-derives the constraint on the
-              # next evaluation, no manual bump to remember. `~> ${majorMinor}.0` (three components -
-              # a two-component `~> 2026.5` would still permit a 2026.8.0-style jump) keeps this
-              # within the server's own release line while still tracking the lock file for anything
-              # the server doesn't handle itself (2026.5.1 exists beyond the old exact pin).
-              version = "~> ${lib.versions.majorMinor pkgs.authentik.version}.0";
+              # `authentikVersion` above (the exact version authentik-nix's OWN locked input builds
+              # from `flake.lock`, not nixpkgs' unrelated `pkgs.authentik`) rather than hand-copied,
+              # so this can never drift out of sync with whatever's actually deployed: a
+              # `nix flake update authentik-nix` that moves the deployed server's own release line
+              # re-derives this constraint on the next evaluation, no manual bump to remember.
+              # `~> ${majorMinor}.0` (three components - a two-component `~> 2026.5` would still
+              # permit a 2026.8.0-style jump) keeps this within the server's own release line while
+              # still tracking the lock file for anything the server doesn't handle itself (2026.5.1
+              # exists beyond the old exact pin).
+              version = "~> ${lib.versions.majorMinor authentikVersion}.0";
             };
 
             variable = {
