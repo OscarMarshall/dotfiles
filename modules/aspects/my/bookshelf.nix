@@ -344,22 +344,26 @@ let
               should_search = true;
             };
 
+            # Reconciled against the actual live values (`tofu plan` after importing, identical for
+            # both instances) - every field here except `hardlinks_copy` now matches what was
+            # already configured; only that one is an intentional change (see radarr.nix's
+            # identical resource for why).
             readarr_media_management.${instance} = {
-              allow_fingerprinting = "never";
+              allow_fingerprinting = "newFiles";
               chmod_folder = "755";
               chown_group = "";
               create_empty_author_folders = false;
               delete_empty_folders = false;
-              download_propers_repacks = "doNotPrefer";
-              extra_file_extensions = "info";
+              download_propers_repacks = "preferAndUpgrade";
+              extra_file_extensions = "srt";
               file_date = "none";
               hardlinks_copy = false;
-              import_extra_files = true;
+              import_extra_files = false;
               minimum_free_space = 100;
               provider = "readarr.${instance}";
               recycle_bin_days = 7;
               recycle_bin_path = "";
-              rescan_after_refresh = "afterManual";
+              rescan_after_refresh = "always";
               set_permissions = false;
               skip_free_space_check = false;
               unmonitor_previous_books = false;

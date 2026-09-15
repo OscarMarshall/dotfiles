@@ -158,25 +158,28 @@ in
               priority = 1;
             };
 
+            # Reconciled against the actual live values (`tofu plan` after importing) - every field
+            # here except `copy_using_hardlinks` now matches what was already configured; only that
+            # one is an intentional change (see this resource's own header comment for why).
             radarr_media_management.default = {
               auto_rename_folders = false;
               auto_unmonitor_previously_downloaded_movies = false;
-              chmod_folder = "755";
+              chmod_folder = "775";
               chown_group = "";
               copy_using_hardlinks = false;
-              create_empty_movie_folders = false;
+              create_empty_movie_folders = true;
               delete_empty_folders = false;
               download_propers_and_repacks = "doNotPrefer";
               enable_media_info = true;
-              extra_file_extensions = "srt";
+              extra_file_extensions = "srt,ass";
               file_date = "none";
               import_extra_files = true;
               minimum_free_space_when_importing = 100;
               paths_default_static = false;
               recycle_bin = "";
               recycle_bin_cleanup_days = 7;
-              rescan_after_refresh = "afterManual";
-              set_permissions_linux = false;
+              rescan_after_refresh = "always";
+              set_permissions_linux = true;
               skip_free_space_check_when_importing = false;
             };
 

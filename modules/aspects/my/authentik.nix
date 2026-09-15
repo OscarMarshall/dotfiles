@@ -647,7 +647,25 @@
               };
             };
 
-            terraform.required_providers.authentik.source = "goauthentik/authentik";
+            terraform.required_providers.authentik = {
+              source = "goauthentik/authentik";
+              # Unlike every other provider in this repo, goauthentik/authentik isn't just
+              # generically safer pinned - the provider talks to Authentik's REST API directly, and
+              # that API's shape tracks the SERVER's own release line (CalVer, `YEAR.MONTH.patch`),
+              # not a stable long-term-compatible surface. Confirmed live: going fully unconstrained
+              # resolved provider v2026.8.0 against the actual deployed server
+              # (`nix eval nixpkgs#authentik.version` -> 2026.5.6 at the time of writing), and EVERY
+              # `authentik_application`/`authentik_policy_binding` read then failed ("no value given
+              # for required property pbm_uuid"/"expires") - the newer provider expects response
+              # fields a 2026.5.x server doesn't return. `~> 2026.5.0` (three components, not the
+              # two-component `~> 2026.5` - that would still permit the same 2026.8.0 jump) keeps
+              # this within the server's own release line while still tracking the lock file for
+              # anything the server doesn't handle itself
+              # (2026.5.1 exists beyond the old exact pin). Bump the FIRST TWO components by hand,
+              # together with the deployed server's own version, whenever that's intentionally
+              # upgraded - never let `tofu init -upgrade` alone decide this one.
+              version = "~> 2026.5.0";
+            };
 
             variable = {
               AUTHENTIK_MAILGUN_SMTP_PASSWORD.sensitive = true;
