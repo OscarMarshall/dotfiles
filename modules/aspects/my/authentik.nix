@@ -255,7 +255,12 @@
       # Do this LAST, after everything else above has already applied cleanly - it's the one step
       # that actually flips real users over to the new `login` flow.
       terranix =
-        { lib, virtual-host, ... }:
+        {
+          lib,
+          pkgs,
+          virtual-host,
+          ...
+        }:
         let
           # WHO may reach an application. An application with NO bindings is open to every
           # authenticated user, which - combined with the Discord source below being able to
@@ -653,18 +658,20 @@
               # generically safer pinned - the provider talks to Authentik's REST API directly, and
               # that API's shape tracks the SERVER's own release line (CalVer, `YEAR.MONTH.patch`),
               # not a stable long-term-compatible surface. Confirmed live: going fully unconstrained
-              # resolved provider v2026.8.0 against the actual deployed server
-              # (`nix eval nixpkgs#authentik.version` -> 2026.5.6 at the time of writing), and EVERY
-              # `authentik_application`/`authentik_policy_binding` read then failed ("no value given
-              # for required property pbm_uuid"/"expires") - the newer provider expects response
-              # fields a 2026.5.x server doesn't return. `~> 2026.5.0` (three components, not the
-              # two-component `~> 2026.5` - that would still permit the same 2026.8.0 jump) keeps
-              # this within the server's own release line while still tracking the lock file for
-              # anything the server doesn't handle itself
-              # (2026.5.1 exists beyond the old exact pin). Bump the FIRST TWO components by hand,
-              # together with the deployed server's own version, whenever that's intentionally
-              # upgraded - never let `tofu init -upgrade` alone decide this one.
-              version = "~> 2026.5.0";
+              # once resolved provider v2026.8.0 against the actual deployed server (2026.5.6 at the
+              # time), and EVERY `authentik_application`/`authentik_policy_binding` read then failed
+              # ("no value given for required property pbm_uuid"/"expires") - the newer provider
+              # expects response fields a 2026.5.x server doesn't return. Derived from
+              # `pkgs.authentik.version` (the SAME nixpkgs-resolved server version `nixos`
+              # deploys - `pkgs` here is terranix's own per-system instance, same input/pin as every
+              # NixOS config in this flake) rather than hand-copied, so this can never drift out of
+              # sync with whatever server version is actually running: a nixpkgs bump that changes
+              # `pkgs.authentik.version`'s major.minor automatically re-derives the constraint on the
+              # next evaluation, no manual bump to remember. `~> ${majorMinor}.0` (three components -
+              # a two-component `~> 2026.5` would still permit a 2026.8.0-style jump) keeps this
+              # within the server's own release line while still tracking the lock file for anything
+              # the server doesn't handle itself (2026.5.1 exists beyond the old exact pin).
+              version = "~> ${lib.versions.majorMinor pkgs.authentik.version}.0";
             };
 
             variable = {
