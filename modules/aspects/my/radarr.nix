@@ -183,11 +183,7 @@ in
             radarr_root_folder.movies.path = "/metalminds/movies";
           };
 
-          terraform.required_providers.radarr = {
-            source = "devopsarr/radarr";
-            version = "~> 2.4";
-          };
-
+          terraform.required_providers.radarr.source = "devopsarr/radarr";
           variable.RADARR_API_KEY.sensitive = true;
         };
 

@@ -169,11 +169,7 @@
             sonarr_root_folder.shows.path = "/metalminds/shows";
           };
 
-          terraform.required_providers.sonarr = {
-            source = "devopsarr/sonarr";
-            version = "~> 3.4";
-          };
-
+          terraform.required_providers.sonarr.source = "devopsarr/sonarr";
           variable.SONARR_API_KEY.sensitive = true;
         };
 

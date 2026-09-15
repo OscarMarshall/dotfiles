@@ -396,10 +396,7 @@ let
             };
           };
 
-          terraform.required_providers.readarr = {
-            source = "devopsarr/readarr";
-            version = "~> 2.1";
-          };
+          terraform.required_providers.readarr.source = "devopsarr/readarr";
 
           variable = {
             # `otherApiKeySecret`'s variable is also declared by the OTHER instance's own `terranix`

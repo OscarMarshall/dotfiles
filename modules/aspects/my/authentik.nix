@@ -647,10 +647,7 @@
               };
             };
 
-            terraform.required_providers.authentik = {
-              source = "goauthentik/authentik";
-              version = "2026.5.0";
-            };
+            terraform.required_providers.authentik.source = "goauthentik/authentik";
 
             variable = {
               AUTHENTIK_MAILGUN_SMTP_PASSWORD.sensitive = true;
