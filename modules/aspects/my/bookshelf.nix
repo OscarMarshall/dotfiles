@@ -280,13 +280,11 @@ let
       # tries one anyway, gets EXDEV, and surfaces that as a permissions error instead of naming
       # the real cause. Applied to radarr.nix/sonarr.nix too, preemptively, since they have the
       # identical separate-dataset shape (`movies`/`shows` vs `torrents`) even though neither has
-      # actually hit this yet. Every OTHER field below is the provider's own stock example value,
-      # UNVERIFIED against either instance's actual live settings - unlike the resources above
-      # (created fresh, nothing to conflict with), this one already exists on every Readarr
-      # install, so importing it will overwrite these other fields to whatever's written here.
-      # Reconcile them against the real values first with
-      # `tofu plan -generate-config-out=media-management.tf.json` (see prowlarr.nix's own comment
-      # on this exact technique) rather than trusting the stock defaults below blindly.
+      # actually hit this yet. Every OTHER field below has since been reconciled against this
+      # instance's own actual live settings (via `tofu plan` after importing), then further aligned
+      # with radarr.nix's/sonarr.nix's identical resources on a few fields that had drifted across
+      # the three apps for no real reason - see the resource's own comment, right above it, for
+      # which fields and why.
       #
       #   tofu import readarr_media_management.${instance} ""  # GET /api/v1/config/mediamanagement
       terranix =
@@ -345,26 +343,32 @@ let
             };
 
             # Reconciled against the actual live values (`tofu plan` after importing, identical for
-            # both instances) - every field here except `hardlinks_copy` now matches what was
-            # already configured; only that one is an intentional change (see radarr.nix's
-            # identical resource for why).
+            # both instances), then aligned with radarr.nix's/sonarr.nix's own identical resources
+            # on `chmod_folder`, `delete_empty_folders`, `import_extra_files`/`extra_file_extensions`,
+            # and `set_permissions` - the three apps had drifted (each configured by hand at a
+            # different time) and there was no reason for Readarr specifically to differ from the
+            # other two on any of these, so each picks whichever value Radarr/Sonarr already agreed
+            # on (or, for `import_extra_files`/`extra_file_extensions`, Radarr's own prior value).
+            # `hardlinks_copy` is the other intentional change (see radarr.nix's identical resource
+            # for why); `allow_fingerprinting`/`watch_ibrary_for_changes`/etc. already matched
+            # Readarr's real settings and have no equivalent in Radarr/Sonarr to align against.
             readarr_media_management.${instance} = {
               allow_fingerprinting = "newFiles";
-              chmod_folder = "755";
+              chmod_folder = "775";
               chown_group = "";
               create_empty_author_folders = false;
-              delete_empty_folders = false;
+              delete_empty_folders = true;
               download_propers_repacks = "preferAndUpgrade";
-              extra_file_extensions = "srt";
+              extra_file_extensions = "srt,ass";
               file_date = "none";
               hardlinks_copy = false;
-              import_extra_files = false;
+              import_extra_files = true;
               minimum_free_space = 100;
               provider = "readarr.${instance}";
               recycle_bin_days = 7;
               recycle_bin_path = "";
               rescan_after_refresh = "always";
-              set_permissions = false;
+              set_permissions = true;
               skip_free_space_check = false;
               unmonitor_previous_books = false;
               watch_ibrary_for_changes = true;

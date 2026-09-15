@@ -103,10 +103,11 @@
       # `sonarr_media_management` turns off `hardlinks_copy` - see radarr.nix's own comment on its
       # identical `radarr_media_management` resource for why (separate ZFS datasets, hardlinks
       # can't cross them, confirmed as Bookshelf's actual failure mode in rreading-glasses.nix's
-      # sibling issue) and for why every OTHER field below is an UNVERIFIED stock default that
-      # needs reconciling against this instance's real live settings (via
-      # `tofu plan -generate-config-out=...`, see prowlarr.nix's own comment) before applying,
-      # since - unlike the resources below it - this one already exists on every Sonarr install.
+      # sibling issue). Every OTHER field below has since been reconciled against this instance's
+      # own actual live settings (via `tofu plan` after importing), then further aligned with
+      # radarr.nix's/bookshelf.nix's identical resources on a couple of fields that had drifted
+      # across the three apps for no real reason - see the resource's own comment, right above it,
+      # for which fields and why.
       #
       # These resources already exist by hand in the running instance; applying without importing
       # first would create duplicates (same situation `authentik_outpost.embedded` was in - see
@@ -145,9 +146,13 @@
               tv_imported_category = "sonarr-imported";
             };
 
-            # Reconciled against the actual live values (`tofu plan` after importing) - every field
-            # here except `hardlinks_copy` now matches what was already configured; only that one
-            # is an intentional change (see radarr.nix's identical resource for why).
+            # Reconciled against the actual live values (`tofu plan` after importing), then aligned
+            # with radarr.nix's/bookshelf.nix's own identical resources on `import_extra_files`/
+            # `extra_file_extensions` (matching Radarr's own prior value, extended here and in
+            # bookshelf.nix) - the three apps had drifted (each configured by hand at a different
+            # time) and there was no reason for Sonarr specifically to differ. `hardlinks_copy` is
+            # the other intentional change (see radarr.nix's identical resource for why); everything
+            # else already matched Sonarr's real settings.
             sonarr_media_management.default = {
               chmod_folder = "775";
               chown_group = "";
@@ -156,10 +161,10 @@
               download_propers_repacks = "preferAndUpgrade";
               enable_media_info = true;
               episode_title_required = "always";
-              extra_file_extensions = "srt";
+              extra_file_extensions = "srt,ass";
               file_date = "none";
               hardlinks_copy = false;
-              import_extra_files = false;
+              import_extra_files = true;
               minimum_free_space = 100;
               recycle_bin_days = 7;
               recycle_bin_path = "";

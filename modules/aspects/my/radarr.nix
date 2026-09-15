@@ -112,14 +112,11 @@ in
       # permissions error" rather than naming the real cause - confirmed as the actual failure mode
       # for Bookshelf (rreading-glasses.nix's own sibling issue), which has the identical
       # separate-dataset shape (`torrents` vs `books`); applying here preemptively since Sonarr has
-      # it too. Every OTHER field below is the provider's own stock example value, NOT verified
-      # against this instance's actual live settings - unlike `radarr_root_folder`/
-      # `radarr_download_client_qbittorrent` below (created fresh, nothing to conflict with), THIS
-      # resource always already exists (every Radarr install has media-management settings from
-      # first boot), so importing it will overwrite these other fields to whatever's written here.
-      # Reconcile them against the real values first with
-      # `tofu plan -generate-config-out=media-management.tf.json` (see prowlarr.nix's own comment
-      # on this exact technique) rather than trusting the stock defaults below blindly.
+      # it too. Every OTHER field below has since been reconciled against this instance's own actual
+      # live settings (via `tofu plan` after importing), then further aligned with sonarr.nix's/
+      # bookshelf.nix's identical resources on a couple of fields that had drifted across the three
+      # apps for no real reason - see the resource's own comment, right above it, for which fields
+      # and why.
       #
       # These resources already exist by hand in the running instance; applying without importing
       # first would create duplicates (same situation `authentik_outpost.embedded` was in - see
@@ -158,9 +155,13 @@ in
               priority = 1;
             };
 
-            # Reconciled against the actual live values (`tofu plan` after importing) - every field
-            # here except `copy_using_hardlinks` now matches what was already configured; only that
-            # one is an intentional change (see this resource's own header comment for why).
+            # Reconciled against the actual live values (`tofu plan` after importing), then aligned
+            # with sonarr.nix's/bookshelf.nix's own identical resources on `delete_empty_folders`
+            # and `download_propers_and_repacks` - the three apps had drifted (each configured by
+            # hand at a different time) and there was no reason for Radarr specifically to differ
+            # from the other two on either setting, so this picks the majority (2-of-3) value for
+            # both. `copy_using_hardlinks` is the other intentional change (see this resource's own
+            # header comment for why); everything else already matched Radarr's real settings.
             radarr_media_management.default = {
               auto_rename_folders = false;
               auto_unmonitor_previously_downloaded_movies = false;
@@ -168,8 +169,8 @@ in
               chown_group = "";
               copy_using_hardlinks = false;
               create_empty_movie_folders = true;
-              delete_empty_folders = false;
-              download_propers_and_repacks = "doNotPrefer";
+              delete_empty_folders = true;
+              download_propers_and_repacks = "preferAndUpgrade";
               enable_media_info = true;
               extra_file_extensions = "srt,ass";
               file_date = "none";
