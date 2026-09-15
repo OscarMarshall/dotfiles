@@ -104,19 +104,24 @@ in
       # this - Sonarr's/Readarr's equivalents call it something else, see their own `terranix`
       # fields).
       #
-      # `radarr_media_management` turns off `copy_using_hardlinks` - `movies` (this aspect's own
-      # dataset, above) and `torrents` (qbittorrent.nix's) are separate ZFS datasets, i.e. separate
-      # filesystems even though both sit under the same `metalminds` pool, and a hardlink can never
-      # cross a filesystem boundary. Radarr's default import strategy tries one anyway, gets EXDEV,
-      # and *arr apps generally surface that as a misleading "can see but not access... likely
-      # permissions error" rather than naming the real cause - confirmed as the actual failure mode
-      # for Bookshelf (rreading-glasses.nix's own sibling issue), which has the identical
-      # separate-dataset shape (`torrents` vs `books`); applying here preemptively since Sonarr has
-      # it too. Every OTHER field below has since been reconciled against this instance's own actual
-      # live settings (via `tofu plan` after importing), then further aligned with sonarr.nix's/
-      # bookshelf.nix's identical resources on a couple of fields that had drifted across the three
-      # apps for no real reason - see the resource's own comment, right above it, for which fields
-      # and why.
+      # `radarr_media_management` leaves `copy_using_hardlinks` on (Radarr's own default) - `movies`
+      # (this aspect's own dataset, above) and `torrents` (qbittorrent.nix's) are separate ZFS
+      # datasets, i.e. separate filesystems even though both sit under the same `metalminds` pool,
+      # and a hardlink can never cross a filesystem boundary. That's fine: Radarr's own import always
+      # requests `HardLink | Copy` together when this is on, so a same-filesystem import still gets
+      # the cheap hardlink, and a cross-filesystem one (like this) transparently falls back to a
+      # plain copy on the OS's own EXDEV error - no fallback-flag config needed. What DOES need
+      # fixing, for either path, is the DELETE of the original that follows once qBittorrent's own
+      # seed limit marks a download "done" (`torrent-client`'s `qbittorrent.nix` owns the source) -
+      # solved centrally in zfs.nix's `dataset` quirk (its own `user`/`group`/`aclUsers` field
+      # comments have the full story: a plain recursive chmod was enough for Radarr/Sonarr's own
+      # native processes, which are real members of qbittorrent.nix's `qbittorrent` group, but
+      # Bookshelf's containerized Readarr needed a POSIX ACL instead, since its base image's own
+      # entrypoint silently drops whatever supplementary group `--group-add` requested). Every field
+      # below has been reconciled against this instance's own actual live settings (via `tofu plan`
+      # after importing), then further aligned with sonarr.nix's/bookshelf.nix's identical resources
+      # on a couple of fields that had drifted across the three apps for no real reason - see the
+      # resource's own comment, right above it, for which fields and why.
       #
       # These resources already exist by hand in the running instance; applying without importing
       # first would create duplicates (same situation `authentik_outpost.embedded` was in - see
@@ -160,14 +165,15 @@ in
             # and `download_propers_and_repacks` - the three apps had drifted (each configured by
             # hand at a different time) and there was no reason for Radarr specifically to differ
             # from the other two on either setting, so this picks the majority (2-of-3) value for
-            # both. `copy_using_hardlinks` is the other intentional change (see this resource's own
-            # header comment for why); everything else already matched Radarr's real settings.
+            # both; everything else (including `copy_using_hardlinks`, left at Radarr's own default -
+            # see this resource's own header comment for why that's fine here) already matched
+            # Radarr's real settings.
             radarr_media_management.default = {
               auto_rename_folders = false;
               auto_unmonitor_previously_downloaded_movies = false;
               chmod_folder = "775";
               chown_group = "";
-              copy_using_hardlinks = false;
+              copy_using_hardlinks = true;
               create_empty_movie_folders = true;
               delete_empty_folders = true;
               download_propers_and_repacks = "preferAndUpgrade";
