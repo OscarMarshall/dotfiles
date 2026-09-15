@@ -21,15 +21,19 @@ let
   # the HOST's own loopback, which is a distinct network namespace from any other container's, so
   # it wouldn't actually be reachable from Bookshelf's container. Podman's own DNS resolves
   # containers by name for any other container sharing this network, so Bookshelf just points
-  # `METADATA_URL` at `http://${name}:${toString port}` (bookshelf.nix) - no fixed IP to track.
-  # NixOS's oci-containers module only ever passes whatever's listed in `networks` straight through
-  # as `--network=` flags (nixos/modules/virtualisation/oci-containers.nix); it doesn't create the
-  # network itself, hence the `podman-network-${network}` oneshot below that every container
-  # sharing it (including Bookshelf's own, in bookshelf.nix) depends on.
+  # `METADATA_URL` at `http://${name}:8788` (bookshelf.nix, hardcoded there rather than shared from
+  # here - see the port comment below) - no fixed IP to track. NixOS's oci-containers module only
+  # ever passes whatever's listed in `networks` straight through as `--network=` flags
+  # (nixos/modules/virtualisation/oci-containers.nix); it doesn't create the network itself, hence
+  # the `podman-network-${network}` oneshot below that every container sharing it (including
+  # Bookshelf's own, in bookshelf.nix) depends on.
   network = name;
-  # rreading-glasses' own hardcoded default (`PORT` env var, cmd/rghc/main.go) - no reason to
-  # override it since, unlike Bookshelf's own two instances, nothing else contends for it: this
-  # container is on its own network namespace, not published to the host at all.
+  # No port option below: 8788 is rreading-glasses' own hardcoded default (`PORT` env var,
+  # cmd/rghc/main.go), so nothing here needs to set or forward it - no reason to override it since,
+  # unlike Bookshelf's own two instances, nothing else contends for it: this container is on its
+  # own network namespace, not published to the host at all. bookshelf.nix's `METADATA_URL` (above)
+  # and its own unrelated `port = 8788;` (Bookshelf's own listen port, not this container's) both
+  # hardcode the same number independently - there's no shared constant to reference from here.
 
 in
 {
