@@ -146,7 +146,17 @@ in
 
           systemd = {
             services = {
-              qbittorrent.serviceConfig.EnvironmentFile = [ config.age.secrets."qbittorrent.env".path ];
+              qbittorrent.serviceConfig = {
+                EnvironmentFile = [ config.age.secrets."qbittorrent.env".path ];
+                # Default umask (022) creates completed-download files/directories `rw-r--r--`/
+                # `rwxr-xr-x` - readable by the `qbittorrent` group, but not writable, which starves
+                # every OTHER app that reaches in as a group member (rather than as `qbittorrent`
+                # itself) of the write access it needs to delete/rename files here on import - see
+                # zfs.nix's own `user`/`group` field comment for the actual failure this caused
+                # (Readarr's completed-download import). This only fixes NEWLY downloaded content
+                # going forward; zfs.nix's own recursive `chmod g+rwX` self-heals what already exists.
+                UMask = "0002";
+              };
 
               # gluetun used to sync qBittorrent's listening port to ProtonVPN's NAT-PMP forwarded
               # port automatically; VPN-Confinement has no equivalent, so this replicates it. Runs
