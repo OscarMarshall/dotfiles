@@ -16,10 +16,11 @@
     {
       "customType": "regex",
       "managerFilePatterns": ["/.+\\.nix$/"],
+      "matchStringsStrategy": "combination",
       "matchStrings": [
-        "(?<indent0>[ \\t]*)terraform\\.required_providers\\.(?<providerAttr>[a-zA-Z0-9_-]+)\\s*=\\s*\\{\\r?\\n(?<indent1>[ \\t]*)source\\s*=\\s*\"(?<depName>[^\"]+)\";\\r?\\n(?<indent2>[ \\t]*)version\\s*=\\s*\"(?<currentValue>[^\"]+)\";"
+        "terraform\\.required_providers\\.[a-zA-Z0-9_-]+[\\s\\S]*?source\\s*=\\s*\"(?<depName>[^\"]+)\";",
+        "terraform\\.required_providers\\.[a-zA-Z0-9_-]+[\\s\\S]*?version\\s*=\\s*\"(?<currentValue>[0-9][^\"]*)\";"
       ],
-      "autoReplaceStringTemplate": "{{{indent0}}}terraform.required_providers.{{{providerAttr}}} = {\n{{{indent1}}}source = \"{{{depName}}}\";\n{{{indent2}}}version = \"{{{newValue}}}\";",
       "datasourceTemplate": "terraform-provider",
       "versioningTemplate": "hashicorp"
     }
