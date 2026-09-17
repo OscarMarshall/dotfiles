@@ -47,6 +47,7 @@
       locale
       mailgun
       meraki
+      mousehole
       networkmanager
       nginx
       samba
