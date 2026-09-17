@@ -891,11 +891,11 @@
         "opam-repository": "opam-repository"
       },
       "locked": {
-        "lastModified": 1789275249,
-        "narHash": "sha256-L3zNdykbZaBw58KOJjVbi576JsHKu4zUSmasNKKDd+g=",
+        "lastModified": 1789101567,
+        "narHash": "sha256-IXk3V/W41/4BCGtuE0SHKk6WmqCq9tVxoCP6FlnGn+A=",
         "owner": "Bad3r",
         "repo": "nix-logseq-git-flake",
-        "rev": "ed380d79f6c758d20e29055cb1680a03106d6e7f",
+        "rev": "79156b149107405cc350b26b099b2d721cb154df",
         "type": "github"
       },
       "original": {
