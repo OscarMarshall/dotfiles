@@ -112,15 +112,19 @@ in
           environmentFiles = [ config.age.secrets."${dbName}.env".path ];
           # Short name - resolves via podman.nix's `unqualified-search-registries` (docker.io
           # first). Re-resolve with:
-          #   skopeo inspect --override-os linux --override-arch amd64 docker://docker.io/library/postgres:17
+          #   skopeo inspect --override-os linux --override-arch amd64 docker://docker.io/library/postgres:18
           #
-          # Pinned to 17 (not renovate-auto-bumpable to 18 - see renovate.json's own `postgres`
-          # packageRule) because 18+'s image refuses to start against this volume's existing
-          # 17-format data laid out directly at `/var/lib/postgresql/data` - it expects a
-          # pg_ctlcluster-style versioned subdirectory under `/var/lib/postgresql` instead (see
-          # https://github.com/docker-library/postgres/pull/1259). Upgrading needs a deliberate
-          # pg_upgrade migration of this volume's data, not just a tag bump.
-          image = "postgres:17@sha256:67f41722b7a8cbdb868a44a4995c846eddfdc2973bccb291ce937dce88ad5675";
+          # 18+'s image refuses to start against 17-format data laid out directly at
+          # `/var/lib/postgresql/data` (it expects a pg_ctlcluster-style versioned subdirectory
+          # under `/var/lib/postgresql` instead - see
+          # https://github.com/docker-library/postgres/pull/1259), which crash-looped this
+          # container when renovate auto-bumped straight from 17 to 18 in place against this
+          # volume's then-17-format data. Fine to land here as a clean 18 init instead of a real
+          # pg_upgrade migration, since (per the module-level comment above) this volume is just a
+          # rebuildable cache - it was wiped, empty, before this bump. A future major bump like
+          # this one won't auto-merge again - see renovate.json's own major-Docker-image
+          # packageRule.
+          image = "postgres:18@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280";
           networks = [ network ];
           volumes = [ "/metalminds/${dbName}:/var/lib/postgresql/data" ];
         };
