@@ -60,7 +60,20 @@ let
         }
       ];
 
-      nixos = { config, ... }: {
+      nixos = { config, pkgs, ... }: {
+        # The shared `books` dataset entry above only guarantees `/metalminds/books` itself exists
+        # (and is owned by readarr:readarr) - nothing creates THIS instance's own subdirectory
+        # beneath it, which Readarr's root-folder API (`readarr_root_folder.${instance}.path` in
+        # `terranix` below) refuses to register if it doesn't already exist on disk. `preStart`
+        # (rather than a `systemd.tmpfiles.rule`) runs as part of THIS container's own unit, which
+        # already orders itself after `zfs-dataset-metalminds-books.service` via the `books` dataset
+        # entry's `units` list above - so the parent directory is guaranteed to exist and be owned
+        # by the time this runs, without needing its own separate ordering.
+        systemd.services."podman-${name}".preStart = ''
+          ${pkgs.coreutils}/bin/mkdir -p /metalminds/books/${instance}
+          ${pkgs.coreutils}/bin/chown readarr:readarr /metalminds/books/${instance}
+        '';
+
         # A dedicated `readarr` user/group (shared by BOTH Bookshelf instances, same as
         # qbittorrent.nix's own service user) rather than accepting the image's own undocumented
         # built-in "abc" (911:911) - both instances' containers run as this user via PUID/PGID
