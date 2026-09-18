@@ -30,6 +30,12 @@
       "matchDatasources": ["terraform-provider"],
       "automerge": false,
       "addLabels": ["terraform-provider"]
+    },
+    {
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "addLabels": ["major-docker-image"]
     }
   ]
 }

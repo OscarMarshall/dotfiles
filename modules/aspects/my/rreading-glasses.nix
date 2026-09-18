@@ -113,7 +113,14 @@ in
           # Short name - resolves via podman.nix's `unqualified-search-registries` (docker.io
           # first). Re-resolve with:
           #   skopeo inspect --override-os linux --override-arch amd64 docker://docker.io/library/postgres:17
-          image = "postgres:18@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280";
+          #
+          # Pinned to 17 (not renovate-auto-bumpable to 18 - see renovate.json's own `postgres`
+          # packageRule) because 18+'s image refuses to start against this volume's existing
+          # 17-format data laid out directly at `/var/lib/postgresql/data` - it expects a
+          # pg_ctlcluster-style versioned subdirectory under `/var/lib/postgresql` instead (see
+          # https://github.com/docker-library/postgres/pull/1259). Upgrading needs a deliberate
+          # pg_upgrade migration of this volume's data, not just a tag bump.
+          image = "postgres:17@sha256:67f41722b7a8cbdb868a44a4995c846eddfdc2973bccb291ce937dce88ad5675";
           networks = [ network ];
           volumes = [ "/metalminds/${dbName}:/var/lib/postgresql/data" ];
         };
