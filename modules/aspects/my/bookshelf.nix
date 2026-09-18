@@ -61,6 +61,14 @@ let
       ];
 
       nixos = { config, ... }: {
+        # The `networks` join above needs the network to already exist - see
+        # rreading-glasses.nix's own `podman-network-${network}` oneshot comment for why NixOS's
+        # oci-containers module doesn't create it automatically.
+        systemd.services."podman-${name}" = {
+          after = [ "podman-network-rreading-glasses.service" ];
+          requires = [ "podman-network-rreading-glasses.service" ];
+        };
+
         # A dedicated `readarr` user/group (shared by BOTH Bookshelf instances, same as
         # qbittorrent.nix's own service user) rather than accepting the image's own undocumented
         # built-in "abc" (911:911) - both instances' containers run as this user via PUID/PGID
@@ -90,6 +98,14 @@ let
 
         virtualisation.oci-containers.containers.${name} = {
           environment = {
+            # Points Bookshelf at the self-hosted rreading-glasses instance (rreading-glasses.nix)
+            # instead of its own baked-in default (the shared, currently rate-limited
+            # `hardcover.bookinfo.pro` - see that aspect's own header comment) - Bookshelf's README
+            # documents this exact env var ("Supports selfhosted metadata (UI or `METADATA_URL` env
+            # var)"), so no need to also set it through Settings > Development in the UI.
+            # `rreading-glasses` resolves via podman's own DNS because this container joins its
+            # network below - same name as that aspect's own `name`/`network` constants.
+            METADATA_URL = "http://rreading-glasses:8788";
             # Matches the shared `readarr` user/group declared alongside it, which
             # `zfs-dataset-metalminds-books.service` (see the shared `books` entry in `dataset`
             # above and zfs.nix's generic consumer) chowns the shared `/books` root folder to.
@@ -134,6 +150,13 @@ let
           #     -H "Accept: application/vnd.docker.distribution.manifest.v2+json" -D - -o /dev/null \
           #     https://ghcr.io/v2/pennydreadful/bookshelf/manifests/hardcover
           image = "ghcr.io/pennydreadful/bookshelf:hardcover@sha256:67498dd5ece516867d72ee642abd6c1a66b36a135c8f7da0127109564372beb1";
+          # Joins rreading-glasses.nix's own dedicated podman network so this container can reach
+          # `rreading-glasses` (METADATA_URL above) by name - see that network's own comment for why
+          # a shared podman network is needed here instead of the usual loopback `ports` publish.
+          # This REPLACES (rather than adds to) podman's own implicit default bridge network, which
+          # is fine: that network is also a normal (non-`--internal`) bridge, so outbound internet
+          # access (indexers, notifications, etc.) and the `ports` publish below are unaffected.
+          networks = [ "rreading-glasses" ];
 
           ports =
             let
@@ -248,6 +271,26 @@ let
       # reason `readarr_root_folder`'s own default profile ids are above.
       #
       #   tofu import readarr_import_list_readarr.${instance} <id>  # GET /api/v1/importlist
+      #
+      # `readarr_media_management` leaves `hardlinks_copy` on (Readarr's own default). The shared
+      # `/books` root folder (above) and qbittorrent.nix's `torrents` dataset ARE separate ZFS
+      # datasets - separate filesystems, even though both sit under the same `metalminds` pool - and
+      # a hardlink can never cross a filesystem boundary, but that's fine: a failed hardlink attempt
+      # here transparently falls back to a plain copy (Readarr always requests `HardLink | Copy`
+      # together when this is on). The actual root cause behind the "can see but not access...
+      # likely permissions error" import failure this instance hit wasn't the hardlink attempt
+      # itself - it was the DELETE of the original that follows once qBittorrent's own seed limit
+      # marks a download "done" (this instance's containerized Readarr process runs as a UID with no
+      # real access to qbittorrent.nix's dataset - confirmed live via `/proc/<pid>/status`, since its
+      # base image's own entrypoint drops whatever supplementary group `--group-add` requested).
+      # Solved centrally in zfs.nix's `dataset` quirk (its own `aclUsers` field comment has the full
+      # story) rather than by avoiding hardlinks here. Every field below has been reconciled against
+      # this instance's own actual live settings (via `tofu plan` after importing), then further
+      # aligned with radarr.nix's/sonarr.nix's identical resources on a few fields that had drifted
+      # across the three apps for no real reason - see the resource's own comment, right above it,
+      # for which fields and why.
+      #
+      #   tofu import readarr_media_management.${instance} ""  # GET /api/v1/config/mediamanagement
       terranix =
         {
           lib,
@@ -303,6 +346,39 @@ let
               should_search = true;
             };
 
+            # Reconciled against the actual live values (`tofu plan` after importing, identical for
+            # both instances), then aligned with radarr.nix's/sonarr.nix's own identical resources
+            # on `chmod_folder`, `delete_empty_folders`, `import_extra_files`/`extra_file_extensions`,
+            # and `set_permissions` - the three apps had drifted (each configured by hand at a
+            # different time) and there was no reason for Readarr specifically to differ from the
+            # other two on any of these, so each picks whichever value Radarr/Sonarr already agreed
+            # on (or, for `import_extra_files`/`extra_file_extensions`, Radarr's own prior value).
+            # Everything else (including `hardlinks_copy`, left at Readarr's own default - see this
+            # resource's own header comment for why that's fine here) already matched Readarr's real
+            # settings, including `allow_fingerprinting`/`watch_ibrary_for_changes`/etc., which have
+            # no equivalent in Radarr/Sonarr to align against.
+            readarr_media_management.${instance} = {
+              allow_fingerprinting = "newFiles";
+              chmod_folder = "775";
+              chown_group = "";
+              create_empty_author_folders = false;
+              delete_empty_folders = true;
+              download_propers_repacks = "preferAndUpgrade";
+              extra_file_extensions = "srt,ass";
+              file_date = "none";
+              hardlinks_copy = true;
+              import_extra_files = true;
+              minimum_free_space = 100;
+              provider = "readarr.${instance}";
+              recycle_bin_days = 7;
+              recycle_bin_path = "";
+              rescan_after_refresh = "always";
+              set_permissions = true;
+              skip_free_space_check = false;
+              unmonitor_previous_books = false;
+              watch_ibrary_for_changes = true;
+            };
+
             readarr_naming.${instance} = {
               author_folder_format = "{Author Name}";
               colon_replacement_format = 4; # Smart
@@ -333,10 +409,7 @@ let
             };
           };
 
-          terraform.required_providers.readarr = {
-            source = "devopsarr/readarr";
-            version = "~> 2.1";
-          };
+          terraform.required_providers.readarr.source = "devopsarr/readarr";
 
           variable = {
             # `otherApiKeySecret`'s variable is also declared by the OTHER instance's own `terranix`
@@ -365,6 +438,13 @@ let
         icon = "https://raw.githubusercontent.com/pennydreadful/bookshelf/develop/Logo/Readarr.svg";
         label = "Bookshelf (${label})";
         protected = true;
+        # Bookshelf's "Add New Book" search (/api/v1/search) calls out to the Hardcover metadata
+        # API synchronously per request (this instance runs the "hardcover" image tag, see the
+        # container's own `image` comment above) - an uncommon title can take nginx's default 60s
+        # proxy_read_timeout to resolve, producing a 504 Gateway Timeout from nginx itself well
+        # before Bookshelf would have replied. 300s covers that without leaving a search hung
+        # indefinitely if Hardcover is actually down.
+        proxyTimeout = 300;
         # Bookshelf's UI keeps a SignalR (WebSocket) connection open for live queue/activity
         # updates (it's a Readarr fork, same mechanism) - without this, nginx's
         # recommendedProxySettings clears the Connection header (see nginx.nix's

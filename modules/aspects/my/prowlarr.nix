@@ -240,10 +240,7 @@
           };
         };
 
-        terraform.required_providers.prowlarr = {
-          source = "devopsarr/prowlarr";
-          version = "~> 3.2";
-        };
+        terraform.required_providers.prowlarr.source = "devopsarr/prowlarr";
 
         variable = {
           BOOKSHELF_AUDIOBOOKS_API_KEY.sensitive = true;
