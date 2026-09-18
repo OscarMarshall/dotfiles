@@ -1,4 +1,9 @@
 let
+  # Same VPN-Confinement bridge address as qbittorrent.nix's own pinned `namespaceAddress` (same
+  # `proton0` namespace) - pinned here too rather than reached via `config`, for the same reason
+  # qbittorrent.nix gives: this is referenced from `virtual-host`'s `upstreamHost` below, a scope
+  # that doesn't have it.
+  namespaceAddress = "192.168.15.1";
   port = 5010;
 in
 {
@@ -75,7 +80,7 @@ in
         label = "Mousehole";
         name = "mousehole";
         protected = true;
-        upstreamHost = "192.168.15.1";
+        upstreamHost = namespaceAddress;
       };
 
       vpn-confinement = "podman-mousehole";
