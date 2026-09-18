@@ -113,7 +113,7 @@ in
           # Short name - resolves via podman.nix's `unqualified-search-registries` (docker.io
           # first). Re-resolve with:
           #   skopeo inspect --override-os linux --override-arch amd64 docker://docker.io/library/postgres:17
-          image = "postgres:17@sha256:67f41722b7a8cbdb868a44a4995c846eddfdc2973bccb291ce937dce88ad5675";
+          image = "postgres:18@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280";
           networks = [ network ];
           volumes = [ "/metalminds/${dbName}:/var/lib/postgresql/data" ];
         };
