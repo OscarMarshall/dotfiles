@@ -69,12 +69,12 @@ in
         ];
       };
 
-      # No `homepage` block: deliberately not a dashboard tile (it's a set-once-and-forget cookie
-      # manager, not something to check daily), but `label`/`icon`/`group` still feed its Authentik
-      # application (see virtual-host.nix).
       virtual-host = {
         inherit port;
         group = "Arr Stack";
+        # No `widget`: no gethomepage.dev widget type exists for Mousehole, so this is a plain
+        # link tile - `label`/`icon`/`group` above feed it too.
+        homepage.description = "Keeps MAM synced with the seedbox's VPN IP";
         host = host.name;
         icon = "https://raw.githubusercontent.com/t-mart/mousehole/master/docs/images/logo/logo.svg";
         label = "Mousehole";
