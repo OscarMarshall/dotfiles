@@ -114,19 +114,18 @@ in
           # first). Re-resolve with:
           #   skopeo inspect --override-os linux --override-arch amd64 docker://docker.io/library/postgres:18
           #
-          # 18+'s image refuses to start against 17-format data laid out directly at
-          # `/var/lib/postgresql/data` (it expects a pg_ctlcluster-style versioned subdirectory
-          # under `/var/lib/postgresql` instead - see
-          # https://github.com/docker-library/postgres/pull/1259), which crash-looped this
-          # container when renovate auto-bumped straight from 17 to 18 in place against this
-          # volume's then-17-format data. Fine to land here as a clean 18 init instead of a real
-          # pg_upgrade migration, since (per the module-level comment above) this volume is just a
-          # rebuildable cache - it was wiped, empty, before this bump. A future major bump like
-          # this one won't auto-merge again - see renovate.json's own major-Docker-image
-          # packageRule.
+          # 18+'s image categorically refuses a bind mount landing directly at the old
+          # `/var/lib/postgresql/data` - doesn't matter whether it actually holds pre-18 data, an
+          # EMPTY mount there still gets rejected (confirmed live: the crash-looped container never
+          # got far enough to write anything, yet still hit this). It wants a mount one level up at
+          # `/var/lib/postgresql` instead, and creates its own versioned subdirectory
+          # (`18/docker`) inside that itself - see https://github.com/docker-library/postgres/pull/1259.
+          # This crash-looped when renovate auto-bumped straight from 17 to 18 in place against the
+          # old mount path; a future major bump like this one won't auto-merge again - see
+          # renovate.json's own major-Docker-image packageRule.
           image = "postgres:18@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280";
           networks = [ network ];
-          volumes = [ "/metalminds/${dbName}:/var/lib/postgresql/data" ];
+          volumes = [ "/metalminds/${dbName}:/var/lib/postgresql" ];
         };
 
         ${name} = {
