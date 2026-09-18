@@ -275,7 +275,6 @@
           # registry) - OpenTofu's own default registry.opentofu.org doesn't mirror it, and a bare
           # "ThePhaseless/jellyfin" source resolves against that default, not terraform.io.
           source = "registry.terraform.io/ThePhaseless/jellyfin";
-          version = "~> 0.3";
         };
       };
 
@@ -296,8 +295,9 @@
             # fetch has no browser session to carry anything the SSO Authentication plugin might
             # otherwise care about (see sonarr.nix's own comment on the same pattern).
             url = "http://127.0.0.1:${toString port}";
-            # `version = 2;` once harmony's Jellyfin is upgraded past 10.12 (currently 10.11.x) -
+            # Jellyfin 10.12+ (now packaged as 12.0 in nixpkgs) deprecated the v1 widget API -
             # see https://gethomepage.dev/widgets/services/jellyfin/.
+            version = 2;
           };
         };
 

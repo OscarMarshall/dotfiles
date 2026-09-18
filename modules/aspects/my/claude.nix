@@ -103,6 +103,56 @@
             "Bash(git:*)"
             "Bash(nix:*)"
           ];
+
+          statusLine = {
+            command = "${pkgs.writeShellScript "claude-code-status-line" ''
+              input=$(cat)
+
+              # Single jq call (rather than one per field): cheaper on a path that re-renders on every
+              # turn, and a parse failure (silenced below) or a null/missing field then leaves both
+              # $cwd and $remaining empty instead of $cwd becoming the literal string "null".
+              # $remaining is whichever of the 5h/7d rate limits is more used, since that is the
+              # binding one, floored (not rounded) so the threshold below never overstates it.
+              parsed=$(printf '%s' "$input" | ${pkgs.jq}/bin/jq -r '
+                (.workspace.current_dir // "") as $cwd
+                | ([.rate_limits.five_hour.used_percentage // empty, .rate_limits.seven_day.used_percentage // empty]
+                    | if length > 0 then ((100 - max) | floor | tostring) else "" end) as $remaining
+                | [$cwd, $remaining]
+                | @tsv
+              ' 2>/dev/null)
+              IFS=$'\t' read -r cwd remaining <<<"$parsed"
+
+              branch=""
+              if [ -n "$cwd" ] && [ -d "$cwd" ]; then
+                branch=$(${pkgs.git}/bin/git --no-optional-locks -C "$cwd" branch --show-current 2>/dev/null)
+              fi
+
+              dim='\033[2m'
+              branch_color='\033[36m'
+              reset='\033[0m'
+
+              out=""
+
+              if [ -n "$branch" ]; then
+                out="''${dim}''${branch_color} ''${branch}''${reset}"
+              fi
+
+              if [ -n "$remaining" ]; then
+                limit_color='\033[32m'
+                [ "$remaining" -lt 50 ] && limit_color='\033[33m'
+                [ "$remaining" -lt 20 ] && limit_color='\033[31m'
+
+                if [ -n "$out" ]; then
+                  out="''${out} ''${dim}·''${reset} "
+                fi
+                out="''${out}''${dim}''${limit_color}''${remaining}% left''${reset}"
+              fi
+
+              printf '%b' "$out"
+            ''}";
+
+            type = "command";
+          };
         };
       };
     };

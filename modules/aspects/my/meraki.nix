@@ -99,6 +99,18 @@ in
 
         terraform.required_providers.meraki = {
           source = "cisco-open/meraki";
+          # Every release cisco-open/meraki has ever published is a pre-release (alpha/beta - see
+          # https://registry.terraform.io/v1/providers/cisco-open/meraki/versions, no stable line
+          # exists) - `tofu init` excludes pre-releases from resolution entirely unless the
+          # constraint itself references one, so unlike every OTHER provider here, this one can't
+          # go unconstrained: with no version at all, `tofu init` fails outright ("no available
+          # releases match the given constraints"). An exact pin is the only thing that actually
+          # works, confirmed live - a `>=` floor referencing this SAME version still fails with the
+          # identical error (OpenTofu's prerelease matching apparently requires an exact match, not
+          # just any constraint that mentions one). So unlike the rest, this one really is pinned in
+          # the traditional sense - bump this by hand (checking that registry link above for
+          # whatever's newest) whenever a newer prerelease is wanted; `tofu init -upgrade` alone
+          # can't move it.
           version = "1.2.4-beta";
         };
       };
