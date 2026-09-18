@@ -49,6 +49,8 @@
       meraki
       networkmanager
       nginx
+      podman
+      rreading-glasses
       samba
       satisfactory-server
       ssh-server
