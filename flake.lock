@@ -891,11 +891,11 @@
         "opam-repository": "opam-repository"
       },
       "locked": {
-        "lastModified": 1789687964,
-        "narHash": "sha256-I71XCFUNDilIT37amIB1qCnxdi83DfR4CXOUV2eMHz0=",
+        "lastModified": 1789700221,
+        "narHash": "sha256-Co/Z/Bb5P7sEFTzOj6q05RgnO9cPeWtkflGxMCo07Mg=",
         "owner": "OscarMarshall",
         "repo": "nix-logseq-git-flake",
-        "rev": "ab9c29adc29cdeadf97c5f7fa713a6cae476beef",
+        "rev": "5a6535d6f21d95338c3e46872fc3205d2485a841",
         "type": "github"
       },
       "original": {
