@@ -18,11 +18,28 @@
       url = if global then "storyteller.${host.domain}" else "storyteller.${host.name}.${host.domain}";
     in
     {
-      dataset = {
-        name = "storyteller";
-        pool = "metalminds";
-        units = [ "podman-storyteller" ];
-      };
+      dataset = [
+        {
+          name = "storyteller";
+          pool = "metalminds";
+          units = [ "podman-storyteller" ];
+        }
+        {
+          # The shared `/books` library (bookshelf.nix's own `books` dataset entry, which owns
+          # this dataset's `user`/`group` - mirrored here verbatim rather than left unset, since
+          # `dataset`'s consumers get flattened and deduplicated by `zfs-dataset-<pool>-<name>`
+          # name alone (zfs.nix's own `ensureDatasetService`/`lib.listToAttrs`): an entry missing
+          # `user`/`group` here could win that dedup and silently drop the chown Bookshelf relies
+          # on). Storyteller reads (and, per its own auto-import docs, writes metadata back into)
+          # this library from its own mount below - see the `PUID`/`PGID` comment there for why no
+          # further `aclUsers` grant is needed on top of this.
+          group = "readarr";
+          name = "books";
+          pool = "metalminds";
+          units = [ "podman-storyteller" ];
+          user = "readarr";
+        }
+      ];
 
       nixos = { config, ... }: {
 
@@ -33,6 +50,16 @@
             # above for why that forces a single canonical hostname.
             AUTH_URL = "https://${url}/api/v2/auth";
             ENABLE_WEB_READER = "true";
+            # Storyteller drops root to a baked-in `storyteller` user (uid/gid 1000) by default,
+            # and its entrypoint only ever chowns its OWN `/data` volume to match `PUID`/`PGID` -
+            # never any other mounted volume (per its self-hosting docs' own "Permission
+            # management" section), so the shared `/library` mount below is only readable/writable
+            # if `PUID`/`PGID` already resolve to a uid/gid that has access to it on the HOST. This
+            # points them at bookshelf.nix's own shared `readarr` user/group instead of leaving the
+            # default 1000:1000 - the same identity Bookshelf itself runs as (see its own
+            # `PUID`/`PGID` comment), which the `books` dataset entry above is chowned to.
+            PGID = toString config.users.groups.readarr.gid;
+            PUID = toString config.users.users.readarr.uid;
           };
 
           environmentFiles = [ config.age.secrets."storyteller.env".path ];
@@ -48,7 +75,17 @@
             in
             [ "127.0.0.1:${port'}:${port'}" ];
 
-          volumes = [ "/metalminds/storyteller:/data" ];
+          volumes = [
+            "/metalminds/storyteller:/data"
+            # The shared books library (bookshelf.nix's `/books`), mounted where Storyteller's own
+            # docs say its auto-import watcher expects it. Readable/writable without a separate
+            # `aclUsers` grant thanks to the `dataset`/`PUID`/`PGID` comments above - Storyteller
+            # writes metadata changes back into these files, so this deliberately isn't `:ro`. The
+            # watched folder itself still needs pointing at `/library` by hand in Storyteller's own
+            # Settings UI - no env var/config-file equivalent for that, same story as
+            # `storyteller-oidc-client-secret`'s own comment above.
+            "/metalminds/books:/library"
+          ];
         };
       };
 
