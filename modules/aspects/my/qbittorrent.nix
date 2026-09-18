@@ -315,11 +315,26 @@ in
         kind = "qbittorrent";
       };
 
-      # No `homepage` block: deliberately not a dashboard tile, but `label`/`icon`/`group` still
-      # feed its Authentik application (see virtual-host.nix).
       virtual-host = {
         inherit global port;
         group = "Arr Stack";
+
+        homepage = {
+          description = "Torrent client";
+
+          widget = {
+            type = "qbittorrent";
+            # Hit qBittorrent directly inside its VPN namespace rather than through nginx/Authentik,
+            # since Homepage's server-side widget fetch has no browser session to pass the
+            # forward-auth gate - same reasoning as sonarr.nix's own widget.url override. No
+            # username/password/API key needed: the source address this arrives from (the default
+            # namespace's own veth/bridge address) falls within `AuthSubnetWhitelist`
+            # (192.168.15.0/24) above, same as nginx's own proxied requests, so qBittorrent skips
+            # login entirely for it already.
+            url = "http://${namespaceAddress}:${toString port}";
+          };
+        };
+
         host = host.name;
         icon = "https://raw.githubusercontent.com/qbittorrent/qBittorrent/master/src/icons/qbittorrent-tray.svg";
         label = "qBittorrent";
