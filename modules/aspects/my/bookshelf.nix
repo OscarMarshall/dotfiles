@@ -142,10 +142,13 @@ let
             [ "127.0.0.1:${port'}:${port'}" ];
 
           # `/books` is shared by BOTH instances deliberately (see the shared `books` entry in
-          # `dataset` above) - the plan is for the ebook and audiobook instance to manage the same
-          # on-disk library for a given book, eventually kept in sync the way
+          # `dataset` above), but each instance only ever reads/writes its OWN subdirectory beneath
+          # it (`/books/${instance}`, set as this instance's root folder below) - audiobook and ebook
+          # files are different formats for the same title, not the same on-disk file, so there's
+          # nothing to actually share at the file level. What's kept in sync between the two
+          # instances (via `readarr_import_list_readarr` below, the pattern
           # https://trash-guides.info/Radarr/Tips/Sync-2-radarr-sonarr/ describes for Radarr/Sonarr
-          # pairs - not implemented yet, tracked as a follow-up.
+          # pairs) is which books are being monitored, not their storage location.
           #
           # `/metalminds/torrents/downloads` is mounted at the SAME absolute path (rather than a
           # container-local alias like `/downloads`) so Bookshelf sees completed downloads at
@@ -292,7 +295,7 @@ let
               name = "Sync from Bookshelf (${otherInstance})";
               provider = "readarr.${instance}";
               quality_profile_id = 1;
-              root_folder_path = "/books";
+              root_folder_path = "/books/${instance}";
               # "specificBook" (not "all" - the provider's actual enum here is
               # `["none" "specificBook" "entireAuthor"]`, confirmed via `tofu validate`) monitors
               # only the book(s) this list actually adds - "entireAuthor" would balloon monitoring
@@ -328,7 +331,7 @@ let
               # not include ''"). "default" is a real value in Calibre's own output-profile enum and
               # is simply inert here since this isn't a Calibre library.
               output_profile = "default";
-              path = "/books";
+              path = "/books/${instance}";
               provider = "readarr.${instance}";
             };
           };
