@@ -103,6 +103,45 @@
             "Bash(git:*)"
             "Bash(nix:*)"
           ];
+
+          statusLine = {
+            command = "${pkgs.writeShellScript "claude-code-status-line" ''
+              input=$(cat)
+
+              cwd=$(printf '%s' "$input" | ${pkgs.jq}/bin/jq -r '.workspace.current_dir')
+              branch=$(${pkgs.git}/bin/git --no-optional-locks -C "$cwd" branch --show-current 2>/dev/null)
+              # Remaining % of whichever rate limit (5h session, 7d weekly) is more used, since that's the binding one.
+              remaining=$(printf '%s' "$input" | ${pkgs.jq}/bin/jq -r '
+                [.rate_limits.five_hour.used_percentage // empty, .rate_limits.seven_day.used_percentage // empty]
+                | if length > 0 then (100 - max | round) else empty end
+              ')
+
+              dim='\033[2m'
+              branch_color='\033[36m'
+              reset='\033[0m'
+
+              out=""
+
+              if [ -n "$branch" ]; then
+                out="''${dim}''${branch_color} ''${branch}''${reset}"
+              fi
+
+              if [ -n "$remaining" ]; then
+                limit_color='\033[32m'
+                [ "$remaining" -lt 50 ] && limit_color='\033[33m'
+                [ "$remaining" -lt 20 ] && limit_color='\033[31m'
+
+                if [ -n "$out" ]; then
+                  out="''${out} ''${dim}·''${reset} "
+                fi
+                out="''${out}''${dim}''${limit_color}''${remaining}% left''${reset}"
+              fi
+
+              printf '%b' "$out"
+            ''}";
+
+            type = "command";
+          };
         };
       };
     };
