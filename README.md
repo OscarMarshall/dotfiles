@@ -128,7 +128,8 @@ Use an aspect function signature (`{ host, lib, ... }:`) when you need context-a
 
 - **Media**: Plex, Jellyfin, Tautulli, Radarr, Sonarr, Prowlarr, Unpackerr, Autobrr, Cross-seed
 - **Documents**: Paperless-ngx, behind Authentik forward-auth
-- **Downloads**: native qBittorrent confined with VPN-Confinement
+- **Downloads**: native qBittorrent confined with VPN-Confinement, Mousehole keeping MAM's seen-IP in sync with the same
+  VPN egress
 - **Gaming**: Minecraft servers
 - **Home Automation**: Home Assistant, with SSO via Authentik's `auth_oidc` integration
 - **Infrastructure**: Nginx reverse proxy with Let's Encrypt, Samba file sharing, ZFS storage, offsite backups

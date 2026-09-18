@@ -40,7 +40,7 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
     - **`my/`**: Reusable aspects in the `my` namespace (~43 aspects)
       - Core: boot.nix, locale.nix, nix.nix, fonts.nix
       - Services: nginx.nix, minecraft-servers.nix, paperless.nix, plex.nix, jellyfin.nix, prowlarr.nix,
-        qbittorrent.nix, radarr.nix, sonarr.nix, unpackerr.nix, home-assistant.nix
+        qbittorrent.nix, radarr.nix, sonarr.nix, unpackerr.nix, home-assistant.nix, mousehole.nix
       - Containers: profilarr.nix
       - Desktop: gnome.nix, pipewire.nix, steam.nix, discord.nix, ghostty.nix, umbriel.nix (wlroots/SceneFX compositor),
         noctalia.nix (Wayland shell), noctalia-greeter.nix (greetd greeter)
@@ -136,7 +136,8 @@ Use direct context flag checks in aspect code (hosted users or standalone homes)
 The **harmony** server (x86_64-linux) runs:
 
 - **Media Stack**: Plex, Jellyfin, Tautulli, Radarr, Sonarr, Prowlarr, Autobrr, Cross-seed
-- **Downloads**: native qBittorrent under VPN-Confinement
+- **Downloads**: native qBittorrent under VPN-Confinement, Mousehole keeping MAM's seen-IP in sync with the same VPN
+  egress
 - **Minecraft**: Multiple servers via nix-minecraft
 - **Home Automation**: Home Assistant, with SSO via Authentik's `auth_oidc` integration
 - **Reverse Proxy**: nginx with Let's Encrypt SSL certificates
