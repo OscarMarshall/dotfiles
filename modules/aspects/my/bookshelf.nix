@@ -60,12 +60,28 @@ let
         }
       ];
 
-      nixos = { config, ... }: {
-        # The `networks` join above needs the network to already exist - see
+      nixos = { config, pkgs, ... }: {
+        # The shared `books` dataset entry above only guarantees `/metalminds/books` itself exists
+        # (and is owned by readarr:readarr) - nothing creates THIS instance's own subdirectory
+        # beneath it, which Readarr's root-folder API (`readarr_root_folder.${instance}.path` in
+        # `terranix` below) refuses to register if it doesn't already exist on disk. `preStart`
+        # (rather than a `systemd.tmpfiles.rule`) runs as part of THIS container's own unit, which
+        # already orders itself after `zfs-dataset-metalminds-books.service` via the `books` dataset
+        # entry's `units` list above - so the parent directory is guaranteed to exist and be owned
+        # by the time this runs, without needing its own separate ordering.
+        #
+        # The `networks` join below also needs the network to already exist - see
         # rreading-glasses.nix's own `podman-network-${network}` oneshot comment for why NixOS's
-        # oci-containers module doesn't create it automatically.
+        # oci-containers module doesn't create it automatically - hence `after`/`requires` on this
+        # same unit alongside `preStart`.
         systemd.services."podman-${name}" = {
           after = [ "podman-network-rreading-glasses.service" ];
+
+          preStart = ''
+            ${pkgs.coreutils}/bin/mkdir -p /metalminds/books/${instance}
+            ${pkgs.coreutils}/bin/chown readarr:readarr /metalminds/books/${instance}
+          '';
+
           requires = [ "podman-network-rreading-glasses.service" ];
         };
 
@@ -165,10 +181,13 @@ let
             [ "127.0.0.1:${port'}:${port'}" ];
 
           # `/books` is shared by BOTH instances deliberately (see the shared `books` entry in
-          # `dataset` above) - the plan is for the ebook and audiobook instance to manage the same
-          # on-disk library for a given book, eventually kept in sync the way
+          # `dataset` above), but each instance only ever reads/writes its OWN subdirectory beneath
+          # it (`/books/${instance}`, set as this instance's root folder below) - audiobook and ebook
+          # files are different formats for the same title, not the same on-disk file, so there's
+          # nothing to actually share at the file level. What's kept in sync between the two
+          # instances (via `readarr_import_list_readarr` below, the pattern
           # https://trash-guides.info/Radarr/Tips/Sync-2-radarr-sonarr/ describes for Radarr/Sonarr
-          # pairs - not implemented yet, tracked as a follow-up.
+          # pairs) is which books are being monitored, not their storage location.
           #
           # `/metalminds/torrents/downloads` is mounted at the SAME absolute path (rather than a
           # container-local alias like `/downloads`) so Bookshelf sees completed downloads at
@@ -335,7 +354,7 @@ let
               name = "Sync from Bookshelf (${otherInstance})";
               provider = "readarr.${instance}";
               quality_profile_id = 1;
-              root_folder_path = "/books";
+              root_folder_path = "/books/${instance}";
               # "specificBook" (not "all" - the provider's actual enum here is
               # `["none" "specificBook" "entireAuthor"]`, confirmed via `tofu validate`) monitors
               # only the book(s) this list actually adds - "entireAuthor" would balloon monitoring
@@ -404,7 +423,7 @@ let
               # not include ''"). "default" is a real value in Calibre's own output-profile enum and
               # is simply inert here since this isn't a Calibre library.
               output_profile = "default";
-              path = "/books";
+              path = "/books/${instance}";
               provider = "readarr.${instance}";
             };
           };
