@@ -44,22 +44,45 @@
           extraPackages = [ pkgs.intel-media-driver ];
         };
 
-        # No `openFirewall`/`port-forward` (unlike plex.nix): Plex genuinely wants direct inbound
-        # reachability for its own remote-access/relay-avoidance logic, but Jellyfin has no such
-        # requirement - it's reached exclusively through nginx's loopback proxy_pass, same as
-        # Sonarr/Radarr/Prowlarr (see sonarr.nix's own comment on this). Opening 8096 - a plaintext
-        # HTTP port, since TLS termination happens at nginx - on the LAN firewall or WAN via Meraki
-        # would just be unnecessary attack surface with no upside.
-        services.jellyfin = {
-          enable = true;
-
-          hardwareAcceleration = {
+        services = {
+          # No `openFirewall`/`port-forward` (unlike plex.nix): Plex genuinely wants direct inbound
+          # reachability for its own remote-access/relay-avoidance logic, but Jellyfin has no such
+          # requirement - it's reached exclusively through nginx's loopback proxy_pass, same as
+          # Sonarr/Radarr/Prowlarr (see sonarr.nix's own comment on this). Opening 8096 - a plaintext
+          # HTTP port, since TLS termination happens at nginx - on the LAN firewall or WAN via Meraki
+          # would just be unnecessary attack surface with no upside.
+          jellyfin = {
             enable = true;
-            device = "/dev/dri/renderD128";
-            type = "vaapi";
+
+            hardwareAcceleration = {
+              enable = true;
+              device = "/dev/dri/renderD128";
+              type = "vaapi";
+            };
+
+            transcoding.enableHardwareEncoding = true;
           };
 
-          transcoding.enableHardwareEncoding = true;
+          # The SSO plugin's post-login hand-off embeds the real Jellyfin web client in an iframe on
+          # its own callback page (same origin - both served by Jellyfin itself) and waits for it to
+          # load ("Still waiting for the Jellyfin web client ... to start inside this page" if it
+          # never does). nginx.nix's `appendHttpConfig` sends `X-Frame-Options DENY` for every vhost
+          # unconditionally, which blocks ALL framing, including same-origin - confirmed live: the
+          # SSO login itself completed fine server-side (`[SSO Audit] Login succeeded`ed in
+          # Jellyfin's own log), only the client-side iframe hand-off hung. `SAMEORIGIN` instead of
+          # `DENY`, for this vhost only - same override mechanism authentik.nix uses for its own
+          # CSRF-cookie quirk (`nginx.virtualHosts.${url}.extraConfig`), bypassing the `virtual-host`
+          # quirk system since this is Jellyfin-specific, not something every service needs. Re-
+          # declares the other three headers alongside it (not just `X-Frame-Options` on its own) -
+          # nginx only inherits `appendHttpConfig`'s `add_header`s into a vhost that declares NONE of
+          # its own; declaring even one here means declaring all of them, same reasoning as
+          # nginx.nix's own `securityHeaders` string.
+          nginx.virtualHosts."jellyfin.${host.name}.${host.domain}".extraConfig = ''
+            add_header Strict-Transport-Security $hsts_header;
+            add_header 'Referrer-Policy' 'origin-when-cross-origin';
+            add_header X-Frame-Options SAMEORIGIN;
+            add_header X-Content-Type-Options nosniff;
+          '';
         };
       };
 
