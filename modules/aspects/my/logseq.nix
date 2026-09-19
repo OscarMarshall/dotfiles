@@ -1,6 +1,6 @@
 { lib, inputs, ... }: {
   flake-file = {
-    inputs.nix-logseq-git-flake.url = "github:OscarMarshall/nix-logseq-git-flake";
+    inputs.nix-logseq-git-flake.url = "github:Bad3r/nix-logseq-git-flake";
 
     nixConfig = {
       extra-substituters = [ "https://nix-logseq-git-flake.cachix.org" ];
