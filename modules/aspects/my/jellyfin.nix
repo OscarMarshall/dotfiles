@@ -149,6 +149,77 @@
               };
             };
 
+          # A SINGLETON - Jellyfin always has exactly one of these, so this is never actually
+          # `zfs create`d, only ever `tofu import`ed (`tofu import
+          # jellyfin_networking_configuration.default singleton` - note the import ID is the
+          # literal string "singleton", NOT the `id` attribute the resource reports afterward,
+          # which is "networking"). Only `known_proxies` is actually managed here - the SSO
+          # plugin's redirect_uri came back as `http://` instead of `https://` (Authentik's own
+          # strict `redirect_uris` match then refused it) because Jellyfin doesn't trust nginx's
+          # `X-Forwarded-Proto` header from an unlisted proxy, and falls back to its own internal
+          # plain-HTTP listener scheme when building a self-referencing URL. `lifecycle.
+          # ignore_changes` on every OTHER field, same "no value here avoids this" reasoning as
+          # `library_options` above - this resource represents Jellyfin's ENTIRE networking
+          # config (ports, HTTPS, remote access, IP filters, ...), so a plan that isn't restricted
+          # to `known_proxies` would push whatever's declared below over whatever's actually
+          # configured live. The values below are therefore only real defaults for a genuinely
+          # fresh install (never `tofu import`ed yet) - matching what this host's own setup
+          # already implies (TLS terminated at nginx, not Jellyfin itself - see `services.jellyfin`
+          # above's own comment; no `openFirewall`/UPnP, same reasoning) - past that first import,
+          # only `known_proxies` still applies on every later plan.
+          jellyfin_networking_configuration.default = {
+            base_url = "";
+            certificate_password = "";
+            certificate_path = "";
+            enable_https = false;
+            enable_ipv4 = true;
+            enable_ipv6 = false;
+            enable_published_server_uri_by_request = false;
+            enable_remote_access = false;
+            enable_upnp = false;
+            ignore_virtual_interfaces = true;
+            internal_http_port = port;
+            internal_https_port = 8920;
+            is_remote_ip_filter_blacklist = false;
+            # nginx.nix's `recommendedProxySettings` (enabled for every vhost, including
+            # Jellyfin's) already sends `X-Forwarded-Proto`/`X-Forwarded-For` correctly - Jellyfin
+            # just needed telling to actually trust the loopback address they arrive from (see
+            # this resource's own comment above).
+            known_proxies = [ "127.0.0.1" ];
+
+            lifecycle.ignore_changes = [
+              "base_url"
+              "certificate_password"
+              "certificate_path"
+              "enable_https"
+              "enable_ipv4"
+              "enable_ipv6"
+              "enable_published_server_uri_by_request"
+              "enable_remote_access"
+              "enable_upnp"
+              "ignore_virtual_interfaces"
+              "internal_http_port"
+              "internal_https_port"
+              "is_remote_ip_filter_blacklist"
+              "local_network_addresses"
+              "local_network_subnets"
+              "public_http_port"
+              "public_https_port"
+              "published_server_uri_by_subnet"
+              "remote_ip_filter"
+              "require_https"
+              "virtual_interface_names"
+            ];
+
+            local_network_addresses = [ ];
+            local_network_subnets = [ ];
+            public_http_port = port;
+            public_https_port = 8920;
+            published_server_uri_by_subnet = [ ];
+            remote_ip_filter = [ ];
+            require_https = false;
+          };
+
           # `depends_on` on every THIRD-PARTY plugin (repository_url isn't a resource reference -
           # it's a plain string, giving Terraform no implicit ordering against the matching
           # `jellyfin_plugin_repository` below) - confirmed live: without it, Terraform created a
