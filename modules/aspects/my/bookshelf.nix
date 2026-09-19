@@ -286,8 +286,11 @@ let
       # webhook/custom-script needed), so anything added to either side gets mirrored to the other.
       # Both instances get one, each pointed at its sibling, for full bidirectional sync -
       # `enable_automatic_add`/`should_search` mirror the guide's "full sync" variant (everything,
-      # automatically). `quality_profile_id`/`metadata_profile_id` are pinned to `1` for the same
-      # reason `readarr_root_folder`'s own default profile ids are above.
+      # automatically). `metadata_profile_id` is pinned to `1` for the same reason
+      # `readarr_root_folder`'s own default profile ids are above. `quality_profile_id` follows that
+      # same default of `1` EXCEPT on the audiobooks instance, which imports into its own dedicated
+      # "Audiobook" quality profile (id `2`) rather than the ebooks-side profile id its sibling
+      # mirrors over.
       #
       #   tofu import readarr_import_list_readarr.${instance} <id>  # GET /api/v1/importlist
       #
@@ -353,7 +356,7 @@ let
               monitor_new_items = "all";
               name = "Sync from Bookshelf (${otherInstance})";
               provider = "readarr.${instance}";
-              quality_profile_id = 1;
+              quality_profile_id = if instance == "audiobooks" then 2 else 1;
               root_folder_path = "/books/${instance}";
               # "specificBook" (not "all" - the provider's actual enum here is
               # `["none" "specificBook" "entireAuthor"]`, confirmed via `tofu validate`) monitors

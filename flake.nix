@@ -78,7 +78,7 @@
       url = "github:nix-community/nix-index-database";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nix-logseq-git-flake.url = "github:OscarMarshall/nix-logseq-git-flake";
+    nix-logseq-git-flake.url = "github:Bad3r/nix-logseq-git-flake";
     nix-minecraft = {
       url = "github:Infinidoge/nix-minecraft";
       inputs = {

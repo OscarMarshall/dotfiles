@@ -888,15 +888,15 @@
         "opam-repository": "opam-repository"
       },
       "locked": {
-        "lastModified": 1789700221,
-        "narHash": "sha256-Co/Z/Bb5P7sEFTzOj6q05RgnO9cPeWtkflGxMCo07Mg=",
-        "owner": "OscarMarshall",
+        "lastModified": 1789792431,
+        "narHash": "sha256-i7QKvdCdtsanhayv9yqO6t6RaAFVaiQYqDOlCsDw9OU=",
+        "owner": "Bad3r",
         "repo": "nix-logseq-git-flake",
-        "rev": "5a6535d6f21d95338c3e46872fc3205d2485a841",
+        "rev": "bf643262a0a17b61acc59b10c41baf8e0eba43f1",
         "type": "github"
       },
       "original": {
-        "owner": "OscarMarshall",
+        "owner": "Bad3r",
         "repo": "nix-logseq-git-flake",
         "type": "github"
       }
