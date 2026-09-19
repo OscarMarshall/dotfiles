@@ -22,7 +22,18 @@
       moonfinManifestUrl = "https://raw.githubusercontent.com/Moonfin-Client/Plugin/refs/heads/master/manifest.json";
       officialManifestUrl = "https://repo.jellyfin.org/files/plugin/manifest.json";
       port = 8096;
-      ssoAuthManifestUrl = "https://raw.githubusercontent.com/9p4/jellyfin-plugin-sso/manifest-release/manifest.json";
+      # 9p4/jellyfin-plugin-sso (the original) was archived 2026-05-12 and never shipped a
+      # Jellyfin 12-compatible build (its manifest tops out at targetAbi 10.11.0.0) - confirmed via
+      # github.com/9p4/jellyfin-plugin-sso/issues/315 and /307, which is exactly the symptom here:
+      # the plugin loads as "NotSupported" against a 12.x server, so Jellyfin silently drops its
+      # login-page integration and the SSO button disappears. Flowfin/jellyfin-plugin-sso (mirrored
+      # under other forks, e.g. kernicek/jellyfin-plugin-sso) is a maintained continuation that
+      # KEPT THE SAME PLUGIN GUID (505ce9d1-d916-42fa-86ca-673ef241d7df) and targets both 10.11
+      # (.NET 9) and 12.0 (.NET 10) from one manifest - a true drop-in that installs over the
+      # existing plugin and keeps `jellyfin_plugin_configuration.sso_authentication` below intact.
+      # `manifest-beta` (not a `-release` branch) is not a caveat here - it's currently the only
+      # branch publishing a 12.0.0.0-targetAbi build at all.
+      ssoAuthManifestUrl = "https://raw.githubusercontent.com/Flowfin/jellyfin-plugin-sso/manifest-beta/manifest.json";
     in
     {
       nixos = { pkgs, ... }: {
@@ -194,16 +205,18 @@
             #
             # `lifecycle.ignore_changes = [ "name" ]`: same root cause as `moonbase`'s own comment
             # above - confirmed in Jellyfin's own logs ("Loaded assembly SSO-Auth ... Loaded
-            # plugin: SSO-Auth 4.0.0.4"), the LOADED plugin is registered as "SSO-Auth" (its
-            # assembly/project name), not "SSO Authentication" (the manifest's friendly name, and
-            # what actually installs it). `name` forces replacement on any mismatch, which without
-            # this would destroy and recreate an already-working, correctly-installed plugin every
-            # single apply - "no value here avoids this, the state itself is wrong", same class of
-            # bug as `library_options` above.
+            # plugin: SSO-Auth 4.0.0.4"), the LOADED plugin is registered under its own
+            # assembly/project name ("SSO-Auth"), not the manifest's friendly `name` (which is what
+            # actually installs it - "SSO Authentication" on the archived 9p4 manifest, now
+            # "Community SSO for Jellyfin" on `ssoAuthManifestUrl`'s Flowfin replacement, see that
+            # variable's own comment). `name` forces replacement on any mismatch, which without this
+            # would destroy and recreate an already-working, correctly-installed plugin every single
+            # apply - "no value here avoids this, the state itself is wrong", same class of bug as
+            # `library_options` above.
             sso_authentication = {
               depends_on = [ "jellyfin_plugin_repository.sso-auth" ];
               lifecycle.ignore_changes = [ "name" ];
-              name = "SSO Authentication";
+              name = "Community SSO for Jellyfin";
               repository_url = ssoAuthManifestUrl;
             };
           };
