@@ -122,6 +122,7 @@ in
           ]
           # Hobby packages (design, media, gaming) have no place on a work machine.
           ++ lib.optionals ((scope.graphical or false) && !(scope.work or false)) [
+            gthumb
             inkscape
             mpv
             prismlauncher

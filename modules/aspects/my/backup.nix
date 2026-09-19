@@ -332,10 +332,7 @@ in
           ];
         };
 
-        terraform.required_providers.b2 = {
-          source = "Backblaze/b2";
-          version = "0.13.2";
-        };
+        terraform.required_providers.b2.source = "Backblaze/b2";
       };
     };
 }

@@ -104,6 +104,25 @@ in
       # this - Sonarr's/Readarr's equivalents call it something else, see their own `terranix`
       # fields).
       #
+      # `radarr_media_management` leaves `copy_using_hardlinks` on (Radarr's own default) - `movies`
+      # (this aspect's own dataset, above) and `torrents` (qbittorrent.nix's) are separate ZFS
+      # datasets, i.e. separate filesystems even though both sit under the same `metalminds` pool,
+      # and a hardlink can never cross a filesystem boundary. That's fine: Radarr's own import always
+      # requests `HardLink | Copy` together when this is on, so a same-filesystem import still gets
+      # the cheap hardlink, and a cross-filesystem one (like this) transparently falls back to a
+      # plain copy on the OS's own EXDEV error - no fallback-flag config needed. What DOES need
+      # fixing, for either path, is the DELETE of the original that follows once qBittorrent's own
+      # seed limit marks a download "done" (`torrent-client`'s `qbittorrent.nix` owns the source) -
+      # solved centrally in zfs.nix's `dataset` quirk (its own `user`/`group`/`aclUsers` field
+      # comments have the full story: a plain recursive chmod was enough for Radarr/Sonarr's own
+      # native processes, which are real members of qbittorrent.nix's `qbittorrent` group, but
+      # Bookshelf's containerized Readarr needed a POSIX ACL instead, since its base image's own
+      # entrypoint silently drops whatever supplementary group `--group-add` requested). Every field
+      # below has been reconciled against this instance's own actual live settings (via `tofu plan`
+      # after importing), then further aligned with sonarr.nix's/bookshelf.nix's identical resources
+      # on a couple of fields that had drifted across the three apps for no real reason - see the
+      # resource's own comment, right above it, for which fields and why.
+      #
       # These resources already exist by hand in the running instance; applying without importing
       # first would create duplicates (same situation `authentik_outpost.embedded` was in - see
       # authentik.nix's comment on that resource). One-time, via `nix develop .#<host>-tf`
@@ -111,6 +130,7 @@ in
       #
       #   tofu import radarr_root_folder.movies <id>                     # GET /api/v3/rootfolder
       #   tofu import radarr_download_client_qbittorrent.qbittorrent <id> # GET /api/v3/downloadclient
+      #   tofu import radarr_media_management.default ""                 # GET /api/v3/config/mediamanagement
       terranix =
         {
           lib,
@@ -140,14 +160,40 @@ in
               priority = 1;
             };
 
+            # Reconciled against the actual live values (`tofu plan` after importing), then aligned
+            # with sonarr.nix's/bookshelf.nix's own identical resources on `delete_empty_folders`
+            # and `download_propers_and_repacks` - the three apps had drifted (each configured by
+            # hand at a different time) and there was no reason for Radarr specifically to differ
+            # from the other two on either setting, so this picks the majority (2-of-3) value for
+            # both; everything else (including `copy_using_hardlinks`, left at Radarr's own default -
+            # see this resource's own header comment for why that's fine here) already matched
+            # Radarr's real settings.
+            radarr_media_management.default = {
+              auto_rename_folders = false;
+              auto_unmonitor_previously_downloaded_movies = false;
+              chmod_folder = "775";
+              chown_group = "";
+              copy_using_hardlinks = true;
+              create_empty_movie_folders = true;
+              delete_empty_folders = true;
+              download_propers_and_repacks = "preferAndUpgrade";
+              enable_media_info = true;
+              extra_file_extensions = "srt,ass";
+              file_date = "none";
+              import_extra_files = true;
+              minimum_free_space_when_importing = 100;
+              paths_default_static = false;
+              recycle_bin = "";
+              recycle_bin_cleanup_days = 7;
+              rescan_after_refresh = "always";
+              set_permissions_linux = true;
+              skip_free_space_check_when_importing = false;
+            };
+
             radarr_root_folder.movies.path = "/metalminds/movies";
           };
 
-          terraform.required_providers.radarr = {
-            source = "devopsarr/radarr";
-            version = "~> 2.4";
-          };
-
+          terraform.required_providers.radarr.source = "devopsarr/radarr";
           variable.RADARR_API_KEY.sensitive = true;
         };
 
