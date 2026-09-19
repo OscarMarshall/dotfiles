@@ -243,6 +243,16 @@
             # would retry - and fail - this identical step forever without this.
             configuration_json = builtins.toJSON {
               OidConfigs.authentik = {
+                # The SSO plugin's outbound fetches (discovery, JWKS, token, userinfo, back-channel
+                # logout) refuse a target that resolves to a private-network address by default (an
+                # SSRF/DNS-rebind guard) - and `auth.${host.domain}` does, on-box: authentik.nix's
+                # own `networking.hosts` pins it to harmony's LAN IP so on-box callers don't hit the
+                # SAME hostname's public AAAA record, which is unreachable from harmony itself (see
+                # that pin's own comment). Confirmed live: without this, every fetch failed fast with
+                # "The outbound host resolves only to blocked addresses" instead of the earlier
+                # (pre-`networking.hosts`) 10s hang. Scoped to just this provider, not a global
+                # toggle - the guard is per-provider by design.
+                AllowPrivateNetworkAddresses = true;
                 EnableAllFolders = true;
                 EnableAuthorization = false;
                 Enabled = true;

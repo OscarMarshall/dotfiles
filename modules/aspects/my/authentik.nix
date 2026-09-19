@@ -35,7 +35,17 @@
         # (rather than each individual consumer aspect re-fixing it against its own target, the way
         # nextcloud.nix does for itself); nginx still serves the right vhost by Host header, over
         # the real Let's Encrypt cert. External browsers use public DNS and are unaffected.
-        networking.hosts."127.0.0.1" = [ url ];
+        #
+        # `host.lan-ip` (not `127.0.0.1`, unlike nextcloud.nix's own version of this fix) -
+        # confirmed live: jellyfin-plugin-sso's outbound SSRF guard (its `AllowPrivateNetworkAddresses`
+        # provider opt-in, set in jellyfin.nix's own `configuration_json`) explicitly keeps refusing
+        # loopback even with that opt-in enabled - only RFC 1918/CGNAT/IPv6-ULA ranges are permitted
+        # opt-in targets, by that guard's own design (loopback and link-local stay blocked
+        # unconditionally, everywhere, as a deliberate SSRF backstop). Harmony's LAN IP is real
+        # RFC 1918 space, so it satisfies that guard while still being unambiguously on-box - nginx
+        # binds every interface, not just loopback, so it answers here the same as it would on
+        # 127.0.0.1.
+        networking.hosts.${host.lan-ip} = [ url ];
 
         services = {
           authentik = {
