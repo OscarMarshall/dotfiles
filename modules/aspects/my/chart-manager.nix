@@ -57,8 +57,7 @@
             # ourselves in the wrapper below to point at these.
             mkdir -p $out/lib/chart-manager/resources/native/onyx-linux $out/lib/chart-manager/resources/native/7zip-linux
             ln -s ${onyx}/bin/onyx $out/lib/chart-manager/resources/native/onyx-linux/onyx
-            tar -xJf ${sevenZipSrc} -C $out/lib/chart-manager/resources/native/7zip-linux 7zz
-            chmod +x $out/lib/chart-manager/resources/native/7zip-linux/7zz
+            ln -s ${pkgs._7zz}/bin/7zz $out/lib/chart-manager/resources/native/7zip-linux/7zz
 
             install -Dm444 build/icon-1024.png $out/share/icons/hicolor/1024x1024/apps/chart-manager.png
             install -Dm444 ${./chart-manager.desktop} $out/share/applications/chart-manager.desktop
@@ -94,9 +93,13 @@
             platforms = [ "x86_64-linux" ];
           };
         };
-        # Companion CLI tools electron-builder's own Linux build fetches at build time (see
+        # Companion CLI tool electron-builder's own Linux build fetches at build time (see
         # upstream's .github/workflows/build-linux.yml) - own release cadence, unrelated to
-        # chart-manager's, so pinned by hand same as any other `fetchurl`.
+        # chart-manager's, so pinned by hand same as any other `fetchurl`. Not built from source:
+        # onyx is a large Haskell project vendoring a dozen C libraries (FFmpeg, libvorbis, FLAC,
+        # FLTK, ...) as git submodules built via its own Docker/MSYS2/Homebrew-specific toolchain
+        # - packaging that in Nix is a project of its own, disproportionate for a helper binary.
+        # Fetching its AppImage is the same distribution path upstream's own CI uses.
         onyx = pkgs.appimageTools.wrapType2 {
           pname = "onyx";
 
@@ -108,10 +111,6 @@
           version = "20251011";
         };
         pname = "chart-manager";
-        sevenZipSrc = pkgs.fetchurl {
-          hash = "sha256-Qaq6exI1MEq1qgYkUwxnroKUls0p6HWSUnHv3MwowD4=";
-          url = "https://github.com/ip7z/7zip/releases/download/26.02/7z2602-linux-x64.tar.xz";
-        };
       in
       {
         home.packages = [ chartManager ];
