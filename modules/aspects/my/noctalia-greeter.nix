@@ -10,31 +10,6 @@
   my.noctalia-greeter.nixos = { pkgs, ... }: {
     imports = [ inputs.noctalia-greeter.nixosModules.default ];
 
-    programs.noctalia-greeter = {
-      enable = true;
-      # Default to the Umbriel session (Name= in umbriel.desktop). Run `noctalia-greeter sessions`
-      # to confirm the exact name if the picker ever looks empty.
-      greeter-args = "--session Umbriel";
-
-      settings = {
-        # Match the Noctalia shell (my.noctalia) and the mocha-dark cursor above: the greeter's
-        # built-in "Catppuccin" palette, dark (Mocha) variant.
-        appearance = {
-          scheme = "Catppuccin";
-          theme_mode = "dark";
-        };
-
-        cursor = {
-          path = "${pkgs.catppuccin-cursors.mochaDark}/share/icons";
-          size = 24;
-          theme = "catppuccin-mocha-dark-cursors";
-        };
-
-        idle.timeout = 300;
-        keyboard.layout = "us";
-      };
-    };
-
     # Umbriel/Noctalia isn't GNOME, so nothing otherwise provides a secret-service (libsecret)
     # keyring. pass-cli, proton-pass-agent, and every other libsecret client stores credentials
     # there and fail hard without it ("Local encryption key not found -> force logout"). Enable
@@ -87,6 +62,31 @@
       # The greeter module reads this to know which account owns /var/lib/noctalia-greeter; greetd's
       # nixpkgs module creates the `greeter` user/group.
       greetd.settings.default_session.user = "greeter";
+    };
+
+    services.displayManager.noctalia-greeter = {
+      enable = true;
+      # Default to the Umbriel session (Name= in umbriel.desktop). Run `noctalia-greeter sessions`
+      # to confirm the exact name if the picker ever looks empty.
+      greeter-args = "--session Umbriel";
+
+      settings = {
+        # Match the Noctalia shell (my.noctalia) and the mocha-dark cursor above: the greeter's
+        # built-in "Catppuccin" palette, dark (Mocha) variant.
+        appearance = {
+          scheme = "Catppuccin";
+          theme_mode = "dark";
+        };
+
+        cursor = {
+          path = "${pkgs.catppuccin-cursors.mochaDark}/share/icons";
+          size = 24;
+          theme = "catppuccin-mocha-dark-cursors";
+        };
+
+        idle.timeout = 300;
+        keyboard.layout = "us";
+      };
     };
   };
 }
