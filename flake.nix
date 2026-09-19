@@ -30,6 +30,10 @@
       url = "github:nix-community/authentik-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    chart-manager-src = {
+      url = "github:xlzipx/clone-hero-chart-manager";
+      flake = false;
+    };
     claude-code-nix = {
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
