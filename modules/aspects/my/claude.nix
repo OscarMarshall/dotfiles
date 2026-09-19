@@ -123,18 +123,47 @@
               IFS=$'\t' read -r cwd remaining <<<"$parsed"
 
               branch=""
+              worktree_path=""
               if [ -n "$cwd" ] && [ -d "$cwd" ]; then
-                branch=$(${pkgs.git}/bin/git --no-optional-locks -C "$cwd" branch --show-current 2>/dev/null)
+                # One rev-parse call for both: --abbrev-ref HEAD prints the literal "HEAD" (not
+                # empty) when detached, unlike `git branch --show-current`, so that case is
+                # normalized back to empty below. A linked worktree's --git-dir sits under
+                # --git-common-dir's ".git/worktrees/", so they differ there but match in the
+                # primary checkout - only then is the toplevel worth showing, since the primary
+                # checkout's location is already implied by the branch alone.
+                git_info=$(${pkgs.git}/bin/git --no-optional-locks -C "$cwd" rev-parse \
+                  --abbrev-ref HEAD --show-toplevel --git-dir --git-common-dir 2>/dev/null)
+                if [ -n "$git_info" ]; then
+                  # `read var1 var2 ...` stops at the first newline (it's the line terminator, not
+                  # just another IFS char), so a plain multi-var read here would leave everything
+                  # past $info[0] empty regardless of IFS. An empty -d delimiter makes it read the
+                  # whole (NUL-free) output as one record instead, so IFS=$'\n' can split all 4
+                  # lines into the array.
+                  IFS=$'\n' read -r -d "" -a info <<<"$git_info"
+                  branch=''${info[0]}
+                  [ "$branch" = "HEAD" ] && branch=""
+                  if [ -n "''${info[2]}" ] && [ "''${info[2]}" != "''${info[3]}" ]; then
+                    worktree_path=''${info[1]/#"$HOME"/\~}
+                  fi
+                fi
               fi
 
               dim='\033[2m'
               branch_color='\033[36m'
+              worktree_color='\033[35m'
               reset='\033[0m'
 
               out=""
 
               if [ -n "$branch" ]; then
                 out="''${dim}''${branch_color} ''${branch}''${reset}"
+              fi
+
+              if [ -n "$worktree_path" ]; then
+                if [ -n "$out" ]; then
+                  out="''${out} ''${dim}·''${reset} "
+                fi
+                out="''${out}''${dim}''${worktree_color} ''${worktree_path}''${reset}"
               fi
 
               if [ -n "$remaining" ]; then
