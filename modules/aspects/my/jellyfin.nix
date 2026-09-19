@@ -22,7 +22,18 @@
       moonfinManifestUrl = "https://raw.githubusercontent.com/Moonfin-Client/Plugin/refs/heads/master/manifest.json";
       officialManifestUrl = "https://repo.jellyfin.org/files/plugin/manifest.json";
       port = 8096;
-      ssoAuthManifestUrl = "https://raw.githubusercontent.com/9p4/jellyfin-plugin-sso/manifest-release/manifest.json";
+      # 9p4/jellyfin-plugin-sso (the original) was archived 2026-05-12 and never shipped a
+      # Jellyfin 12-compatible build (its manifest tops out at targetAbi 10.11.0.0) - confirmed via
+      # github.com/9p4/jellyfin-plugin-sso/issues/315 and /307, which is exactly the symptom here:
+      # the plugin loads as "NotSupported" against a 12.x server, so Jellyfin silently drops its
+      # login-page integration and the SSO button disappears. Flowfin/jellyfin-plugin-sso (mirrored
+      # under other forks, e.g. kernicek/jellyfin-plugin-sso) is a maintained continuation that
+      # KEPT THE SAME PLUGIN GUID (505ce9d1-d916-42fa-86ca-673ef241d7df) and targets both 10.11
+      # (.NET 9) and 12.0 (.NET 10) from one manifest - a true drop-in that installs over the
+      # existing plugin and keeps `jellyfin_plugin_configuration.sso_authentication` below intact.
+      # `manifest-beta` (not a `-release` branch) is not a caveat here - it's currently the only
+      # branch publishing a 12.0.0.0-targetAbi build at all.
+      ssoAuthManifestUrl = "https://raw.githubusercontent.com/Flowfin/jellyfin-plugin-sso/manifest-beta/manifest.json";
     in
     {
       nixos = { pkgs, ... }: {
@@ -33,22 +44,45 @@
           extraPackages = [ pkgs.intel-media-driver ];
         };
 
-        # No `openFirewall`/`port-forward` (unlike plex.nix): Plex genuinely wants direct inbound
-        # reachability for its own remote-access/relay-avoidance logic, but Jellyfin has no such
-        # requirement - it's reached exclusively through nginx's loopback proxy_pass, same as
-        # Sonarr/Radarr/Prowlarr (see sonarr.nix's own comment on this). Opening 8096 - a plaintext
-        # HTTP port, since TLS termination happens at nginx - on the LAN firewall or WAN via Meraki
-        # would just be unnecessary attack surface with no upside.
-        services.jellyfin = {
-          enable = true;
-
-          hardwareAcceleration = {
+        services = {
+          # No `openFirewall`/`port-forward` (unlike plex.nix): Plex genuinely wants direct inbound
+          # reachability for its own remote-access/relay-avoidance logic, but Jellyfin has no such
+          # requirement - it's reached exclusively through nginx's loopback proxy_pass, same as
+          # Sonarr/Radarr/Prowlarr (see sonarr.nix's own comment on this). Opening 8096 - a plaintext
+          # HTTP port, since TLS termination happens at nginx - on the LAN firewall or WAN via Meraki
+          # would just be unnecessary attack surface with no upside.
+          jellyfin = {
             enable = true;
-            device = "/dev/dri/renderD128";
-            type = "vaapi";
+
+            hardwareAcceleration = {
+              enable = true;
+              device = "/dev/dri/renderD128";
+              type = "vaapi";
+            };
+
+            transcoding.enableHardwareEncoding = true;
           };
 
-          transcoding.enableHardwareEncoding = true;
+          # The SSO plugin's post-login hand-off embeds the real Jellyfin web client in an iframe on
+          # its own callback page (same origin - both served by Jellyfin itself) and waits for it to
+          # load ("Still waiting for the Jellyfin web client ... to start inside this page" if it
+          # never does). nginx.nix's `appendHttpConfig` sends `X-Frame-Options DENY` for every vhost
+          # unconditionally, which blocks ALL framing, including same-origin - confirmed live: the
+          # SSO login itself completed fine server-side (`[SSO Audit] Login succeeded`ed in
+          # Jellyfin's own log), only the client-side iframe hand-off hung. `SAMEORIGIN` instead of
+          # `DENY`, for this vhost only - same override mechanism authentik.nix uses for its own
+          # CSRF-cookie quirk (`nginx.virtualHosts.${url}.extraConfig`), bypassing the `virtual-host`
+          # quirk system since this is Jellyfin-specific, not something every service needs. Re-
+          # declares the other three headers alongside it (not just `X-Frame-Options` on its own) -
+          # nginx only inherits `appendHttpConfig`'s `add_header`s into a vhost that declares NONE of
+          # its own; declaring even one here means declaring all of them, same reasoning as
+          # nginx.nix's own `securityHeaders` string.
+          nginx.virtualHosts."jellyfin.${host.name}.${host.domain}".extraConfig = ''
+            add_header Strict-Transport-Security $hsts_header;
+            add_header 'Referrer-Policy' 'origin-when-cross-origin';
+            add_header X-Frame-Options SAMEORIGIN;
+            add_header X-Content-Type-Options nosniff;
+          '';
         };
       };
 
@@ -194,16 +228,18 @@
             #
             # `lifecycle.ignore_changes = [ "name" ]`: same root cause as `moonbase`'s own comment
             # above - confirmed in Jellyfin's own logs ("Loaded assembly SSO-Auth ... Loaded
-            # plugin: SSO-Auth 4.0.0.4"), the LOADED plugin is registered as "SSO-Auth" (its
-            # assembly/project name), not "SSO Authentication" (the manifest's friendly name, and
-            # what actually installs it). `name` forces replacement on any mismatch, which without
-            # this would destroy and recreate an already-working, correctly-installed plugin every
-            # single apply - "no value here avoids this, the state itself is wrong", same class of
-            # bug as `library_options` above.
+            # plugin: SSO-Auth 4.0.0.4"), the LOADED plugin is registered under its own
+            # assembly/project name ("SSO-Auth"), not the manifest's friendly `name` (which is what
+            # actually installs it - "SSO Authentication" on the archived 9p4 manifest, now
+            # "Community SSO for Jellyfin" on `ssoAuthManifestUrl`'s Flowfin replacement, see that
+            # variable's own comment). `name` forces replacement on any mismatch, which without this
+            # would destroy and recreate an already-working, correctly-installed plugin every single
+            # apply - "no value here avoids this, the state itself is wrong", same class of bug as
+            # `library_options` above.
             sso_authentication = {
               depends_on = [ "jellyfin_plugin_repository.sso-auth" ];
               lifecycle.ignore_changes = [ "name" ];
-              name = "SSO Authentication";
+              name = "Community SSO for Jellyfin";
               repository_url = ssoAuthManifestUrl;
             };
           };
@@ -229,7 +265,24 @@
             # operation (not just a warning) and never commits the update to state, every apply
             # would retry - and fail - this identical step forever without this.
             configuration_json = builtins.toJSON {
+              # Plugin-wide (NOT per-provider, unlike everything under `OidConfigs.authentik`
+              # below) - off by default, "fail safe": without it, an enabled/working provider
+              # still never gets a button spliced into the login page's branding disclaimer.
+              # Confirmed live: `Test Connection` succeeding was NOT enough on its own - the
+              # button was still absent from the login page until this was also turned on.
+              ManageLoginPageButtons = true;
+
               OidConfigs.authentik = {
+                # The SSO plugin's outbound fetches (discovery, JWKS, token, userinfo, back-channel
+                # logout) refuse a target that resolves to a private-network address by default (an
+                # SSRF/DNS-rebind guard) - and `auth.${host.domain}` does, on-box: authentik.nix's
+                # own `networking.hosts` pins it to harmony's LAN IP so on-box callers don't hit the
+                # SAME hostname's public AAAA record, which is unreachable from harmony itself (see
+                # that pin's own comment). Confirmed live: without this, every fetch failed fast with
+                # "The outbound host resolves only to blocked addresses" instead of the earlier
+                # (pre-`networking.hosts`) 10s hang. Scoped to just this provider, not a global
+                # toggle - the guard is per-provider by design.
+                AllowPrivateNetworkAddresses = true;
                 EnableAllFolders = true;
                 EnableAuthorization = false;
                 Enabled = true;
