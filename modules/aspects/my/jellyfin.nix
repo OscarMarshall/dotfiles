@@ -242,6 +242,13 @@
             # operation (not just a warning) and never commits the update to state, every apply
             # would retry - and fail - this identical step forever without this.
             configuration_json = builtins.toJSON {
+              # Plugin-wide (NOT per-provider, unlike everything under `OidConfigs.authentik`
+              # below) - off by default, "fail safe": without it, an enabled/working provider
+              # still never gets a button spliced into the login page's branding disclaimer.
+              # Confirmed live: `Test Connection` succeeding was NOT enough on its own - the
+              # button was still absent from the login page until this was also turned on.
+              ManageLoginPageButtons = true;
+
               OidConfigs.authentik = {
                 # The SSO plugin's outbound fetches (discovery, JWKS, token, userinfo, back-channel
                 # logout) refuse a target that resolves to a private-network address by default (an
