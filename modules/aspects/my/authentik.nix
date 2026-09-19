@@ -23,6 +23,19 @@
     {
       nixos = { config, ... }: {
         imports = [ (inputs.authentik-nix.nixosModules.default or { }) ];
+
+        # `host.lan-ip` (den.nix) is optional in the host schema - only harmony declares one right
+        # now, and only harmony includes `my.authentik`, but neither of those is enforced anywhere.
+        # Without this, a host missing it would fail evaluation on the bare `host.lan-ip` reference
+        # below with Nix's own generic "attribute 'lan-ip' missing" error, with nothing pointing at
+        # WHY this aspect needs one.
+        assertions = [
+          {
+            assertion = host ? lan-ip;
+            message = "my.authentik requires host.lan-ip (modules/den.nix) - it pins Authentik's own hostname to it on-box, working around its public AAAA record being unreachable from itself (see the `networking.hosts` assignment below).";
+          }
+        ];
+
         # Public DNS for this hostname resolves off-box; on-box callers (immich.nix/nextcloud.nix/
         # seerr.nix's own OIDC config, and jellyfin.nix's SSO plugin - anything using `oidc` on a
         # `virtual-host`, see virtual-host.nix) hit it too and hairpin through the router - or
