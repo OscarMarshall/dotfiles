@@ -26,13 +26,17 @@
         }
         {
           # The shared `/books` library (bookshelf.nix's own `books` dataset entry, which owns
-          # this dataset's `user`/`group` - mirrored here verbatim rather than left unset, since
-          # `dataset`'s consumers get flattened and deduplicated by `zfs-dataset-<pool>-<name>`
-          # name alone (zfs.nix's own `ensureDatasetService`/`lib.listToAttrs`): an entry missing
-          # `user`/`group` here could win that dedup and silently drop the chown Bookshelf relies
-          # on). Storyteller reads (and, per its own auto-import docs, writes metadata back into)
-          # this library from its own mount below - see the `PUID`/`PGID` comment there for why no
-          # further `aclUsers` grant is needed on top of this.
+          # this dataset overall - `samba`/`guestAccess` deliberately NOT duplicated here, since
+          # those are bookshelf.nix's concern and samba.nix's own consumer filters the raw
+          # `dataset` list for `samba = true` entries before its own separate dedup, so leaving
+          # them off here doesn't affect the Samba share either way). `user`/`group` ARE repeated
+          # here verbatim rather than left unset, because THOSE are what zfs.nix's own
+          # `ensureDatasetService` reads when it flattens/dedupes every contributor's entries by
+          # `zfs-dataset-<pool>-<name>` name alone (`lib.listToAttrs`, last-entry-wins): an entry
+          # missing `user`/`group` here could win that dedup and silently drop the chown Bookshelf
+          # relies on. Storyteller reads (and, per its own auto-import docs, writes metadata back
+          # into) this library from its own mount below - see the `PUID`/`PGID` comment there for
+          # why no further `aclUsers` grant is needed on top of this.
           group = "readarr";
           name = "books";
           pool = "metalminds";
@@ -42,6 +46,18 @@
       ];
 
       nixos = { config, ... }: {
+        # Storyteller's `PUID`/`PGID` below (and the `books` dataset entry above) assume
+        # bookshelf.nix's shared `readarr` user/group is also declared on this host. Without this,
+        # `config.users.users.readarr.uid` below would fail evaluation with a bare "attribute
+        # 'readarr' missing" - this turns that into an actionable message instead. NixOS resolves
+        # `config.assertions` before forcing the rest of `config.system.build.toplevel`, so a
+        # failing assertion here pre-empts that crash rather than racing it.
+        assertions = [
+          {
+            assertion = config.users.users ? readarr;
+            message = "my.storyteller mounts the shared /library dataset and runs its container as bookshelf.nix's `readarr` user (PUID/PGID) - enable `my.bookshelf` (or otherwise declare a `readarr` user/group) on this host too.";
+          }
+        ];
 
         virtualisation.oci-containers.containers.storyteller = {
           environment = {
