@@ -109,18 +109,22 @@
               input=$(cat)
 
               # Single jq call (rather than one per field): cheaper on a path that re-renders on every
-              # turn, and a parse failure (silenced below) or a null/missing field then leaves both
-              # $cwd and $remaining empty instead of $cwd becoming the literal string "null".
-              # $remaining is whichever of the 5h/7d rate limits is more used, since that is the
-              # binding one, floored (not rounded) so the threshold below never overstates it.
+              # turn, and a parse failure (silenced below) or a null/missing field then leaves every
+              # field empty instead of e.g. $cwd becoming the literal string "null". $binding is
+              # whichever of the 5h/7d rate limits is more used, since that is the one that actually
+              # constrains the user next - Anthropic's rate-limit headers only ever report a blended
+              # utilization percentage (there's no per-window token quota to weigh this by instead).
+              # $remaining is floored (not rounded) so the threshold below never overstates it.
               parsed=$(printf '%s' "$input" | ${pkgs.jq}/bin/jq -r '
                 (.workspace.current_dir // "") as $cwd
-                | ([.rate_limits.five_hour.used_percentage // empty, .rate_limits.seven_day.used_percentage // empty]
-                    | if length > 0 then ((100 - max) | floor | tostring) else "" end) as $remaining
-                | [$cwd, $remaining]
+                | ([.rate_limits.five_hour, .rate_limits.seven_day] | map(select(.used_percentage != null))) as $windows
+                | (if ($windows | length) > 0 then ($windows | max_by(.used_percentage)) else null end) as $binding
+                | (if $binding then (100 - $binding.used_percentage | floor | tostring) else "" end) as $remaining
+                | (if $binding then ($binding.resets_at // "" | tostring) else "" end) as $resets_at
+                | [$cwd, $remaining, $resets_at]
                 | @tsv
               ' 2>/dev/null)
-              IFS=$'\t' read -r cwd remaining <<<"$parsed"
+              IFS=$'\t' read -r cwd remaining resets_at <<<"$parsed"
 
               branch=""
               worktree_path=""
@@ -175,6 +179,25 @@
                   out="''${out} ''${dim}·''${reset} "
                 fi
                 out="''${out}''${dim}''${limit_color}''${remaining}% left''${reset}"
+
+                # Only worth surfacing once the binding window is more than half used - above that,
+                # a reset time is just noise next to the percentage.
+                if [ "$remaining" -lt 50 ] && [ -n "$resets_at" ]; then
+                  seconds_left=$(( resets_at - $(${pkgs.coreutils}/bin/date +%s) ))
+                  if [ "$seconds_left" -gt 0 ]; then
+                    days=$(( seconds_left / 86400 ))
+                    hours=$(( seconds_left % 86400 / 3600 ))
+                    minutes=$(( seconds_left % 3600 / 60 ))
+                    if [ "$days" -gt 0 ]; then
+                      resets_in="''${days}d ''${hours}h"
+                    elif [ "$hours" -gt 0 ]; then
+                      resets_in="''${hours}h ''${minutes}m"
+                    else
+                      resets_in="''${minutes}m"
+                    fi
+                    out="''${out} ''${dim}(resets in ''${resets_in})''${reset}"
+                  fi
+                fi
               fi
 
               printf '%b' "$out"
