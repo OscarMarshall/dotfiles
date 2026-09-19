@@ -23,6 +23,19 @@
     {
       nixos = { config, ... }: {
         imports = [ (inputs.authentik-nix.nixosModules.default or { }) ];
+        # Public DNS for this hostname resolves off-box; on-box callers (immich.nix/nextcloud.nix/
+        # seerr.nix's own OIDC config, and jellyfin.nix's SSO plugin - anything using `oidc` on a
+        # `virtual-host`, see virtual-host.nix) hit it too and hairpin through the router - or
+        # worse, since this host's AAAA record points at an address that's simply unreachable from
+        # harmony, causing an on-box HTTP client that tries IPv6 first (confirmed for both
+        # jellyfin-plugin-sso's OIDC discovery fetch and, previously, coolwsd - see nextcloud.nix's
+        # own identical `networking.hosts` comment) to hang for its full request timeout rather
+        # than fail fast, instead of falling back to the working IPv4 path. Pinning to loopback
+        # here sidesteps both problems for every on-box self-reference to Authentik specifically
+        # (rather than each individual consumer aspect re-fixing it against its own target, the way
+        # nextcloud.nix does for itself); nginx still serves the right vhost by Host header, over
+        # the real Let's Encrypt cert. External browsers use public DNS and are unaffected.
+        networking.hosts."127.0.0.1" = [ url ];
 
         services = {
           authentik = {
