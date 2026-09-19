@@ -8,6 +8,27 @@
     includes = with my; [
       (auto-upgrade { allowReboot = false; })
       (cachyos-kernel { })
+      # 24/32 of harmony's threads - see the same comment in melaan.nix.
+      (remote-builder {
+        # MagicDNS name - see the same comment in melaan.nix.
+        builder = "harmony";
+        hostName = "harmony.ts.silverlight-nex.us";
+        maxJobs = 24;
+        publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSU1rTTV1Tlkwck15MlFNRzZJcHRseGdWbDRzUVdvZVNTTm1VcDcvZjJ6MUIK";
+        speedFactor = 4;
+
+        supportedFeatures = [
+          "big-parallel"
+          "kvm"
+          "nixos-test"
+        ];
+
+        system = "x86_64-linux";
+      })
+      (tailscale {
+        loginServer = "https://headscale.harmony.silverlight-nex.us";
+        unattended = true;
+      })
       boot
       disko
       locale
