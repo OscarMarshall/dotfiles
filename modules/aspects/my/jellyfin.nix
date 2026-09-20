@@ -185,12 +185,18 @@
               repository_url = officialManifestUrl;
             };
 
-            # `EnableAuthorization = false;`/`EnableAllFolders = true;` (no RBAC): mapping
-            # authentik groups to Jellyfin roles needs a custom "Group Membership" Authentik scope
-            # mapping (github.com/9p4/jellyfin-plugin-sso/blob/main/providers.md#authentik) that
-            # authentik.nix's generic `oidc` field doesn't set up - every authenticated Authentik
-            # user just gets a normal (non-admin) account with full library access, which is fine
-            # for a family server. Revisit if finer-grained access ever matters.
+            # `EnableAuthorization = true;`/`AdminRoles`/`RoleClaim`: grants Jellyfin admin to
+            # anyone in Authentik's `admin` group (authentik.nix's `authentik_group.admin`), same
+            # group Nextcloud and the break-glass login flow key off. No custom Authentik-side
+            # scope mapping is needed for this (unlike providers.md's own Authentik walkthrough,
+            # which has you add one) - `profile`, already attached to every OIDC provider here,
+            # already carries a `groups` claim by default (see authentik.nix's `oidc-defaults`
+            # comment), so `RoleClaim = "groups"` reads directly off that. `Roles` is deliberately
+            # left unset: per the plugin's own `SSOController.cs`, an empty/absent `Roles` skips
+            # the login-gate check entirely (`Roles == null || Roles.Length == 0` -> valid), while
+            # `AdminRoles` is evaluated independently - so every authenticated user can still log
+            # in and gets `EnableAllFolders`, only `admin`-group members also get
+            # `PermissionKind.IsAdministrator`.
             #
             # `lifecycle.ignore_changes = [ "name" ]`: same root cause as `moonbase`'s own comment
             # above - confirmed in Jellyfin's own logs ("Loaded assembly SSO-Auth ... Loaded
@@ -230,8 +236,9 @@
             # would retry - and fail - this identical step forever without this.
             configuration_json = builtins.toJSON {
               OidConfigs.authentik = {
+                AdminRoles = [ "admin" ];
                 EnableAllFolders = true;
-                EnableAuthorization = false;
+                EnableAuthorization = true;
                 Enabled = true;
                 OidClientId = "jellyfin";
                 # Matches authentik.nix's own `url = if global then "auth.${host.domain}" ...`
@@ -241,6 +248,7 @@
                 # through a completely separate module system with no access to it.
                 OidEndpoint = "https://auth.${host.domain}/application/o/jellyfin/";
                 OidSecret = "\${var.JELLYFIN_OIDC_CLIENT_SECRET}";
+                RoleClaim = "groups";
               };
             };
 
