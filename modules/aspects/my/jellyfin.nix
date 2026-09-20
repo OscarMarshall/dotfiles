@@ -18,12 +18,7 @@
     }:
     { host, ... }:
     let
-      # JellySeerr's own tabs (Movies/TV/Requests) render via File Transformation
-      # (github.com/IAmParadox27/jellyfin-plugin-file-transformation) splicing into jellyfin-web's served
-      # files - it has no configuration of its own, just needs to be present alongside JellySeerr.
-      fileTransformationManifestUrl = "https://www.iamparadox.dev/jellyfin/plugins/manifest.json";
       introSkipperManifestUrl = "https://intro-skipper.org/manifest.json";
-      jellySeerrManifestUrl = "https://raw.githubusercontent.com/ThuGie/JellySeerr/main/manifest.json";
       moonfinManifestUrl = "https://raw.githubusercontent.com/Moonfin-Client/Plugin/refs/heads/master/manifest.json";
       officialManifestUrl = "https://repo.jellyfin.org/files/plugin/manifest.json";
       port = 8096;
@@ -157,32 +152,10 @@
               repository_url = officialManifestUrl;
             };
 
-            file_transformation = {
-              depends_on = [ "jellyfin_plugin_repository.file-transformation" ];
-              name = "File Transformation";
-              repository_url = fileTransformationManifestUrl;
-            };
-
             intro_skipper = {
               depends_on = [ "jellyfin_plugin_repository.intro-skipper" ];
               name = "Intro Skipper";
               repository_url = introSkipperManifestUrl;
-            };
-
-            # Movies/TV/Requests tabs bridging Jellyfin into `seerr` (seerr.nix) - needs
-            # `file_transformation` above (not expressed as a terraform `depends_on`: both plugins just
-            # need to be present after the post-install restart, there's no install-order requirement,
-            # per github.com/ThuGie/JellySeerr's own docs saying "before or alongside").
-            #
-            # One-time manual setup, same class of problem as this file's own top-of-file comment on
-            # `jellyfin-api-key`: Dashboard -> JellySeerr -> Setup, with `seerr`'s own URL and an API key
-            # minted from Seerr's Settings -> General (also only ever issued to an already-authenticated
-            # session, no equivalent of a self-generated key to push in via `jellyfin_plugin_configuration`
-            # the way `sso_authentication` below does its OIDC config).
-            jellyseerr = {
-              depends_on = [ "jellyfin_plugin_repository.jellyseerr" ];
-              name = "JellySeerr";
-              repository_url = jellySeerrManifestUrl;
             };
 
             # `lifecycle.ignore_changes`: Jellyfin registers a LOADED plugin under its own
@@ -276,22 +249,10 @@
           };
 
           jellyfin_plugin_repository = {
-            file-transformation = {
-              enabled = true;
-              name = "File Transformation";
-              url = fileTransformationManifestUrl;
-            };
-
             intro-skipper = {
               enabled = true;
               name = "Intro Skipper";
               url = introSkipperManifestUrl;
-            };
-
-            jellyseerr = {
-              enabled = true;
-              name = "JellySeerr";
-              url = jellySeerrManifestUrl;
             };
 
             moonfin = {
