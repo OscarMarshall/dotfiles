@@ -16,6 +16,19 @@ in
       global ? false,
     }:
     { host, ... }: {
+      # Owned by a dedicated `seerr` system user/group (declared below, in `nixos` - Seerr's own
+      # NixOS module runs it under `DynamicUser` instead, which has no fixed name/id to chown a
+      # dataset to ahead of time, so this aspect overrides that) - zfs.nix's generic `dataset`-quirk
+      # consumer chowns it once created, and `units` orders `seerr.service` after that (same
+      # reasoning as radarr.nix's/paperless.nix's own `dataset` fields).
+      dataset = {
+        group = "seerr";
+        name = "seerr";
+        pool = "metalminds";
+        units = [ "seerr" ];
+        user = "seerr";
+      };
+
       nixos =
         {
           config,
@@ -97,12 +110,32 @@ in
           services.seerr = {
             inherit package port;
             enable = true;
+            # Points CONFIG_DIRECTORY straight at the mounted dataset (like paperless.nix's
+            # `dataDir`/immich.nix's `mediaLocation`) - the module's own `StateDirectory = "seerr"`
+            # (unconditional, not affected by this) still creates/chowns an unused `/var/lib/seerr`
+            # alongside it; harmless, just not where Seerr actually reads/writes.
+            configDir = "/metalminds/seerr";
           };
 
           systemd.services.seerr.serviceConfig = {
+            # Overrides the module's own `DynamicUser = true;` - a dynamically-allocated identity
+            # has no stable name/id the `dataset` field above could chown its dataset to ahead of
+            # time, unlike the fixed `seerr` user/group declared below.
+            DynamicUser = lib.mkForce false;
             EnvironmentFile = config.age.secrets."seerr.env".path;
             ExecStartPre = [ (lib.getExe configureOidc) ];
+            Group = "seerr";
             LoadCredential = "oidc-client-secret:${config.age.secrets.seerr-oidc-client-secret.path}";
+            User = "seerr";
+          };
+
+          users = {
+            groups.seerr = { };
+
+            users.seerr = {
+              group = "seerr";
+              isSystemUser = true;
+            };
           };
         };
 
