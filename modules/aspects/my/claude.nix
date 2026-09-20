@@ -142,8 +142,11 @@
                   # just another IFS char), so a plain multi-var read here would leave everything
                   # past $info[0] empty regardless of IFS. An empty -d delimiter makes it read the
                   # whole (NUL-free) output as one record instead, so IFS=$'\n' can split all 4
-                  # lines into the array.
-                  IFS=$'\n' read -r -d "" -a info <<<"$git_info"
+                  # lines into the array - but since $git_info never contains a NUL, that delimiter
+                  # is never found, so `read` always hits EOF and returns non-zero even though the
+                  # array came through fine; the `||:` ignores that expected failure explicitly
+                  # rather than leaving a bare non-zero status for a future `set -e` to trip on.
+                  IFS=$'\n' read -r -d "" -a info <<<"$git_info" || :
                   branch=''${info[0]}
                   [ "$branch" = "HEAD" ] && branch=""
                   if [ -n "''${info[2]}" ] && [ "''${info[2]}" != "''${info[3]}" ]; then
