@@ -24,6 +24,42 @@
       nixos = { config, ... }: {
         imports = [ (inputs.authentik-nix.nixosModules.default or { }) ];
 
+        # `host.lan-ip` (den.nix) is optional in the host schema - only harmony declares one right
+        # now, and only harmony includes `my.authentik`, but neither of those is enforced anywhere.
+        # Without this, a host missing it would fail evaluation on the bare `host.lan-ip` reference
+        # below with Nix's own generic "attribute 'lan-ip' missing" error, with nothing pointing at
+        # WHY this aspect needs one.
+        assertions = [
+          {
+            assertion = host ? lan-ip;
+            message = "my.authentik requires host.lan-ip (modules/den.nix) - it pins Authentik's own hostname to it on-box, working around its public AAAA record being unreachable from itself (see the `networking.hosts` assignment below).";
+          }
+        ];
+
+        # Public DNS for this hostname resolves off-box; on-box callers (immich.nix/nextcloud.nix/
+        # seerr.nix's own OIDC config, and jellyfin.nix's SSO plugin - anything using `oidc` on a
+        # `virtual-host`, see virtual-host.nix) hit it too and hairpin through the router - or
+        # worse, since this host's AAAA record points at an address that's simply unreachable from
+        # harmony, causing an on-box HTTP client that tries IPv6 first (confirmed for both
+        # jellyfin-plugin-sso's OIDC discovery fetch and, previously, coolwsd - see nextcloud.nix's
+        # own identical `networking.hosts` comment) to hang for its full request timeout rather
+        # than fail fast, instead of falling back to the working IPv4 path. Pinning to loopback
+        # here sidesteps both problems for every on-box self-reference to Authentik specifically
+        # (rather than each individual consumer aspect re-fixing it against its own target, the way
+        # nextcloud.nix does for itself); nginx still serves the right vhost by Host header, over
+        # the real Let's Encrypt cert. External browsers use public DNS and are unaffected.
+        #
+        # `host.lan-ip` (not `127.0.0.1`, unlike nextcloud.nix's own version of this fix) -
+        # confirmed live: jellyfin-plugin-sso's outbound SSRF guard (its `AllowPrivateNetworkAddresses`
+        # provider opt-in, set in jellyfin.nix's own `configuration_json`) explicitly keeps refusing
+        # loopback even with that opt-in enabled - only RFC 1918/CGNAT/IPv6-ULA ranges are permitted
+        # opt-in targets, by that guard's own design (loopback and link-local stay blocked
+        # unconditionally, everywhere, as a deliberate SSRF backstop). Harmony's LAN IP is real
+        # RFC 1918 space, so it satisfies that guard while still being unambiguously on-box - nginx
+        # binds every interface, not just loopback, so it answers here the same as it would on
+        # 127.0.0.1.
+        networking.hosts.${host.lan-ip} = [ url ];
+
         services = {
           authentik = {
             enable = true;

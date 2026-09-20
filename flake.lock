@@ -99,6 +99,22 @@
         "type": "github"
       }
     },
+    "chart-manager-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789771234,
+        "narHash": "sha256-I/LxiEQHU0YD61z51ORsczqFIvKYnS9aEDLyaR2FuhM=",
+        "owner": "xlzipx",
+        "repo": "clone-hero-chart-manager",
+        "rev": "a38b82355e6c71731bbad16b4a7993156458f614",
+        "type": "github"
+      },
+      "original": {
+        "owner": "xlzipx",
+        "repo": "clone-hero-chart-manager",
+        "type": "github"
+      }
+    },
     "claude-code-nix": {
       "inputs": {
         "nixpkgs": [
@@ -1372,6 +1388,7 @@
       "inputs": {
         "agenix-rekey": "agenix-rekey",
         "authentik-nix": "authentik-nix",
+        "chart-manager-src": "chart-manager-src",
         "claude-code-nix": "claude-code-nix",
         "codex-cli-nix": "codex-cli-nix",
         "darwin": "darwin",
