@@ -100,17 +100,105 @@ in
           };
 
           systemd.services.seerr.serviceConfig = {
+            EnvironmentFile = config.age.secrets."seerr.env".path;
             ExecStartPre = [ (lib.getExe configureOidc) ];
             LoadCredential = "oidc-client-secret:${config.age.secrets.seerr-oidc-client-secret.path}";
           };
         };
 
-      # `settings.terraform = "variable";` feeds a Terraform `variable` (modules/terranix.nix's two
-      # modes); also read directly below (LoadCredential) by `configureOidc`, so it's NOT
-      # `intermediary` - it has to be materialized as a real host secret too.
-      secrets.seerr-oidc-client-secret = {
-        generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
-        settings.terraform = "variable";
+      secrets = { secrets, ... }: {
+        # Seerr mints its own API key at first boot and persists it in settings.json - there's no
+        # env var to preset it like Radarr's/Sonarr's `*_AUTH_APIKEY` (see radarr.nix's own
+        # `radarr-api-key` comment for that pattern). This fork (unlike stock seerr-team/seerr)
+        # DOES honor an `API_KEY` env var though, both to fill a missing key and to override an
+        # existing one on every load (server/lib/settings/index.ts's `load()`/`generateApiKey()`,
+        # confirmed against `oidcFork.rev`'s tree) - so this pins Seerr's key to one Nix already
+        # knows, giving the `seerr` Terraform provider (this file's own `terranix` field, below) a
+        # stable credential instead of one that would otherwise only exist after minting it by hand
+        # through the UI post-setup.
+        seerr-api-key = {
+          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 16";
+          intermediary = true;
+          settings.terraform = "variable";
+        };
+
+        # `settings.terraform = "variable";` feeds a Terraform `variable` (modules/terranix.nix's
+        # two modes); also read directly above (LoadCredential) by `configureOidc`, so it's NOT
+        # `intermediary` - it has to be materialized as a real host secret too.
+        seerr-oidc-client-secret = {
+          generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
+          settings.terraform = "variable";
+        };
+
+        "seerr.env".generator = {
+          dependencies = { inherit (secrets) seerr-api-key; };
+
+          script =
+            {
+              lib,
+              decrypt,
+              deps,
+              ...
+            }:
+            ''
+              printf 'API_KEY=%s\n' "$(${decrypt} ${lib.escapeShellArg deps.seerr-api-key.file})"
+            '';
+        };
+      };
+
+      # Managed via terranix (Nix -> Terraform config, see modules/terranix.nix) and the
+      # josh-archer/seerr provider - same class of setup as jellyfin.nix's own `terranix` field,
+      # which contributes the `jellyfin_library` resources referenced below. Deliberately doesn't
+      # declare `seerr_radarr_server`/`seerr_sonarr_server`/notification-agent resources: those
+      # weren't Terraform-managed before this switch either (Seerr's whole config was hand-set
+      # through its UI) - reconnecting them post-wipe is the same one-time manual step it always was,
+      # just against Jellyfin's Movies/Requests tabs instead of Plex's.
+      #
+      # Seerr's data is being wiped as part of this switch (fresh `/var/lib/seerr`, one-time, by
+      # hand) rather than migrated - there's no existing `seerr_*` Terraform state to import from,
+      # since none of this was Terraform-managed under Plex.
+      terranix = { host, ... }: {
+        provider.seerr = {
+          api_key = "\${var.SEERR_API_KEY}";
+          url = "https://seerr.${host.name}.${host.domain}";
+        };
+
+        resource = {
+          # `item_id` (Jellyfin's own internal library GUID), not `id` (the Terraform resource
+          # identifier) - Seerr matches libraries by the ID Jellyfin's own API reports, which is
+          # `jellyfin_library`'s `item_id` (jellyfin.nix's own resource, cross-referenced here since
+          # every aspect's `terranix` field on a host merges into the same Terraform config/state -
+          # same pattern nextcloud.nix uses for mailgun.nix's `mailgun_domain.default`).
+          seerr_jellyfin_library_settings.default.enabled_libraries = [
+            "\${jellyfin_library.movies.item_id}"
+            "\${jellyfin_library.tv-shows.item_id}"
+          ];
+
+          # `ip`/`port` are jellyfin.nix's own loopback/8096 (`seerr` and Jellyfin both run
+          # natively on the same host - see that file's own comments on this same loopback
+          # convention). `api_key` is Jellyfin's OWN API key (jellyfin.nix's `jellyfin-api-key`,
+          # flipped to `settings.terraform = "variable"` there so it can be read as a plain
+          # resource attribute here, not just via the `jellyfin` provider's own implicit env pickup)
+          # - a DIFFERENT credential than this file's own `SEERR_API_KEY` above, which authenticates
+          # the other direction (Terraform -> Seerr, not Seerr -> Jellyfin).
+          seerr_jellyfin_settings.default = {
+            api_key = "\${var.JELLYFIN_API_KEY}";
+            external_hostname = "https://jellyfin.${host.name}.${host.domain}";
+            ip = "127.0.0.1";
+            name = "Jellyfin";
+            port = 8096;
+            use_ssl = false;
+          };
+
+          seerr_main_settings.main = {
+            app_title = "Seerr";
+            application_url = "https://seerr.${host.name}.${host.domain}";
+            locale = "en";
+          };
+        };
+
+        terraform.required_providers.seerr.source = "josh-archer/seerr";
+        variable.SEERR_API_KEY.sensitive = true;
       };
 
       virtual-host = {

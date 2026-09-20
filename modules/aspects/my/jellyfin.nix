@@ -7,10 +7,13 @@
 #
 # One-time manual setup, after Jellyfin's own first-run wizard has created an admin account:
 # Dashboard -> API Keys -> "+" to mint one, then `agenix edit secrets/jellyfin-api-key.age` (needs
-# the YubiKey) to store it, and `agenix rekey -a` to make it available to harmony. The provider
-# reads it from the JELLYFIN_API_KEY env var (`settings.terraform = true;` below), same mechanism as
-# the Cloudflare/Meraki providers (dns.nix/meraki.nix) - never written into the generated Terraform
-# config or state.
+# the YubiKey) to store it, and `agenix rekey -a` to make it available to harmony. `settings.terraform
+# = "variable";` below (not `= true;`, unlike the Cloudflare/Meraki providers in dns.nix/meraki.nix)
+# because seerr.nix's own `seerr_jellyfin_settings` resource ALSO needs this same key as a plain
+# resource attribute value (Seerr's own connection to Jellyfin, a different thing than this file's
+# `jellyfin` provider's auth) - same reasoning as radarr.nix's own `radarr-api-key` comment. Fed to
+# the `jellyfin` provider explicitly below (`provider.jellyfin.api_key`) since a `variable` secret
+# has no implicit env-var pickup the way a `= true;` one does.
 {
   my.jellyfin =
     {
@@ -93,7 +96,7 @@
 
           settings = {
             homepage = "jellyfin";
-            terraform = true;
+            terraform = "variable";
           };
         };
 
@@ -121,7 +124,10 @@
       };
 
       terranix = { host, ... }: {
-        provider.jellyfin.endpoint = "https://jellyfin.${host.name}.${host.domain}";
+        provider.jellyfin = {
+          api_key = "\${var.JELLYFIN_API_KEY}";
+          endpoint = "https://jellyfin.${host.name}.${host.domain}";
+        };
 
         resource = {
           # Names/paths are a best-effort guess (Radarr's/Sonarr's own `movies`/`shows` datasets -
@@ -430,10 +436,14 @@
         };
 
         # Not auto-declared the way every `virtual-host.oidc.client-secret` is (authentik.nix's own
-        # `genAttrs ... oidc-hosts` collects those centrally) - `moonfin-seerr-webhook-secret` has
-        # nothing to do with Authentik/OIDC, so per modules/terranix.nix's own header comment, THIS
-        # aspect (the one actually consuming it, below) is the one that has to declare it.
-        variable.MOONFIN_SEERR_WEBHOOK_SECRET.sensitive = true;
+        # `genAttrs ... oidc-hosts` collects those centrally) - neither `moonfin-seerr-webhook-secret`
+        # nor `jellyfin-api-key` has anything to do with Authentik/OIDC, so per modules/terranix.nix's
+        # own header comment, THIS aspect (the one actually consuming each, above) is the one that
+        # has to declare them.
+        variable = {
+          JELLYFIN_API_KEY.sensitive = true;
+          MOONFIN_SEERR_WEBHOOK_SECRET.sensitive = true;
+        };
       };
 
       virtual-host = {
