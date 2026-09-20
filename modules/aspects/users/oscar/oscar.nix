@@ -77,6 +77,7 @@ in
       # Hobby apps (gaming, 3D printing, media) have no place on a work machine, so they're
       # additionally gated off whenever `work` is set - see `scope` comment above.
       ++ lib.optionals ((scope.graphical or false) && !(scope.work or false)) [
+        my.chart-manager
         my.discord
         my.mkvtoolnix
         my.orca-slicer
