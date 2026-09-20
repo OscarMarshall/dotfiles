@@ -180,26 +180,8 @@
             # install-always-needs-a-restart loop against the WRONG name) - same "no value here
             # avoids this" class of bug as `sso_authentication` below and `library_options` above.
             #
-            # Moonbase has its own built-in Seerr integration (Movies/TV/Requests tabs proxied
-            # through Jellyfin, bridging into `seerr` - seerr.nix), but it's NOT wired up via
-            # `jellyfin_plugin_configuration` the way `sso_authentication` below does its OIDC
-            # config: that resource POSTs `configuration_json` as a full replacement straight to
-            # Jellyfin's `/Plugins/{id}/Configuration` (confirmed in the provider's own source,
-            # `client.UpdatePluginConfiguration`), which Jellyfin core deserializes onto a BRAND
-            # NEW config object - any field the JSON omits reverts to its C# class default. SSO-
-            # Auth's entire config IS just `OidConfigs`, so that's harmless there, but Moonbase's
-            # config also holds unrelated admin-curated state (uploaded themes, server messages,
-            # game library IDs, TMDB/MDBList keys, ...) that terraform declaring only the Seerr
-            # fields would silently wipe back to defaults on every apply.
-            #
-            # One-time manual setup instead: Dashboard -> Plugins -> Moonfin -> enable Seerr
-            # integration, Seerr URL = "http://127.0.0.1:5055" (seerr.nix's own `port`, loopback
-            # since both run natively on the same host - same reasoning as this file's own
-            # homepage widget `url` above). Moonbase auto-generates its own webhook secret and,
-            # once any admin signs into Seerr through a Moonfin client, auto-registers its webhook
-            # in Seerr via that session (Moonfin's own `SeerrProvisioningService`) - no admin API
-            # key to mint and paste by hand, unlike this file's own top-of-file `jellyfin-api-key`
-            # note.
+            # Moonbase's own Seerr integration is configured below via `jellyfin_plugin_configuration.
+            # moonbase` (its own comment covers the full-replacement `configuration_json` hazard).
             moonbase = {
               depends_on = [ "jellyfin_plugin_repository.moonfin" ];
 
