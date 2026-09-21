@@ -265,26 +265,26 @@
           };
 
           jellyfin_plugin_configuration = {
-            # Fully manages Moonbase's stored config (not just its Seerr integration): the provider's
-            # own `UpdatePluginConfiguration` (client/plugins.go) does a raw POST of `configuration_json`
-            # straight to Jellyfin's `/Plugins/{id}/Configuration`, which Jellyfin core deserializes onto
-            # a BRAND NEW config object - any field left out here reverts to Moonfin-Client/Plugin's own
-            # C# class default on the next apply, same as `library_options`/`sso_authentication`'s
-            # `configuration_json` are full replacements, not merges. Every field below mirrors
-            # `Jellyfin/backend/PluginConfiguration.cs` (Moonfin-Client/Plugin@3908c9f, 2026-09) at its
-            # own stock default EXCEPT the `Seerr*`/`PublicServerUrl` block, which wires up `seerr`
-            # (seerr.nix). Re-diff against that file whenever Moonfin materially changes, and expect
-            # this resource to own the ENTIRE plugin going forward - any setting an admin changes via
-            # Dashboard -> Plugins -> Moonfin (a custom theme upload, a server message, an anime-markers
-            # toggle, ...) gets overwritten back to what's declared here on the next apply.
+            # Establishes Moonbase's ENTIRE stored config (not just its Seerr integration) on first
+            # apply: the provider's own `UpdatePluginConfiguration` (client/plugins.go) does a raw POST
+            # of `configuration_json` straight to Jellyfin's `/Plugins/{id}/Configuration`, which
+            # Jellyfin core deserializes onto a BRAND NEW config object - any field left out here would
+            # revert to Moonfin-Client/Plugin's own C# class default, same as `library_options`/
+            # `sso_authentication`'s `configuration_json` are full replacements, not merges. Every field
+            # below mirrors `Jellyfin/backend/PluginConfiguration.cs` (Moonfin-Client/Plugin@3908c9f,
+            # 2026-09) at its own stock default EXCEPT the `Seerr*`/`PublicServerUrl` block, which wires
+            # up `seerr` (seerr.nix). Re-diff against that file whenever Moonfin materially changes.
             #
-            # No `lifecycle.ignore_changes` (unlike `sso_authentication` below): that resource hit a
-            # confirmed provider/Terraform-core bug where Jellyfin's round-tripped `configuration_json`
-            # never matches what was sent, failing the whole apply forever. The exact same provider
-            # mechanism is applied here to a much larger payload, so the same bug is plausible - but
-            # `ignore_changes` would freeze this resource at whatever the FIRST successful apply wrote,
-            # defeating the actual point of managing it here. Left unset until (if) it's actually
-            # confirmed live, so a real config change still has a chance to land.
+            # `lifecycle.ignore_changes = [ "configuration_json" ]`: the SAME confirmed provider/
+            # Terraform-core bug `sso_authentication` below already hit ("Provider produced inconsistent
+            # result after apply ... .configuration_json: inconsistent values for sensitive attribute"),
+            # now also confirmed live here - same round-trip-through-Jellyfin's-own-store mechanism, just
+            # applied to a much larger payload. Without this, every apply after the first retries - and
+            # fails - identically, forever. This DOES mean the "own the entire plugin going forward"
+            # framing above only holds through the first successful apply: after that, Terraform never
+            # touches this field again, and any setting an admin later changes via Dashboard -> Plugins
+            # -> Moonfin (a custom theme upload, a server message, an anime-markers toggle, the Seerr
+            # fields themselves, ...) sticks - same tradeoff `sso_authentication` already lives with.
             moonbase = {
               configuration_json = builtins.toJSON {
                 AnimeAudioMarkersEnabled = false;
@@ -345,6 +345,7 @@
                 WebForcedServerUrl = null;
               };
 
+              lifecycle.ignore_changes = [ "configuration_json" ];
               plugin_id = "\${jellyfin_plugin.moonbase.id}";
             };
 
