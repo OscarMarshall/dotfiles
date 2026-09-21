@@ -126,6 +126,12 @@ in
             ExecStartPre = [ (lib.getExe configureOidc) ];
             Group = "seerr";
             LoadCredential = "oidc-client-secret:${config.age.secrets.seerr-oidc-client-secret.path}";
+            # The module's own `ProtectSystem = "strict";` only allow-lists paths it manages itself
+            # (StateDirectory's `/var/lib/seerr`, RuntimeDirectory, ...) - `configDir` above points
+            # elsewhere, so without this, both `configureOidc` and Seerr itself get "Read-only file
+            # system" writing there (confirmed live: `seerr-configure-oidc` failing on
+            # `/metalminds/seerr/settings.json.tmp`).
+            ReadWritePaths = [ "/metalminds/seerr" ];
             User = "seerr";
           };
 
