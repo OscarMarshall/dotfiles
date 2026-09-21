@@ -134,8 +134,13 @@
                 # normalized back to empty below. A linked worktree's --git-dir sits under
                 # --git-common-dir's ".git/worktrees/", so they differ there but match in the
                 # primary checkout - only then is the toplevel worth showing, since the primary
-                # checkout's location is already implied by the branch alone.
-                git_info=$(${pkgs.git}/bin/git --no-optional-locks -C "$cwd" rev-parse \
+                # checkout's location is already implied by the branch alone. --path-format=absolute
+                # is required for that comparison to hold: --git-dir and --git-common-dir are each
+                # printed relative to $cwd by default, and not always at the same relative depth
+                # (e.g. from a subdirectory of the primary checkout, --git-dir alone can come back
+                # absolute), so an unqualified comparison can see them as different even at the
+                # primary checkout.
+                git_info=$(${pkgs.git}/bin/git --no-optional-locks -C "$cwd" rev-parse --path-format=absolute \
                   --abbrev-ref HEAD --show-toplevel --git-dir --git-common-dir 2>/dev/null)
                 if [ -n "$git_info" ]; then
                   # `read var1 var2 ...` stops at the first newline (it's the line terminator, not
