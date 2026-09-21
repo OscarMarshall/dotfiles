@@ -220,9 +220,22 @@ in
       # through its UI) - reconnecting them post-wipe is the same one-time manual step it always was,
       # just against Jellyfin's Movies/Requests tabs instead of Plex's.
       #
-      # Seerr's data is being wiped as part of this switch (fresh `/var/lib/seerr`, one-time, by
-      # hand) rather than migrated - there's no existing `seerr_*` Terraform state to import from,
-      # since none of this was Terraform-managed under Plex.
+      # One-time bootstrap, required even with a wiped/fresh `/metalminds/seerr` (`dataset` above):
+      # `X-Api-Key` auth (server/middleware/auth.ts) only ever authenticates as user ID 1, "the
+      # original administrator account" - which doesn't exist until SOME real login creates it, and
+      # this provider only knows how to bootstrap that via a Plex admin token (`plex_token`, its own
+      # provider-config field), which doesn't apply here. Confirmed live: every `seerr_*` resource
+      # 403'd ("You do not have permission to access this endpoint") until this was done by hand.
+      # So: open Seerr's own setup wizard once, sign in with a Jellyfin ADMIN account (creates user
+      # #1) - the wizard's own Jellyfin-connection/library-selection steps necessarily configure the
+      # exact same state as `seerr_jellyfin_settings`/`seerr_jellyfin_library_settings`/
+      # `seerr_main_settings` below, so import them into state afterward (one-time, via
+      # `nix develop .#<host>-tf`, same as radarr.nix's own equivalent note) rather than letting
+      # `tofu apply` try to CREATE resources that already exist:
+      #
+      #   tofu import seerr_main_settings.main main
+      #   tofu import seerr_jellyfin_settings.default jellyfin
+      #   tofu import seerr_jellyfin_library_settings.default jellyfin_library_settings
       terranix = { host, ... }: {
         provider.seerr = {
           api_key = "\${var.SEERR_API_KEY}";
