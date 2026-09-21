@@ -40,6 +40,30 @@ in
           # Seerr's OIDC settings have no env-var equivalent yet — only settings.json. Merge our
           # provider config into it on every start, preserving whatever else is already there (the
           # app itself owns the rest of the file).
+          #
+          # Also backfills `main.mediaServerType` when missing - NOT an OIDC concern, but has to
+          # live in this same write, for the same first-boot reason. On a truly fresh install (no
+          # settings.json yet, e.g. right after wiping Seerr's data for this Plex -> Jellyfin
+          # switch), this script is what CREATES the file, before Seerr itself ever reads it - and
+          # `server/lib/overseerrMerge.ts`'s `checkOverseerrMerge()` loads it via `raw = true`
+          # (server/lib/settings/index.ts's `load()`), which - unlike a normal load - does NOT
+          # merge in `Settings`'s own constructor defaults, just `JSON.parse`s exactly what's on
+          # disk. A settings.json containing only `{ main: { oidcLogin: true }, oidc: {...} }` (this
+          # script's own output, pre-fix) therefore reads back with `main.mediaServerType ===
+          # undefined`, and `checkOverseerrMerge`'s own gate (`if (settings.main.mediaServerType)
+          # return false`) exists specifically to detect "already configured, skip the Overseerr-
+          # merge compatibility path" - `undefined` is falsy, so it wrongly falls through into that
+          # path, which does a raw `INSERT INTO migrations (...)` assuming a table that only
+          # `runMigrations()` (called LATER, still unreached) would have created. Confirmed live:
+          # crash-looped on `SQLITE_ERROR: no such table: migrations` every single boot, immediately
+          # after `[Seerr Migration]`'s own "Failed to insert migration records" log line.
+          # `MediaServerType.NOT_CONFIGURED` (4 - server/constants/server.ts; PLEX/JELLYFIN/EMBY are
+          # 1/2/3, so this only needs to be non-zero/truthy to take the gate's early-return branch)
+          # is exactly `Settings`'s own constructor default for this field - this just writes that
+          # default explicitly, rather than actually configuring a media server up front. `//`
+          # preserves whatever real value Seerr itself later persists here (e.g. `2` for Jellyfin,
+          # once `seerr_jellyfin_settings` - this file's own `terranix` field - applies) across
+          # every subsequent restart, instead of stomping it back to 4 on every boot.
           configureOidc = pkgs.writeShellApplication {
             name = "seerr-configure-oidc";
 
@@ -59,7 +83,10 @@ in
                 --arg secret "$client_secret" \
                 '(($existing.oidc.providers // []) | map(select(.slug != "authentik"))) as $others
                 | $existing * {
-                  main: { oidcLogin: true },
+                  main: {
+                    mediaServerType: ($existing.main.mediaServerType // 4),
+                    oidcLogin: true
+                  },
                   oidc: {
                     providers: ($others + [{
                       slug: "authentik",
