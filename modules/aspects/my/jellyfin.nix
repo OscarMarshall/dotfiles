@@ -191,12 +191,16 @@
             # scope mapping is needed for this (unlike providers.md's own Authentik walkthrough,
             # which has you add one) - `profile`, already attached to every OIDC provider here,
             # already carries a `groups` claim by default (see authentik.nix's `oidc-defaults`
-            # comment), so `RoleClaim = "groups"` reads directly off that. `Roles` is deliberately
-            # left unset: per the plugin's own `SSOController.cs`, an empty/absent `Roles` skips
-            # the login-gate check entirely (`Roles == null || Roles.Length == 0` -> valid), while
-            # `AdminRoles` is evaluated independently - so every authenticated user can still log
-            # in and gets `EnableAllFolders`, only `admin`-group members also get
-            # `PermissionKind.IsAdministrator`.
+            # comment), so `RoleClaim = "groups"` reads directly off that. `Roles = [ ]` is
+            # deliberately EMPTY, not omitted: most of `SSOController.cs`'s own role-processing
+            # null-checks `config.Roles` before touching it (`Roles == null || Roles.Length == 0`
+            # -> valid), but its "OIDC provider doesn't send `preferred_username`, fall back to
+            # `sub`" branch does a bare `config.Roles.Length` with no null-check - an absent
+            # `Roles` (deserializing to `null`) would throw there for any provider hitting that
+            # fallback. An explicit empty array sidesteps that while keeping the same effect: the
+            # login-gate check stays off, so every authenticated user can still log in and gets
+            # `EnableAllFolders`; `AdminRoles` is evaluated independently, so only `admin`-group
+            # members also get `PermissionKind.IsAdministrator`.
             #
             # `lifecycle.ignore_changes = [ "name" ]`: same root cause as `moonbase`'s own comment
             # above - confirmed in Jellyfin's own logs ("Loaded assembly SSO-Auth ... Loaded
@@ -249,6 +253,7 @@
                 OidEndpoint = "https://auth.${host.domain}/application/o/jellyfin/";
                 OidSecret = "\${var.JELLYFIN_OIDC_CLIENT_SECRET}";
                 RoleClaim = "groups";
+                Roles = [ ];
               };
             };
 
