@@ -79,6 +79,23 @@
           };
 
           environmentFiles = [ config.age.secrets."storyteller.env".path ];
+          # Next.js's own on-disk cache (`/app/.next/standalone/applications/web/.next/cache`,
+          # image-optimization output included) is baked into the image layer, owned by the
+          # baked-in `storyteller` user (uid/gid 1000) at build time - and unlike `/data` above,
+          # this ISN'T a volume the entrypoint chowns to `PUID`/`PGID` (see the `PUID`/`PGID`
+          # comment above), so the process ends up running as `readarr` (uid 31000) against a
+          # directory it was never given access to. Podman creates a fresh, empty tmpfs there
+          # instead, entirely bypassing the image's baked-in ownership. `mode=1777` (world-
+          # writable, sticky) rather than pinning `uid=`/`gid=` to `readarr` - despite those
+          # being valid plain tmpfs mount options per mount(8), podman 5.8's own `--tmpfs`/
+          # `--mount type=tmpfs` option parser (confirmed on harmony) rejects both with "unknown
+          # mount option", so this is the only way left to make it writable by whatever uid the
+          # container ends up running as. Losing this on container restart is fine; it's a
+          # rebuildable cache, not the app's actual state. `size=512m` caps it well above what a
+          # book-cover/audiobook image cache needs, so a pathological cache blowup can't eat into
+          # host RAM unbounded; `noexec`/`nosuid`/`nodev` harden it since Next.js only ever reads
+          # and writes cached image files there, never executes or device-mounts anything from it.
+          extraOptions = [ "--tmpfs=/app/.next/standalone/applications/web/.next/cache:mode=1777,size=512m,noexec,nosuid,nodev" ];
           # Pinned to the current `latest` tag's digest at the time this was written --
           # storyteller-platform doesn't cut stable releases, so there's nothing more specific to
           # pin to. Re-resolve via the GitLab registry API if bumping:
