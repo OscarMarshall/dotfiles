@@ -239,13 +239,6 @@
               repository_url = officialManifestUrl;
             };
 
-            # `EnableAuthorization = false;`/`EnableAllFolders = true;` (no RBAC): mapping
-            # authentik groups to Jellyfin roles needs a custom "Group Membership" Authentik scope
-            # mapping (github.com/9p4/jellyfin-plugin-sso/blob/main/providers.md#authentik) that
-            # authentik.nix's generic `oidc` field doesn't set up - every authenticated Authentik
-            # user just gets a normal (non-admin) account with full library access, which is fine
-            # for a family server. Revisit if finer-grained access ever matters.
-            #
             # `lifecycle.ignore_changes = [ "name" ]`: same root cause as `moonbase`'s own comment
             # above - confirmed in Jellyfin's own logs ("Loaded assembly SSO-Auth ... Loaded
             # plugin: SSO-Auth 4.0.0.4"), the LOADED plugin is registered under its own
@@ -378,6 +371,24 @@
                 ManageLoginPageButtons = true;
 
                 OidConfigs.authentik = {
+                  # `EnableAuthorization = true;`/`AdminRoles`/`RoleClaim`: grants Jellyfin admin to
+                  # anyone in Authentik's `admin` group (authentik.nix's `authentik_group.admin`),
+                  # same group Nextcloud and the break-glass login flow key off. No custom
+                  # Authentik-side scope mapping is needed for this (unlike providers.md's own
+                  # Authentik walkthrough, which has you add one) - `profile`, already attached to
+                  # every OIDC provider here, already carries a `groups` claim by default (see
+                  # authentik.nix's `oidc-defaults` comment), so `RoleClaim = "groups"` reads
+                  # directly off that. `Roles = [ ]` is deliberately EMPTY, not omitted: most of
+                  # `SSOController.cs`'s own role-processing null-checks `config.Roles` before
+                  # touching it (`Roles == null || Roles.Length == 0` -> valid), but its "OIDC
+                  # provider doesn't send `preferred_username`, fall back to `sub`" branch does a
+                  # bare `config.Roles.Length` with no null-check - an absent `Roles` (deserializing
+                  # to `null`) would throw there for any provider hitting that fallback. An explicit
+                  # empty array sidesteps that while keeping the same effect: the login-gate check
+                  # stays off, so every authenticated user can still log in and gets
+                  # `EnableAllFolders`; `AdminRoles` is evaluated independently, so only
+                  # `admin`-group members also get `PermissionKind.IsAdministrator`.
+                  AdminRoles = [ "admin" ];
                   # The SSO plugin's outbound fetches (discovery, JWKS, token, userinfo, back-channel
                   # logout) refuse a target that resolves to a private-network address by default (an
                   # SSRF/DNS-rebind guard) - and `auth.${host.domain}` does, on-box: authentik.nix's
@@ -389,7 +400,7 @@
                   # toggle - the guard is per-provider by design.
                   AllowPrivateNetworkAddresses = true;
                   EnableAllFolders = true;
-                  EnableAuthorization = false;
+                  EnableAuthorization = true;
                   Enabled = true;
                   OidClientId = "jellyfin";
                   # Matches authentik.nix's own `url = if global then "auth.${host.domain}" ...`
@@ -399,6 +410,8 @@
                   # through a completely separate module system with no access to it.
                   OidEndpoint = "https://auth.${host.domain}/application/o/jellyfin/";
                   OidSecret = "\${var.JELLYFIN_OIDC_CLIENT_SECRET}";
+                  RoleClaim = "groups";
+                  Roles = [ ];
                 };
               };
 
