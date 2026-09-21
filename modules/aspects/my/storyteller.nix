@@ -79,6 +79,20 @@
           };
 
           environmentFiles = [ config.age.secrets."storyteller.env".path ];
+
+          # Next.js's own on-disk cache (`/app/.next/standalone/applications/web/.next/cache`,
+          # image-optimization output included) is baked into the image layer, owned by the
+          # baked-in `storyteller` user (uid/gid 1000) at build time - and unlike `/data` above,
+          # this ISN'T a volume the entrypoint chowns to `PUID`/`PGID` (see the `PUID`/`PGID`
+          # comment above), so the process ends up running as `readarr` (uid 31000) against a
+          # directory it was never given access to. Podman creates a fresh, empty tmpfs there
+          # instead, entirely bypassing the image's baked-in ownership - `uid=`/`gid=` are plain
+          # tmpfs mount options (see mount(8)), not a podman-specific flag. Losing this on
+          # container restart is fine; it's a rebuildable cache, not the app's actual state.
+          extraOptions = [
+            "--tmpfs=/app/.next/standalone/applications/web/.next/cache:uid=${toString config.users.users.readarr.uid},gid=${toString config.users.groups.readarr.gid},mode=0755"
+          ];
+
           # Pinned to the current `latest` tag's digest at the time this was written --
           # storyteller-platform doesn't cut stable releases, so there's nothing more specific to
           # pin to. Re-resolve via the GitLab registry API if bumping:
