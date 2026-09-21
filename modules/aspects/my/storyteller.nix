@@ -91,8 +91,11 @@
           # `--mount type=tmpfs` option parser (confirmed on harmony) rejects both with "unknown
           # mount option", so this is the only way left to make it writable by whatever uid the
           # container ends up running as. Losing this on container restart is fine; it's a
-          # rebuildable cache, not the app's actual state.
-          extraOptions = [ "--tmpfs=/app/.next/standalone/applications/web/.next/cache:mode=1777" ];
+          # rebuildable cache, not the app's actual state. `size=512m` caps it well above what a
+          # book-cover/audiobook image cache needs, so a pathological cache blowup can't eat into
+          # host RAM unbounded; `noexec`/`nosuid`/`nodev` harden it since Next.js only ever reads
+          # and writes cached image files there, never executes or device-mounts anything from it.
+          extraOptions = [ "--tmpfs=/app/.next/standalone/applications/web/.next/cache:mode=1777,size=512m,noexec,nosuid,nodev" ];
           # Pinned to the current `latest` tag's digest at the time this was written --
           # storyteller-platform doesn't cut stable releases, so there's nothing more specific to
           # pin to. Re-resolve via the GitLab registry API if bumping:
