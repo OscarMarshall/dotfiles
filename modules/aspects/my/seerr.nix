@@ -219,12 +219,14 @@ in
           # flipped to `settings.terraform = "variable"` there so it can be read as a plain
           # resource attribute here, not just via the `jellyfin` provider's own implicit env pickup)
           # - a DIFFERENT credential than this file's own `SEERR_API_KEY` above, which authenticates
-          # the other direction (Terraform -> Seerr, not Seerr -> Jellyfin).
+          # the other direction (Terraform -> Seerr, not Seerr -> Jellyfin). No `name` - despite the
+          # provider's own README example setting it, the actual schema marks it read-only (Seerr
+          # derives it from the connected server itself) - confirmed live: `tofu apply` refused with
+          # "Invalid Configuration for Read-Only Attribute" on it.
           seerr_jellyfin_settings.default = {
             api_key = "\${var.JELLYFIN_API_KEY}";
             external_hostname = "https://jellyfin.${host.name}.${host.domain}";
             ip = "127.0.0.1";
-            name = "Jellyfin";
             port = 8096;
             use_ssl = false;
           };
