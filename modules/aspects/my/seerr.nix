@@ -19,8 +19,10 @@ in
       # Owned by a dedicated `seerr` system user/group (declared below, in `nixos` - Seerr's own
       # NixOS module runs it under `DynamicUser` instead, which has no fixed name/id to chown a
       # dataset to ahead of time, so this aspect overrides that) - zfs.nix's generic `dataset`-quirk
-      # consumer chowns it once created, and `units` orders `seerr.service` after that (same
-      # reasoning as radarr.nix's/paperless.nix's own `dataset` fields).
+      # consumer creates it if missing and re-chowns it (`chown -R`) on every activation, and `units`
+      # orders `seerr.service` after that (same reasoning as radarr.nix's/paperless.nix's own
+      # `dataset` fields) - a stable NAME is enough here precisely because the chown re-runs every
+      # time rather than depending on a uid that was only ever pinned once.
       dataset = {
         group = "seerr";
         name = "seerr";
@@ -140,7 +142,10 @@ in
             # Points CONFIG_DIRECTORY straight at the mounted dataset (like paperless.nix's
             # `dataDir`/immich.nix's `mediaLocation`) - the module's own `StateDirectory = "seerr"`
             # (unconditional, not affected by this) still creates/chowns an unused `/var/lib/seerr`
-            # alongside it; harmless, just not where Seerr actually reads/writes.
+            # alongside it; harmless, just not where Seerr actually reads/writes. Seerr's REAL data
+            # lives entirely under this dataset now - `/metalminds/seerr`, not `/var/lib/seerr` - so
+            # THIS is the path to wipe for a from-scratch reset (e.g. `rm -rf /metalminds/seerr/*`
+            # with the service stopped), not the unused StateDirectory.
             configDir = "/metalminds/seerr";
           };
 
