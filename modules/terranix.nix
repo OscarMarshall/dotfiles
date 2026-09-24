@@ -4,15 +4,11 @@
 # workflow. See https://den.denful.dev/tutorials/terranix-demo/.
 #
 # A `terranix` field that's a FUNCTION requesting a den context arg (`host`, or a quirk like
-# `virtual-host`) needs the `warnings-shim` below. Den's `wrapClassModule` attaches a
-# collision-validator module (which sets a `warnings` output) to any such function;
-# nixos/darwin/homeManager tolerate that fine (real NixOS-derived module types already have a
-# `warnings` option), but terranix's own module type (upstream, not den) doesn't declare one, so
-# `evalModules` throws "The option `warnings` does not exist" - not because of the value, just
-# because nothing declared the option. `warnings-shim` declares it (default `[ ]`) so evaluation
-# succeeds; terranix's own core (`core/default.nix`) then builds its final JSON by explicitly
-# whitelisting only real Terraform keys (resource/variable/provider/etc.), so the shimmed
-# `warnings` value never reaches config.tf.json regardless of its contents.
+# `virtual-host`) is fine: Den's `wrapClassModule` attaches a collision-validator module (which
+# sets a `warnings` output) to any such function; terranix's own module type declares `warnings`
+# upstream (in `core/terraform-options.nix`), so evaluation succeeds. Terranix's own core
+# (`core/default.nix`) then builds its final JSON by explicitly whitelisting only real Terraform
+# keys (resource/variable/provider/etc.), so the `warnings` value never reaches config.tf.json.
 #
 # Exposing a secret to Terraform: set `settings.terraform` on that secret's OWN entry under the
 # aspect's `secrets` field (agenix-rekey's `age.secrets.<name>.settings` - a genuinely freeform
@@ -429,12 +425,6 @@ let
   # `{ }` and silently dropping every `<hostname>-tf` package. Hoisting the lookup here keeps that
   # failure mode from resurfacing if that happens.
   terranix-modules = config.flake.terranixModules or { };
-  warnings-shim = {
-    options.warnings = lib.mkOption {
-      default = [ ];
-      type = lib.types.listOf lib.types.str;
-    };
-  };
 in
 {
   flake-file.inputs.terranix = {
@@ -489,7 +479,7 @@ in
           host-name = lib.removeSuffix "-tf" key;
         in
         {
-          modules = modules ++ [ warnings-shim ];
+          inherit modules;
 
           terraformWrapper = {
             package = pkgs.opentofu;
