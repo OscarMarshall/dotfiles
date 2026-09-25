@@ -242,6 +242,28 @@ in
       #   tofu import seerr_jellyfin_settings.default jellyfin
       #   tofu import seerr_jellyfin_library_settings.default jellyfin_library_settings
       terranix = { host, ... }: {
+        # Inputs to `seerr_user_permissions.authentik-admin` below. `data.authentik_group.admin` reads
+        # authentik.nix's own `authentik_group.admin` back as a data source purely to get its
+        # MEMBERSHIP (`users_obj`) - that resource deliberately leaves `users` unmanaged (see its own
+        # comment), so it's only ever known live, never in this config. `main-settings` is Seerr's
+        # own `defaultPermissions`, which neither `seerr_main_settings` resource nor data source
+        # exposes, so it's read via the provider's raw-request escape hatch instead.
+        data = {
+          authentik_group.admin.name = "\${authentik_group.admin.name}";
+
+          seerr_api_request.main-settings = {
+            method = "GET";
+            path = "/api/v1/settings/main";
+          };
+
+          seerr_users.all = { };
+        };
+
+        # Lowercased on both sides because Seerr lowercases the email when it creates an OIDC user
+        # (server/routes/auth.ts), while Authentik stores whatever case was entered. Inactive
+        # Authentik accounts are excluded so deactivating someone also demotes them here.
+        locals.seerr-admin-emails = "\${ [ for user in data.authentik_group.admin.users_obj : lower(user.email) if user.is_active && user.email != \"\" ] }";
+
         provider.seerr = {
           api_key = "\${var.SEERR_API_KEY}";
           url = "https://seerr.${host.name}.${host.domain}";
@@ -280,6 +302,31 @@ in
             app_title = "Seerr";
             application_url = "https://seerr.${host.name}.${host.domain}";
             locale = "en";
+          };
+
+          # Seerr's OIDC login (`oidcFork`) has no group/role claim mapping at all - new users just
+          # get `defaultPermissions`, and `requiredClaims` can only gate login, never grant anything
+          # (still true at seerr-team/seerr#2715's head as of 2026-09-25). So the Authentik `admin`
+          # group -> Seerr ADMIN mapping jellyfin.nix (`AdminRoles`) and nextcloud.nix (group
+          # provisioning) get natively is done here instead, matching Seerr users to group members
+          # by email.
+          #
+          # Seerr users only exist after their first login, so a new admin gets promoted on the
+          # NEXT `tofu apply` after they first sign in, not instantly.
+          #
+          # Demotion needs its own entries, because this resource's Delete is a no-op (the provider
+          # has no DELETE route to call - it only forgets state), so dropping someone from the group
+          # can't just drop them from `for_each`. Instead, any user still holding the ADMIN bit (2,
+          # server/lib/permissions.ts - `floor(p / 2) % 2` since Terraform has no bitwise ops) who
+          # ISN'T in the group gets reset to `defaultPermissions`; on the apply after that they no
+          # longer match and fall out of `for_each` (a harmless state-only "destroy"). Everyone
+          # else's permissions are left alone, so per-user tweaks for non-admins still work through
+          # Seerr's UI. User 1 is excluded: it's the owner account (created by the bootstrap
+          # sign-in, see above), always admin, and Seerr refuses edits to it from anyone but itself.
+          seerr_user_permissions.authentik-admin = {
+            for_each = "\${ { for user in data.seerr_users.all.users : user.id => contains(local.seerr-admin-emails, lower(coalesce(user.email, \"-\"))) if user.id != \"1\" && (contains(local.seerr-admin-emails, lower(coalesce(user.email, \"-\"))) || floor(user.permissions / 2) % 2 == 1) } }";
+            permissions = "\${each.value ? 2 : jsondecode(data.seerr_api_request.main-settings.response_body_json).defaultPermissions}";
+            user_id = "\${tonumber(each.key)}";
           };
         };
 
