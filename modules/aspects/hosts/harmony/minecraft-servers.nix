@@ -140,18 +140,18 @@ let
         symlinks.mods = pkgs.linkFarmFromDrvs "mods" (
           builtins.attrValues {
             Jade = pkgs.fetchurl {
-              sha512 = "730e07dd5cbbf850ba0e7fd4852b528867d3e2fc2de63b156c89eee9ee6dd92d882b744f97fe724f2aa0afc5b468577486d9558f80d3e46cc5fa133ba241b9c9";
-              url = "https://cdn.modrinth.com/data/nvQzSEkH/versions/ue8CO97w/Jade-mc26.2-Fabric-26.2.11.jar";
+              sha512 = "1359d6576214fffadcb7bd4202bfd1606c827ab6c75143cbc7747269ed7d4131f5db226a914b9a924cac92e596c7994e6fe3303671ff8d5a2dcd41caf613e7ae";
+              url = "https://cdn.modrinth.com/data/nvQzSEkH/versions/lt43vWtF/Jade-mc26.3-Fabric-26.3.1.jar";
             };
 
             appleskin = pkgs.fetchurl {
-              sha512 = "ddf31d8fe239f66760632606221a9ea55d31907a9f7f8667331929cad348457ec2199cb90d410ee1a06e36bafc01a3bf152a06fd3c9b9e46f50841240875832b";
-              url = "https://cdn.modrinth.com/data/EsAfCjCV/versions/uo5bAN1Y/appleskin-fabric-mc26.2-3.0.10.jar";
+              sha512 = "17d257af419b7530aa8617c2e8c0e4bbfabcf888f26655790e0188e7957e0bcd931f85f9a4c69fd27e889dee5082cf7b2b8741a14a6ed4425e9ef4bfe13a8b8c";
+              url = "https://cdn.modrinth.com/data/EsAfCjCV/versions/PHjDtQay/appleskin-fabric-mc26.3-3.0.10.jar";
             };
 
             fabric-api = pkgs.fetchurl {
-              sha512 = "4c2c1ebe74ffd54875a01ff371b53ba3d8674ac98d561f7dae02a96d3d37fbdbc5f5abc6e820f73b6154d6f873ddd05a442b0998ed2d456863dc0ad972e040a6";
-              url = "https://cdn.modrinth.com/data/P7dR8mSH/versions/NqwNSxwA/fabric-api-0.158.0%2B26.2.jar";
+              sha512 = "ed6b2586d6fde11fde8472f5a527c51e99b67026e46f94d4bfd85e7e28ce5ee299173ee16ad576ceb51f39f98d30a811086a6deb1a86a524859cc16e12da109d";
+              url = "https://cdn.modrinth.com/data/P7dR8mSH/versions/bNnaTiuM/fabric-api-0.161.0%2B26.3.jar";
             };
 
             ferritecore = pkgs.fetchurl {
@@ -160,13 +160,13 @@ let
             };
 
             jei = pkgs.fetchurl {
-              sha512 = "749454d81f0b8e9860995e4fea6703573453cc16d5fec7b24c97b8c58d319988bb4d8f49e20b5e0e18781ee1c5e90a6bc7c2ef0046bf7a3ffac5d885a15d9740";
-              url = "https://cdn.modrinth.com/data/u6dRKJwZ/versions/AFgObZjc/jei-26.2-fabric-30.25.0.177.jar";
+              sha512 = "1e64160d88effd1c7d33fc43aeac01f375ce45613e4f7486d7d98465c947656233a931dcf5633918ed13aba106382d57b9b6d02be16e030662110153f0772951";
+              url = "https://cdn.modrinth.com/data/u6dRKJwZ/versions/1QosOWso/jei-26.3-fabric-31.7.0.40.jar";
             };
 
             lithium = pkgs.fetchurl {
-              sha512 = "148b638f3c6229fbaf487120a2344a0af5e411a5aa6533d5db9d75da0a8c0d8304f63eb4cca13f4d03b2c9b4c23d559dd74c1d832422ef8a3087bd005e62a8bd";
-              url = "https://cdn.modrinth.com/data/gvQqBUqZ/versions/f7vZ0VWU/lithium-fabric-0.25.3%2Bmc26.2.jar";
+              sha512 = "acbb9b037a203f005e03a20bf1d9866019384abb5ad27664808a12b919639a2501ecb52f8f0d77d27e1409935b0dbdbb70e01ac466480c0ae421ee403f649c59";
+              url = "https://cdn.modrinth.com/data/gvQqBUqZ/versions/WXHRsMRl/lithium-fabric-0.26.1%2Bmc26.3.jar";
             };
           }
         );
