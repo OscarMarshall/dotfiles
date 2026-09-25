@@ -259,6 +259,28 @@
       # default of `preferred` already produces these) are what let this flow resolve the user
       # without an identification stage of its own - the credential itself carries the identity.
       #
+      # `invite` is a fourth, "enrollment"-designated flow (not "authentication") - this is what
+      # replaces Wizarr (formerly wizarr.nix, dropped entirely): redeemed at
+      # `https://${url}/if/flow/invite/?itoken=<token>` for people without a Discord account.
+      # The token itself comes from a fresh `authentik_stage_invitation` OBJECT, minted through
+      # Directory > Invitations in the UI - NOT managed here, since the Terraform provider's own
+      # `authentik_stage_invitation` RESOURCE is only the STAGE that gates the flow on some valid
+      # token existing, with no fields for the token/expiry/single-use themselves. Same
+      # "structure is code, individual instances are a manual UI action" split as
+      # `jellyfin-api-key`/group membership above - just applied to invites instead of tokens/
+      # memberships. No password field in its prompt stage: `login`'s own identification stage
+      # (above) has no `password_stage`, so a password set here would be write-only, never
+      # actually usable to log back in. Instead its own `invite-webauthn-setup` binding reuses
+      # `authentik_stage_authenticator_webauthn.setup` - the SAME object the self-service card
+      # points at - to force enrolling a passkey right inside the enrollment flow, exactly like
+      # `authentik_stage_user_login.default` is reused across three flows above; `login-passkey`
+      # becomes the invited user's real way back in. `create_users_group` drops them straight into
+      # the `user` group (above), the same one every `open-group` application's own policy binding
+      # already grants access to - so finishing this flow hands out exactly what Wizarr used to for
+      # Jellyfin/Seerr. It does NOT touch Plex: Wizarr's Plex invites went through Plex's own
+      # sharing API, and plex.nix's virtual host was never behind Authentik to begin with - Plex
+      # access goes back to a manual "Invite a Friend" action on plex.tv.
+      #
       # `webauthn-setup`/`email-otp-setup` are tiny `stage_configuration` flows whose only job is
       # to be pointed at by their stage's own `configure_flow` - that's what makes "Set up a
       # passkey"/"Change sign-in email" show up as self-service cards in a user's own Account
@@ -445,6 +467,13 @@
                   title = "Set up email sign-in codes";
                 };
 
+                invite = {
+                  designation = "enrollment";
+                  name = "invite";
+                  slug = "invite";
+                  title = "Create your account";
+                };
+
                 login = {
                   designation = "authentication";
                   name = "login";
@@ -496,6 +525,36 @@
                   order = 10;
                   stage = "\${authentik_stage_authenticator_email.otp.id}";
                   target = "\${authentik_flow.email-otp-setup.uuid}";
+                };
+
+                invite-invitation = {
+                  order = 10;
+                  stage = "\${authentik_stage_invitation.invite.id}";
+                  target = "\${authentik_flow.invite.uuid}";
+                };
+
+                invite-prompt = {
+                  order = 20;
+                  stage = "\${authentik_stage_prompt.invite.id}";
+                  target = "\${authentik_flow.invite.uuid}";
+                };
+
+                invite-user-login = {
+                  order = 50;
+                  stage = "\${authentik_stage_user_login.default.id}";
+                  target = "\${authentik_flow.invite.uuid}";
+                };
+
+                invite-webauthn-setup = {
+                  order = 40;
+                  stage = "\${authentik_stage_authenticator_webauthn.setup.id}";
+                  target = "\${authentik_flow.invite.uuid}";
+                };
+
+                invite-write = {
+                  order = 30;
+                  stage = "\${authentik_stage_user_write.invite.id}";
+                  target = "\${authentik_flow.invite.uuid}";
                 };
 
                 login-email-otp = {
@@ -675,9 +734,63 @@
                 };
               };
 
+              # See the `invite` flow's own comment above `terranix =` for why the actual invite
+              # tokens aren't managed here - this resource is only the STAGE that gates the flow.
+              authentik_stage_invitation.invite = {
+                # The provider's own default - spelled out anyway since it's the entire point of
+                # gating this flow at all: `true` would let anyone hit
+                # `https://${url}/if/flow/invite/` and create an account with no token at all.
+                continue_flow_without_invitation = false;
+                name = "invite";
+              };
+
               authentik_stage_password.admin = {
                 backends = [ "authentik.core.auth.InbuiltBackend" ];
                 name = "admin-password";
+              };
+
+              # `fields` reference `field_key`s Authentik treats specially - `UserWriteStage`
+              # (below) reads "username"/"name"/"email" straight off the flow's prompt data onto
+              # the new user it creates, the same convention Authentik's own built-in
+              # default-enrollment-flow prompt uses. No "password" field - see the `invite` flow's
+              # own comment above `terranix =` for why one would be write-only here.
+              authentik_stage_prompt.invite = {
+                fields = [
+                  "\${authentik_stage_prompt_field.invite-username.id}"
+                  "\${authentik_stage_prompt_field.invite-name.id}"
+                  "\${authentik_stage_prompt_field.invite-email.id}"
+                ];
+
+                name = "invite-prompt";
+              };
+
+              authentik_stage_prompt_field = {
+                invite-email = {
+                  field_key = "email";
+                  label = "Email";
+                  name = "invite-email";
+                  order = 30;
+                  required = true;
+                  type = "email";
+                };
+
+                invite-name = {
+                  field_key = "name";
+                  label = "Name";
+                  name = "invite-name";
+                  order = 20;
+                  required = true;
+                  type = "text";
+                };
+
+                invite-username = {
+                  field_key = "username";
+                  label = "Username";
+                  name = "invite-username";
+                  order = 10;
+                  required = true;
+                  type = "username";
+                };
               };
 
               # A standalone object, not flow-scoped - reused via three separate
@@ -690,6 +803,22 @@
               authentik_stage_user_login.default = {
                 name = "login-user-login";
                 session_duration = "days=30";
+              };
+
+              # `create_users_as_inactive = false` - the provider's own default is `true`, which
+              # would leave every invited account unable to log in until an admin flips it by
+              # hand. `create_users_group`: drops the new user straight into the `user` group
+              # above, matching what redeeming a Wizarr invite used to grant for Jellyfin/Seerr
+              # (see the `invite` flow's own comment above `terranix =`). `user_type = "internal"`
+              # (not the provider's own "external" default, which Authentik reserves for
+              # source-provisioned/service accounts) since this really is a direct, first-class
+              # Authentik user - the same kind an admin creates by hand in the UI.
+              authentik_stage_user_write.invite = {
+                create_users_as_inactive = false;
+                create_users_group = "\${authentik_group.user.id}";
+                name = "invite-write";
+                user_creation_mode = "always_create";
+                user_type = "internal";
               };
 
               # Cross-references `mailgun_domain.default`, defined in mailgun.nix's own `terranix`
