@@ -3,6 +3,7 @@
     includes = with my; [
       homebrew
       neardrop
+      paperwm
     ];
 
     darwin = {
