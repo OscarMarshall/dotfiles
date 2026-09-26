@@ -114,9 +114,9 @@ let
           # applies only if the plan is destroy-free - Authentik OIDC clients, *arr wiring, etc.
           # aren't things to let an unattended run delete with no human in the loop. A
           # destroy-containing plan (or any other failure) just exits non-zero: no separate
-          # alerting wired up here, relying instead on Netdata's stock "failed systemd unit"
-          # health check (already routed to Discord via my/netdata.nix's
-          # health_alarm_notify.conf) to surface it.
+          # alerting wired up here, relying instead on Beszel's failed-systemd-service alerting
+          # (my/beszel.nix) to surface it, once its Discord notification is configured there
+          # (see that file's own comment on why that one step stays manual).
           #
           # `wantedBy` + `restartTriggers` (not a custom `system.activationScripts` entry that
           # `systemctl start`s this directly) - confirmed live: activation scripts run BEFORE

@@ -15,7 +15,7 @@
       # Catches vulnerability-scanner probing (PHP shells, wp-login, etc.) that shows up in
       # nginx's error log as 400s/404s for paths none of our vhosts serve.
       nginx-botsearch.settings.backend = "auto";
-      # Netdata's API vhost (netdata.nix) is the only virtual host still gated on HTTP Basic
+      # Beszel's API vhost (beszel.nix) is the only virtual host still gated on HTTP Basic
       # Auth instead of Authentik forward-auth - this is what actually catches repeated
       # failures against it.
       nginx-http-auth.settings.backend = "auto";
