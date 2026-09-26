@@ -91,6 +91,7 @@ in
                   },
                   oidc: {
                     providers: ($others + [{
+                      adminGroups: ["admin"],
                       slug: "authentik",
                       name: "Authentik",
                       issuerUrl: "https://${config.services.authentik.nginx.host}/application/o/seerr/",
@@ -113,6 +114,17 @@ in
               old.version == "3.4.1"
               || throw "seerr.nix: pkgs.seerr is now ${old.version} (was 3.4.1) - re-check whether seerr-team/seerr#2715 (OIDC support) has merged/released; if so, drop the oidcFork override.";
             rec {
+              # Seerr's OIDC login has no group/role claim mapping (not in `oidcFork`, nor at
+              # seerr-team/seerr#2715's head or any other upstream PR as of 2026-09-25) - OIDC users
+              # only ever get `defaultPermissions`. This adds an `adminGroups` provider field (set
+              # to authentik.nix's `admin` group by `configureOidc` above) that syncs the ADMIN
+              # permission from the `groups` claim on EVERY login: granted if the user is in one of
+              # them, reset to `defaultPermissions` if they hold ADMIN but no longer are. The owner
+              # account (ID 1) is never touched. Same group -> admin mapping jellyfin.nix
+              # (`AdminRoles`) and nextcloud.nix (group provisioning) get natively. `groups` comes
+              # from Authentik's `profile` scope (see authentik.nix's `oidc-defaults`), which
+              # `scopes` above already requests. Re-check it still applies whenever `oidcFork` moves.
+              patches = (old.patches or [ ]) ++ [ ./seerr-oidc-admin-groups.patch ];
               pname = "seerr";
 
               pnpmDeps = pkgs.fetchPnpmDeps {
