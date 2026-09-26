@@ -294,6 +294,8 @@
               ".config/umbriel"
               ".config/discord"
               ".claude" # Claude Code: project memory, history, todos
+              ".local/share/opencode" # OpenCode: provider auth (auth.json), sessions, snapshots
+              ".local/state/opencode" # OpenCode: prompt history, recent models
               ".config/zen" # zen-browser profile (moved off ~/.zen via MOZ_LEGACY_PROFILES="")
               # pass-cli's encrypted session DB (session.json, user_keys.enc, pass-cli.db). The DB
               # key lives in gnome-keyring (PROTON_PASS_LINUX_KEYRING=dbus, see my.proton-pass) and

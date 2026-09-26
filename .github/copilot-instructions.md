@@ -46,6 +46,8 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
         noctalia.nix (Wayland shell), noctalia-greeter.nix (greetd greeter)
       - Utilities: auto-upgrade.nix, auto-login.nix, host-flag.nix, routes.nix
       - Applications: emacs/, git.nix, gpg.nix, ssh-client.nix, ssh-server.nix
+      - AI coding agents: claude.nix (Claude Code), opencode.nix (OpenCode), openai.nix (Codex), mcp-servers.nix (MCP
+        servers shared via `programs.mcp`)
       - Infrastructure: zfs.nix, samba.nix, lm-sensors.nix, networkmanager.nix, secrets.nix, vpn-confinement.nix,
         backup.nix (offsite backups - see "Working with Offsite Backups" below), disko.nix, preservation.nix (ephemeral
         root + `/persist` bind mounts), yubikey.nix (pcscd for the PIV/age-plugin-yubikey smartcard interface)
@@ -337,6 +339,9 @@ The configuration uses Den aspects organized into three main categories:
 - **oscar**: Primary user with full desktop environment, development tools, emacs, git config
   - Work-specific configuration in `oscar/work/`
   - Graphical apps (Discord, Ghostty, Zen Browser, PrusaSlicer) via direct `host.graphical` checks
+  - AI coding agents on every host: Claude Code (`my.claude`) and OpenCode (`my.opencode`); Codex (`my.openai`) only via
+    `oscar/work/`. OpenCode's state (`~/.local/share/opencode`, `~/.local/state/opencode`) is listed in
+    `my.preservation` so it survives tensoon's ephemeral home
 - **adelline**: Secondary user on melaan with basic GNOME setup
 - Each user aspect:
   - Defines user account details (name via `user.description`, hashed password, SSH keys)
@@ -354,7 +359,8 @@ Organized by category:
 - **Containers**: profilarr
 - **Desktop**: gnome, pipewire, steam, discord, ghostty, zen-browser, prusa-slicer, xfce-desktop, umbriel
   (wlroots/SceneFX compositor), noctalia (Wayland shell), noctalia-greeter (greetd greeter)
-- **Development**: emacs, git, gpg, ssh-client, ssh-server
+- **Development**: emacs, git, gpg, ssh-client, ssh-server, claude (Claude Code), opencode (OpenCode), openai (Codex),
+  mcp-servers (MCP servers shared by all three)
 - **Infrastructure**: zfs, samba, lm-sensors, secrets, auto-upgrade, auto-login, vpn-confinement, backup (offsite
   backups via Restic/Backblaze B2), disko, preservation (ephemeral root + `/persist` bind mounts), yubikey (pcscd for
   the PIV/age-plugin-yubikey smartcard interface)
