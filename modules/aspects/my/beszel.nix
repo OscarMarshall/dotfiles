@@ -87,7 +87,7 @@ in
                 # Written by beszel-fetch-hub-key.service below, once the hub has actually
                 # minted one - see that service's own comment for why this one piece still
                 # can't be done through the Terraform provider (my.terranix below) the way
-                # TOKEN_FILE now is.
+                # TOKEN_FILE is.
                 KEY_FILE = "/var/lib/beszel-agent/id_ed25519.pub";
                 # Netdata's stock `unit_name=!*` matcher (see the old netdata.nix, now removed)
                 # matched nothing by design until overridden - Beszel's own default is unset
@@ -95,14 +95,18 @@ in
                 # the same "watch every unit" intent explicitly rather than relying on a guess.
                 SERVICE_PATTERNS = "*";
                 SYSTEM_NAME = host.name;
+                # `TOKEN_FILE`, not `environmentFile`: the latter wires straight into systemd's
+                # `EnvironmentFile=`, which only parses `KEY=VALUE` lines - `beszel-agent-token`'s
+                # raw `openssl rand -hex 32` output has no `TOKEN=` prefix, so that would leave
+                # `$TOKEN` unset (or fail the file's parse outright). Points straight at the
+                # agenix secret Terraform is ALSO handed (as
+                # `beszel_universal_token.${host.name}.token` below) - both sides agree on the
+                # token's value without either one having to read the other's output, which this
+                # repo has no mechanism for in the Terraform -> NixOS direction (every other
+                # `settings.terraform` secret only ever flows the other way).
+                TOKEN_FILE = config.age.secrets.beszel-agent-token.path;
               };
 
-              # Points straight at the agenix secret Terraform is ALSO handed (as
-              # `beszel_universal_token.${host.name}.token` below) - both sides agree on the
-              # token's value without either one having to read the other's output, which this
-              # repo has no mechanism for in the Terraform -> NixOS direction (every other
-              # `settings.terraform` secret only ever flows the other way).
-              environmentFile = config.age.secrets.beszel-agent-token.path;
               smartmon.enable = true;
             };
 
