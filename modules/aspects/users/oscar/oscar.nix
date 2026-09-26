@@ -27,11 +27,6 @@ let
   };
 in
 {
-  flake-file.inputs.ponytail = {
-    url = "github:DietrichGebert/ponytail/2ed6c52c9d7e5e56942508591085fd45dea277d3";
-    flake = false;
-  };
-
   den.aspects.oscar =
     {
       home ? null,
