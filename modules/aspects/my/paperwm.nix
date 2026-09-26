@@ -19,7 +19,7 @@
           ".hammerspoon/Spoons/PaperWM.spoon".source = spoon;
 
           ".hammerspoon/init.lua".text = ''
-            PaperWM = hs.loadSpoon("PaperWM")
+            local PaperWM = hs.loadSpoon("PaperWM")
             PaperWM:bindHotkeys(PaperWM.default_hotkeys)
             PaperWM:start()
           '';
