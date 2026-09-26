@@ -153,6 +153,10 @@ declares the `proton0` namespace directly in its own aspect.
 - **Git** with per-machine configuration
 - **GPG** and SSH setup
 - **Shell**: Fish shell via Home Manager
+- **AI coding agents**: Claude Code (`my.claude`) and OpenCode (`my.opencode`) for oscar on every host, plus Codex
+  (`my.openai`) on work machines; all share the MCP servers in `my.mcp-servers`. OpenCode's provider auth, sessions and
+  prompt history (`~/.local/share/opencode`, `~/.local/state/opencode`) are persisted on tensoon's ephemeral home - run
+  `opencode auth login` once per machine to connect a provider
 
 ## Secrets Management
 

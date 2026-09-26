@@ -63,6 +63,7 @@ in
         my.gpg
         my.nh
         my.nix-index
+        my.opencode
         my.proton-pass
         my.ssh-client
         userAspect
