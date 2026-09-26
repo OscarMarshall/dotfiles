@@ -3,12 +3,17 @@
 # Nix store by nginx - no daemon, no database, nothing to back up. Prose lives in the repo's own
 # top-level `docs/` directory (plain Markdown, one page per guide); anything that would otherwise
 # drift out of date with the config - which services exist and where, which Minecraft worlds are
-# up, which Samba shares there are - is GENERATED here from the same data the rest of the host
-# already consumes, so a service added to a host shows up in its docs without touching Markdown.
+# up - is GENERATED here from the same data the rest of the host already consumes, so a service
+# added to a host shows up in its docs without touching Markdown.
+#
+# Scope: only what's reachable from OUTSIDE the home network - the `virtual-host` services (every
+# one has a public DNS record, see dns.nix) and anything with a `port-forward` (the Minecraft
+# worlds). LAN-only things (Samba shares, the Satisfactory server) are left out on purpose, so
+# everything documented here works for everyone it's documented for, wherever they are.
 #
 # Hand-written pages reference host-specific values through `@placeholder@` tokens (see
 # `substitutions` below) rather than hard-coding them, the same `substituteAll` convention nixpkgs
-# uses - so the prose doesn't bake in `host.domain`/`host.lan-ip`, which are Nix values.
+# uses - so the prose doesn't bake in `host.domain` and friends, which are Nix values.
 #
 # Deliberately NOT `protected`: the whole point is that someone who has just been sent an invite -
 # and so has no Authentik account yet - can read how to redeem it. Nothing on it is more sensitive
@@ -60,19 +65,6 @@
                     "`${world}.minecraft.${host.domain}`"
                   ]) worlds
                 );
-
-            # Same idea for samba.nix's shares - `global` is Samba's own settings section, not a
-            # share. The rest of `unlisted-shares` are guest-readable like every other share, but
-            # hold someone's personal files (Immich's `pictures`, Paperless's `documents`) or
-            # plumbing nobody needs to browse (`backups`, `torrents`) - leaving them out of a
-            # public page only avoids advertising them, it isn't access control (see samba.nix).
-            "samba-shares.md" = table [ "Share" "Windows" "macOS / Linux" ] (
-              lib.mapAttrsToList (share: _: [
-                share
-                "`\\\\${host.name}\\${share}`"
-                "`smb://${host.lan-ip}/${share}`"
-              ]) (removeAttrs (lib.attrByPath [ "services" "samba" "settings" ] { } config) unlisted-shares)
-            );
           };
           # Every hand-written page under `docs/guides/` is named after the `virtual-host.name` it
           # documents (`jellyfin.md` for `name = "jellyfin"`), so the Services table can link a row
@@ -101,7 +93,6 @@
                 { "Documents: Paperless-ngx" = "guides/paperless.md"; }
                 { "Books: Storyteller" = "guides/storyteller.md"; }
                 { "Game servers" = "guides/games.md"; }
-                { "File shares" = "guides/file-shares.md"; }
               ];
             }
             { "Getting help" = "help.md"; }
@@ -112,6 +103,8 @@
           # repeated rather than shared; if the two ever disagree, the Services page lists
           # something people can't open (or omits something they can).
           open-group = "Media";
+          # The Services page as a whole (not just an include) - it's nothing but the table plus
+          # a sentence, so there's no hand-written prose worth keeping in `docs/` for it.
           services-page = ''
             # Services
 
@@ -247,11 +240,9 @@
           source = ../../../docs;
           # The `@key@` tokens hand-written pages may use - see this file's header comment.
           substitutions = {
+            inherit (host) domain;
             admin = "Oscar";
             auth = config.services.authentik.nginx.host;
-            inherit (host) domain;
-            host = host.name;
-            inherit (host) lan-ip;
           };
           # Markdown tables are the one place prose would otherwise have to repeat the config, so
           # every table here is rendered from Nix instead. `|` is the only character that would
@@ -265,15 +256,6 @@
               ]
               ++ map (row: "| ${lib.concatStringsSep " | " row} |") rows
             );
-          # The Services page as a whole (not just an include) - it's nothing but the table plus
-          # a sentence, so there's no hand-written prose worth keeping in `docs/` for it.
-          unlisted-shares = [
-            "backups"
-            "documents"
-            "global"
-            "pictures"
-            "torrents"
-          ];
         in
         {
           # No `port` on the `virtual-host` below, so nginx.nix builds no proxy location for this

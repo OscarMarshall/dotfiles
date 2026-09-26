@@ -21,12 +21,3 @@ These worlds run on **Minecraft: Java Edition** (the PC/Mac version, not Bedrock
     Your game needs to match the world's Minecraft version — if you see **"Outdated client"** or **"Outdated
     server"**, that's the problem. Some worlds are modded; a plain game joins the unmodded ones fine, but ask @admin@
     which version and mods a world needs before joining a modded one.
-
-## Satisfactory
-
-There's a dedicated **Satisfactory** server for up to four players. It only works **on the home network** — it isn't
-reachable from outside.
-
-1. In Satisfactory, open **Server Manager** from the main menu.
-2. Click **Add Server** and enter `@lan-ip@` with port `7777`.
-3. Select the server and click **Join Game**. If it asks for a password, ask @admin@.
