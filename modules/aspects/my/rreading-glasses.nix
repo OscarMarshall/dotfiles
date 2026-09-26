@@ -45,6 +45,24 @@ in
     # no backup) for the app container itself, only for `dbName`'s data directory below.
     dataset = [
       {
+        # `aclUsers = [ "999" ]` - the postgres image's own baked-in `postgres` user (see the
+        # `users.${name}` comment below for the full mechanism this works around). Confirmed live
+        # via `podman run --entrypoint bash ... -x docker-entrypoint.sh postgres`: root's own pass
+        # `mkdir`s and `chown`s ONLY `$PGDATA` (`/var/lib/postgresql/18/docker`) before re-execing
+        # itself as `postgres` (uid 999) via `gosu` - that second pass re-runs
+        # `docker_create_db_directories` AS uid 999, which needs to just TRAVERSE the mount point
+        # (`/var/lib/postgresql`, this dataset's own root) and its `18/` child to reach the
+        # already-chowned `docker/` leaf. Neither of those two directories is `$PGDATA` itself, so
+        # root's chown never touches them - they're left with `user`/`group`'s own
+        # `rreading-glasses:rreading-glasses` ownership, which grants uid 999 (neither the owner
+        # nor a group member) nothing at all: `mkdir: cannot create directory
+        # '/var/lib/postgresql': Permission denied` (misleadingly names the mount point itself,
+        # since that's where GNU `mkdir -p`'s path-walk first loses the ability to even `stat`
+        # deeper). Harmless under the OLD (pre-18) mount scheme - `$PGDATA` there WAS the mount
+        # point (`/var/lib/postgresql/data`, no nesting), so root's own chown covered the whole
+        # thing every start, matching the `users.${name}` comment below. 18+'s extra nesting level
+        # (see `volumes` below) is what exposes this.
+        aclUsers = [ "999" ];
         group = name;
         name = dbName;
         pool = "metalminds";
@@ -86,11 +104,12 @@ in
       # A dedicated `rreading-glasses` user/group, same reasoning and numbering convention as
       # bookshelf.nix's own `readarr` (31000), satisfactory-server.nix's (31001), and
       # qbittorrent.nix's (31002) - next available id in that sequence. Unlike those, this
-      # doesn't actually need to match anything inside the container: the official `postgres`
-      # image manages its own internal ownership (it runs its entrypoint as real root and
-      # chowns `/var/lib/postgresql/data` to its own baked-in `postgres` user itself, regardless
-      # of the host-side owner set here) - this is just what `ensureDatasetService` requires a
-      # dataset entry to name.
+      # doesn't actually need to match anything the postgres container itself reads as - the
+      # official `postgres` image chowns `$PGDATA` to its own baked-in `postgres` user (uid 999)
+      # itself, regardless of the host-side owner set here, on every start (as real root, before
+      # dropping to that user) - this is just what `ensureDatasetService` requires a dataset entry
+      # to name. See the `dataset` entry's own `aclUsers` comment above for the one thing this
+      # self-healing does NOT cover under 18+'s mount layout.
       users = {
         groups.${name}.gid = 31003;
 
@@ -123,7 +142,7 @@ in
           # This crash-looped when renovate auto-bumped straight from 17 to 18 in place against the
           # old mount path; a future major bump like this one won't auto-merge again - see
           # renovate.json's own major-Docker-image packageRule.
-          image = "postgres:18@sha256:86c951e05bf56c93d95d397747fb8820ac76cc3bedb78f43abd83eedbe3666ae";
+          image = "postgres:18@sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722";
           networks = [ network ];
           volumes = [ "/metalminds/${dbName}:/var/lib/postgresql" ];
         };
