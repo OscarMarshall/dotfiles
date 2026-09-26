@@ -153,6 +153,10 @@ declares the `proton0` namespace directly in its own aspect.
 - **Git** with per-machine configuration
 - **GPG** and SSH setup
 - **Shell**: Fish shell via Home Manager
+- **AI coding agents**: Claude Code (`my.claude`) and OpenCode (`my.opencode`) for oscar on every host, plus Codex
+  (`my.openai`) on work machines; all share the MCP servers in `my.mcp-servers`. OpenCode's provider auth, sessions and
+  prompt history (`~/.local/share/opencode`, `~/.local/state/opencode`) are persisted on tensoon's ephemeral home - run
+  `opencode auth login` once per machine to connect a provider
 
 ## Secrets Management
 
@@ -255,6 +259,8 @@ GitHub automation:
 - Dependabot handles GitHub Actions and Nix (`flake.lock`) updates.
 - Dependabot PRs are automatically set to auto-merge once required checks pass.
 - Renovate is kept only for Docker image updates referenced from Nix files.
+- A daily workflow (`update-minecraft-mods.yml`) re-resolves harmony's Minecraft mods and opens a PR; mod-only bumps
+  auto-merge, Minecraft version upgrades are labelled `minecraft-game-version` and wait for review.
 
 ### Update All Dependencies
 
@@ -267,6 +273,20 @@ nix flake update
 ```console
 nix flake update <input-name>
 ```
+
+### Update Minecraft Mods
+
+harmony's Fabric worlds list their mods by Modrinth slug in `modules/aspects/hosts/harmony/minecraft-servers.nix`
+(optionally `<slug>.channel = "beta"` or `"alpha"`, and a per-world `gameVersion` pin). Both the mods and each world's
+Minecraft version come from the generated `minecraft-mods.lock.json` next to it - never edit that by hand. After adding,
+removing or re-channelling a mod (evaluation fails until you do), or to pull updates immediately:
+
+```console
+nix run .#update-minecraft-mods
+```
+
+An unpinned world moves to the newest Minecraft release that nix-minecraft packages and every one of its mods supports,
+and never downgrades.
 
 ### Regenerate flake.nix
 
