@@ -48,6 +48,11 @@
         # its own Bash tool calls, $NETDATA_API_KEY for the netdata-api vhost (nginx.nix's
         # `basicAuthSecret`) without an interactive Authentik login.
         #
+        # $GH_TOKEN reuses the GitHub MCP server's token for `gh`. fish.nix's Proton Pass lookup
+        # only runs in interactive fish, which never sees sessions the Claude daemon spawns
+        # (`claude bg-spare`) or the Bash tool (bash, not fish) - so those saw `gh` as logged out.
+        # `:-` keeps a $GH_TOKEN already inherited from a fish launch.
+        #
         # A plain `writeShellScriptBin "claude" ...` wrapper has no version metadata, and the
         # module uses `lib.getVersion cfg.package` to pick between its modern and "legacy"
         # `--plugin-dir` MCP/plugin wrapper strategies - losing that made it silently fall back to
@@ -66,7 +71,8 @@
 
             postBuild = ''
               wrapProgram $out/bin/claude \
-                --run 'export NETDATA_API_KEY="$(cat ${config.age.secrets.netdata-api-key.path})"'
+                --run 'export NETDATA_API_KEY="$(cat ${config.age.secrets.netdata-api-key.path})"' \
+                --run 'export GH_TOKEN="''${GH_TOKEN:-$(cat ${config.age.secrets.github-mcp-server-github-access-token.path})}"'
             '';
           }
           // {
