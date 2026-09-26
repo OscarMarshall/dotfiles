@@ -3,10 +3,10 @@ let
   # Seerr has no released OIDC support yet (seerr-team/seerr#2715 is still open). Build from
   # michaelhthomas's PR branch until it lands in a release, then drop this override.
   oidcFork = {
-    hash = "sha256-6HR1OMqwaDds0B8u6iA/LTcxF9qtuywzhYsdJ0e3Mkw=";
+    hash = "sha256-eu3ITUhwQYzMPdMu0Adi/Hpu5e+ho18ye/pX/KsDaVw=";
     owner = "michaelhthomas";
     repo = "seerr";
-    rev = "aebd4433738ff01a471642210537bb4e1020d1c2";
+    rev = "2d1a2ed233d13ee216b147951afda8321d42f5d2";
   };
   port = 5055;
 in
@@ -108,7 +108,7 @@ in
           package = pkgs.seerr.overrideAttrs (
             old:
             # Pinned so a seerr version bump forces a check of whether upstream has released OIDC
-            # support (seerr-team/seerr#2715, still an open, unmerged PR as of 2026-08-24) - if so,
+            # support (seerr-team/seerr#2715, still an open, unmerged PR as of 2026-09-25) - if so,
             # drop the oidcFork override above and go back to the stock package.
             assert
               old.version == "3.4.1"
@@ -130,7 +130,7 @@ in
               pnpmDeps = pkgs.fetchPnpmDeps {
                 inherit pname src version;
                 fetcherVersion = 3;
-                hash = "sha256-sraOsE7jPhSpidcV5X6l8xvHkPGUPoNSN2/6UTMymTs=";
+                hash = "sha256-bfdmNLBypcoJ79/lMRSgRKSIddQJJohcn3/dL21edog=";
                 pnpm = pkgs.pnpm_10.override { nodejs-slim = pkgs.nodejs-slim_22; };
               };
 
@@ -143,7 +143,7 @@ in
                   ;
               };
 
-              version = "unstable-2026-07-31";
+              version = "unstable-2026-09-08";
             }
           );
         in

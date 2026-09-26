@@ -11,7 +11,7 @@
  export type PublicOidcProvider = Pick<OidcProvider, 'slug' | 'name' | 'logo'>;
 --- a/server/routes/auth.ts
 +++ b/server/routes/auth.ts
-@@ -1186,6 +1186,29 @@
+@@ -1232,6 +1232,29 @@
        });
      }
  
