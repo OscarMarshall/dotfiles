@@ -1,0 +1,102 @@
+{
+  "chicken-house": {
+    "gameVersion": "1.21.8",
+    "mods": {
+      "architectury-api": {
+        "channel": "release",
+        "sha512": "7965ed7140c9f50cfcf8cf9b415de90497ae44ea4fb6dfe21704c6eba4210d0a34a4a0b0b6baf8b3e9d3b1cb70d0df79ef1ba93d04b5557f09a754959ac9c8b0",
+        "url": "https://cdn.modrinth.com/data/lhGA9TYQ/versions/XcJm5LH4/architectury-17.0.8-fabric.jar",
+        "version": "17.0.8+fabric"
+      },
+      "autowhitelist": {
+        "channel": "release",
+        "sha512": "59382409b8ff073b602817e5d5461df8e88dd11bc84022942d965786ead9390c31a4f445da6c940a3709ec0ae2fed513eaca62f83d746f57ecbbf5353c535efa",
+        "url": "https://cdn.modrinth.com/data/BMaqFQAd/versions/HFoJjLnw/autowhitelist-1.3.3%2B1.21.6.jar",
+        "version": "1.3.3+1.21.6"
+      },
+      "cloth-config": {
+        "channel": "release",
+        "sha512": "924b7e9bf6da670b936c3eaf3a2ba7904a05eff4fd712acf8ee62e587770c05a225109d3c0bdf015992e870945d2086aa00e738f90b3b109e364b0105c08875a",
+        "url": "https://cdn.modrinth.com/data/9s6osm5g/versions/cz0b1j8R/cloth-config-19.0.147-fabric.jar",
+        "version": "19.0.147+fabric"
+      },
+      "fabric-api": {
+        "channel": "release",
+        "sha512": "eb1a6b5fc9912c68409493f10f43c3b61adda1d789ede9c83b16d0a95a2eb96bd630472866e163960479eb1b4d1196d09ade5aadc9da62624e800640c706c4a9",
+        "url": "https://cdn.modrinth.com/data/P7dR8mSH/versions/g58ofrov/fabric-api-0.136.1%2B1.21.8.jar",
+        "version": "0.136.1+1.21.8"
+      },
+      "fabric-language-kotlin": {
+        "channel": "release",
+        "sha512": "91404f87774466ce8604aafea791d8cc97b603bc310dce17c8188f94f7783cca6dc14fc726ce871ca317bfe9033c199d8d858d51284106a00754e952147703b8",
+        "url": "https://cdn.modrinth.com/data/Ha28R6CL/versions/eRRZzGMc/fabric-language-kotlin-1.14.1%2Bkotlin.2.4.20.jar",
+        "version": "1.14.1+kotlin.2.4.20"
+      },
+      "ferrite-core": {
+        "channel": "release",
+        "sha512": "8be6c49aa5900f434c082f505a48cf6bafc70bb43e9b9d4e0e42524605d2d22f968bc3a0c0048190a5296fd3cc696d8c3a7329dc8a022792f920e83ece47e5b6",
+        "url": "https://cdn.modrinth.com/data/uXXizFIs/versions/LdlksamY/ferritecore-8.0.4-fabric.jar",
+        "version": "8.0.4-fabric"
+      },
+      "jade": {
+        "channel": "release",
+        "sha512": "3cf66c4a859805886777f18d354f587db366f2a7bb47781dee782bd2d29ed19500e0521b1d19c2701c8a16d6e116e7256b0ab287d387e57d02a0430e1312ed4b",
+        "url": "https://cdn.modrinth.com/data/nvQzSEkH/versions/o3aatc5Q/Jade-1.21.8-Fabric-19.3.2.jar",
+        "version": "19.3.2+fabric"
+      },
+      "lithium": {
+        "channel": "release",
+        "sha512": "ef3e0820c7c831c352cbd5afa4a1f4ff73db0fa3c4e4428ba35ad2faeb8e7bce8ae4805a04934be82099012444a70c0a2cf2049f2af95fe688ca84d94d1c4672",
+        "url": "https://cdn.modrinth.com/data/gvQqBUqZ/versions/qxIL7Kb8/lithium-fabric-0.18.1%2Bmc1.21.8.jar",
+        "version": "mc1.21.8-0.18.1-fabric"
+      },
+      "rei": {
+        "channel": "release",
+        "sha512": "13c50f7e95930bc013fed7e50d8240e376ab8e0e3b2b73ce103a0df60c0010debc3f412a09a7c14e4c03b89d1006f58a6f395617f28512fd35a095be929de785",
+        "url": "https://cdn.modrinth.com/data/nfn13YXA/versions/hoEFy7aF/RoughlyEnoughItems-20.0.811-fabric.jar",
+        "version": "20.0.811+fabric"
+      }
+    }
+  },
+  "vanilla": {
+    "gameVersion": "26.3",
+    "mods": {
+      "appleskin": {
+        "channel": "release",
+        "sha512": "17d257af419b7530aa8617c2e8c0e4bbfabcf888f26655790e0188e7957e0bcd931f85f9a4c69fd27e889dee5082cf7b2b8741a14a6ed4425e9ef4bfe13a8b8c",
+        "url": "https://cdn.modrinth.com/data/EsAfCjCV/versions/PHjDtQay/appleskin-fabric-mc26.3-3.0.10.jar",
+        "version": "3.0.10+mc26.3"
+      },
+      "fabric-api": {
+        "channel": "release",
+        "sha512": "ed6b2586d6fde11fde8472f5a527c51e99b67026e46f94d4bfd85e7e28ce5ee299173ee16ad576ceb51f39f98d30a811086a6deb1a86a524859cc16e12da109d",
+        "url": "https://cdn.modrinth.com/data/P7dR8mSH/versions/bNnaTiuM/fabric-api-0.161.0%2B26.3.jar",
+        "version": "0.161.0+26.3"
+      },
+      "ferrite-core": {
+        "channel": "release",
+        "sha512": "d81fa97e11784c19d42f89c2f433831d007603dd7193cee45fa177e4a6a9c52b384b198586e04a0f7f63cd996fed713322578bde9a8db57e1188854ae5cbe584",
+        "url": "https://cdn.modrinth.com/data/uXXizFIs/versions/d5ddUdiB/ferritecore-9.0.0-fabric.jar",
+        "version": "9.0.0-fabric"
+      },
+      "jade": {
+        "channel": "release",
+        "sha512": "1359d6576214fffadcb7bd4202bfd1606c827ab6c75143cbc7747269ed7d4131f5db226a914b9a924cac92e596c7994e6fe3303671ff8d5a2dcd41caf613e7ae",
+        "url": "https://cdn.modrinth.com/data/nvQzSEkH/versions/lt43vWtF/Jade-mc26.3-Fabric-26.3.1.jar",
+        "version": "26.3.1+fabric"
+      },
+      "jei": {
+        "channel": "beta",
+        "sha512": "1e64160d88effd1c7d33fc43aeac01f375ce45613e4f7486d7d98465c947656233a931dcf5633918ed13aba106382d57b9b6d02be16e030662110153f0772951",
+        "url": "https://cdn.modrinth.com/data/u6dRKJwZ/versions/1QosOWso/jei-26.3-fabric-31.7.0.40.jar",
+        "version": "31.7.0.40"
+      },
+      "lithium": {
+        "channel": "release",
+        "sha512": "acbb9b037a203f005e03a20bf1d9866019384abb5ad27664808a12b919639a2501ecb52f8f0d77d27e1409935b0dbdbb70e01ac466480c0ae421ee403f649c59",
+        "url": "https://cdn.modrinth.com/data/gvQqBUqZ/versions/WXHRsMRl/lithium-fabric-0.26.1%2Bmc26.3.jar",
+        "version": "mc26.3-0.26.1-fabric"
+      }
+    }
+  }
+}

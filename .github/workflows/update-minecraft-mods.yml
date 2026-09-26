@@ -1,0 +1,112 @@
+name: Update Minecraft mods
+
+# Re-resolves every harmony Minecraft world's Modrinth mods (`nix run .#update-minecraft-mods`, see
+# modules/aspects/my/minecraft-servers/update-mods.py) and opens a PR with the new
+# modules/aspects/hosts/harmony/minecraft-mods.lock.json. Neither Dependabot nor Renovate can do
+# this: there's no Modrinth datasource, and the interesting part - picking the newest Minecraft
+# version EVERY mod supports, so the server never moves ahead of its mods (#896 did exactly that,
+# and vanilla crash-looped) - isn't a per-dependency bump at all.
+#
+# Standalone scheduled PR rather than pushing onto anyone's branch for the same reason as
+# terraform-provider-lock.yml (see its header comment).
+on:
+  schedule:
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  update-mods:
+    runs-on: ubuntu-latest
+    steps:
+      # ref: main / persist-credentials: false - see terraform-provider-lock.yml.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+
+      # Pull-only, no authToken - see terraform-provider-lock.yml.
+      - name: Setup Nix cache
+        uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
+        with:
+          name: oscarmarshall
+          extraPullNames: nix-community
+
+      - name: Update lock file
+        run: |
+          set -o pipefail
+          nix run .#update-minecraft-mods | tee "$RUNNER_TEMP/changes.txt"
+
+      # Only a lock that actually builds gets a PR: fetching every jar checks each sha512, and
+      # building each server checks the locked game version exists in nix-minecraft. This is also
+      # what makes auto-merging mod-only bumps below safe even when Test doesn't run on the PR (it
+      # won't without the PAT secret - see terraform-provider-lock.yml).
+      - name: Build every locked world
+        id: check
+        run: |
+          lock=modules/aspects/hosts/harmony/minecraft-mods.lock.json
+          if git diff --quiet -- "$lock"; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+          for world in $(jq -r 'keys[]' "$lock"); do
+            prefix=".#nixosConfigurations.harmony.config.services.minecraft-servers.servers.$world"
+            nix build --no-link "$prefix.symlinks.mods" "$prefix.package"
+          done
+
+          # A Minecraft upgrade rewrites a world irreversibly, so it always waits for a human;
+          # mod-only bumps within the same game version auto-merge.
+          versions='map_values(.gameVersion)'
+          if [ "$(git show "HEAD:$lock" | jq -cS "$versions")" = "$(jq -cS "$versions" "$lock")" ]; then
+            echo "game-version-changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "game-version-changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+          {
+            echo "body<<EOF"
+            echo 'Re-resolved by `nix run .#update-minecraft-mods`:'
+            echo
+            echo '```'
+            cat "$RUNNER_TEMP/changes.txt"
+            echo '```'
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Open PR
+        id: pr
+        if: steps.check.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          # See terraform-provider-lock.yml for why the PAT (Test only runs on PRs it opens).
+          token: ${{ secrets.PAT || github.token }}
+          add-paths: modules/aspects/hosts/harmony/minecraft-mods.lock.json
+          commit-message: "chore(minecraft): update mods"
+          title: "chore(minecraft): update mods"
+          body: ${{ steps.check.outputs.body }}
+          labels: ${{ steps.check.outputs.game-version-changed == 'true' && 'minecraft-game-version' || '' }}
+          branch: update-minecraft-mods
+          delete-branch: true
+
+      - name: Enable auto-merge on mod-only bumps
+        if: >
+          steps.pr.outputs.pull-request-number && steps.check.outputs.game-version-changed == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.PAT || github.token }}
+          PR_URL: ${{ steps.pr.outputs.pull-request-url }}
+        run: gh pr merge --auto --squash "$PR_URL"
