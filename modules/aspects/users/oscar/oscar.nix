@@ -1,6 +1,7 @@
 {
   lib,
   den,
+  inputs,
   my,
   ...
 }:
@@ -181,6 +182,8 @@ in
           fzf.enable = true;
           gh.enable = true;
         };
+
+        programs.codex.plugins = [ inputs.ponytail ];
 
         # On work machines, the agent needs SSH keys from both the Personal and Meraki
         # vaults - pass-cli's ssh-agent only accepts a single --vault-name, so the only way
