@@ -112,9 +112,12 @@
             in
             assert lib.assertMsg
               (
-                lib.attrNames world.mods == lib.attrNames locked.mods && (world.gameVersion or locked.gameVersion) == locked.gameVersion
+                # Compares each mod's channel too (not just the set of names), so switching a mod
+                # to e.g. `channel = "beta"` also demands a re-resolve.
+                lib.mapAttrs (_: mod: mod.channel or "release") world.mods == lib.mapAttrs (_: mod: mod.channel) locked.mods
+                && (world.gameVersion or locked.gameVersion) == locked.gameVersion
               )
-              "my.minecraft-servers: `${name}`'s lock is out of date with its `mods`/`gameVersion` - run `nix run .#update-minecraft-mods`";
+              "my.minecraft-servers: `${name}`'s lock is out of date with its `mods` (names or channels)/`gameVersion` - run `nix run .#update-minecraft-mods`";
             {
               # nix-minecraft's `mkTextileServer` doesn't inherit the JDK from the vanilla server
               # it wraps (`vanillaServers.<version>.java` - nix-minecraft's own pick, the newest
