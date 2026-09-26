@@ -62,8 +62,8 @@ in
           };
 
           virtual-host = {
-            inherit host;
             basicAuthSecret = "beszel-api.htpasswd";
+            host = host.name;
             name = "beszel-api";
             port = hubPort;
           };
@@ -216,9 +216,14 @@ in
           generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
           # Read directly by the agent process (`environmentFile` above), not by systemd itself -
           # same reasoning as `beszel-api.htpasswd`'s own `owner`/`group`, just for the static
-          # `beszel-agent` user instead of nginx's.
+          # `beszel-agent` user instead of nginx's. Not `intermediary = true;` - unlike
+          # `beszel-password`/`beszel-api-key` (which only ever get read at generation time via
+          # a downstream secret's `deps.<name>.file`), this one is ALSO read directly by
+          # `beszel-agent.service` on harmony itself via `environmentFile` above, so it needs a
+          # real rekeyed copy for harmony - `intermediary` skips producing one, same class of bug
+          # `seerr-oidc-client-secret`/`home-assistant-oidc-client-secret` avoid for the same
+          # reason.
           group = "beszel-agent";
-          intermediary = true;
           owner = "beszel-agent";
           # Handed to Terraform as `beszel_universal_token.${host.name}.token` (my.terranix
           # below) - a genuine RESOURCE ATTRIBUTE Beszel's API has to persist, not read from an
