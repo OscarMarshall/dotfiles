@@ -27,7 +27,7 @@
 +
 +      if (isAdmin !== hasAdmin) {
 +        user.permissions = isAdmin
-+          ? Permission.ADMIN
++          ? user.permissions | Permission.ADMIN
 +          : settings.main.defaultPermissions;
 +        await userRepository.save(user);
 +
