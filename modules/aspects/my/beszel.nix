@@ -194,9 +194,11 @@ in
                       | ${pkgs.jq}/bin/jq -r '.token'
                   )"
 
+                  key_tmp="$(mktemp "$STATE_DIRECTORY/id_ed25519.pub.XXXXXX")"
                   ${pkgs.curl}/bin/curl -fsS -H "Authorization: $token" "$hub_url/api/beszel/getkey" \
-                    | ${pkgs.jq}/bin/jq -r '.key' > "$STATE_DIRECTORY/id_ed25519.pub"
-                  chmod 444 "$STATE_DIRECTORY/id_ed25519.pub"
+                    | ${pkgs.jq}/bin/jq -r '.key' > "$key_tmp"
+                  chmod 444 "$key_tmp"
+                  mv -f "$key_tmp" "$STATE_DIRECTORY/id_ed25519.pub"
                 '';
 
                 Group = "beszel-agent";
