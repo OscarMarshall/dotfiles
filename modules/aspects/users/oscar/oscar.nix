@@ -1,6 +1,7 @@
 {
   lib,
   den,
+  inputs,
   my,
   ...
 }:
@@ -26,6 +27,11 @@ let
   };
 in
 {
+  flake-file.inputs.ponytail = {
+    url = "github:DietrichGebert/ponytail/2ed6c52c9d7e5e56942508591085fd45dea277d3";
+    flake = false;
+  };
+
   den.aspects.oscar =
     {
       home ? null,
@@ -181,6 +187,8 @@ in
           fzf.enable = true;
           gh.enable = true;
         };
+
+        programs.codex.plugins = [ inputs.ponytail ];
 
         # On work machines, the agent needs SSH keys from both the Personal and Meraki
         # vaults - pass-cli's ssh-agent only accepts a single --vault-name, so the only way

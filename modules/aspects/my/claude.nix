@@ -93,6 +93,8 @@
           nixos.command = "${pkgs.mcp-nixos}/bin/mcp-nixos";
         };
 
+        plugins.ponytail = inputs.ponytail;
+
         settings = {
           agentPushNotifEnabled = true;
           autoUpdaterStatus = "disabled";
