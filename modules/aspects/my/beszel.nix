@@ -77,102 +77,10 @@ in
           pkgs,
           ...
         }:
-        let
-          # nixpkgs' own `beszel` is still 0.18.7 (as of this writing) - ZFS pool/dataset
-          # monitoring, the entire reason for this migration (#772), only landed in 0.19.0.
-          # 0.19.0's go.mod needs Go >=1.27.1; nixpkgs' package.nix builds with
-          # `buildGo126Module`, so this can't be a simple `pkgs.beszel.overrideAttrs` (that
-          # keeps the ORIGINAL derivation's build machinery - the Go toolchain it compiles with
-          # included - so overriding just `version`/`src` still tries to build 0.19.0's go.mod
-          # with 1.26 and fails at `go: go.mod requires go >= 1.27.1`). Rebuilt from scratch
-          # instead, copying nixpkgs' own package.nix structure with `buildGo127Module` (already
-          # available in this flake's own nixpkgs pin) substituted in. `webui`'s `npmDepsHash` is
-          # identical to nixpkgs' 0.18.7 one - the frontend lockfile didn't change between these
-          # two releases - `vendorHash` is new (Go deps did change). No `checkFlags` skip-list
-          # (unlike nixpkgs' own derivation): `doCheck = false` instead, since 0.19.0's test
-          # suite hasn't been checked against this specific skip-list's continued relevance.
-          #
-          # See the `assertions` entry below - this whole block is meant to be deleted, not
-          # maintained: once nixpkgs' own `beszel` reaches 0.19.0+, switch both `package`s below
-          # back to the plain `pkgs.beszel` the upstream NixOS module already defaults to.
-          beszel-0_19_0 = pkgs.buildGo127Module (finalAttrs: {
-            __darwinAllowLocalNetworking = true;
-            doCheck = false;
-            pname = "beszel";
-
-            postInstall = ''
-              mv $out/bin/agent $out/bin/beszel-agent
-              mv $out/bin/hub $out/bin/beszel-hub
-            '';
-
-            preBuild = ''
-              mkdir -p internal/site/dist
-              cp -r ${finalAttrs.webui}/* internal/site/dist
-            '';
-
-            src = pkgs.fetchFromGitHub {
-              hash = "sha256-KwC94IeXZtb8ygKxQR86dy+MyrwGu/aa2t+rmpD+0IE=";
-              owner = "henrygd";
-              repo = "beszel";
-              tag = "v${finalAttrs.version}";
-            };
-
-            vendorHash = "sha256-HhkqTQpmf8EQ9/fJN56OTovI+Zufxxy/tuNH6Z+mxC4=";
-            version = "0.19.0";
-
-            webui = pkgs.buildNpmPackage {
-              inherit (finalAttrs) pname src version;
-
-              buildPhase = ''
-                runHook preBuild
-
-                npx lingui extract --overwrite
-                npx lingui compile
-                node --max_old_space_size=1024000 ./node_modules/vite/bin/vite.js build
-
-                runHook postBuild
-              '';
-
-              installPhase = ''
-                runHook preInstall
-
-                mkdir -p $out
-                cp -r dist/* $out
-
-                runHook postInstall
-              '';
-
-              npmDepsHash = "sha256-mYAD8FrQwa+F/VgGxFpe8vqucfZaM0PmY+gJJqw1IKk=";
-              npmFlags = [ "--legacy-peer-deps" ];
-              sourceRoot = "${finalAttrs.src.name}/internal/site";
-            };
-
-            meta = {
-              changelog = "https://github.com/henrygd/beszel/releases/tag/v${finalAttrs.version}";
-              description = "Lightweight server monitoring hub with historical data, docker stats, and alerts";
-              homepage = "https://github.com/henrygd/beszel";
-              license = lib.licenses.mit;
-            };
-          });
-        in
         {
-          assertions = [
-            {
-              assertion = lib.versionOlder pkgs.beszel.version "0.19.0";
-
-              message = ''
-                nixpkgs' own `beszel` package is now ${pkgs.beszel.version} (>= 0.19.0) - the
-                pinned-forward `beszel-0_19_0` override in modules/aspects/my/beszel.nix is no
-                longer needed. Delete it and point `services.beszel.hub.package` /
-                `services.beszel.agent.package` back at the stock `pkgs.beszel`.
-              '';
-            }
-          ];
-
           services.beszel = {
             agent = {
               enable = true;
-              package = beszel-0_19_0;
 
               environment = {
                 HUB_URL = "http://127.0.0.1:${toString hubPort}";
@@ -200,7 +108,6 @@ in
 
             hub = {
               enable = true;
-              package = beszel-0_19_0;
 
               environment = {
                 # Used for links in Beszel's own emails/notifications, not for routing - nginx
