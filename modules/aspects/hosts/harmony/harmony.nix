@@ -21,6 +21,7 @@
       (jellyfin { global = true; })
       (netdata { })
       (nextcloud { global = true; })
+      (ollama { global = true; })
       (paperless {
         administrators = [ "oscar" ];
         global = true;
