@@ -1,4 +1,4 @@
-{ my, ... }: {
+{ inputs, my, ... }: {
   my.opencode = {
     includes = [ my.mcp-servers ];
 
@@ -37,6 +37,8 @@
               type = "local";
             };
           };
+
+          plugin = [ inputs.ponytail ];
         };
       };
     };

@@ -5,9 +5,16 @@
   ...
 }:
 {
-  flake-file.inputs.claude-code-nix = {
-    url = "github:sadjow/claude-code-nix";
-    inputs.nixpkgs.follows = "nixpkgs";
+  flake-file.inputs = {
+    claude-code-nix = {
+      url = "github:sadjow/claude-code-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    ponytail = {
+      url = "github:DietrichGebert/ponytail/2ed6c52c9d7e5e56942508591085fd45dea277d3";
+      flake = false;
+    };
   };
 
   my.claude = {
@@ -54,6 +61,11 @@
         # that secret's own comment in beszel.nix) - email is the fixed, non-secret
         # `admin@beszel.local` from beszel.nix, safe to hardcode since it's never a real mailbox.
         #
+        # $GH_TOKEN reuses the GitHub MCP server's token for `gh`. fish.nix's Proton Pass lookup
+        # only runs in interactive fish, which never sees sessions the Claude daemon spawns
+        # (`claude bg-spare`) or the Bash tool (bash, not fish) - so those saw `gh` as logged out.
+        # `:-` keeps a $GH_TOKEN already inherited from a fish launch.
+        #
         # A plain `writeShellScriptBin "claude" ...` wrapper has no version metadata, and the
         # module uses `lib.getVersion cfg.package` to pick between its modern and "legacy"
         # `--plugin-dir` MCP/plugin wrapper strategies - losing that made it silently fall back to
@@ -73,7 +85,8 @@
             postBuild = ''
               wrapProgram $out/bin/claude \
                 --run 'export BESZEL_API_KEY="$(cat ${config.age.secrets.beszel-api-key.path})"' \
-                --run 'export BESZEL_PASSWORD="$(cat ${config.age.secrets.beszel-password.path})"'
+                --run 'export BESZEL_PASSWORD="$(cat ${config.age.secrets.beszel-password.path})"' \
+                --run 'export GH_TOKEN="''${GH_TOKEN:-$(cat ${config.age.secrets.github-mcp-server-github-access-token.path})}"'
             '';
           }
           // {
@@ -99,6 +112,8 @@
 
           nixos.command = "${pkgs.mcp-nixos}/bin/mcp-nixos";
         };
+
+        plugins.ponytail = inputs.ponytail;
 
         settings = {
           agentPushNotifEnabled = true;
