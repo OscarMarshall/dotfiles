@@ -1,3 +1,4 @@
+{ den, ... }:
 let
   ollamaPort = 11434;
   openWebuiPort = 8080;
@@ -13,6 +14,8 @@ in
       # which can only be introduced via `includes` since the top level already carries the Open
       # WebUI `virtual-host`. Same split as netdata.nix's main dashboard vs. netdata-api.
       includes = [
+        # open-webui is under the "Open WebUI License", which nixpkgs classifies as unfree.
+        (den._.unfree [ "open-webui" ])
         {
           secrets = { secrets, ... }: {
             # Raw token - never read by nginx directly; kept as its own secret so its plaintext is
@@ -109,15 +112,30 @@ in
 
             # WEBUI_SECRET_KEY is required and must not be in the Nix store (it signs sessions).
             # Supplied via environmentFile from the decrypted age secret below.
+            # systemd reads EnvironmentFile= as root before dropping to the service user, so the
+            # default root-owned 0400 permissions are fine - no need for owner = "open-webui".
             environmentFile = config.age.secrets."open-webui.env".path;
             # Bind to loopback only; nginx handles external access.
             host = "127.0.0.1";
             port = openWebuiPort;
             # Open WebUI's state (conversation history, uploaded files, user accounts) lives on the
-            # ZFS dataset. The service's DynamicUser means it can't write to an arbitrary path unless
-            # the directory already exists with the right ownership; the dataset quirk handles that.
+            # ZFS dataset rather than the default /var/lib/open-webui. The dataset quirk's `units`
+            # list ensures the dataset is mounted before open-webui.service starts; the
+            # ExecStartPre below creates the subdirectory (DynamicUser services get ReadWritePaths
+            # access but don't auto-create directories outside StateDirectory).
             stateDir = "/metalminds/llm/open-webui";
           };
+        };
+
+        systemd.services = {
+          # Both services use DynamicUser = true with ReadWritePaths covering their data
+          # directories. ReadWritePaths grants access but does not create the directory - it must
+          # exist before the service starts. The dataset quirk guarantees the ZFS mount is up (via
+          # the `units` ordering above), but only creates the dataset root (/metalminds/llm); the
+          # subdirectories need to be created separately. ExecStartPre runs as root (before the
+          # DynamicUser UID is allocated), so it can mkdir without knowing the runtime UID.
+          ollama.serviceConfig.ExecStartPre = "+${pkgs.coreutils}/bin/mkdir -p /metalminds/llm/models";
+          open-webui.serviceConfig.ExecStartPre = "+${pkgs.coreutils}/bin/mkdir -p /metalminds/llm/open-webui";
         };
       };
 
@@ -145,11 +163,10 @@ in
               '';
           };
 
-          # open-webui.service runs as the `open-webui` user (DynamicUser); systemd's
-          # EnvironmentFile= requires the service's user to be able to read the file. The agenix
-          # default of root:root 0400 would silently fail to load the env (same class of bug as
-          # netdata-secrets.env needing owner = "netdata").
-          owner = "open-webui";
+          # open-webui.service reads WEBUI_SECRET_KEY via systemd's EnvironmentFile=, which is
+          # processed by the service manager as root before privileges are dropped - the default
+          # root-owned 0400 secret permissions are correct here, unlike netdata-secrets.env which
+          # is sourced directly by a shell running as the `netdata` user.
         };
       };
 
