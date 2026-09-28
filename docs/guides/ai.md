@@ -7,7 +7,8 @@ get a reply — but everything runs on the home server; nothing is sent to any c
 
 ## Using the chat
 
-1. Go to <https://ai.@domain@> and sign in with your account.
+1. Go to <https://ai.@domain@> and sign in with your usual account — your chat account is created automatically the
+   first time.
 2. Click **New chat** (top left).
 3. Pick a model from the dropdown at the top of the chat window.
 4. Type your message and press **Enter** (or click the send button).
@@ -28,11 +29,15 @@ smaller models reply faster.
 
 ## Using from an app or script
 
-The server exposes an **OpenAI-compatible API** at `https://ollama.@host_name@.@domain@`. Any app that supports a custom
-OpenAI endpoint works with it.
+The server exposes an **OpenAI-compatible API** at `https://ollama.@host_name@.@domain@/v1`. It's protected by a
+username and password (HTTP Basic Auth) rather than an API key, so an app needs to be able to send a custom
+`Authorization` header — the usual "API key" field sends a different kind of header, which is rejected.
 
-- **Base URL:** `https://ollama.@host_name@.@domain@`
-- **API key:** an HTTP Basic Auth credential — ask @admin@ for yours.
+- **Base URL:** `https://ollama.@host_name@.@domain@/v1` for OpenAI-compatible apps, or without `/v1` for apps that talk
+  to Ollama directly.
+- **Username:** `ollama`
+- **Password:** ask @admin@.
+- **Header:** `Authorization: Basic <token>`, where `<token>` is the output of `printf 'ollama:<password>' | base64`.
 - **Model name:** use the Ollama model name exactly as shown in the chat dropdown (e.g. `qwen3:4b`).
 
 ### Continue.dev (VS Code / JetBrains)
@@ -46,14 +51,16 @@ models:
     provider: ollama
     model: qwen3:4b
     apiBase: https://ollama.@host_name@.@domain@
-    apiKey: "your-api-key"
+    requestOptions:
+      headers:
+        Authorization: "Basic <token>"
 ```
 
 ### curl
 
 ```sh
 curl https://ollama.@host_name@.@domain@/api/chat \
-  -u "ollama:your-api-key" \
+  -u "ollama:<password>" \
   -d '{"model":"qwen3:4b","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
@@ -61,7 +68,7 @@ The `/v1/` prefix also works for OpenAI-compatible clients:
 
 ```sh
 curl https://ollama.@host_name@.@domain@/v1/chat/completions \
-  -u "ollama:your-api-key" \
+  -u "ollama:<password>" \
   -H "Content-Type: application/json" \
   -d '{"model":"qwen3:4b","messages":[{"role":"user","content":"Hello"}]}'
 ```
