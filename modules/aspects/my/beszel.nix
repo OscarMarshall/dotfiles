@@ -388,13 +388,11 @@ in
         };
 
         terraform.required_providers.beszel = {
-          # Fully-qualified, not the short form every other provider in this repo uses
-          # (`goauthentik/authentik`, `cloudflare/cloudflare`) - OpenTofu's own registry
-          # (registry.opentofu.org, its default resolution target for a short-form source)
-          # mirrors popular Terraform Registry providers, but doesn't index this one: `tofu init`
-          # fails outright with "provider registry.opentofu.org/leo-lem/beszel: provider not
-          # found". The full `registry.terraform.io/...` address bypasses that mirror and pulls
-          # straight from the Terraform Registry, where this provider actually is published.
+          # Full hostname required, same reasoning (and same fix) as jellyfin.nix's own
+          # `registry.terraform.io/ThePhaseless/jellyfin` - OpenTofu's own default registry
+          # (registry.opentofu.org, what a bare "leo-lem/beszel" source resolves against)
+          # doesn't mirror this provider either: `tofu init` failed outright with "provider
+          # registry.opentofu.org/leo-lem/beszel: provider not found" until this was qualified.
           source = "registry.terraform.io/leo-lem/beszel";
           version = "0.3.0";
         };
