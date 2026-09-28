@@ -162,16 +162,11 @@
       ) config.flake.nixosConfigurations;
       # `services.nginx.virtualHosts` itself defaults to `{ localhost = { }; }` in nixpkgs
       # (nixos/modules/services/web-servers/nginx/default.nix) regardless of whether nginx is even
-      # enabled, and `statusPage = true;` (netdata.nix's collector) adds "127.0.0.1"/"[::1]" as
-      # that same vhost's `serverAliases` - none of that is a real public hostname (it never flows
-      # through the `virtual-host` quirk / `globalHosts` that actually drives Cloudflare records
-      # above), so every host ends up "claiming" it and falsely collides with any other host that
-      # merely imports the nginx module. Dropped from `hostnamesByHost` above before comparing.
-      reservedHostnames = [
-        "localhost"
-        "127.0.0.1"
-        "[::1]"
-      ];
+      # enabled - not a real public hostname (it never flows through the `virtual-host` quirk /
+      # `globalHosts` that actually drives Cloudflare records above), so every host ends up
+      # "claiming" it and falsely collides with any other host that merely imports the nginx
+      # module. Dropped from `hostnamesByHost` above before comparing.
+      reservedHostnames = [ "localhost" ];
     in
     {
       checks.dns-global-uniqueness =

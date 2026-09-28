@@ -8,6 +8,7 @@
         applicationKeyId = "004119677af80560000000002";
         bucket = "coppermind-harmony";
       })
+      (beszel { })
       (bookshelf-audiobooks { })
       (bookshelf-ebooks { })
       (cachyos-kernel { variant = "server"; })
@@ -19,7 +20,6 @@
         global = true;
       })
       (jellyfin { global = true; })
-      (netdata { })
       (nextcloud { global = true; })
       (paperless {
         administrators = [ "oscar" ];
