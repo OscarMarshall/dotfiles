@@ -375,7 +375,14 @@ in
         };
 
         terraform.required_providers.beszel = {
-          source = "leo-lem/beszel";
+          # Fully-qualified, not the short form every other provider in this repo uses
+          # (`goauthentik/authentik`, `cloudflare/cloudflare`) - OpenTofu's own registry
+          # (registry.opentofu.org, its default resolution target for a short-form source)
+          # mirrors popular Terraform Registry providers, but doesn't index this one: `tofu init`
+          # fails outright with "provider registry.opentofu.org/leo-lem/beszel: provider not
+          # found". The full `registry.terraform.io/...` address bypasses that mirror and pulls
+          # straight from the Terraform Registry, where this provider actually is published.
+          source = "registry.terraform.io/leo-lem/beszel";
           version = "0.3.0";
         };
 
