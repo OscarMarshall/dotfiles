@@ -87,9 +87,9 @@
       },
       "jei": {
         "channel": "beta",
-        "sha512": "fa8b2207f39099a317d2f59a940b5d65c56744ceed9e984c8a5d26b620f19fefc941e080e27f0cabbed6874b66bd76a4dbc5504eb2ac7b92f0f2230e96ba0a8f",
-        "url": "https://cdn.modrinth.com/data/u6dRKJwZ/versions/KW74xpQp/jei-26.3-fabric-31.7.0.47.jar",
-        "version": "31.7.0.47"
+        "sha512": "ec87cd200205198eb3858510197bfff8d6f508c493a26935c62e0c25282e9eee656a15b85f74272d07662d4fd5d42d57393283924418631fe45b94f666409c07",
+        "url": "https://cdn.modrinth.com/data/u6dRKJwZ/versions/ZfOEvQay/jei-26.3-fabric-31.8.0.48.jar",
+        "version": "31.8.0.48"
       },
       "lithium": {
         "channel": "release",
