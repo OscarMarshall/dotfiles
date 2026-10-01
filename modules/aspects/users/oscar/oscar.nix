@@ -65,6 +65,7 @@ in
         my.nh
         my.nix-index
         my.opencode
+        my.pi
         my.proton-pass
         my.ssh-client
         userAspect
