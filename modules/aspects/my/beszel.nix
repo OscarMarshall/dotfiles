@@ -334,7 +334,20 @@ in
                 )
               )
               [
-                { name = "Status"; }
+                # `min`/`value` explicit (not left unset, unlike this provider's own docs example
+                # for a Status alert) to route around a real provider bug: Beszel's API always
+                # returns 0 for an alert's unset numeric fields rather than omitting them (or
+                # returning null), and the provider's Read trusts that 0 as a real value - so an
+                # alert created with these genuinely unset comes back holding 0 on the very next
+                # read, which OpenTofu then rejects outright ("Provider produced inconsistent
+                # result after apply ... .min: was null, but now cty.NumberIntVal(0)"). Setting
+                # them to 0 up front makes planned and applied state agree from the start; for a
+                # binary up/down check, 0 reads naturally anyway (no lag, no threshold).
+                {
+                  min = 0;
+                  name = "Status";
+                  value = 0;
+                }
                 {
                   min = 10;
                   name = "CPU";
@@ -375,7 +388,12 @@ in
         };
 
         terraform.required_providers.beszel = {
-          source = "leo-lem/beszel";
+          # Full hostname required, same reasoning (and same fix) as jellyfin.nix's own
+          # `registry.terraform.io/ThePhaseless/jellyfin` - OpenTofu's own default registry
+          # (registry.opentofu.org, what a bare "leo-lem/beszel" source resolves against)
+          # doesn't mirror this provider either: `tofu init` failed outright with "provider
+          # registry.opentofu.org/leo-lem/beszel: provider not found" until this was qualified.
+          source = "registry.terraform.io/leo-lem/beszel";
           version = "0.3.0";
         };
 
