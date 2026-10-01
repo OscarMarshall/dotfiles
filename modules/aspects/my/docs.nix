@@ -93,6 +93,7 @@
                 { "Documents: Paperless-ngx" = "guides/paperless.md"; }
                 { "Books: Storyteller" = "guides/storyteller.md"; }
                 { "Game servers" = "guides/games.md"; }
+                { "AI chat" = "guides/ai.md"; }
               ];
             }
             { "Getting help" = "help.md"; }
@@ -243,6 +244,7 @@
             inherit (host) domain;
             admin = "Oscar";
             auth = config.services.authentik.nginx.host;
+            host_name = host.name;
           };
           # Markdown tables are the one place prose would otherwise have to repeat the config, so
           # every table here is rendered from Nix instead. `|` is the only character that would
