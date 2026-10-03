@@ -81,15 +81,15 @@
       },
       "jade": {
         "channel": "release",
-        "sha512": "31dfa3012ed7c01c905c26138ab37e1e85aabd5fc89275bff472afb9f138c5b02ee5d4dc68624428ba389f8846f524aaffeabaa6f48e947d6eddddafcfdcdc39",
-        "url": "https://cdn.modrinth.com/data/nvQzSEkH/versions/PfOFn2ub/Jade-mc26.3-Fabric-26.3.4.jar",
-        "version": "26.3.4+fabric"
+        "sha512": "2e7331e62eb6658268ae92dc42de8b469f50dd6c6a9d2546a6f649bae97c2cdfd8d4c1560948cf46269175d2c79c6c47a36a02685e39d476768d18fbb2a28703",
+        "url": "https://cdn.modrinth.com/data/nvQzSEkH/versions/71CTWqdE/Jade-mc26.3-Fabric-26.3.5.jar",
+        "version": "26.3.5+fabric"
       },
       "jei": {
         "channel": "beta",
-        "sha512": "beb99ad3442cb83f870d96e502046c684c122981b404efac9427c364b20bba4a443bd73e31ac9432b1e103b055374c8d5ef7b8655817694bed097cb8003f1416",
-        "url": "https://cdn.modrinth.com/data/u6dRKJwZ/versions/Ht3a1qXx/jei-26.3-fabric-31.8.0.53.jar",
-        "version": "31.8.0.53"
+        "sha512": "2d1d3d436d4123dff057fef8fc65f21f7136d220fd01f8467be2de7b771140c06daf0753c1b9ab15e02d5451a100fc966ff23692600842051ab61efba80dd627",
+        "url": "https://cdn.modrinth.com/data/u6dRKJwZ/versions/pjjNQBoS/jei-26.3-fabric-31.9.0.56.jar",
+        "version": "31.9.0.56"
       },
       "lithium": {
         "channel": "release",
