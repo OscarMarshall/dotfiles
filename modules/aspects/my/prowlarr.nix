@@ -261,12 +261,14 @@
         inherit global port;
 
         # Prowlarr serves its own REST API under /api, and proxies per-indexer Torznab requests
-        # under /<indexerId>/api; nginx.nix lets both through the Authentik forward-auth gate
-        # untouched since cross-seed calls them directly with an API key, machine-to-machine, with
-        # no browser session to carry an Authentik cookie.
+        # under /<indexerId>/api and .torrent/.nzb fetches under /<indexerId>/download; nginx.nix
+        # lets all three through the Authentik forward-auth gate untouched since these are called
+        # directly with an API key, machine-to-machine, with no browser session to carry an
+        # Authentik cookie.
         bypassAuthPaths = [
           "^/api"
           "^/[0-9]+/api"
+          "^/[0-9]+/download"
         ];
 
         group = "Arr Stack";

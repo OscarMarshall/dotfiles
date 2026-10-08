@@ -85,9 +85,9 @@ let
     "Mod+F" = "window-toggle-fullscreen";
     "Mod+M" = "window-toggle-maximize";
     "Mod+P" = "window-toggle-pinned";
-    "Mod+R" = "window-cycle-width";
+    "Mod+R" = "window-cycle-primary-extent";
     "Mod+Shift+Q" = "window-close";
-    "Mod+Shift+R" = "window-cycle-width-back";
+    "Mod+Shift+R" = "window-cycle-primary-extent-back";
     "Mod+Shift+T" = "window-focus-switch-floating";
     "Mod+T" = "window-toggle-floating";
   };

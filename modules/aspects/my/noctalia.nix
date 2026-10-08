@@ -15,154 +15,168 @@
   };
 
   my.noctalia = {
-    hmLinux.programs.noctalia = {
-      enable = true;
+    hmLinux = { config, ... }: {
+      programs.noctalia = {
+        enable = true;
 
-      # Promoted from the Noctalia settings menu (~/.local/state/noctalia/settings.toml).
-      # Runtime edits through the UI still take precedence; this is the declarative baseline.
-      # Left in the runtime file on purpose: config_version (metadata), the lockscreen_widgets
-      # editor geometry, and wallpaper.{default,last} (a /nix/store path that rots on update).
-      settings = {
-        # Bar layout: audio visualiser + media on the left, date/weather/notifications in the
-        # centre; right side is keyboard-layout + caffeine + system indicators (the clipboard,
-        # wallpaper and brightness buttons were removed via the UI).
-        bar.default = {
-          center = [
-            "date"
-            "clock"
-            "weather"
-            "notifications"
-          ];
-
-          end = [
-            "tray"
-            "keyboard_layout"
-            "caffeine"
-            "network"
-            "bluetooth"
-            "volume"
-            "battery"
-            "session"
-          ];
-
-          start = [
-            "control-center"
-            "launcher"
-            "workspaces"
-            "media"
-            "audio_visualizer"
-          ];
-        };
-
-        # Idle staging (Noctalia drives this off the compositor's idle-notify). Each named block
-        # is one stage; `timeout` is seconds of inactivity, `locked_timeout` applies once the
-        # session is already locked. `suspend` runs shell.session.power.suspend
-        # (systemctl suspend-then-hibernate), so: 5 min -> lock, 6 -> screen off, 15 -> suspend,
-        # +30 more in S3 -> hibernate (HibernateDelaySec, tensoon.nix). Bump the timeouts if this
-        # is too eager.
-        idle.behavior = {
-          lock = {
-            action = "lock";
-            enabled = true;
-            timeout = 300;
-          };
-
-          screen-off = {
-            action = "screen_off";
-            enabled = true;
-            locked_timeout = 60;
-            timeout = 360;
-          };
-
-          suspend = {
-            action = "suspend";
-            enabled = true;
-            timeout = 900;
-          };
-        };
-
-        location.auto_locate = true;
-        # Custom lockscreen widgets are off. Their editor geometry (per-output pixel coords) is
-        # deliberately left in the runtime settings.toml rather than promoted here.
-        lockscreen_widgets.enabled = false;
-        nightlight.enabled = true;
-        # Community plugin: VPN Manager (github.com/noctalia-dev/community-plugins). Adds a bar
-        # indicator, panel and `vpn` launcher provider for NetworkManager VPN connections of any
-        # protocol, plus auto connect/disconnect keyed on a trusted-network list. Noctalia fetches
-        # it from the built-in "community" source on first start and re-materialises it after
-        # tensoon's per-boot state wipe (ensureEnabledMaterialized); the nixos block below adds its
-        # optional GUI helpers and my.preservation keeps its ~/.local/state/noctalia/plugins data
-        # (trusted networks, default VPN) across reboots. Per-plugin toggles (auto_connect_enabled,
-        # poll_interval_seconds, ...) are left to the UI.
-        plugins.enabled = [ "andrewdems/vpn-manager" ];
-
-        shell = {
-          # Short tags for the keyboard-layout widget in place of the full XKB description.
-          keyboard_layout.custom_labels = {
-            "English (US)" = "US";
-            "English (programmer Dvorak)" = "DV";
-          };
-
-          # Session panel: only these four buttons (replaces Noctalia's default set). Suspend runs
-          # suspend-then-hibernate - S3 now, hibernate after the HibernateDelaySec in tensoon.nix.
-          session = {
-            actions = [
-              { action = "logout"; }
-              { action = "suspend"; }
-              { action = "reboot"; }
-              { action = "shutdown"; }
+        # Promoted from the Noctalia settings menu (~/.local/state/noctalia/settings.toml).
+        # Runtime edits through the UI still take precedence; this is the declarative baseline.
+        # Left in the runtime file on purpose: config_version (metadata), the lockscreen_widgets
+        # editor geometry, and wallpaper.last (Noctalia's own recently-used history - fine to lose
+        # on tensoon's per-boot state wipe).
+        #
+        # wallpaper.default/.monitors below point at ~/Pictures/wallpaper.jpg - an ordinary file the
+        # user drops in by hand, not something Home Manager manages, so there's no /nix/store path
+        # to rot under GC.
+        settings = {
+          # Bar layout: audio visualiser + media on the left, date/weather/notifications in the
+          # centre; right side is keyboard-layout + caffeine + system indicators (the clipboard,
+          # wallpaper and brightness buttons were removed via the UI).
+          bar.default = {
+            center = [
+              "date"
+              "clock"
+              "weather"
+              "notifications"
             ];
 
-            power.suspend = "systemctl suspend-then-hibernate";
+            end = [
+              "tray"
+              "keyboard_layout"
+              "caffeine"
+              "network"
+              "bluetooth"
+              "volume"
+              "battery"
+              "session"
+            ];
+
+            start = [
+              "control-center"
+              "launcher"
+              "workspaces"
+              "media"
+              "audio_visualizer"
+            ];
           };
 
-          # "Setup wizard done" is tracked by a marker in ~/.local/state/noctalia, which tensoon's
-          # tmpfs root drops every boot - so the "Welcome to Noctalia" panel pops on every login.
-          # Every real setting is already declared here, so switch the wizard off.
-          setup_wizard_enabled = false;
+          # Idle staging (Noctalia drives this off the compositor's idle-notify). Each named block
+          # is one stage; `timeout` is seconds of inactivity, `locked_timeout` applies once the
+          # session is already locked. `suspend` runs shell.session.power.suspend
+          # (systemctl suspend-then-hibernate), so: 5 min -> lock, 6 -> screen off, 15 -> suspend,
+          # +30 more in S3 -> hibernate (HibernateDelaySec, tensoon.nix). Bump the timeouts if this
+          # is too eager.
+          idle.behavior = {
+            lock = {
+              action = "lock";
+              enabled = true;
+              timeout = 300;
+            };
+
+            screen-off = {
+              action = "screen_off";
+              enabled = true;
+              locked_timeout = 60;
+              timeout = 360;
+            };
+
+            suspend = {
+              action = "suspend";
+              enabled = true;
+              timeout = 900;
+            };
+          };
+
+          location.auto_locate = true;
+          # Custom lockscreen widgets are off. Their editor geometry (per-output pixel coords) is
+          # deliberately left in the runtime settings.toml rather than promoted here.
+          lockscreen_widgets.enabled = false;
+          nightlight.enabled = true;
+          # Community plugin: VPN Manager (github.com/noctalia-dev/community-plugins). Adds a bar
+          # indicator, panel and `vpn` launcher provider for NetworkManager VPN connections of any
+          # protocol, plus auto connect/disconnect keyed on a trusted-network list. Noctalia fetches
+          # it from the built-in "community" source on first start and re-materialises it after
+          # tensoon's per-boot state wipe (ensureEnabledMaterialized); the nixos block below adds its
+          # optional GUI helpers and my.preservation keeps its ~/.local/state/noctalia/plugins data
+          # (trusted networks, default VPN) across reboots. Per-plugin toggles (auto_connect_enabled,
+          # poll_interval_seconds, ...) are left to the UI.
+          plugins.enabled = [ "andrewdems/vpn-manager" ];
+
+          shell = {
+            # Short tags for the keyboard-layout widget in place of the full XKB description.
+            keyboard_layout.custom_labels = {
+              "English (US)" = "US";
+              "English (programmer Dvorak)" = "DV";
+            };
+
+            # Session panel: only these four buttons (replaces Noctalia's default set). Suspend runs
+            # suspend-then-hibernate - S3 now, hibernate after the HibernateDelaySec in tensoon.nix.
+            session = {
+              actions = [
+                { action = "logout"; }
+                { action = "suspend"; }
+                { action = "reboot"; }
+                { action = "shutdown"; }
+              ];
+
+              power.suspend = "systemctl suspend-then-hibernate";
+            };
+
+            # "Setup wizard done" is tracked by a marker in ~/.local/state/noctalia, which tensoon's
+            # tmpfs root drops every boot - so the "Welcome to Noctalia" panel pops on every login.
+            # Every real setting is already declared here, so switch the wizard off.
+            setup_wizard_enabled = false;
+          };
+
+          # Bundled Catppuccin; `auto` follows the system/location light-dark schedule.
+          theme = {
+            builtin = "Catppuccin";
+            mode = "auto";
+            source = "builtin";
+          };
+
+          # Since Stylix was removed, Noctalia's own templates theme external apps. gtk3/gtk4 drop a
+          # noctalia.css next to gtk.css and flip `gsettings color-scheme` + adw-gtk3 on mode change;
+          # qt writes a qt6ct colour scheme; umbriel writes ~/.config/umbriel/noctalia.toml, which
+          # my.umbriel pulls in via `[include]`. The nixos block below installs adw-gtk3, dconf and
+          # qt6ct. Not enabled: ghostty/starship/emacs - their apply.sh edits config files that are
+          # read-only Home Manager symlinks here.
+          theme.templates = {
+            builtin_ids = [
+              "gtk3"
+              "gtk4"
+              "qt"
+              "umbriel"
+            ];
+
+            enable_builtin_templates = true;
+          };
+
+          # The only monitor tensoon's laptop panel identifies as. `default` is what a fresh
+          # settings.toml (see comment above) starts from after every reboot's tmpfs wipe.
+          wallpaper = {
+            default.path = "${config.home.homeDirectory}/Pictures/wallpaper.jpg";
+            monitors.eDP-1.path = "${config.home.homeDirectory}/Pictures/wallpaper.jpg";
+          };
+
+          weather.unit = "imperial";
+
+          widget = {
+            clock.anchor = true;
+            date.format = "{:%F}";
+            keyboard_layout.show_glyph = false;
+            media.hide_when_no_media = true;
+            network.show_label = false;
+            notifications.hide_when_no_unread = true;
+            volume.show_label = false;
+            weather.show_condition = false;
+          };
         };
 
-        # Bundled Catppuccin; `auto` follows the system/location light-dark schedule.
-        theme = {
-          builtin = "Catppuccin";
-          mode = "auto";
-          source = "builtin";
-        };
-
-        # Since Stylix was removed, Noctalia's own templates theme external apps. gtk3/gtk4 drop a
-        # noctalia.css next to gtk.css and flip `gsettings color-scheme` + adw-gtk3 on mode change;
-        # qt writes a qt6ct colour scheme; umbriel writes ~/.config/umbriel/noctalia.toml, which
-        # my.umbriel pulls in via `[include]`. The nixos block below installs adw-gtk3, dconf and
-        # qt6ct. Not enabled: ghostty/starship/emacs - their apply.sh edits config files that are
-        # read-only Home Manager symlinks here.
-        theme.templates = {
-          builtin_ids = [
-            "gtk3"
-            "gtk4"
-            "qt"
-            "umbriel"
-          ];
-
-          enable_builtin_templates = true;
-        };
-
-        weather.unit = "imperial";
-
-        widget = {
-          clock.anchor = true;
-          date.format = "{:%F}";
-          keyboard_layout.show_glyph = false;
-          media.hide_when_no_media = true;
-          network.show_label = false;
-          notifications.hide_when_no_unread = true;
-          volume.show_label = false;
-          weather.show_condition = false;
-        };
+        # User service, PartOf graphical-session.target - Umbriel brings it up via autostart too;
+        # the service keeps it supervised and restarted on failure.
+        systemd.enable = true;
       };
-
-      # User service, PartOf graphical-session.target - Umbriel brings it up via autostart too;
-      # the service keeps it supervised and restarted on failure.
-      systemd.enable = true;
     };
 
     nixos = { pkgs, ... }: {

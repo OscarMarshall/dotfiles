@@ -1,0 +1,43 @@
+--- a/server/lib/settings/index.ts
++++ b/server/lib/settings/index.ts
+@@ -71,6 +71,8 @@
+   requiredClaims?: string;
+   scopes?: string;
+   newUserLogin?: boolean;
++  adminGroups?: string[];
++  groupsClaim?: string;
+ };
+ 
+ export type PublicOidcProvider = Pick<OidcProvider, 'slug' | 'name' | 'logo'>;
+--- a/server/routes/auth.ts
++++ b/server/routes/auth.ts
+@@ -1232,6 +1232,29 @@
+       });
+     }
+ 
++    // Sync the ADMIN permission from the provider's groups claim on every
++    // login. The owner account (ID 1) is always left untouched.
++    if (provider.adminGroups?.length && user.id !== 1) {
++      const claim = fullUserInfo[provider.groupsClaim ?? 'groups'];
++      const groups = Array.isArray(claim) ? claim : [];
++      const isAdmin = provider.adminGroups.some((group) =>
++        groups.includes(group)
++      );
++      const hasAdmin = (user.permissions & Permission.ADMIN) !== 0;
++
++      if (isAdmin !== hasAdmin) {
++        user.permissions = isAdmin
++          ? user.permissions | Permission.ADMIN
++          : settings.main.defaultPermissions;
++        await userRepository.save(user);
++
++        logger.info(
++          `${isAdmin ? 'Granted' : 'Revoked'} admin for ${user.email} from OIDC groups claim`,
++          { label: 'Auth', provider: provider.slug, ip: req.ip }
++        );
++      }
++    }
++
+     // Set logged in session and return
+     if (req.session) {
+       req.session.userId = user.id;

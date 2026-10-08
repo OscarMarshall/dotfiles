@@ -22,13 +22,21 @@
   #                           # remaining serverProperties, symlinks, etc.) - a function since
   #                           # `pkgs` isn't available yet at the aspect's own call site (see
   #                           # harmony.nix), only once `nixos` is resolved.
+  #     mods = {            # optional: Fabric mods by Modrinth slug, resolved into `modsLock`
+  #       <slug> = { };     #   newest release build
+  #       <slug>.channel = "beta"; # also accept beta (or "alpha") builds
+  #     };
+  #     gameVersion = "1.21.8"; # optional, with `mods`: pin Minecraft instead of tracking the
+  #                             # newest release every mod supports
   #   };
   # `port` is kept separate (rather than read out of `server`) so DNS generation below never needs
-  # a real `pkgs` at all.
+  # a real `pkgs` at all. `modsLock` is the imported lock file `nix run .#update-minecraft-mods`
+  # writes (see the host's own minecraft-servers.nix, which defines that package).
   my.minecraft-servers =
     {
       worlds,
       administrators ? [ ],
+      modsLock ? { },
     }:
     { host, ... }:
     let
@@ -84,35 +92,80 @@
         units = map (world: "minecraft-server-${world}") (lib.attrNames worlds);
       };
 
-      nixos = { config, pkgs, ... }: {
-        imports = [ (inputs.nix-minecraft.nixosModules.minecraft-servers or { }) ];
-        nixpkgs.overlays = [ (inputs.nix-minecraft.overlay or { }) ];
-
-        services.minecraft-servers = {
-          enable = true;
-          dataDir = "/metalminds/minecraft-worlds";
-          environmentFile = config.age.secrets."minecraft-servers.env".path;
-          eula = true;
-          openFirewall = true;
-
-          servers = lib.mapAttrs (
-            _: world:
+      nixos =
+        { config, pkgs, ... }:
+        let
+          # A world with `mods` gets its Fabric server AND its mods from `modsLock` (written by
+          # `nix run .#update-minecraft-mods`, see minecraft-servers/update-mods.py), never from
+          # `fabricServers.fabric` (latest) - #896's nix-minecraft bump once moved `vanilla` onto
+          # Minecraft 26.3 while every mod was still a 26.2 build, and Fabric Loader refused to start
+          # (a silent crash loop: nix-minecraft's tmux wrapper swallows the JVM's output). With the
+          # game version pinned in the same lock as the mods, only the updater moves it, and only
+          # to a version every mod already supports.
+          lockedServer =
+            name: world: server:
             let
-              server = world.server pkgs;
+              escapedVersion = lib.replaceStrings [ "." " " ] [ "_" "_" ] locked.gameVersion;
+              locked =
+                modsLock.${name}
+                  or (throw "my.minecraft-servers: world `${name}` has `mods` but no lock entry - run `nix run .#update-minecraft-mods`");
             in
-            server
-            // {
-              serverProperties = (server.serverProperties or { }) // {
-                server-port = world.port;
+            assert lib.assertMsg
+              (
+                # Compares each mod's channel too (not just the set of names), so switching a mod
+                # to e.g. `channel = "beta"` also demands a re-resolve.
+                lib.mapAttrs (_: mod: mod.channel or "release") world.mods == lib.mapAttrs (_: mod: mod.channel) locked.mods
+                && (world.gameVersion or locked.gameVersion) == locked.gameVersion
+              )
+              "my.minecraft-servers: `${name}`'s lock is out of date with its `mods` (names or channels)/`gameVersion` - run `nix run .#update-minecraft-mods`";
+            {
+              # nix-minecraft's `mkTextileServer` doesn't inherit the JDK from the vanilla server
+              # it wraps (`vanillaServers.<version>.java` - nix-minecraft's own pick, the newest
+              # JDK it packages for anything past Java 8) - it uses nixpkgs' ambient
+              # `jre_headless`, and a server newer than that JDK exits instantly with
+              # UnsupportedClassVersionError (happened 2026-08-24: 26.2 needed Java 25, ambient
+              # was 21). Always run what nix-minecraft runs its own vanilla server on instead.
+              package = pkgs.fabricServers."fabric-${escapedVersion}".override {
+                jre_headless = pkgs.vanillaServers."vanilla-${escapedVersion}".java;
               };
-            }
-          ) worlds;
-        };
 
-        users.users = lib.genAttrs administrators (user: {
-          extraGroups = [ "minecraft" ];
-        });
-      };
+              symlinks = (server.symlinks or { }) // {
+                mods = pkgs.linkFarmFromDrvs "mods" (
+                  lib.mapAttrsToList (_: mod: pkgs.fetchurl { inherit (mod) sha512 url; }) locked.mods
+                );
+              };
+            };
+        in
+        {
+          imports = [ (inputs.nix-minecraft.nixosModules.minecraft-servers or { }) ];
+          nixpkgs.overlays = [ (inputs.nix-minecraft.overlay or { }) ];
+
+          services.minecraft-servers = {
+            enable = true;
+            dataDir = "/metalminds/minecraft-worlds";
+            environmentFile = config.age.secrets."minecraft-servers.env".path;
+            eula = true;
+            openFirewall = true;
+
+            servers = lib.mapAttrs (
+              name: world:
+              let
+                server = world.server pkgs;
+              in
+              server
+              // lib.optionalAttrs (world ? mods) (lockedServer name world server)
+              // {
+                serverProperties = (server.serverProperties or { }) // {
+                  server-port = world.port;
+                };
+              }
+            ) worlds;
+          };
+
+          users.users = lib.genAttrs administrators (user: {
+            extraGroups = [ "minecraft" ];
+          });
+        };
 
       # One inbound rule per world, on its own game port (see modules/aspects/my/meraki.nix).
       port-forward = lib.mapAttrsToList (name: world: {

@@ -1,6 +1,7 @@
 {
   lib,
   den,
+  inputs,
   my,
   ...
 }:
@@ -63,6 +64,7 @@ in
         my.gpg
         my.nh
         my.nix-index
+        my.opencode
         my.proton-pass
         my.ssh-client
         userAspect
@@ -77,6 +79,7 @@ in
       # Hobby apps (gaming, 3D printing, media) have no place on a work machine, so they're
       # additionally gated off whenever `work` is set - see `scope` comment above.
       ++ lib.optionals ((scope.graphical or false) && !(scope.work or false)) [
+        my.chart-manager
         my.discord
         my.mkvtoolnix
         my.orca-slicer
@@ -122,6 +125,7 @@ in
           ]
           # Hobby packages (design, media, gaming) have no place on a work machine.
           ++ lib.optionals ((scope.graphical or false) && !(scope.work or false)) [
+            gthumb
             inkscape
             mpv
             prismlauncher
@@ -178,6 +182,8 @@ in
           fzf.enable = true;
           gh.enable = true;
         };
+
+        programs.codex.plugins = [ inputs.ponytail ];
 
         # On work machines, the agent needs SSH keys from both the Personal and Meraki
         # vaults - pass-cli's ssh-agent only accepts a single --vault-name, so the only way

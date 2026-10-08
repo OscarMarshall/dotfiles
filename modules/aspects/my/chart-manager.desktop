@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Clone Hero Chart Manager
+Comment=Search, download and convert Clone Hero charts from RhythmVerse and Chorus Encore
+Exec=chart-manager %U
+Icon=chart-manager
+Terminal=false
+Type=Application
+StartupWMClass=Clone Hero Chart Manager
+Categories=AudioVideo;

@@ -8,17 +8,18 @@
         applicationKeyId = "004119677af80560000000002";
         bucket = "coppermind-harmony";
       })
+      (beszel { })
       (bookshelf-audiobooks { })
       (bookshelf-ebooks { })
       (cachyos-kernel { variant = "server"; })
       (collabora-online { })
+      (docs { global = true; })
       (home-assistant { global = true; })
       (immich {
         administrators = [ "oscar" ];
         global = true;
       })
       (jellyfin { global = true; })
-      (netdata { })
       (nextcloud { global = true; })
       (paperless {
         administrators = [ "oscar" ];
@@ -36,9 +37,6 @@
       # membership by hand instead of via the same preauth key melaan/tensoon/OMARSHAL-M-T2QF use.
       (tailscale { loginServer = "https://headscale.harmony.silverlight-nex.us"; })
       (tautulli { })
-      # Global (not LAN-only like tautulli/profilarr/etc.) since its whole purpose is inviting
-      # people who don't have LAN/VPN access yet to join Plex.
-      (wizarr { global = true; })
       (zfs [ "metalminds" ])
       boot
       cross-seed

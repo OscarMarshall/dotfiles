@@ -74,9 +74,6 @@
           # should increase server_names_hash_bucket_size"). 128 leaves headroom for future
           # services without revisiting this.
           serverNamesHashBucketSize = 128;
-          # Exposes /nginx_status on localhost for Netdata's nginx collector (request/connection
-          # metrics).
-          statusPage = true;
 
           virtualHosts = lib.listToAttrs (
             map (

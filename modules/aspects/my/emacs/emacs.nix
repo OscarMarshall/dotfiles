@@ -11,7 +11,6 @@
       # to write into our (immutable, git-committed) flake.lock.
       doomdir.follows = "nixpkgs";
       nixpkgs.follows = "nixpkgs";
-      systems.follows = "systems";
     };
   };
 
