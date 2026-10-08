@@ -111,11 +111,14 @@
       # Lets melaan/tensoon/OMARSHAL-M-T2QF (my.remote-builder) offload builds here over SSH.
       # `openssh.authorizedKeys.keys` is a listOf, so this concatenates with oscar's personal login
       # key from userAspect (oscar.nix) rather than replacing it. The forced command restricts this
-      # dedicated key to serving the Nix store protocol - it can't open an interactive shell even
-      # though it authenticates as the (trusted-user) oscar account, which is what lets the daemon
-      # accept builds/substitutions from it without further restriction.
+      # dedicated key to running the nix-daemon's own worker-protocol server - it can't open an
+      # interactive shell even though it authenticates as the (trusted-user) oscar account, which
+      # is what lets the daemon accept builds/substitutions from it without further restriction.
+      # MUST be `nix-daemon --stdio`, not `nix-store --serve`: remote-builder.nix sets `protocol =
+      # "ssh-ng"`, which makes the client speak the worker protocol over this same SSH session -
+      # `--serve` speaks a different, incompatible protocol and the handshake would just fail.
       users.users.oscar.openssh.authorizedKeys.keys = [
-        ''command="nice -n19 nix-store --serve --write",restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPQDr4fQSUeD4J0rnJoh80UM+txjrYBT1sLZ04b7qgeF remote-builder@harmony''
+        ''command="nice -n19 nix-daemon --stdio",restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPQDr4fQSUeD4J0rnJoh80UM+txjrYBT1sLZ04b7qgeF remote-builder@harmony''
       ];
     };
 

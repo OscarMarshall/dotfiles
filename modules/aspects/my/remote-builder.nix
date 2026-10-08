@@ -6,8 +6,9 @@
 # The private half of the SSH keypair is a dedicated secret per builder (NOT the personal
 # oscar-ssh-private-key, see oscar.nix) - remote build connections are made by the nix-daemon
 # (root), not the interactive user, so the key has to be root-readable at daemon-start. The
-# corresponding public key's `authorizedKeys` entry on the builder host is restricted to
-# `nix-store --serve` only (see harmony.nix) so this secret can't be used for a general login.
+# corresponding public key's `authorizedKeys` entry on the builder host is restricted to running
+# `nix-daemon --stdio` only (see harmony.nix) so this secret can't be used for a general login -
+# it MUST be that and not `nix-store --serve`, to match `protocol = "ssh-ng"` below.
 #
 # Usage:
 #   includes = [ (remote-builder { builder = "harmony"; hostName = "harmony"; system = "x86_64-linux"; maxJobs = 32; publicHostKey = "..."; }) ];
