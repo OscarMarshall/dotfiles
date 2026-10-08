@@ -66,11 +66,7 @@
           git
           ripgrep
 
-          (aspellWithDicts (dicts: [
-            dicts.en
-            dicts.en-computers
-            dicts.en-science
-          ]))
+          (aspellWithDicts (dicts: [ dicts.en ]))
           babashka
           bash-language-server
           clj-kondo
