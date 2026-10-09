@@ -1,5 +1,11 @@
 { config, lib, ... }:
 let
+  # The personal cache's signing key, minted server-side by `attic cache create` (see attic.nix's
+  # header for the bootstrap) - Attic can't be handed a pre-made one, so this can't be known before
+  # the cache exists. Left `null` until then, which simply omits the substituter below rather than
+  # trusting a placeholder. Re-run `nix run .#write-flake` after setting it, since the flake's own
+  # `nixConfig` is generated from this.
+  atticPublicKey = null;
   flakeFileNixConfig = config.flake-file.nixConfig;
   mkNixConfig = { config, pkgs }: {
     nix = {
@@ -31,13 +37,13 @@ in
 
     extra-substituters = [
       "https://nix-community.cachix.org"
-      "https://oscarmarshall.cachix.org"
-    ];
+    ]
+    ++ lib.optional (atticPublicKey != null) "https://attic.silverlight-nex.us/oscarmarshall";
 
     extra-trusted-public-keys = [
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
-      "oscarmarshall.cachix.org-1:Fa13vGeBXoJ7jWpvnalg/PCRTtvCpyuHUFL5jQXt/9w="
-    ];
+    ]
+    ++ lib.optional (atticPublicKey != null) atticPublicKey;
   };
 
   flake.nixConfig = flakeFileNixConfig;
