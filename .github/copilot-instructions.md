@@ -37,7 +37,7 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
     - **`users/`**: User-specific aspects (one directory per user)
       - **`oscar/`**: oscar.nix, work/ (work-specific config)
       - **`adelline/`**: adelline.nix
-    - **`my/`**: Reusable aspects in the `my` namespace (~43 aspects)
+    - **`my/`**: Reusable aspects in the `my` namespace (~46 aspects)
       - Core: boot.nix, locale.nix, nix.nix, fonts.nix
       - Services: nginx.nix, minecraft-servers.nix, paperless.nix, plex.nix, jellyfin.nix, prowlarr.nix,
         qbittorrent.nix, radarr.nix, sonarr.nix, unpackerr.nix, home-assistant.nix, mousehole.nix
@@ -51,6 +51,9 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
       - Infrastructure: zfs.nix, samba.nix, lm-sensors.nix, networkmanager.nix, secrets.nix, vpn-confinement.nix,
         backup.nix (offsite backups - see "Working with Offsite Backups" below), disko.nix, preservation.nix (ephemeral
         root + `/persist` bind mounts), yubikey.nix (pcscd for the PIV/age-plugin-yubikey smartcard interface)
+      - Remote building: headscale.nix (self-hosted Tailscale coordination server, harmony only), tailscale.nix (joins a
+        host to that tailnet, optionally unattended via a preauth-key secret), remote-builder.nix (offloads builds to
+        another tailnet host over `nix.buildMachines`, see "Working with the Remote Builder" below)
       - Darwin: homebrew.nix
       - VM: vm.nix, vm-bootable.nix, ci-no-boot.nix
 - **`secrets/`**: Directory containing ragenix/agenix-rekey-encrypted secrets (`.age` files). Primitive secrets are
@@ -113,7 +116,7 @@ Example: `modules/aspects/users/oscar/oscar.nix` includes emacs, git config, gpg
 
 ### Reusable Aspects (`my.*`)
 
-The `my` namespace contains ~43 reusable aspects for services, applications, and features. These are functions that
+The `my` namespace contains ~46 reusable aspects for services, applications, and features. These are functions that
 return configuration and can accept parameters (e.g., `qbittorrent { administrators = [ "oscar" ]; }`).
 
 ### Aspect Routing
@@ -348,7 +351,7 @@ The configuration uses Den aspects organized into three main categories:
   - Includes Home Manager configuration
   - Uses direct host checks for conditional desktop apps
 
-### Reusable Aspects (`my.*` - 43 aspects)
+### Reusable Aspects (`my.*` - 46 aspects)
 
 Organized by category:
 
@@ -365,6 +368,8 @@ Organized by category:
   backups via Restic/Backblaze B2), disko, preservation (ephemeral root + `/persist` bind mounts), yubikey (pcscd for
   the PIV/age-plugin-yubikey smartcard interface)
 - **Darwin**: homebrew
+- **Remote building**: headscale (self-hosted Tailscale coordination server), tailscale (joins a host to that tailnet),
+  remote-builder (offloads builds to another tailnet host via `nix.buildMachines`)
 - **Utilities**: host-flag, routes, vm, vm-bootable, ci-no-boot
 
 Each `my.*` aspect is a self-contained module that can be included by hosts or users.
@@ -545,6 +550,41 @@ nix-minecraft bump can't move a world onto a Minecraft version its mods don't su
 - AI agents can run the updater and verify with
   `nix build .#nixosConfigurations.harmony.config.services.minecraft-servers.servers.<world>.{symlinks.mods,package}`;
   whether the server actually starts is only visible on harmony (`logs/latest.log` in the world's directory).
+
+### Working with the Remote Builder (my.headscale/my.tailscale/my.remote-builder)
+
+harmony (32 threads, 125GiB RAM) is a `nix.buildMachines` entry for melaan/tensoon/OMARSHAL-M-T2QF (`my.remote-builder`
+on each, `protocol = "ssh-ng"`), reachable from anywhere via a self-hosted Headscale coordination server on harmony
+(`my.headscale`) instead of exposing sshd to the WAN - every host joins that tailnet with `my.tailscale`, and MagicDNS
+gives harmony a stable name (`harmony.ts.silverlight-nex.us`) any tailnet member, including root (the actual nix-daemon
+connecting, not the interactive user), can resolve.
+
+Two dedicated secrets, neither reusing a personal credential:
+
+- `remote-builder-harmony-ssh-key` - root-readable (the nix-daemon opens this connection, not oscar interactively). The
+  matching public key's `authorizedKeys` entry on harmony (`harmony.nix`) is forced to `nix-daemon --stdio` only - it
+  MUST be that, not `nix-store --serve`, to match the `ssh-ng` protocol; the two speak incompatible handshakes.
+- `tailscale-authkey` - a single reusable, long-lived Headscale preauth key shared by every `unattended = true`
+  `my.tailscale` inclusion, letting NixOS hosts join (and re-join on every boot) with zero interaction.
+
+**Bootstrap order for a new builder relationship** (a real chicken-and-egg: the preauth key can't exist before
+headscale, which only harmony hosts, is already running):
+
+1. `nixos-rebuild switch` on harmony - needs neither secret yet; `my.tailscale` on harmony itself omits `unattended`, so
+   nothing there blocks on `tailscale-authkey` either.
+2. **Human step, on harmony**: `headscale users create <user>`,
+   `tailscale up --login-server=<harmony's headscale URL> --accept-dns`,
+   `headscale nodes register --user <user> --key <printed nodekey>`, then
+   `headscale preauthkeys create --user <user> --reusable --expiration <duration>`.
+3. **Human step**: `agenix edit` both new secrets with the generated SSH keypair and that preauth key, `agenix rekey -a`
+   (YubiKey, per "Working with Secrets" above).
+4. Rebuild the client hosts.
+
+AI agents can verify the Nix wiring with `nix build .#nixosConfigurations.<host>.config.system.build.toplevel --dry-run`
+(fails only on the two secrets not existing yet, until step 3 above) and
+`nix build .#darwinConfigurations.OMARSHAL-M-T2QF.config.system.build.toplevel --dry-run` the same way, but cannot run
+any step 2 command (no access to harmony's YubiKey-gated secrets or its running `headscale`/`tailscale` state) or
+confirm an actual remote build succeeded end to end.
 
 ## Documentation Update Policy
 

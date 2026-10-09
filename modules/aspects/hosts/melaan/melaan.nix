@@ -8,6 +8,32 @@
     includes = with my; [
       (auto-upgrade { allowReboot = false; })
       (cachyos-kernel { })
+      # 24/32 of harmony's threads - leaves headroom for its own services (Jellyfin/Plex/Immich/
+      # etc.) while still giving builds real throughput for source-heavy rebuilds.
+      (remote-builder {
+        # MagicDNS name (my.tailscale/my.headscale) instead of the bare "harmony" ssh-client.nix
+        # alias - that alias is per-user home-manager config, invisible to the nix-daemon (root)
+        # that actually opens this connection, and only resolved on LAN besides. This works from
+        # anywhere the tailnet reaches, and root can resolve it too via systemd-resolved's
+        # tailscale-installed split-DNS for the ts.silverlight-nex.us suffix.
+        builder = "harmony";
+        hostName = "harmony.ts.silverlight-nex.us";
+        maxJobs = 24;
+        publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSU1rTTV1Tlkwck15MlFNRzZJcHRseGdWbDRzUVdvZVNTTm1VcDcvZjJ6MUIK";
+        speedFactor = 4;
+
+        supportedFeatures = [
+          "big-parallel"
+          "kvm"
+          "nixos-test"
+        ];
+
+        system = "x86_64-linux";
+      })
+      (tailscale {
+        loginServer = "https://headscale.harmony.silverlight-nex.us";
+        unattended = true;
+      })
       boot
       gnome
       locale
