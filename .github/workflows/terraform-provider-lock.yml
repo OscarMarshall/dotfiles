@@ -46,19 +46,15 @@ jobs:
           ref: main
           persist-credentials: false
 
+      # No cache step: this job only needs to PULL prebuilt artifacts for speed, never push, and
+      # accept-flake-config already trusts the flake's own nixConfig substituters (the personal
+      # Attic cache and nix-community) - so it never needs (and shouldn't be handed) a secret
+      # capable of writing to the cache.
       - name: Install Nix
         uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
         with:
           extra_nix_config: |
             accept-flake-config = true
-
-      # No authToken: this job only needs to PULL prebuilt artifacts for speed, never push, so it
-      # doesn't need (and shouldn't be handed) a secret capable of writing to the cache.
-      - name: Setup Nix cache
-        uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
-        with:
-          name: oscarmarshall
-          extraPullNames: nix-community
 
       # Deliberately NOT `nix run .#harmony-tf.init`/`.terraform` - both go through the same wrapped
       # `tofu` binary, whose prefixText (modules/terranix.nix) unconditionally tries to `agenix view`

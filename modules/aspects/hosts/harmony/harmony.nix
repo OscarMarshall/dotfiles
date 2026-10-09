@@ -1,6 +1,7 @@
 { den, my, ... }: {
   den.aspects.harmony = {
     includes = with my; [
+      (attic { global = true; })
       (authentik { global = true; })
       (auto-upgrade { allowReboot = true; })
       (autobrr { })

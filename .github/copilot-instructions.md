@@ -378,7 +378,7 @@ Each `my.*` aspect is a self-contained module that can be included by hosts or u
   - Check configuration syntax and evaluate expressions: `nix eval`
   - Build derivations to validate configuration: `nix build .#<output>`
   - Run flake apps: `nix run .#<app>` (note: `nix run .#write-flake` regenerates flake.nix)
-  - The `oscarmarshall` and `nix-community` Cachix caches are configured for read-only access
+  - The personal `oscarmarshall` Attic cache and the `nix-community` Cachix cache are configured for read-only access
 
 ### Limitations
 
