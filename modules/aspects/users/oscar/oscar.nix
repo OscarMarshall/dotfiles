@@ -49,6 +49,8 @@ in
     {
       includes = [
         (den._.user-shell "fish")
+        (my.claude { gh-token = !(scope.work or false); })
+        (my.fish { gh-token = !(scope.work or false); })
         (my.git {
           inherit name;
           email = "3111765+OscarMarshall@users.noreply.github.com";
@@ -57,10 +59,8 @@ in
         den._.primary-user
         den.aspects.oscar.provides.work
         my.bat
-        my.claude
         my.direnv
         my.emacs
-        my.fish
         my.gpg
         my.nh
         my.nix-index

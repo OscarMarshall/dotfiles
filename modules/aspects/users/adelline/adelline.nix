@@ -2,6 +2,7 @@
   den.aspects.adelline = {
     includes = [
       (den._.user-shell "fish")
+      (my.fish { })
       ({ user, ... }: {
         nixos.users.users.${user.userName}.hashedPassword =
           "$y$j9T$PIOU1O0/eDXQdlTWkzuf5.$AhnTDMJLgzM04nt6pzz/ae.3U.3LUWhte6PiBw.Mzb2";
@@ -9,7 +10,6 @@
       den._.primary-user
       my.chrome
       my.discord
-      my.fish
       my.ghostty
       my.steam
       my.zen-browser
