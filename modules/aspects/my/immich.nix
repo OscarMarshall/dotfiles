@@ -108,7 +108,7 @@ in
                 inherit (finalAttrs) pname src version;
                 inherit (previousAttrs.passthru) pnpm;
                 fetcherVersion = 4;
-                hash = "sha256-8l7993jubyBjVpggyqQn5AJu/q12MCPPpkdusJUJ2Rw=";
+                hash = "sha256-HgBSKC0dfmyH9xXIJv6Z7ZFJy4MSTNfPCfQJ8a6djSQ=";
               };
 
               src = pkgs.fetchFromGitHub {
