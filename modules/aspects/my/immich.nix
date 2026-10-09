@@ -66,11 +66,41 @@ in
           # so nixpkgs' build/install phases apply unchanged - but only while each Noodle release's
           # Immich base (in its release title, e.g. "v5.7.1 (immich v3.2.4)") matches
           # `pkgs.immich.version`, since nixpkgs pins pnpm/esbuild/geodata for that exact release.
-          # Bump `version` here alongside every nixpkgs Immich bump. Machine learning follows
-          # automatically: the module runs `cfg.package.machine-learning`, which nixpkgs builds from
-          # `"${src}/machine-learning"` of whatever package this resolves to.
+          # Bump `version` here alongside every nixpkgs Immich bump.
           package = pkgs.immich.overrideAttrs (
             finalAttrs: previousAttrs: {
+              # The module runs `cfg.package.machine-learning`, built by nixpkgs from
+              # `"${src}/machine-learning"` - so it picks up the fork's source on its own, but the
+              # fork's ML adds one dependency upstream doesn't have (`prometheus-client`, for its
+              # metrics endpoint). Adding it to `dependencies` alone only satisfies the build's
+              # runtime-deps check: nixpkgs' `machine-learning` wrapper bakes its PYTHONPATH from
+              # the ORIGINAL `dependencies` list (a `rec` binding in its package.nix, which
+              # `overridePythonAttrs` can't reach), so the wrapper needs the extra path too or the
+              # service would fail importing it at startup.
+              passthru = previousAttrs.passthru // {
+                machine-learning =
+                  (pkgs.immich-machine-learning.override { immich = finalAttrs.finalPackage; }).overridePythonAttrs
+                    (previousMlAttrs: {
+                      dependencies = previousMlAttrs.dependencies ++ [ pkgs.python3.pkgs.prometheus-client ];
+
+                      # Broken upstream in v5.7.1, not by anything Nix-specific: the fork's
+                      # `PetRecognizer._predict` now skips crops under `_MIN_CROP_SIDE`, but these
+                      # tests still mock exactly one embedding per (tiny, e.g. 10x10) box, so its
+                      # `zip(..., strict=True)` trips on the count mismatch. Drop once fixed upstream.
+                      disabledTests = (previousMlAttrs.disabledTests or [ ]) ++ [
+                        "test_recognizer_crops_each_bounding_box"
+                        "test_recognizer_raises_on_embedding_count_mismatch"
+                        "test_recognizer_returns_one_embedding_per_pet"
+                        "test_recognizer_uses_area_interpolation_downscaling_and_linear_upscaling"
+                      ];
+
+                      postInstall = previousMlAttrs.postInstall + ''
+                        wrapProgram "''${!outputBin}"/bin/machine-learning \
+                          --prefix PYTHONPATH : ${pkgs.python3.pkgs.makePythonPath [ pkgs.python3.pkgs.prometheus-client ]}
+                      '';
+                    });
+              };
+
               pname = "noodle-gallery";
 
               # Same call as nixpkgs' own (fetcherVersion included) - only the lockfile differs.
@@ -78,11 +108,11 @@ in
                 inherit (finalAttrs) pname src version;
                 inherit (previousAttrs.passthru) pnpm;
                 fetcherVersion = 4;
-                hash = lib.fakeHash;
+                hash = "sha256-8l7993jubyBjVpggyqQn5AJu/q12MCPPpkdusJUJ2Rw=";
               };
 
               src = pkgs.fetchFromGitHub {
-                hash = lib.fakeHash;
+                hash = "sha256-1Gm/hTL6Szm2wFm2gJHxUOPQ/rFsuaDxaMvl7KbR23M=";
                 owner = "open-noodle";
                 repo = "gallery";
                 tag = "v${finalAttrs.version}";
