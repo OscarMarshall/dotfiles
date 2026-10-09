@@ -56,7 +56,7 @@
             };
 
             enable = true;
-            package = pkgs.nextcloud34;
+            package = pkgs.nextcloud35;
             database.createLocally = true;
             datadir = "/metalminds/nextcloud"; # holds both config/ (config.php) and data/ (user files)
 
