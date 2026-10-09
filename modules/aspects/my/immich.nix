@@ -51,10 +51,77 @@ in
         user = "immich";
       };
 
-      nixos = { config, ... }: {
+      nixos = { config, pkgs, ... }: {
         services.immich = {
           inherit port;
           enable = true;
+
+          # Noodle Gallery (github.com/open-noodle/gallery) rather than upstream Immich - a soft fork
+          # (adds family/partner sharing and shared face recognition) that its own docs pitch as a
+          # drop-in: same database schema, same media layout, same config file, same mobile/OAuth
+          # endpoints. So rather than switching to its Docker images, this keeps NixOS's own
+          # `services.immich` (Postgres + VectorChord, Redis, users, hardening, the backup hook
+          # above) and only swaps the source tree under nixpkgs' own `immich` derivation. The fork
+          # keeps upstream's pnpm workspace names (`immich`, `immich-web`, `@immich/plugin-core`),
+          # so nixpkgs' build/install phases apply unchanged - but only while each Noodle release's
+          # Immich base (in its release title, e.g. "v5.7.1 (immich v3.2.4)") matches
+          # `pkgs.immich.version`, since nixpkgs pins pnpm/esbuild/geodata for that exact release.
+          # Bump `version` here alongside every nixpkgs Immich bump.
+          package = pkgs.immich.overrideAttrs (
+            finalAttrs: previousAttrs: {
+              # The module runs `cfg.package.machine-learning`, built by nixpkgs from
+              # `"${src}/machine-learning"` - so it picks up the fork's source on its own, but the
+              # fork's ML adds one dependency upstream doesn't have (`prometheus-client`, for its
+              # metrics endpoint). Adding it to `dependencies` alone only satisfies the build's
+              # runtime-deps check: nixpkgs' `machine-learning` wrapper bakes its PYTHONPATH from
+              # the ORIGINAL `dependencies` list (a `rec` binding in its package.nix, which
+              # `overridePythonAttrs` can't reach), so the wrapper needs the extra path too or the
+              # service would fail importing it at startup.
+              passthru = previousAttrs.passthru // {
+                machine-learning =
+                  (pkgs.immich-machine-learning.override { immich = finalAttrs.finalPackage; }).overridePythonAttrs
+                    (previousMlAttrs: {
+                      dependencies = previousMlAttrs.dependencies ++ [ pkgs.python3.pkgs.prometheus-client ];
+
+                      # Broken upstream in v5.7.1, not by anything Nix-specific: the fork's
+                      # `PetRecognizer._predict` now skips crops under `_MIN_CROP_SIDE`, but these
+                      # tests still mock exactly one embedding per (tiny, e.g. 10x10) box, so its
+                      # `zip(..., strict=True)` trips on the count mismatch. Drop once fixed upstream.
+                      disabledTests = (previousMlAttrs.disabledTests or [ ]) ++ [
+                        "test_recognizer_crops_each_bounding_box"
+                        "test_recognizer_raises_on_embedding_count_mismatch"
+                        "test_recognizer_returns_one_embedding_per_pet"
+                        "test_recognizer_uses_area_interpolation_downscaling_and_linear_upscaling"
+                      ];
+
+                      postInstall = previousMlAttrs.postInstall + ''
+                        wrapProgram "''${!outputBin}"/bin/machine-learning \
+                          --prefix PYTHONPATH : ${pkgs.python3.pkgs.makePythonPath [ pkgs.python3.pkgs.prometheus-client ]}
+                      '';
+                    });
+              };
+
+              pname = "noodle-gallery";
+
+              # Same call as nixpkgs' own (fetcherVersion included) - only the lockfile differs.
+              pnpmDeps = pkgs.fetchPnpmDeps {
+                inherit (finalAttrs) pname src version;
+                inherit (previousAttrs.passthru) pnpm;
+                fetcherVersion = 4;
+                hash = "sha256-HgBSKC0dfmyH9xXIJv6Z7ZFJy4MSTNfPCfQJ8a6djSQ=";
+              };
+
+              src = pkgs.fetchFromGitHub {
+                hash = "sha256-1Gm/hTL6Szm2wFm2gJHxUOPQ/rFsuaDxaMvl7KbR23M=";
+                owner = "open-noodle";
+                repo = "gallery";
+                tag = "v${finalAttrs.version}";
+              };
+
+              version = "5.7.1";
+            }
+          );
+
           host = "127.0.0.1";
           mediaLocation = "/metalminds/pictures";
 
@@ -110,7 +177,10 @@ in
         homepage.description = "Photo & video backup";
         host = host.name;
         icon = "immich.svg";
-        label = "Immich";
+        # Display-only (Homepage tile, Authentik library). `name` - and so the hostname and the
+        # Authentik slug/OIDC client id - deliberately stays `immich`: Noodle Gallery speaks
+        # Immich's API, so existing Immich mobile apps keep pointing at the same server URL.
+        label = "Noodle Gallery";
         name = "immich";
 
         # Requests the matching OAuth2 Provider + Application from Authentik (authentik.nix) - see
