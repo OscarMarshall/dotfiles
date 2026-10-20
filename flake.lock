@@ -921,11 +921,11 @@
         "opam-repository": "opam-repository"
       },
       "locked": {
-        "lastModified": 1792125717,
-        "narHash": "sha256-DQQiw+pLXeKjd5IzbUcWK6oF0T8jxF4UkeRBBRlGftY=",
+        "lastModified": 1792211461,
+        "narHash": "sha256-ptHjLTP/SBYECRUzoHPnvrGbnxfBTvf3pAfIuxvN9Ac=",
         "owner": "Bad3r",
         "repo": "nix-logseq-git-flake",
-        "rev": "7df94947b2754962a48d880f689dadc8467caa1b",
+        "rev": "18606f8c5707b2677311462d71e170d1948b136f",
         "type": "github"
       },
       "original": {
@@ -1213,11 +1213,11 @@
     "opam-repository": {
       "flake": false,
       "locked": {
-        "lastModified": 1792097243,
-        "narHash": "sha256-KNN9onT2pxHg9L82oiroIQIw1tYkULPBVZKaXiuMI4o=",
+        "lastModified": 1792167168,
+        "narHash": "sha256-90qKZbVvERyYjW7VEiko5P9goYxVr7Y8jbgExBTd+UE=",
         "owner": "ocaml",
         "repo": "opam-repository",
-        "rev": "7b5e9a2b084fe7ff750c4a9449289065ef9f9216",
+        "rev": "4b3c9153f191701aa5da18d2f5ab5da796ce2133",
         "type": "github"
       },
       "original": {
