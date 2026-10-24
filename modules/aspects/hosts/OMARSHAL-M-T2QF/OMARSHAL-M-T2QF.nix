@@ -1,6 +1,31 @@
 { my, ... }: {
   den.aspects.OMARSHAL-M-T2QF = {
     includes = with my; [
+      # Lets this aarch64-darwin machine build x86_64-linux closures (e.g. nixosConfigurations.
+      # harmony/melaan/tensoon) over SSH instead of needing a local linux-builder VM. 24/32 of
+      # harmony's threads - see the same comment in melaan.nix.
+      (remote-builder {
+        # MagicDNS name (my.tailscale/my.headscale) - see the same comment in melaan.nix. Also the
+        # only way this leg can reach harmony at all when off-LAN, unlike melaan/tensoon which
+        # could still fall back to a LAN-only build.
+        builder = "harmony";
+        hostName = "harmony.ts.silverlight-nex.us";
+        maxJobs = 24;
+        publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSU1rTTV1Tlkwck15MlFNRzZJcHRseGdWbDRzUVdvZVNTTm1VcDcvZjJ6MUIK";
+        speedFactor = 4;
+
+        supportedFeatures = [
+          "big-parallel"
+          "kvm"
+          "nixos-test"
+        ];
+
+        system = "x86_64-linux";
+      })
+      (tailscale {
+        loginServer = "https://headscale.harmony.silverlight-nex.us";
+        unattended = true;
+      })
       homebrew
       neardrop
     ];

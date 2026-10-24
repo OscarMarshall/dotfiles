@@ -33,6 +33,9 @@
       (seerr { global = true; })
       (sonarr { administrators = [ "oscar" ]; })
       (storyteller { global = true; })
+      # No `unattended` - see headscale.nix's own header for why harmony bootstraps its own tailnet
+      # membership by hand instead of via the same preauth key melaan/tensoon/OMARSHAL-M-T2QF use.
+      (tailscale { loginServer = "https://headscale.harmony.silverlight-nex.us"; })
       (tautulli { })
       (zfs [ "metalminds" ])
       boot
@@ -40,6 +43,7 @@
       den.aspects.harmony.provides.minecraft-servers
       dns
       fail2ban
+      headscale
       homepage
       lm-sensors
       locale
@@ -103,6 +107,19 @@
       # For more information, see `man configuration.nix` or
       # https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
       system.stateVersion = "25.05"; # Did you read the comment?
+
+      # Lets melaan/tensoon/OMARSHAL-M-T2QF (my.remote-builder) offload builds here over SSH.
+      # `openssh.authorizedKeys.keys` is a listOf, so this concatenates with oscar's personal login
+      # key from userAspect (oscar.nix) rather than replacing it. The forced command restricts this
+      # dedicated key to running the nix-daemon's own worker-protocol server - it can't open an
+      # interactive shell even though it authenticates as the (trusted-user) oscar account, which
+      # is what lets the daemon accept builds/substitutions from it without further restriction.
+      # MUST be `nix-daemon --stdio`, not `nix-store --serve`: remote-builder.nix sets `protocol =
+      # "ssh-ng"`, which makes the client speak the worker protocol over this same SSH session -
+      # `--serve` speaks a different, incompatible protocol and the handshake would just fail.
+      users.users.oscar.openssh.authorizedKeys.keys = [
+        ''command="nice -n19 nix-daemon --stdio",restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPQDr4fQSUeD4J0rnJoh80UM+txjrYBT1sLZ04b7qgeF remote-builder@harmony''
+      ];
     };
 
     # This value determines the Home Manager release that your configuration is compatible with. This helps avoid
