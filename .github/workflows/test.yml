@@ -30,12 +30,18 @@ jobs:
           extra_nix_config: |
             accept-flake-config = true
 
+      # Push-only (`skip-use`): pulls already come from the flake's own nixConfig, trusted via
+      # accept-flake-config above. No push without a token (e.g. Dependabot PRs, which don't see
+      # Actions secrets) - unlike cachix-action, attic-action doesn't fall back to pull-only itself.
       - name: Setup Nix cache
-        uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
+        uses: ryanccn/attic-action@dc99f5eb1d5c0495aa26f7b56337b30011fa153e # v0.5.2
         with:
-          name: oscarmarshall
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          extraPullNames: nix-community
+          cache: oscarmarshall
+          endpoint: https://attic.silverlight-nex.us
+          inputs-from: .
+          skip-push: ${{ secrets.ATTIC_TOKEN == '' }}
+          skip-use: true
+          token: ${{ secrets.ATTIC_TOKEN }}
 
       - run: nix flake metadata
 
@@ -72,12 +78,18 @@ jobs:
           extra_nix_config: |
             accept-flake-config = true
 
+      # Push-only (`skip-use`): pulls already come from the flake's own nixConfig, trusted via
+      # accept-flake-config above. No push without a token (e.g. Dependabot PRs, which don't see
+      # Actions secrets) - unlike cachix-action, attic-action doesn't fall back to pull-only itself.
       - name: Setup Nix cache
-        uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
+        uses: ryanccn/attic-action@dc99f5eb1d5c0495aa26f7b56337b30011fa153e # v0.5.2
         with:
-          name: oscarmarshall
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          extraPullNames: nix-community
+          cache: oscarmarshall
+          endpoint: https://attic.silverlight-nex.us
+          inputs-from: .
+          skip-push: ${{ secrets.ATTIC_TOKEN == '' }}
+          skip-use: true
+          token: ${{ secrets.ATTIC_TOKEN }}
 
       - run: nix flake metadata
 
