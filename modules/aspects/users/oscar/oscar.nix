@@ -133,6 +133,21 @@ in
 
         nixpkgs.overlays = [
           (final: prev: {
+            # nixpkgs moved python3Packages.mcp to 2.x (NixOS/nixpkgs#575004), and
+            # fastmcp-slim is marked broken against it - which takes mcp-nixos
+            # (claude.nix/opencode.nix's `nixos` MCP server) down with it. Build
+            # it against the still-packaged mcp_1 instead, the same fix nixpkgs
+            # applied to ha-mcp (NixOS/nixpkgs#578535). Pinned so an mcp-nixos
+            # bump forces a check of whether it's been fixed upstream - if so,
+            # delete this; if not, bump the version pinned here.
+            mcp-nixos =
+              assert
+                prev.mcp-nixos.version == "3.0.1"
+                || throw "mcp-nixos ${prev.mcp-nixos.version}: re-check the mcp_1 workaround in oscar.nix";
+              prev.mcp-nixos.override {
+                python3Packages = prev.python3Packages.overrideScope (pyFinal: _pyPrev: { mcp = pyFinal.mcp_1; });
+              };
+
             pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
               (_pyFinal: pyPrev: {
                 # curl-cffi's compiled extension links against curl-impersonate's

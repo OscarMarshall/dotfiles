@@ -64,19 +64,19 @@ in
           # above) and only swaps the source tree under nixpkgs' own `immich` derivation. The fork
           # keeps upstream's pnpm workspace names (`immich`, `immich-web`, `@immich/plugin-core`),
           # so nixpkgs' build/install phases apply unchanged - but only while each Noodle release's
-          # Immich base (in its release title, e.g. "v5.7.1 (immich v3.2.4)") matches
+          # Immich base (in its release title, e.g. "v5.9.0 (immich 3.3.5)") matches
           # `pkgs.immich.version`, since nixpkgs pins pnpm/esbuild/geodata for that exact release.
           # Bump `version` here alongside every nixpkgs Immich bump.
           package = pkgs.immich.overrideAttrs (
             finalAttrs: previousAttrs:
             # Pinned (like seerr.nix's/oscar.nix's own overrides) so a nixpkgs Immich bump fails
             # evaluation with a "bump the fork" message, rather than quietly building this
-            # 3.2.4-based source against pnpm/esbuild/geodata pins meant for a different release.
+            # 3.3.5-based source against pnpm/esbuild/geodata pins meant for a different release.
             # On a bump: move `version` below to the Noodle release whose title names the new
             # Immich base, refresh both hashes, then update the version pinned here.
             assert
-              previousAttrs.version == "3.2.4"
-              || throw "immich.nix: pkgs.immich is now ${previousAttrs.version} (was 3.2.4) - bump Noodle Gallery's `version` to the open-noodle/gallery release based on Immich v${previousAttrs.version}, refresh its src/pnpmDeps hashes, then update this pin.";
+              previousAttrs.version == "3.3.5"
+              || throw "immich.nix: pkgs.immich is now ${previousAttrs.version} (was 3.3.5) - bump Noodle Gallery's `version` to the open-noodle/gallery release based on Immich v${previousAttrs.version}, refresh its src/pnpmDeps hashes, then update this pin.";
             {
               # The module runs `cfg.package.machine-learning`, built by nixpkgs from
               # `"${src}/machine-learning"` - so it picks up the fork's source on its own, but the
@@ -92,17 +92,6 @@ in
                     (previousMlAttrs: {
                       dependencies = previousMlAttrs.dependencies ++ [ pkgs.python3.pkgs.prometheus-client ];
 
-                      # Broken upstream in v5.7.1, not by anything Nix-specific: the fork's
-                      # `PetRecognizer._predict` now skips crops under `_MIN_CROP_SIDE`, but these
-                      # tests still mock exactly one embedding per (tiny, e.g. 10x10) box, so its
-                      # `zip(..., strict=True)` trips on the count mismatch. Drop once fixed upstream.
-                      disabledTests = (previousMlAttrs.disabledTests or [ ]) ++ [
-                        "test_recognizer_crops_each_bounding_box"
-                        "test_recognizer_raises_on_embedding_count_mismatch"
-                        "test_recognizer_returns_one_embedding_per_pet"
-                        "test_recognizer_uses_area_interpolation_downscaling_and_linear_upscaling"
-                      ];
-
                       postInstall = previousMlAttrs.postInstall + ''
                         wrapProgram "''${!outputBin}"/bin/machine-learning \
                           --prefix PYTHONPATH : ${pkgs.python3.pkgs.makePythonPath [ pkgs.python3.pkgs.prometheus-client ]}
@@ -117,17 +106,17 @@ in
                 inherit (finalAttrs) pname src version;
                 inherit (previousAttrs.passthru) pnpm;
                 fetcherVersion = 4;
-                hash = "sha256-HgBSKC0dfmyH9xXIJv6Z7ZFJy4MSTNfPCfQJ8a6djSQ=";
+                hash = "sha256-SwCOcHZq6bjWZNPpRd5NdS3YGInALFcKLnd0ayCkOYo=";
               };
 
               src = pkgs.fetchFromGitHub {
-                hash = "sha256-1Gm/hTL6Szm2wFm2gJHxUOPQ/rFsuaDxaMvl7KbR23M=";
+                hash = "sha256-7x+xMc+Gd0Fe8eQte+IqmeTfWLPnsp/GIoivVyPvW6c=";
                 owner = "open-noodle";
                 repo = "gallery";
                 tag = "v${finalAttrs.version}";
               };
 
-              version = "5.7.1";
+              version = "5.9.0";
             }
           );
 
