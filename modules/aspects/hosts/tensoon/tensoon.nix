@@ -103,7 +103,7 @@
     # version changes in each release.
     provides =
       let
-        # See the comment in OMARSHAL-M-T2QF.nix for why these sentinels are needed.
+        # See the comment on provides.oscar in harmony.nix for why these sentinels are needed.
         hmSentinels = {
           hm64bit = { };
           hmAarch64 = { };

@@ -1,7 +1,7 @@
 # Hosts that declare a `lan-ip` (see modules/den.nix) get a same-named SSH alias for free, but only
 # for whoever has an account there under the same den aspect as whoever's applying this config -
 # i.e. the same person, matched by aspect identity rather than by username, since the username on
-# each side can differ (e.g. omarshal on work machines vs oscar elsewhere). `ssh harmony` then
+# each side can differ. `ssh harmony` then
 # resolves to that host's LAN IP and logs in as whatever that matching account is actually named.
 { config, lib, ... }:
 let

@@ -8,7 +8,7 @@
 # options only exist where `inputs.preservation.nixosModules.default` is imported, which happens
 # only inside my.preservation, included only by tensoon. An aspect like my.orca-slicer (pulled in
 # by modules/aspects/users/oscar/oscar.nix, so present on every host oscar has an account on -
-# harmony, melaan, the Mac, the dev203 home) that referenced `preservation.*` directly would fail
+# harmony, melaan) that referenced `preservation.*` directly would fail
 # to evaluate everywhere else with "The option `preservation` does not exist". Emitting a
 # `preserve` quirk instead is inert on any host without my.preservation: the value is collected
 # scope-locally and simply never read.

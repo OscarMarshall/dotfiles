@@ -9,9 +9,6 @@ This repository contains my personal system configurations for multiple machines
 - **melaan** (x86_64-linux): Framework laptop with GNOME desktop
 - **tensoon** (x86_64-linux): Framework 13 laptop running the Noctalia/Umbriel Wayland shell, on a disko + LUKS +
   preservation (ephemeral root) disk layout
-- **OMARSHAL-M-T2QF** (aarch64-darwin): MacBook with development environment
-- **omarshal@dev203.meraki.com** (x86_64-linux): Standalone Home Manager config reusing the `oscar` aspect for a work
-  machine
 
 ## Quick Start
 
@@ -35,18 +32,6 @@ cd dotfiles
 sudo nixos-rebuild switch --flake .#<hostname>
 ```
 
-**macOS systems (OMARSHAL-M-T2QF):**
-
-```console
-darwin-rebuild switch --flake .#OMARSHAL-M-T2QF
-```
-
-**Standalone Home Manager (omarshal@dev203.meraki.com):**
-
-```console
-home-manager switch --flake .#"omarshal@dev203.meraki.com"
-```
-
 ### Validate Configuration
 
 ```console
@@ -55,7 +40,6 @@ home-manager switch --flake .#"omarshal@dev203.meraki.com"
 nix build .#nixosConfigurations.harmony.config.system.build.toplevel
 nix build .#nixosConfigurations.melaan.config.system.build.toplevel
 nix build .#nixosConfigurations.tensoon.config.system.build.toplevel
-nix build .#darwinConfigurations.OMARSHAL-M-T2QF.config.system.build.toplevel
 
 # Show available outputs
 nix flake show
@@ -143,7 +127,6 @@ declares the `proton0` namespace directly in its own aspect.
 - **GNOME** on melaan (Wayland, via NixOS)
 - **Noctalia/Umbriel**: a native Wayland shell (bar, launcher, control center, notifications, lock screen) on a
   wlroots/SceneFX compositor, on tensoon
-- **macOS desktop**: Fonts, Homebrew-based applications, and Nix-managed development environment on OMARSHAL-M-T2QF
 - **Applications**: Emacs, Ghostty terminal, Zen Browser, Discord, Steam, Krita, PrusaSlicer
 - **Framework laptop** support via nixos-hardware
 
@@ -153,10 +136,10 @@ declares the `proton0` namespace directly in its own aspect.
 - **Git** with per-machine configuration
 - **GPG** and SSH setup
 - **Shell**: Fish shell via Home Manager
-- **AI coding agents**: Claude Code (`my.claude`) and OpenCode (`my.opencode`) for oscar on every host, plus Codex
-  (`my.openai`) on work machines; all share the MCP servers in `my.mcp-servers`. OpenCode's provider auth, sessions and
-  prompt history (`~/.local/share/opencode`, `~/.local/state/opencode`) are persisted on tensoon's ephemeral home - run
-  `opencode auth login` once per machine to connect a provider
+- **AI coding agents**: Claude Code (`my.claude`) and OpenCode (`my.opencode`) for oscar on every host; both share the
+  MCP servers in `my.mcp-servers`. OpenCode's provider auth, sessions and prompt history (`~/.local/share/opencode`,
+  `~/.local/state/opencode`) are persisted on tensoon's ephemeral home - run `opencode auth login` once per machine to
+  connect a provider
 
 ## Secrets Management
 

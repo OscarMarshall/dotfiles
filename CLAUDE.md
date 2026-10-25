@@ -7,14 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Apply Configuration
 
 ```bash
-# NixOS (harmony, melaan)
+# NixOS (harmony, melaan, tensoon)
 sudo nixos-rebuild switch --flake .#<hostname>
-
-# macOS
-darwin-rebuild switch --flake .#OMARSHAL-M-T2QF
-
-# Standalone Home Manager
-home-manager switch --flake .#"omarshal@dev203.meraki.com"
 ```
 
 ### Build Without Applying
@@ -22,7 +16,7 @@ home-manager switch --flake .#"omarshal@dev203.meraki.com"
 ```bash
 nix build .#nixosConfigurations.harmony.config.system.build.toplevel
 nix build .#nixosConfigurations.melaan.config.system.build.toplevel
-nix build .#darwinConfigurations.OMARSHAL-M-T2QF.config.system.build.toplevel
+nix build .#nixosConfigurations.tensoon.config.system.build.toplevel
 ```
 
 ### Format
@@ -79,12 +73,11 @@ Each aspect can provide configuration through named classes:
 
 ### Hosts
 
-| Hostname                     | Arch           | Type                                        |
-| ---------------------------- | -------------- | ------------------------------------------- |
-| `harmony`                    | x86_64-linux   | NixOS home server (media, Minecraft, infra) |
-| `melaan`                     | x86_64-linux   | NixOS Framework laptop with GNOME           |
-| `OMARSHAL-M-T2QF`            | aarch64-darwin | MacBook (nix-darwin)                        |
-| `omarshal@dev203.meraki.com` | x86_64-linux   | Standalone Home Manager (work machine)      |
+| Hostname  | Arch         | Type                                                  |
+| --------- | ------------ | ----------------------------------------------------- |
+| `harmony` | x86_64-linux | NixOS home server (media, Minecraft, infra)           |
+| `melaan`  | x86_64-linux | NixOS Framework laptop with GNOME                     |
+| `tensoon` | x86_64-linux | NixOS Framework 13 laptop with Noctalia/Umbriel, LUKS |
 
 ### Adding a New Service Aspect
 
@@ -100,7 +93,7 @@ includes = [ (my.<service> { param = value; }) ];
 ```
 
 Use `{ host, lib, ... }:` as the aspect function signature when you need conditional logic based on host properties
-(`host.graphical`, `host.work`, etc.).
+(`host.graphical`, etc.).
 
 ## Secrets
 

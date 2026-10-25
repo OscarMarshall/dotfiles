@@ -114,7 +114,11 @@
       hm64bit = { };
       hmAarch64 = { };
       hmDarwin = { };
-      # See the comment in OMARSHAL-M-T2QF.nix for why these sentinels are needed.
+      # Den's allHomeNodes spawn re-walks the host aspect without the user's own includes, so none of the
+      # hmXxx keys are present at compile time. Without them, the hmXxx→homeManager forwards compiled by
+      # hmPlatforms become Tier 2 (complex) routes that call resolveSourceFallback, which creates a
+      # self-parent inner spawn and throws. Sentinel empty modules here make each key present so the
+      # forwards compile as Tier 1 (simple) routes instead.
       hmLinux = { };
       homeManager.home.stateVersion = "25.05";
     };
