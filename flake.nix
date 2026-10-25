@@ -111,7 +111,7 @@
       url = "github:DietrichGebert/ponytail";
       flake = false;
     };
-    preservation.url = "github:nix-community/preservation";
+    preservation.url = "github:mjm/preservation/ed8dbeaac0ad240341259c814cade7163a53fc1f";
     ragenix = {
       url = "github:yaxitech/ragenix";
       inputs = {
