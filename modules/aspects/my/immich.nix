@@ -68,7 +68,16 @@ in
           # `pkgs.immich.version`, since nixpkgs pins pnpm/esbuild/geodata for that exact release.
           # Bump `version` here alongside every nixpkgs Immich bump.
           package = pkgs.immich.overrideAttrs (
-            finalAttrs: previousAttrs: {
+            finalAttrs: previousAttrs:
+            # Pinned (like seerr.nix's/oscar.nix's own overrides) so a nixpkgs Immich bump fails
+            # evaluation with a "bump the fork" message, rather than quietly building this
+            # 3.2.4-based source against pnpm/esbuild/geodata pins meant for a different release.
+            # On a bump: move `version` below to the Noodle release whose title names the new
+            # Immich base, refresh both hashes, then update the version pinned here.
+            assert
+              previousAttrs.version == "3.2.4"
+              || throw "immich.nix: pkgs.immich is now ${previousAttrs.version} (was 3.2.4) - bump Noodle Gallery's `version` to the open-noodle/gallery release based on Immich v${previousAttrs.version}, refresh its src/pnpmDeps hashes, then update this pin.";
+            {
               # The module runs `cfg.package.machine-learning`, built by nixpkgs from
               # `"${src}/machine-learning"` - so it picks up the fork's source on its own, but the
               # fork's ML adds one dependency upstream doesn't have (`prometheus-client`, for its
