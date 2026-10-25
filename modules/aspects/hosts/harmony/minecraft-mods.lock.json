@@ -69,9 +69,9 @@
       },
       "fabric-api": {
         "channel": "release",
-        "sha512": "2ce7b0826f75801a56e8150eb5ceca467cdf8b4b44e160b5a5381e5412567d024f46a16c679f29c4a9346b2687fa1740f91ed6026a31b2ed1f3d4b5035968d69",
-        "url": "https://cdn.modrinth.com/data/P7dR8mSH/versions/LEklt8GT/fabric-api-0.164.0%2B26.3.jar",
-        "version": "0.164.0+26.3"
+        "sha512": "0a4b8a14e847b71567b557b43d906c2167fa263eeeef37454a821ba286996e3da1616dc2d9647736d28a250d5ecf400541cae808359b29a62324a8a6f2ad5e30",
+        "url": "https://cdn.modrinth.com/data/P7dR8mSH/versions/EQKgpeKu/fabric-api-0.165.0%2B26.3.jar",
+        "version": "0.165.0+26.3"
       },
       "ferrite-core": {
         "channel": "release",
@@ -87,9 +87,9 @@
       },
       "jei": {
         "channel": "beta",
-        "sha512": "cfa143894aa1a16458107af027b9dab0100a6bbafb5183009b577a59d1a11ed6070b4e418d370c7d325425cad12ddcec2aaf91002e5c5c03c1c212274bbe429a",
-        "url": "https://cdn.modrinth.com/data/u6dRKJwZ/versions/Nfv71T5d/jei-26.3-fabric-31.16.0.89.jar",
-        "version": "31.16.0.89"
+        "sha512": "dabb61181f2c5656c86804cb162f0b6486bd73f247b4ccb6ff0bd3999c49228d81bfa4055f6ac4a6b66acbc2ad658549b084cf090931ed940df1765af7139d4a",
+        "url": "https://cdn.modrinth.com/data/u6dRKJwZ/versions/aSjVJwgD/jei-26.3-fabric-31.16.0.90.jar",
+        "version": "31.16.0.90"
       },
       "lithium": {
         "channel": "release",
