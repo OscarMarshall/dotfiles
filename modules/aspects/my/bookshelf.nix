@@ -273,9 +273,10 @@ let
       #
       # `readarr_naming` turns on file renaming (`rename_books`) - Terraform requires the other
       # naming fields alongside it regardless (the resource covers Readarr's whole Media Management
-      # > naming settings, not just the toggle), so they're pinned to Readarr's own stock defaults
-      # rather than left to chance: `{Author Name}` folders, `{Author Name} - {Book Title}` files,
-      # smart colon replacement, illegal characters replaced.
+      # > naming settings, not just the toggle), so they're pinned rather than left to chance -
+      # Readarr's own stock defaults (`{Author Name}` folders, smart colon replacement, illegal
+      # characters replaced) except the book format, which uses `{Book TitleThe}` (leading
+      # "The"/"A"/"An" moved to the end, e.g. "Hobbit, The") so titles sort alphabetically.
       #
       #   tofu import readarr_naming.${instance} <id>  # GET /api/v1/config/naming
       #
@@ -408,8 +409,9 @@ let
               rename_books = true;
               replace_illegal_characters = true;
               # Must contain Book Title AND PartNumber, OR Original Title (confirmed via a real
-              # `tofu apply` 400) - this is Readarr's own default format.
-              standard_book_format = "{Book Title}/{Author Name} - {Book Title}{ (PartNumber)}";
+              # `tofu apply` 400) - Readarr's own default format, with `{Book TitleThe}` in place of
+              # `{Book Title}`.
+              standard_book_format = "{Book TitleThe}/{Author Name} - {Book TitleThe}{ (PartNumber)}";
             };
 
             readarr_root_folder.${instance} = {

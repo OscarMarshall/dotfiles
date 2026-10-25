@@ -49,14 +49,14 @@
 
         services = {
           nextcloud = {
-            config = {
-              adminpassFile = config.age.secrets.nextcloud-admin-password.path;
-              adminuser = "admin";
-              dbtype = "pgsql";
-            };
-
+            # No `adminuser`/`adminpassFile`: upstream removed both (they only ever seeded the
+            # initial install, which this one is long past). The local `admin` break-glass account
+            # they created still exists; its password isn't kept anywhere, since root on this box can
+            # always reset it (`nextcloud-occ user:resetpassword admin`, plus
+            # `twofactorauth:disable admin <provider>` for the enforced 2FA below).
+            config.dbtype = "pgsql";
             enable = true;
-            package = pkgs.nextcloud34;
+            package = pkgs.nextcloud35;
             database.createLocally = true;
             datadir = "/metalminds/nextcloud"; # holds both config/ (config.php) and data/ (user files)
 
@@ -257,8 +257,6 @@
       };
 
       secrets = { secrets, ... }: {
-        nextcloud-admin-password.generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -base64 24";
-
         # Nextcloud's own Mailgun mailbox (mailgun.nix owns the `mailgun_domain` this credential is
         # created under, via the `terranix` field below). Generated, not external - unlike the old
         # Proton token this replaces, nothing has to be copied out of a dashboard by hand.

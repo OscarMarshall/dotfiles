@@ -71,7 +71,24 @@
               host = url;
             };
 
-            settings.disable_startup_analytics = true;
+            settings = {
+              disable_startup_analytics = true;
+
+              # Global email backend, for everything that sends mail WITHOUT its own stage-level SMTP
+              # config - notably the admin UI's "Send via email" on an invitation. Left unset, Authentik
+              # falls back to localhost:25, where harmony's own MTA refuses to relay to outside domains
+              # ("454 4.7.1 Relay access denied"), so every such email silently failed in the worker.
+              # Same Mailgun mailbox as the email-OTP stage below; the password comes in through
+              # `authentik.env` as AUTHENTIK_EMAIL__PASSWORD rather than here, keeping it out of the
+              # world-readable store.
+              email = {
+                from = "authentik@${host.domain}";
+                host = "smtp.mailgun.org";
+                port = 587;
+                use_tls = true;
+                username = "authentik@${host.domain}";
+              };
+            };
           };
 
           # nginx.nix forces `HttpOnly` onto every proxied cookie, but Authentik's frontend needs to
@@ -116,7 +133,7 @@
         };
 
         "authentik.env".generator = {
-          dependencies = { inherit (secrets) authentik-secret-key authentik-token; };
+          dependencies = { inherit (secrets) authentik-mailgun-smtp-password authentik-secret-key authentik-token; };
 
           script =
             {
@@ -126,6 +143,7 @@
               ...
             }:
             ''
+              printf 'AUTHENTIK_EMAIL__PASSWORD=%s\n' "$(${decrypt} ${lib.escapeShellArg deps.authentik-mailgun-smtp-password.file})"
               printf 'AUTHENTIK_SECRET_KEY=%s\n' "$(${decrypt} ${lib.escapeShellArg deps.authentik-secret-key.file})"
               printf 'AUTHENTIK_BOOTSTRAP_TOKEN=%s\n' "$(${decrypt} ${lib.escapeShellArg deps.authentik-token.file})"
             '';
@@ -640,8 +658,9 @@
               };
 
               # SMTP identity is Authentik's own Mailgun mailbox (secrets above, mailgun.nix owns
-              # the underlying `mailgun_domain`) - `use_global_settings = false` since nothing
-              # configures Authentik's GLOBAL email backend (AUTHENTIK_EMAIL__* env vars) at all.
+              # the underlying `mailgun_domain`) - `use_global_settings = false` predates the global
+              # email backend (`services.authentik.settings.email` above) pointing at the same mailbox;
+              # both now send identically, this one just doesn't depend on it.
               # `from_address`/`username` are built directly from `host.domain` rather than reading
               # `mailgun_domain_credential.authentik-otp`'s own attributes - despite what its docs
               # claim, the real v0.10.0 schema (confirmed via `tofu providers schema -json`) has no

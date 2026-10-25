@@ -6,7 +6,7 @@
     flake = false;
   };
 
-  my.chart-manager = {
+  my.chart-manager = { user, ... }: {
     # Not in nixpkgs, and upstream (https://github.com/xlzipx/clone-hero-chart-manager,
     # distributed from https://chartmanager.pages.dev/) only ships electron-builder artifacts
     # (AppImage on Linux, dmg/exe elsewhere) - built from `chart-manager-src` instead of fetching
@@ -62,8 +62,11 @@
             install -Dm444 build/icon-1024.png $out/share/icons/hicolor/1024x1024/apps/chart-manager.png
             install -Dm444 ${./chart-manager.desktop} $out/share/applications/chart-manager.desktop
 
+            # The app directory, not `out/main/index.js` itself: only then does Electron read
+            # package.json's `name` ("chm"), so userData (config, catalog.db, indexes) lands in
+            # ~/.config/chm instead of the generic ~/.config/Electron every bare script shares.
             makeWrapper ${pkgs.electron}/bin/electron $out/bin/chart-manager \
-              --add-flags "$out/lib/chart-manager/out/main/index.js" \
+              --add-flags "$out/lib/chart-manager" \
               --add-flags "--no-sandbox" \
               --add-flags "--ozone-platform-hint=auto" \
               --set PORTABLE_EXECUTABLE_DIR "$out/lib/chart-manager/resources"
@@ -115,5 +118,11 @@
       {
         home.packages = [ chartManager ];
       };
+
+    # Settings, remembered game paths, setlist names and the local chart catalog.db (rebuilt by a
+    # full ~10 min API sync when missing - no bundled seed in this build) - lost on every boot on
+    # an ephemeral-root host without this. `preserve` (modules/aspects/my/preserve.nix) is inert
+    # without my.preservation.
+    preserve.users.${user.userName}.directories = [ ".config/chm" ];
   };
 }

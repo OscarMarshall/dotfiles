@@ -3,10 +3,10 @@ let
   # Seerr has no released OIDC support yet (seerr-team/seerr#2715 is still open). Build from
   # michaelhthomas's PR branch until it lands in a release, then drop this override.
   oidcFork = {
-    hash = "sha256-eu3ITUhwQYzMPdMu0Adi/Hpu5e+ho18ye/pX/KsDaVw=";
+    hash = "sha256-k8qWhsSBnQXfGk/xEmb2+4tlw6xY8viwWzEQUBxtrNs=";
     owner = "michaelhthomas";
     repo = "seerr";
-    rev = "2d1a2ed233d13ee216b147951afda8321d42f5d2";
+    rev = "2e523125e8e7262af44309c70db20fe2d7ca28a3";
   };
   port = 5055;
 in
@@ -108,14 +108,14 @@ in
           package = pkgs.seerr.overrideAttrs (
             old:
             # Pinned so a seerr version bump forces a check of whether upstream has released OIDC
-            # support (seerr-team/seerr#2715, still an open, unmerged PR as of 2026-09-25) - if so,
+            # support (seerr-team/seerr#2715, still an open, unmerged PR as of 2026-10-24) - if so,
             # drop the oidcFork override above and go back to the stock package.
             assert
-              old.version == "3.4.1"
-              || throw "seerr.nix: pkgs.seerr is now ${old.version} (was 3.4.1) - re-check whether seerr-team/seerr#2715 (OIDC support) has merged/released; if so, drop the oidcFork override.";
+              old.version == "3.5.0"
+              || throw "seerr.nix: pkgs.seerr is now ${old.version} (was 3.5.0) - re-check whether seerr-team/seerr#2715 (OIDC support) has merged/released; if so, drop the oidcFork override.";
             rec {
               # Seerr's OIDC login has no group/role claim mapping (not in `oidcFork`, nor at
-              # seerr-team/seerr#2715's head or any other upstream PR as of 2026-09-25) - OIDC users
+              # seerr-team/seerr#2715's head or any other upstream PR as of 2026-10-24) - OIDC users
               # only ever get `defaultPermissions`. This adds an `adminGroups` provider field (set
               # to authentik.nix's `admin` group by `configureOidc` above) that syncs the ADMIN
               # permission from the `groups` claim on EVERY login: granted if the user is in one of
@@ -143,7 +143,7 @@ in
                   ;
               };
 
-              version = "unstable-2026-09-08";
+              version = "unstable-2026-10-10";
             }
           );
         in
@@ -309,9 +309,9 @@ in
         name = "seerr";
 
         # Requests the matching OAuth2 Provider + Application from Authentik (authentik.nix) - see
-        # virtual-host.nix's `oidc` field for the shape. Redirect paths per the OIDC setup docs for
-        # this exact fork revision (docs/using-seerr/settings/users/oidc.md at `oidcFork.rev`
-        # above).
+        # virtual-host.nix's `oidc` field for the shape. Redirect paths are the `returnUrl`s this
+        # exact fork revision sends to the provider (server/routes/auth.ts's `getOidcRedirectUrl` at
+        # `oidcFork.rev` above - its docs/ tree, which used to list them, is gone since the rebase).
         oidc = {
           client-secret = "seerr-oidc-client-secret";
 

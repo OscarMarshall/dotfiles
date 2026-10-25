@@ -49,6 +49,8 @@ in
     {
       includes = [
         (den._.user-shell "fish")
+        (my.claude { gh-token = !(scope.work or false); })
+        (my.fish { gh-token = !(scope.work or false); })
         (my.git {
           inherit name;
           email = "3111765+OscarMarshall@users.noreply.github.com";
@@ -57,10 +59,8 @@ in
         den._.primary-user
         den.aspects.oscar.provides.work
         my.bat
-        my.claude
         my.direnv
         my.emacs
-        my.fish
         my.gpg
         my.nh
         my.nix-index
@@ -149,7 +149,7 @@ in
                   # nixpkgs has started setting an LC_RPATH for
                   # libcurl-impersonate on Darwin itself - if so, delete this
                   # overlay; if not, bump the version pinned here.
-                  assert old.version == "0.16.0" || throw "curl-cffi ${old.version}: re-check the Darwin rpath workaround in oscar.nix";
+                  assert old.version == "0.16.3" || throw "curl-cffi ${old.version}: re-check the Darwin rpath workaround in oscar.nix";
                   {
                     doCheck = (old.doCheck or true) && !prev.stdenv.hostPlatform.isDarwin;
 
