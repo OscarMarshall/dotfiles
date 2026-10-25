@@ -24,11 +24,36 @@ jobs:
         with:
           ref: ${{ github.head_ref || github.ref }}
 
+      # harmony (modules/aspects/my/remote-builder.nix) offloads these builds off the runner's
+      # shared 2-4 vCPUs onto harmony's 32 threads - a bigger win here than for melaan/tensoon
+      # (which are already native x86_64-linux too) specifically for the custom/optimized
+      # derivations that don't substitute from Cachix. Secrets are a standing credential living in
+      # GitHub's own secret store, NOT agenix - see harmony.nix's own comment on why that's a
+      # deliberately separate, independently-revocable key from the one melaan/tensoon/
+      # OMARSHAL-M-T2QF use. GitHub already redacts both secrets to empty strings on a fork PR's
+      # `pull_request`-triggered run (not `pull_request_target`), same protection
+      # secrets.CACHIX_AUTH_TOKEN below already relies on.
+      - name: Write remote-builder SSH key
+        run: |
+          umask 077
+          printf '%s' "$REMOTE_BUILDER_SSH_KEY" > "$RUNNER_TEMP/remote-builder-ci-key"
+        env:
+          REMOTE_BUILDER_SSH_KEY: ${{ secrets.REMOTE_BUILDER_CI_SSH_KEY }}
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@99a8333667fff04fdd6cffb46dfd409f8329a7bf # v4.3.0
+        with:
+          authkey: ${{ secrets.TAILSCALE_CI_AUTHKEY }}
+          args: --login-server=https://headscale.harmony.silverlight-nex.us --accept-dns
+          ping: harmony.ts.silverlight-nex.us
+
       - name: Install Nix
         uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
         with:
           extra_nix_config: |
             accept-flake-config = true
+            builders = ssh-ng://oscar@harmony.ts.silverlight-nex.us x86_64-linux ${{ runner.temp }}/remote-builder-ci-key 24 1 big-parallel,kvm,nixos-test - c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSU1rTTV1Tlkwck15MlFNRzZJcHRseGdWbDRzUVdvZVNTTm1VcDcvZjJ6MUIK
+            builders-use-substitutes = true
 
       - name: Setup Nix cache
         uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17

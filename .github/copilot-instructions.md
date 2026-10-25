@@ -586,6 +586,19 @@ AI agents can verify the Nix wiring with `nix build .#nixosConfigurations.<host>
 any step 2 command (no access to harmony's YubiKey-gated secrets or its running `headscale`/`tailscale` state) or
 confirm an actual remote build succeeded end to end.
 
+**GitHub Actions** (`.github/workflows/test.yml`'s `build-linux` job only - harmony is x86_64-linux, so it can't help
+`build-darwin`'s aarch64-darwin job) joins the tailnet per-run instead of having a standing host config: a
+`tailscale/github-action` step before `cachix/install-nix-action`, then a `builders = ssh-ng://...` line in that same
+step's `extra_nix_config`. Two secrets live in GitHub's own secret store instead of agenix - `REMOTE_BUILDER_CI_SSH_KEY`
+(a THIRD dedicated keypair, separate from the one melaan/tensoon/OMARSHAL-M-T2QF share, so it's independently revocable)
+and `TAILSCALE_CI_AUTHKEY` (a reusable, **ephemeral** Headscale preauth key - `--ephemeral` so each run's tailnet node
+self-removes on disconnect instead of piling up in `headscale nodes list`). Both are standing credentials with real
+build access to harmony, readable by any workflow run with secrets access - GitHub already redacts them to empty strings
+on a fork PR's plain `pull_request` run (not `pull_request_target`), the same protection `secrets.CACHIX_AUTH_TOKEN`
+already relies on in this same workflow, so this doesn't change the trust model, just extends it. AI agents can validate
+the workflow YAML itself (`actionlint`) but cannot create the GitHub secrets, mint the Headscale preauth key, or observe
+a real CI run using the builder.
+
 ## Documentation Update Policy
 
 Whenever making changes that affect documented behaviour (secrets architecture, adding hosts/users/services, changing

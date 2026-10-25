@@ -108,17 +108,23 @@
       # https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
       system.stateVersion = "25.05"; # Did you read the comment?
 
-      # Lets melaan/tensoon/OMARSHAL-M-T2QF (my.remote-builder) offload builds here over SSH.
-      # `openssh.authorizedKeys.keys` is a listOf, so this concatenates with oscar's personal login
-      # key from userAspect (oscar.nix) rather than replacing it. The forced command restricts this
-      # dedicated key to running the nix-daemon's own worker-protocol server - it can't open an
-      # interactive shell even though it authenticates as the (trusted-user) oscar account, which
-      # is what lets the daemon accept builds/substitutions from it without further restriction.
-      # MUST be `nix-daemon --stdio`, not `nix-store --serve`: remote-builder.nix sets `protocol =
-      # "ssh-ng"`, which makes the client speak the worker protocol over this same SSH session -
-      # `--serve` speaks a different, incompatible protocol and the handshake would just fail.
+      # Lets melaan/tensoon/OMARSHAL-M-T2QF (my.remote-builder) and GitHub Actions (.github/workflows/
+      # test.yml) offload builds here over SSH. `openssh.authorizedKeys.keys` is a listOf, so this
+      # concatenates with oscar's personal login key from userAspect (oscar.nix) rather than
+      # replacing it. Each forced command restricts its key to running the nix-daemon's own
+      # worker-protocol server - it can't open an interactive shell even though it authenticates as
+      # the (trusted-user) oscar account, which is what lets the daemon accept builds/substitutions
+      # from it without further restriction. MUST be `nix-daemon --stdio`, not `nix-store --serve`:
+      # both remote-builder.nix and the workflow set `protocol = "ssh-ng"`/use the `ssh-ng://` store
+      # URI, which makes the client speak the worker protocol over this same SSH session - `--serve`
+      # speaks a different, incompatible protocol and the handshake would just fail.
+      #
+      # CI gets its OWN key (not the one above) - a standing credential that lives in GitHub's
+      # secret store rather than behind the YubiKey/agenix like every other secret in this repo, so
+      # it's kept independently revocable/rotatable without touching the real machines' access.
       users.users.oscar.openssh.authorizedKeys.keys = [
         ''command="nice -n19 nix-daemon --stdio",restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPQDr4fQSUeD4J0rnJoh80UM+txjrYBT1sLZ04b7qgeF remote-builder@harmony''
+        ''command="nice -n19 nix-daemon --stdio",restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIUpLx2LhyMTIrVwH0aWAKg+mav7mBxV1ZrFpN8YKkLT remote-builder-ci@harmony''
       ];
     };
 
