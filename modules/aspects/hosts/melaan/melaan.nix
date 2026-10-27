@@ -62,7 +62,6 @@
         hmSentinels = {
           hm64bit = { };
           hmAarch64 = { };
-          hmDarwin = { };
           hmLinux = { };
         };
       in

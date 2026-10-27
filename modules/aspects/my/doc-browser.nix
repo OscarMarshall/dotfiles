@@ -1,6 +1,5 @@
 {
   my.doc-browser = { user, ... }: {
-    darwin.homebrew.casks = [ "dash" ];
     hmLinux = { pkgs, ... }: { home.packages = [ pkgs.zeal ]; };
 
     # Zeal keeps every downloaded docset under ~/.local/share/Zeal (large; a fresh re-download

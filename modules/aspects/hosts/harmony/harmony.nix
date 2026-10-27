@@ -113,7 +113,6 @@
     provides.oscar = {
       hm64bit = { };
       hmAarch64 = { };
-      hmDarwin = { };
       # Den's allHomeNodes spawn re-walks the host aspect without the user's own includes, so none of the
       # hmXxx keys are present at compile time. Without them, the hmXxx→homeManager forwards compiled by
       # hmPlatforms become Tier 2 (complex) routes that call resolveSourceFallback, which creates a

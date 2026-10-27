@@ -1,7 +1,7 @@
 # Repository Overview
 
-This is a personal NixOS/nix-darwin configuration repository for multiple systems. It manages system configuration,
-services, and user environments using Nix flakes, Den/Dendritic, and Home Manager.
+This is a personal NixOS configuration repository for multiple systems. It manages system configuration, services, and
+user environments using Nix flakes, Den/Dendritic, and Home Manager.
 
 ## Systems
 
@@ -42,12 +42,11 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
         noctalia.nix (Wayland shell), noctalia-greeter.nix (greetd greeter)
       - Utilities: auto-upgrade.nix, auto-login.nix, host-flag.nix, routes.nix
       - Applications: emacs/, git.nix, gpg.nix, ssh-client.nix, ssh-server.nix
-      - AI coding agents: claude.nix (Claude Code), opencode.nix (OpenCode), openai.nix (Codex), mcp-servers.nix (MCP
-        servers shared via `programs.mcp`)
+      - AI coding agents: claude.nix (Claude Code), opencode.nix (OpenCode), mcp-servers.nix (MCP servers shared via
+        `programs.mcp`)
       - Infrastructure: zfs.nix, samba.nix, lm-sensors.nix, networkmanager.nix, secrets.nix, vpn-confinement.nix,
         backup.nix (offsite backups - see "Working with Offsite Backups" below), disko.nix, preservation.nix (ephemeral
         root + `/persist` bind mounts), yubikey.nix (pcscd for the PIV/age-plugin-yubikey smartcard interface)
-      - Darwin: homebrew.nix
       - VM: vm.nix, vm-bootable.nix, ci-no-boot.nix
 - **`secrets/`**: Directory containing ragenix/agenix-rekey-encrypted secrets (`.age` files). Primitive secrets are
   encrypted to the YubiKey master identity. Do not expose plaintext. Rekeyed OS-level host secrets live in
@@ -63,7 +62,6 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
 - **import-tree**: Automatic module discovery and importing
 - **flake-file**: Auto-generates flake.nix from module inputs
 - **NixOS**: Declarative Linux distribution for reproducible system configurations
-- **nix-darwin**: NixOS-like system configuration for macOS
 - **Nix Flakes**: Modern Nix package and configuration management with lockfile-based dependency pinning
 - **Home Manager**: Manages user-specific configuration (dotfiles, packages, shell, etc.) declaratively
 - **ragenix**: Secret management using age encryption (drop-in Rust rewrite of agenix)
@@ -78,19 +76,17 @@ Den uses an "aspect-oriented" approach where configuration is composed from reus
 
 Each aspect can provide configuration for different targets using these classes:
 
-- **`os`**: Applies to both NixOS and Darwin (use this to avoid duplicating identical config in `nixos` and `darwin`)
+- **`os`**: OS-level configuration (currently NixOS only)
 - **`nixos`**: NixOS-specific configuration only
-- **`darwin`**: macOS (nix-darwin) specific configuration only
 - **`homeManager`**: Home Manager configuration (cross-platform user environment)
-- **`hmLinux`/`hmDarwin`**: Platform-specific Home Manager classes forwarded into `homeManager` by
-  `modules/aspects/defaults.nix`
+- **`hmLinux`**: Platform-specific Home Manager classes forwarded into `homeManager` by `modules/aspects/defaults.nix`
 
 ### Host Aspects
 
 Each host has its own aspect (e.g., `den.aspects.harmony`) that declares:
 
 - Which `my.*` aspects to include (services, features, etc.)
-- Host-specific NixOS/Darwin configuration
+- Host-specific NixOS configuration
 - Which users have accounts on the host
 - Hardware configuration (via `hardware-configuration.nix` for NixOS hosts)
 
@@ -198,7 +194,6 @@ Note: Build/switch commands typically require appropriate permissions and are ru
 - **Show outputs**: `nix flake show` displays all flake outputs (hosts, homes, packages, etc.)
 - **Metadata**: `nix flake metadata` shows input information
 - **Build check (NixOS)**: `nixos-rebuild build --flake .#<host>` builds a NixOS configuration
-- **Build check (Darwin)**: `darwin-rebuild build --flake .#<host>` builds a Darwin configuration
 - **Build check (Home)**: `home-manager build --flake .#<home>` builds a home configuration
 - **Formatting**: `nix fmt` formats Nix code (configured via treefmt-nix)
 
@@ -217,8 +212,8 @@ CI builds the Linux hosts (harmony, melaan, tensoon) on Ubuntu.
    agenix-rekey's per-node orphan cleanup (in local storage mode) doesn't delete the other node's secrets. Never commit
    plaintext secrets or edit `.age` files directly. Use the `secrets` class (not `age.secrets` directly) to declare
    secrets in aspects — it routes to `age.secrets` on all platforms. Use `nixosSecrets` only when the secret must be
-   excluded from Darwin/Home Manager (e.g. hashed login passwords). Each host that uses secrets must set
-   `age.rekey.hostPubkey` in its host aspect.
+   excluded from Home Manager (e.g. hashed login passwords). Each host that uses secrets must set `age.rekey.hostPubkey`
+   in its host aspect.
 3. **State Version**: Never change `system.stateVersion` or `home.stateVersion` unless you understand the implications
    (see NixOS documentation).
 4. **Declarative Configuration**: All system configuration should be in Nix files; avoid imperative changes.
@@ -229,8 +224,7 @@ CI builds the Linux hosts (harmony, melaan, tensoon) on Ubuntu.
    - Put user-specific config in `modules/aspects/users/<username>/`
    - Put reusable config in `modules/aspects/my/`
    - Use direct host checks (`host.graphical`) for conditional config
-   - Use `hmLinux`/`hmDarwin` for platform-specific Home Manager config in user aspects
-   - Use `os` class for config identical on NixOS and Darwin; avoid duplicating in `nixos` and `darwin`
+   - Use `hmLinux` for platform-specific Home Manager config in user aspects
 7. **Input Management**: Declare flake inputs close to their usage in module files, not centralized in one place.
 8. **Module Discovery**: Files in `modules/` are auto-imported via import-tree; no manual imports needed.
 9. **Parametric Aspects**: Use functions for configurable aspects (e.g., `qbittorrent { administrators = [...]; }`)
@@ -250,21 +244,19 @@ CI builds the Linux hosts (harmony, melaan, tensoon) on Ubuntu.
 
 ### Den Patterns
 
-- **Aspect definition**:
-  `den.aspects.<name> = { includes = [...]; os = {...}; nixos = {...}; darwin = {...}; homeManager = {...}; }`
-- **`os` class**: Use `os = {...}` for config that applies to both NixOS and Darwin (avoids duplication)
-- **`user.description`**: Set `user.description = "Full Name"` in user aspects instead of repeating in
-  `os`/`nixos`/`darwin` user configs
+- **Aspect definition**: `den.aspects.<name> = { includes = [...]; os = {...}; nixos = {...}; homeManager = {...}; }`
+- **`user.description`**: Set `user.description = "Full Name"` in user aspects instead of repeating in `os`/`nixos` user
+  configs
 - **Parametric aspects**: `my.<name> = params: { ... }` for configurable aspects
 - **Host routing**: Use `<host>.provides.<user>` and `<user>.provides.<host>` for bidirectional config
 - **Conditional config**: Use `lib.optionals (host.<flag> or false) [ ... ]` / `lib.mkIf` for conditional config
 - **Taking parameters**: Use `den.lib.take.exactly` or `den.lib.take.atLeast` to extract specific context parameters
 - **`secrets` class**: Use in host/user/service aspects to declare secrets — preferred over setting `age.secrets`
-  directly. Forwarded into `age.secrets` on all platforms (NixOS, Darwin, Home Manager) by `defaults.nix`. Example:
+  directly. Forwarded into `age.secrets` on all platforms (NixOS, Home Manager) by `defaults.nix`. Example:
   `secrets.my-secret.rekeyFile = ../../../secrets/my-secret.age;`
 - **`nixosSecrets` class**: Use in user/host aspects for NixOS-only secrets (e.g. hashed passwords). Forwarded only into
-  `nixos.age.secrets` by `defaults.nix`, never to Darwin or Home Manager. Use `secrets` in all other cases; only reach
-  for `nixosSecrets` when the secret must be excluded from non-NixOS hosts. Requires `age.rekey.hostPubkey` set on each
+  `nixos.age.secrets` by `defaults.nix`, never to Home Manager. Use `secrets` in all other cases; only reach for
+  `nixosSecrets` when the secret must be excluded from non-NixOS hosts. Requires `age.rekey.hostPubkey` set on each
   NixOS host that uses it.
 
 ### Configuration Patterns
@@ -275,7 +267,7 @@ CI builds the Linux hosts (harmony, melaan, tensoon) on Ubuntu.
   generators.
 - **Secret declarations**: Use the `secrets` class (not `age.secrets` directly) in aspects. Example:
   `secrets.my-secret.rekeyFile = ../../../secrets/my-secret.age;` Use `nixosSecrets` only for secrets that must be
-  excluded from Darwin/Home Manager.
+  excluded from Home Manager.
 - **Rekeyed secret references**: The rekeyed copy in `secrets/rekeyed/<hostname>/` (OS-level) or
   `secrets/rekeyed/<hostname>-home-<username>/` (embedded Home Manager) is auto-generated by `agenix rekey -a`
   (human-only).
@@ -309,7 +301,7 @@ The configuration uses Den aspects organized into three main categories:
 - **tensoon** (x86_64-linux): Framework 13 laptop with Noctalia/Umbriel, disko + LUKS + preservation (ephemeral root)
 - Each host aspect:
   - Includes relevant `my.*` aspects for services and features
-  - Defines host-specific NixOS/Darwin configuration
+  - Defines host-specific NixOS configuration
   - Declares which users have accounts
   - Imports hardware-configuration.nix (NixOS hosts only)
 
@@ -337,12 +329,11 @@ Organized by category:
 - **Containers**: profilarr
 - **Desktop**: gnome, pipewire, steam, discord, ghostty, zen-browser, prusa-slicer, xfce-desktop, umbriel
   (wlroots/SceneFX compositor), noctalia (Wayland shell), noctalia-greeter (greetd greeter)
-- **Development**: emacs, git, gpg, ssh-client, ssh-server, claude (Claude Code), opencode (OpenCode), openai (Codex),
-  mcp-servers (MCP servers shared by all three)
+- **Development**: emacs, git, gpg, ssh-client, ssh-server, claude (Claude Code), opencode (OpenCode), mcp-servers (MCP
+  servers shared by both)
 - **Infrastructure**: zfs, samba, lm-sensors, secrets, auto-upgrade, auto-login, vpn-confinement, backup (offsite
   backups via Restic/Backblaze B2), disko, preservation (ephemeral root + `/persist` bind mounts), yubikey (pcscd for
   the PIV/age-plugin-yubikey smartcard interface)
-- **Darwin**: homebrew
 - **Utilities**: host-flag, routes, vm, vm-bootable, ci-no-boot
 
 Each `my.*` aspect is a self-contained module that can be included by hosts or users.
@@ -360,11 +351,11 @@ Each `my.*` aspect is a self-contained module that can be included by hosts or u
 
 ### Limitations
 
-- Cannot execute `nixos-rebuild`, `darwin-rebuild`, or `home-manager` commands (requires target system access)
+- Cannot execute `nixos-rebuild`, or `home-manager` commands (requires target system access)
 - Cannot test actual service functionality (no runtime environment)
 - Cannot decrypt or modify ragenix secrets
 - Cannot access the actual systems (harmony, melaan, tensoon)
-- Focus on configuration file correctness, Den aspect patterns, and NixOS/Darwin best practices
+- Focus on configuration file correctness, Den aspect patterns, and NixOS best practices
 - When making changes to flake inputs in modules, regenerate flake.nix with `nix run .#write-flake`
 
 ## Working with This Repository
@@ -444,7 +435,7 @@ Each host that consumes rekeyed secrets must declare `age.rekey.hostPubkey` in i
 Some live services aren't configured through Nix directly, but through their own APIs - Authentik SSO clients, \*arr app
 wiring, DNS records, the Meraki router. These are managed as Terraform/OpenTofu config generated from Nix via
 [terranix](https://terranix.org) (`modules/terranix.nix`). Any aspect can contribute resources by declaring a `terranix`
-field, merged per-host the same way `nixos`/`darwin`/`homeManager` are.
+field, merged per-host the same way `nixos`/`homeManager` are.
 
 Each host that uses this gets its own `nix run .#<host>-tf*` commands (currently only `harmony-tf`) - `.plan`,
 `.destroy`, `nix develop .#<host>-tf` for a shell with `opentofu`, `nix build .#<host>-tf.config` to inspect the

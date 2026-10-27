@@ -38,10 +38,6 @@
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    darwin = {
-      url = "github:nix-darwin/nix-darwin";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     den.url = "github:denful/den";
     disko = {
       url = "github:nix-community/disko";
@@ -112,7 +108,7 @@
       url = "github:yaxitech/ragenix";
       inputs = {
         agenix.inputs = {
-          darwin.follows = "darwin";
+          darwin.follows = "";
           home-manager.follows = "home-manager";
           nixpkgs.follows = "nixpkgs";
           systems.follows = "systems";

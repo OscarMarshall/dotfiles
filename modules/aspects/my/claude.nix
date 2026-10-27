@@ -24,8 +24,6 @@
       my.mcp-servers
     ];
 
-    darwin.homebrew.casks = [ "claude" ];
-
     homeManager = { config, pkgs, ... }: {
       age.secrets = {
         # Same generated secrets beszel.nix's beszel-api vhost and hub admin account already

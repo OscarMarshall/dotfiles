@@ -1,5 +1,5 @@
 # Generic Den <-> terranix wiring: any aspect can contribute a `terranix = {...};` class module
-# (same shape as `nixos`/`darwin`/`homeManager`), scoped and merged per-host, turned into a
+# (same shape as `nixos`/`homeManager`), scoped and merged per-host, turned into a
 # `nix run .#<hostname>-tf` / `.#<hostname>-tf.plan` / `nix develop .#<hostname>-tf` Terraform
 # workflow. See https://den.denful.dev/tutorials/terranix-demo/.
 #

@@ -13,7 +13,6 @@ let
 
       each = [
         "Linux"
-        "Darwin"
         "Aarch64"
         "64bit"
       ];
@@ -56,7 +55,6 @@ let
 
       each = [
         "nixos"
-        "darwin"
         "homeManager"
       ];
 

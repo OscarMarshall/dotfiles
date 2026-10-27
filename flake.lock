@@ -2,9 +2,7 @@
   "nodes": {
     "agenix": {
       "inputs": {
-        "darwin": [
-          "darwin"
-        ],
+        "darwin": [],
         "home-manager": [
           "home-manager"
         ],
@@ -165,26 +163,6 @@
       "original": {
         "owner": "ipetkov",
         "repo": "crane",
-        "type": "github"
-      }
-    },
-    "darwin": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1792366139,
-        "narHash": "sha256-jto4pdsl0bgErQ5vaMc3gOyj//PILLRJuqX3I7fUk6s=",
-        "owner": "nix-darwin",
-        "repo": "nix-darwin",
-        "rev": "f0ec2b3fae4df92ea7788359aef9e07bb88d720f",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nix-darwin",
-        "repo": "nix-darwin",
         "type": "github"
       }
     },
@@ -1367,7 +1345,6 @@
         "authentik-nix": "authentik-nix",
         "chart-manager-src": "chart-manager-src",
         "claude-code-nix": "claude-code-nix",
-        "darwin": "darwin",
         "den": "den",
         "disko": "disko",
         "flake-compat": "flake-compat_4",

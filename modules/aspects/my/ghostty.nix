@@ -1,6 +1,5 @@
 {
   my.ghostty = {
-    hmDarwin = { pkgs, ... }: { programs.ghostty.package = pkgs.ghostty-bin; };
     # tensoon runs Umbriel with a global [input.touchpad] scroll_factor of 0.6, but Ghostty
     # re-quantises the scaled delta into its own wheel detents using mouse-scroll-multiplier,
     # whose touchpad ("precision") default is 1 - so scrolling inside a full-screen TUI (claude)

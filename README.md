@@ -1,4 +1,4 @@
-# NixOS/Darwin Configuration with Den
+# NixOS Configuration with Den
 
 This repository contains my personal system configurations for multiple machines using Nix, managed through the
 [Den](https://denful.github.io/den) aspect-oriented configuration framework.
@@ -15,7 +15,7 @@ This repository contains my personal system configurations for multiple machines
 ### Prerequisites
 
 - [Nix](https://nixos.org/download.html) with flakes enabled
-- Appropriate system (NixOS, macOS, or Linux for home-manager only)
+- A NixOS system
 
 ### Clone and Build
 
@@ -64,12 +64,10 @@ into composable aspects:
 
 Each aspect can provide configuration for different targets using these classes:
 
-- **`os`**: Applies to both NixOS and Darwin (avoids duplicating identical config in `nixos` and `darwin`)
+- **`os`**: OS-level configuration (currently NixOS only)
 - **`nixos`**: NixOS-specific configuration only
-- **`darwin`**: macOS (nix-darwin) specific configuration only
 - **`homeManager`**: Home Manager configuration (cross-platform user environment)
-- **`hmLinux`/`hmDarwin`**: Platform-specific Home Manager classes forwarded into `homeManager` by
-  `modules/aspects/defaults.nix`
+- **`hmLinux`**: Platform-specific Home Manager classes forwarded into `homeManager` by `modules/aspects/defaults.nix`
 
 ### Host Aspects
 
@@ -178,10 +176,10 @@ agenix rekey -a
   doesn't recognize as one of that node's own secrets — sharing a directory between the OS and Home Manager nodes would
   cause each to delete the other's secrets as "orphans".
 - **`secrets` class**: use in host/user/service aspects to declare secrets — preferred over setting `age.secrets`
-  directly. Forwarded to `age.secrets` on all platforms (NixOS, Darwin, Home Manager) by `defaults.nix`.
+  directly. Forwarded to `age.secrets` on all platforms (NixOS, Home Manager) by `defaults.nix`.
 - **`nixosSecrets` class**: used in user/host aspects for NixOS-only secrets (e.g. hashed passwords). Forwarded only to
-  `nixos.age.secrets`, never to Darwin or Home Manager configs. Prefer `secrets` unless the secret must be excluded from
-  non-NixOS hosts.
+  `nixos.age.secrets`, never to Home Manager configs. Prefer `secrets` unless the secret must be excluded from non-NixOS
+  hosts.
 
 Each host that consumes rekeyed secrets must declare `age.rekey.hostPubkey` in its host aspect.
 
@@ -190,7 +188,7 @@ Each host that consumes rekeyed secrets must declare `age.rekey.hostPubkey` in i
 Some live services aren't configured through Nix directly, but through their own APIs — Authentik SSO clients, \*arr app
 wiring, DNS records, the Meraki router. These are managed as Terraform/OpenTofu config instead, generated from Nix via
 [terranix](https://terranix.org) (see `modules/terranix.nix`). Any aspect can contribute resources by declaring a
-`terranix` field, the same way it would declare `nixos`/`darwin`/`homeManager`.
+`terranix` field, the same way it would declare `nixos`/`homeManager`.
 
 Each host that uses this gets its own `nix run .#<host>-tf*` commands (currently only `harmony-tf`):
 
@@ -290,16 +288,8 @@ nix run .#write-flake
 
 ### Add a New Host
 
-#### NixOS host
-
 1. Create `modules/aspects/hosts/<hostname>/<hostname>.nix`
 2. Add a NixOS `hardware-configuration.nix` for the host
-3. Declare the host in `modules/den.nix`
-
-#### Darwin host
-
-1. Create `modules/aspects/hosts/<hostname>/<hostname>.nix`
-2. Configure the host-specific nix-darwin options in your aspect
 3. Declare the host in `modules/den.nix`
 
 ### Add a New User
@@ -313,7 +303,6 @@ nix run .#write-flake
 - [Dendritic Template](https://github.com/denful/den/tree/main/templates/dendritic) - Template this repo is based on
 - [NixOS Manual](https://nixos.org/manual/nixos/stable/) - NixOS configuration reference
 - [Home Manager Manual](https://nix-community.github.io/home-manager/) - Home Manager options
-- [nix-darwin Manual](https://daiderd.com/nix-darwin/manual/index.html) - macOS system configuration
 
 ## License
 

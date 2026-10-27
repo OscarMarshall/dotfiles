@@ -50,26 +50,25 @@ This repo uses **Den**, an aspect-oriented configuration framework built on flak
 
 Each aspect can provide configuration through named classes:
 
-| Class                  | Target                                                                         |
-| ---------------------- | ------------------------------------------------------------------------------ |
-| `os`                   | Both NixOS and Darwin (avoids duplication)                                     |
-| `nixos`                | NixOS only                                                                     |
-| `darwin`               | macOS (nix-darwin) only                                                        |
-| `homeManager`          | Home Manager (cross-platform)                                                  |
-| `hmLinux` / `hmDarwin` | Platform-specific Home Manager, forwarded into `homeManager` by `defaults.nix` |
-| `secrets`              | Forwarded to `age.secrets` on all platforms                                    |
-| `nixosSecrets`         | Forwarded only to NixOS `age.secrets` (e.g. hashed passwords)                  |
+| Class          | Target                                                                         |
+| -------------- | ------------------------------------------------------------------------------ |
+| `os`           | OS-level config (NixOS)                                                        |
+| `nixos`        | NixOS only                                                                     |
+| `homeManager`  | Home Manager (cross-platform)                                                  |
+| `hmLinux`      | Platform-specific Home Manager, forwarded into `homeManager` by `defaults.nix` |
+| `secrets`      | Forwarded to `age.secrets` on all platforms                                    |
+| `nixosSecrets` | Forwarded only to NixOS `age.secrets` (e.g. hashed passwords)                  |
 
 ### Module Layout
 
 - **`modules/aspects/my/`** — Reusable service/feature aspects (the `my` namespace). These are the building blocks.
 - **`modules/aspects/hosts/<hostname>/`** — Host-specific aspects that compose `my.*` aspects via `includes`.
 - **`modules/aspects/users/<username>/`** — User-specific aspects.
-- **`modules/aspects/defaults.nix`** — Applied to all configurations: forwards `hmLinux`/`hmDarwin` → `homeManager`, and
-  `secrets` → `age.secrets` on all platforms.
+- **`modules/aspects/defaults.nix`** — Applied to all configurations: forwards `hmLinux` → `homeManager`, and `secrets`
+  → `age.secrets` on all platforms.
 - **`modules/den.nix`** — Declares all hosts and their users; also defines the schema defaults (what every host/user
   gets automatically).
-- **`modules/inputs.nix`** — Base flake inputs (nixpkgs, home-manager, darwin, etc.).
+- **`modules/inputs.nix`** — Base flake inputs (nixpkgs, home-manager, etc.).
 
 ### Hosts
 
@@ -110,7 +109,7 @@ agenix rekey -a && git add secrets/rekeyed/*/  # rekey for all hosts
 ```
 
 In aspect code, use the `secrets` class (not `age.secrets` directly) — `defaults.nix` forwards it to the right place on
-every platform. Use `nixosSecrets` only when a secret must be excluded from Darwin/Home Manager.
+every platform. Use `nixosSecrets` only when a secret must be excluded from Home Manager.
 
 ## Formatting
 
