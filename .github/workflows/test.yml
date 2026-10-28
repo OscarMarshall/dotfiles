@@ -29,8 +29,8 @@ jobs:
       # (which are already native x86_64-linux too) specifically for the custom/optimized
       # derivations that don't substitute from Cachix. Secrets are a standing credential living in
       # GitHub's own secret store, NOT agenix - see harmony.nix's own comment on why that's a
-      # deliberately separate, independently-revocable key from the one melaan/tensoon/
-      # OMARSHAL-M-T2QF use. GitHub already redacts both secrets to empty strings on a fork PR's
+      # deliberately separate, independently-revocable key from the one melaan/tensoon use.
+      # GitHub already redacts both secrets to empty strings on a fork PR's
       # `pull_request`-triggered run (not `pull_request_target`), same protection
       # secrets.CACHIX_AUTH_TOKEN below already relies on.
       - name: Write remote-builder SSH key

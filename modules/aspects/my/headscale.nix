@@ -1,7 +1,7 @@
 # Self-hosted Tailscale coordination server (control plane only - NAT traversal still leans on
 # Tailscale's own public DERP relays, see `derp.urls` below, so this isn't a fully third-party-free
 # setup, just one where harmony's own network never depends on someone else's control plane). Lets
-# my.tailscale clients (melaan/tensoon/OMARSHAL-M-T2QF, and harmony itself) reach each other from
+# my.tailscale clients (melaan/tensoon, and harmony itself) reach each other from
 # anywhere without exposing sshd - or anything else - to WAN; see remote-builder.nix's own header.
 #
 # One-time bootstrap after the first `nixos-rebuild switch` that deploys this (headscale needs to

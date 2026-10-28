@@ -1,7 +1,5 @@
 # A *client*-side aspect: makes this host offload builds to another host's Nix daemon over SSH
-# (`nix.distributedBuilds`) - CPU offload to a beefier always-on machine, and/or building for a
-# system this host can't natively execute derivations for (e.g. aarch64-darwin building
-# x86_64-linux).
+# (`nix.distributedBuilds`) - CPU offload to a beefier always-on machine.
 #
 # The private half of the SSH keypair is a dedicated secret per builder (NOT the personal
 # oscar-ssh-private-key, see oscar.nix) - remote build connections are made by the nix-daemon

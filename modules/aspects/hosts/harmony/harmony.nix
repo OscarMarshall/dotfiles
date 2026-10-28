@@ -34,7 +34,7 @@
       (sonarr { administrators = [ "oscar" ]; })
       (storyteller { global = true; })
       # No `unattended` - see headscale.nix's own header for why harmony bootstraps its own tailnet
-      # membership by hand instead of via the same preauth key melaan/tensoon/OMARSHAL-M-T2QF use.
+      # membership by hand instead of via the same preauth key melaan/tensoon use.
       (tailscale { loginServer = "https://headscale.harmony.silverlight-nex.us"; })
       (tautulli { })
       (zfs [ "metalminds" ])
@@ -108,7 +108,7 @@
       # https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
       system.stateVersion = "25.05"; # Did you read the comment?
 
-      # Lets melaan/tensoon/OMARSHAL-M-T2QF (my.remote-builder) and GitHub Actions (.github/workflows/
+      # Lets melaan/tensoon (my.remote-builder) and GitHub Actions (.github/workflows/
       # test.yml) offload builds here over SSH. `openssh.authorizedKeys.keys` is a listOf, so this
       # concatenates with oscar's personal login key from userAspect (oscar.nix) rather than
       # replacing it. Each forced command restricts its key to running the nix-daemon's own

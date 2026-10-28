@@ -519,8 +519,8 @@ nix-minecraft bump can't move a world onto a Minecraft version its mods don't su
 
 ### Working with the Remote Builder (my.headscale/my.tailscale/my.remote-builder)
 
-harmony (32 threads, 125GiB RAM) is a `nix.buildMachines` entry for melaan/tensoon/OMARSHAL-M-T2QF (`my.remote-builder`
-on each, `protocol = "ssh-ng"`), reachable from anywhere via a self-hosted Headscale coordination server on harmony
+harmony (32 threads, 125GiB RAM) is a `nix.buildMachines` entry for melaan/tensoon (`my.remote-builder` on each,
+`protocol = "ssh-ng"`), reachable from anywhere via a self-hosted Headscale coordination server on harmony
 (`my.headscale`) instead of exposing sshd to the WAN - every host joins that tailnet with `my.tailscale`, and MagicDNS
 gives harmony a stable name (`harmony.ts.silverlight-nex.us`) any tailnet member, including root (the actual nix-daemon
 connecting, not the interactive user), can resolve.
@@ -547,23 +547,21 @@ headscale, which only harmony hosts, is already running):
 4. Rebuild the client hosts.
 
 AI agents can verify the Nix wiring with `nix build .#nixosConfigurations.<host>.config.system.build.toplevel --dry-run`
-(fails only on the two secrets not existing yet, until step 3 above) and
-`nix build .#darwinConfigurations.OMARSHAL-M-T2QF.config.system.build.toplevel --dry-run` the same way, but cannot run
-any step 2 command (no access to harmony's YubiKey-gated secrets or its running `headscale`/`tailscale` state) or
-confirm an actual remote build succeeded end to end.
+(fails only on the two secrets not existing yet, until step 3 above), but cannot run any step 2 command (no access to
+harmony's YubiKey-gated secrets or its running `headscale`/`tailscale` state) or confirm an actual remote build
+succeeded end to end.
 
-**GitHub Actions** (`.github/workflows/test.yml`'s `build-linux` job only - harmony is x86_64-linux, so it can't help
-`build-darwin`'s aarch64-darwin job) joins the tailnet per-run instead of having a standing host config: a
-`tailscale/github-action` step before `cachix/install-nix-action`, then a `builders = ssh-ng://...` line in that same
-step's `extra_nix_config`. Two secrets live in GitHub's own secret store instead of agenix - `REMOTE_BUILDER_CI_SSH_KEY`
-(a THIRD dedicated keypair, separate from the one melaan/tensoon/OMARSHAL-M-T2QF share, so it's independently revocable)
-and `TAILSCALE_CI_AUTHKEY` (a reusable, **ephemeral** Headscale preauth key - `--ephemeral` so each run's tailnet node
-self-removes on disconnect instead of piling up in `headscale nodes list`). Both are standing credentials with real
-build access to harmony, readable by any workflow run with secrets access - GitHub already redacts them to empty strings
-on a fork PR's plain `pull_request` run (not `pull_request_target`), the same protection `secrets.CACHIX_AUTH_TOKEN`
-already relies on in this same workflow, so this doesn't change the trust model, just extends it. AI agents can validate
-the workflow YAML itself (`actionlint`) but cannot create the GitHub secrets, mint the Headscale preauth key, or observe
-a real CI run using the builder.
+**GitHub Actions** (`.github/workflows/test.yml`'s `build-linux` job) joins the tailnet per-run instead of having a
+standing host config: a `tailscale/github-action` step before `cachix/install-nix-action`, then a
+`builders = ssh-ng://...` line in that same step's `extra_nix_config`. Two secrets live in GitHub's own secret store
+instead of agenix - `REMOTE_BUILDER_CI_SSH_KEY` (a second dedicated keypair, separate from the one melaan/tensoon share,
+so it's independently revocable) and `TAILSCALE_CI_AUTHKEY` (a reusable, **ephemeral** Headscale preauth key -
+`--ephemeral` so each run's tailnet node self-removes on disconnect instead of piling up in `headscale nodes list`).
+Both are standing credentials with real build access to harmony, readable by any workflow run with secrets access -
+GitHub already redacts them to empty strings on a fork PR's plain `pull_request` run (not `pull_request_target`), the
+same protection `secrets.CACHIX_AUTH_TOKEN` already relies on in this same workflow, so this doesn't change the trust
+model, just extends it. AI agents can validate the workflow YAML itself (`actionlint`) but cannot create the GitHub
+secrets, mint the Headscale preauth key, or observe a real CI run using the builder.
 
 ## Documentation Update Policy
 
