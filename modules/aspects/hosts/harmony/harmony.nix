@@ -39,8 +39,6 @@
       (seerr { global = true; })
       (sonarr { administrators = [ "oscar" ]; })
       (storyteller { global = true; })
-      # No `unattended` - see headscale.nix's own header for why harmony bootstraps its own tailnet
-      # membership by hand instead of via the same preauth key melaan/tensoon use.
       (tailscale { loginServer = "https://headscale.harmony.silverlight-nex.us"; })
       (tautulli { })
       (zfs [ "metalminds" ])

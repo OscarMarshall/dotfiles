@@ -30,10 +30,7 @@
 
         system = "x86_64-linux";
       })
-      (tailscale {
-        loginServer = "https://headscale.harmony.silverlight-nex.us";
-        unattended = true;
-      })
+      (tailscale { loginServer = "https://headscale.harmony.silverlight-nex.us"; })
       boot
       gnome
       locale

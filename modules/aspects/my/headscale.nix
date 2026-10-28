@@ -8,11 +8,10 @@
 # actually be running before any of this works):
 #   ssh harmony
 #   sudo headscale users create oscar
-#   sudo tailscale up --login-server=https://headscale.harmony.silverlight-nex.us --accept-dns
-#   sudo headscale nodes register --user oscar --key <nodekey printed by the command above>
-#   sudo headscale preauthkeys create --user oscar --reusable --expiration 87600h
-# Then `agenix edit secrets/tailscale-authkey.age` (paste that preauthkey) and `agenix rekey -a` -
-# see my.tailscale's own header for what that unlocks.
+#   sudo headscale users list   # `--user` below takes this numeric ID, not the name
+#   sudo headscale preauthkeys create --user <ID> --reusable --expiration 87600h
+# Save the printed key in Proton Pass (Personal vault, item "Headscale preauth key", Password
+# field), then run `tailscale-join` on each host, harmony included - see my.tailscale's own header.
 {
   my.headscale =
     { host, ... }:
