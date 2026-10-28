@@ -4,7 +4,7 @@
 #
 # my.noctalia-greeter references the same catppuccin-cursors.mochaDark package directly.
 {
-  my.catppuccin.hmLinux = { pkgs, ... }: {
+  my.catppuccin.homeManager = { pkgs, ... }: {
     home.pointerCursor = {
       enable = true;
       package = pkgs.catppuccin-cursors.mochaDark;

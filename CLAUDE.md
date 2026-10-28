@@ -50,22 +50,21 @@ This repo uses **Den**, an aspect-oriented configuration framework built on flak
 
 Each aspect can provide configuration through named classes:
 
-| Class          | Target                                                                         |
-| -------------- | ------------------------------------------------------------------------------ |
-| `os`           | OS-level config (NixOS)                                                        |
-| `nixos`        | NixOS only                                                                     |
-| `homeManager`  | Home Manager (cross-platform)                                                  |
-| `hmLinux`      | Platform-specific Home Manager, forwarded into `homeManager` by `defaults.nix` |
-| `secrets`      | Forwarded to `age.secrets` on all platforms                                    |
-| `nixosSecrets` | Forwarded only to NixOS `age.secrets` (e.g. hashed passwords)                  |
+| Class          | Target                                                        |
+| -------------- | ------------------------------------------------------------- |
+| `os`           | OS-level config (NixOS)                                       |
+| `nixos`        | NixOS only                                                    |
+| `homeManager`  | Home Manager (cross-platform)                                 |
+| `secrets`      | Forwarded to `age.secrets` on all platforms                   |
+| `nixosSecrets` | Forwarded only to NixOS `age.secrets` (e.g. hashed passwords) |
 
 ### Module Layout
 
 - **`modules/aspects/my/`** — Reusable service/feature aspects (the `my` namespace). These are the building blocks.
 - **`modules/aspects/hosts/<hostname>/`** — Host-specific aspects that compose `my.*` aspects via `includes`.
 - **`modules/aspects/users/<username>/`** — User-specific aspects.
-- **`modules/aspects/defaults.nix`** — Applied to all configurations: forwards `hmLinux` → `homeManager`, and `secrets`
-  → `age.secrets` on all platforms.
+- **`modules/aspects/defaults.nix`** — Applied to all configurations: forwards `secrets` → `age.secrets` on all
+  platforms, and (via `den.batteries.host-aspects`) projects `homeManager` config from a host's aspects onto its users.
 - **`modules/den.nix`** — Declares all hosts and their users; also defines the schema defaults (what every host/user
   gets automatically).
 - **`modules/inputs.nix`** — Base flake inputs (nixpkgs, home-manager, etc.).

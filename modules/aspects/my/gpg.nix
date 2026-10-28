@@ -1,10 +1,7 @@
 {
-  my.gpg = {
-    hmLinux = { pkgs, ... }: { home.packages = [ pkgs.pinentry-all ]; };
-
-    homeManager = {
-      programs.gpg.enable = true;
-      services.gpg-agent.enable = true;
-    };
+  my.gpg.homeManager = { pkgs, ... }: {
+    home.packages = [ pkgs.pinentry-all ];
+    programs.gpg.enable = true;
+    services.gpg-agent.enable = true;
   };
 }

@@ -7,6 +7,6 @@
       ])
     ];
 
-    hmLinux = { pkgs, ... }: { home.packages = [ pkgs.discord ]; };
+    homeManager = { pkgs, ... }: { home.packages = [ pkgs.discord ]; };
   };
 }

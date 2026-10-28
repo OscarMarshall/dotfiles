@@ -79,7 +79,6 @@ Each aspect can provide configuration for different targets using these classes:
 - **`os`**: OS-level configuration (currently NixOS only)
 - **`nixos`**: NixOS-specific configuration only
 - **`homeManager`**: Home Manager configuration (cross-platform user environment)
-- **`hmLinux`**: Platform-specific Home Manager classes forwarded into `homeManager` by `modules/aspects/defaults.nix`
 
 ### Host Aspects
 
@@ -224,7 +223,6 @@ CI builds the Linux hosts (harmony, melaan, tensoon) on Ubuntu.
    - Put user-specific config in `modules/aspects/users/<username>/`
    - Put reusable config in `modules/aspects/my/`
    - Use direct host checks (`host.graphical`) for conditional config
-   - Use `hmLinux` for platform-specific Home Manager config in user aspects
 7. **Input Management**: Declare flake inputs close to their usage in module files, not centralized in one place.
 8. **Module Discovery**: Files in `modules/` are auto-imported via import-tree; no manual imports needed.
 9. **Parametric Aspects**: Use functions for configurable aspects (e.g., `qbittorrent { administrators = [...]; }`)

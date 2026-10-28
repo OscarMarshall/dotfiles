@@ -1,6 +1,6 @@
 {
   my.orca-slicer = { user, ... }: {
-    hmLinux = { pkgs, ... }: { home.packages = [ pkgs.orca-slicer ]; };
+    homeManager = { pkgs, ... }: { home.packages = [ pkgs.orca-slicer ]; };
     # Printer / filament / process profiles, app config and login all live here - lost on every
     # boot on an ephemeral-root host without this. `preserve` (modules/aspects/my/preserve.nix) is
     # inert wherever my.preservation isn't included.

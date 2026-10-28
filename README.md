@@ -67,7 +67,6 @@ Each aspect can provide configuration for different targets using these classes:
 - **`os`**: OS-level configuration (currently NixOS only)
 - **`nixos`**: NixOS-specific configuration only
 - **`homeManager`**: Home Manager configuration (cross-platform user environment)
-- **`hmLinux`**: Platform-specific Home Manager classes forwarded into `homeManager` by `modules/aspects/defaults.nix`
 
 ### Host Aspects
 

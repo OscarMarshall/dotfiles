@@ -1,6 +1,6 @@
 {
   my.gnome = {
-    hmLinux.dconf.enable = true;
+    homeManager.dconf.enable = true;
 
     nixos = { pkgs, ... }: {
       environment = {

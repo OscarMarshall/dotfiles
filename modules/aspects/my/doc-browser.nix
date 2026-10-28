@@ -1,6 +1,6 @@
 {
   my.doc-browser = { user, ... }: {
-    hmLinux = { pkgs, ... }: { home.packages = [ pkgs.zeal ]; };
+    homeManager = { pkgs, ... }: { home.packages = [ pkgs.zeal ]; };
 
     # Zeal keeps every downloaded docset under ~/.local/share/Zeal (large; a fresh re-download
     # otherwise on each boot) and its settings under ~/.config/Zeal. `preserve`
