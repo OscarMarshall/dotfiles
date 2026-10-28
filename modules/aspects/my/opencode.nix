@@ -18,6 +18,9 @@
           autoupdate = false;
 
           mcp = {
+            # Wrapped for the same reason as my.claude's github MCP server: agenix's Home Manager
+            # secret path is an unexpanded `${XDG_RUNTIME_DIR}/...`, which OpenCode's `{file:...}`
+            # env interpolation would take literally.
             github = {
               command = [
                 "${pkgs.writeShellScript "opencode-github-mcp-server-wrapper" ''

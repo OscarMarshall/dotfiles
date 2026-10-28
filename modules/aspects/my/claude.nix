@@ -103,6 +103,10 @@
         # Claude-specific MCP servers (as opposed to `my.mcp-servers`, which
         # holds servers shared with other MCP-integrated programs like OpenCode).
         mcpServers = {
+          # agenix's Home Manager secret paths are an unexpanded `${XDG_RUNTIME_DIR}/agenix/...`,
+          # and `programs.mcp`'s env.*.file support single-quotes the path before `cat`-ing it, so
+          # the variable never expands and the token file is never found. Read it ourselves in a
+          # wrapper script instead, where bash expands it at runtime.
           github.command = "${pkgs.writeShellScript "github-mcp-server-wrapper" ''
             export GITHUB_PERSONAL_ACCESS_TOKEN="$(cat ${config.age.secrets.github-mcp-server-github-access-token.path})"
             exec ${pkgs.github-mcp-server}/bin/github-mcp-server stdio

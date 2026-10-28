@@ -5,7 +5,7 @@
 # as close as possible to their actual usage.
 # See: https://denful.github.io/dendrix/Dendritic.html#minimal-and-focused-flakenix
 #
-_: {
+{
   flake-file.inputs = {
     # Follow targets
     flake-compat.url = "github:NixOS/flake-compat";
