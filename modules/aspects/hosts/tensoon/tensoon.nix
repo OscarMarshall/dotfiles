@@ -25,7 +25,6 @@
 
         system = "x86_64-linux";
       })
-      (tailscale { loginServer = "https://headscale.harmony.silverlight-nex.us"; })
       boot
       disko
       locale
@@ -36,6 +35,7 @@
       pipewire
       preservation
       ssh-server
+      tailscale
       umbriel
       yubikey
     ];

@@ -33,7 +33,7 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
     - **`users/`**: User-specific aspects (one directory per user)
       - **`oscar/`**: oscar.nix, zen-browser.nix
       - **`adelline/`**: adelline.nix
-    - **`my/`**: Reusable aspects in the `my` namespace (~46 aspects)
+    - **`my/`**: Reusable aspects in the `my` namespace (~47 aspects)
       - Core: boot.nix, locale.nix, nix.nix, fonts.nix
       - Services: nginx.nix, minecraft-servers.nix, paperless.nix, plex.nix, jellyfin.nix, prowlarr.nix,
         qbittorrent.nix, radarr.nix, sonarr.nix, unpackerr.nix, home-assistant.nix, mousehole.nix
@@ -47,9 +47,10 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
       - Infrastructure: zfs.nix, samba.nix, lm-sensors.nix, networkmanager.nix, secrets.nix, vpn-confinement.nix,
         backup.nix (offsite backups - see "Working with Offsite Backups" below), disko.nix, preservation.nix (ephemeral
         root + `/persist` bind mounts), yubikey.nix (pcscd for the PIV/age-plugin-yubikey smartcard interface)
-      - Remote building: headscale.nix (self-hosted Tailscale coordination server, harmony only), tailscale.nix (joins a
-        host to that tailnet via a one-time `tailscale-join`), remote-builder.nix (offloads builds to another tailnet
-        host over `nix.buildMachines`, see "Working with the Remote Builder" below)
+      - Remote building: headscale.nix (self-hosted Tailscale coordination server with Authentik login, harmony only),
+        headplane.nix (Headscale web UI behind Authentik forward-auth, harmony only), tailscale.nix (joins a host to
+        that tailnet via a one-time Authentik login), remote-builder.nix (offloads builds to another tailnet host over
+        `nix.buildMachines`, see "Working with the Remote Builder" below)
       - VM: vm.nix, vm-bootable.nix, ci-no-boot.nix
 - **`secrets/`**: Directory containing ragenix/agenix-rekey-encrypted secrets (`.age` files). Primitive secrets are
   encrypted to the YubiKey master identity. Do not expose plaintext. Rekeyed OS-level host secrets live in
@@ -106,7 +107,7 @@ Example: `modules/aspects/users/oscar/oscar.nix` includes emacs, git config, gpg
 
 ### Reusable Aspects (`my.*`)
 
-The `my` namespace contains ~46 reusable aspects for services, applications, and features. These are functions that
+The `my` namespace contains ~47 reusable aspects for services, applications, and features. These are functions that
 return configuration and can accept parameters (e.g., `qbittorrent { administrators = [ "oscar" ]; }`).
 
 ### Aspect Routing
@@ -318,7 +319,7 @@ The configuration uses Den aspects organized into three main categories:
   - Includes Home Manager configuration
   - Uses direct host checks for conditional desktop apps
 
-### Reusable Aspects (`my.*` - 46 aspects)
+### Reusable Aspects (`my.*` - 47 aspects)
 
 Organized by category:
 
@@ -334,8 +335,8 @@ Organized by category:
 - **Infrastructure**: zfs, samba, lm-sensors, secrets, auto-upgrade, auto-login, vpn-confinement, backup (offsite
   backups via Restic/Backblaze B2), disko, preservation (ephemeral root + `/persist` bind mounts), yubikey (pcscd for
   the PIV/age-plugin-yubikey smartcard interface)
-- **Remote building**: headscale (self-hosted Tailscale coordination server), tailscale (joins a host to that tailnet),
-  remote-builder (offloads builds to another tailnet host via `nix.buildMachines`)
+- **Remote building**: headscale (self-hosted Tailscale coordination server), headplane (its web UI), tailscale (joins a
+  host to that tailnet), remote-builder (offloads builds to another tailnet host via `nix.buildMachines`)
 - **Utilities**: host-flag, routes, vm, vm-bootable, ci-no-boot
 
 Each `my.*` aspect is a self-contained module that can be included by hosts or users.
@@ -525,38 +526,42 @@ harmony (32 threads, 125GiB RAM) is a `nix.buildMachines` entry for melaan/tenso
 gives harmony a stable name (`harmony.ts.silverlight-nex.us`) any tailnet member, including root (the actual nix-daemon
 connecting, not the interactive user), can resolve.
 
-Two dedicated credentials, neither reusing a personal one:
-
 - `remote-builder-harmony-ssh-key` - a generated agenix secret (`secrets/generated/`), root-readable (the nix-daemon
   opens this connection, not oscar interactively). Its generator also writes the public half to
   `secrets/generated/remote-builder-harmony-ssh-key.pub`, which `harmony.nix` reads into an `authorizedKeys` entry
   forced to `nix-daemon --stdio` only - it MUST be that, not `nix-store --serve`, to match the `ssh-ng` protocol; the
   two speak incompatible handshakes. It uses a custom script rather than agenix-rekey's built-in `ssh-ed25519`
   generator, whose per-host key comment would make melaan's and tensoon's definitions of the one shared file differ.
-- A reusable, long-lived Headscale preauth key, deliberately NOT in agenix: it lives in Proton Pass (Personal vault,
-  Custom item `Headscale preauth key`, hidden `API Key` field), so a credential that can add any machine to the tailnet
-  isn't sitting decrypted on every host's disk. `my.tailscale` installs `tailscale-join`, which reads it with `pass-cli`
-  (as the logged-in user - pass-cli can't run at boot as root, which is why this isn't `services.tailscale.authKeyFile`)
-  and runs `sudo tailscale up` with it. That's a one-time step per install: `/var/lib/tailscale` is preserved (including
-  on tensoon's ephemeral root), so tailscaled reconnects on its own after that.
+  **Joining the tailnet** goes through Authentik: `headscale.nix` configures Headscale's native OIDC against an
+  admin-only Authentik app (`virtual-host.oidc`, client ID `headscale`, generated `headscale-oidc-client-secret`). On a
+  new install, `sudo tailscale up --login-server=https://headscale.harmony.silverlight-nex.us --accept-dns` prints a
+  URL; signing in there registers the node to that Authentik user. That's a one-time step: `/var/lib/tailscale` is
+  preserved (including on tensoon's ephemeral root), so tailscaled reconnects on its own after that.
+  `only_start_if_oidc_is_available = false` keeps Headscale up while Authentik isn't, so only new browser logins depend
+  on it. Headscale names OIDC users separately from CLI-made ones (its unique index on `name` only covers users without
+  a `provider_identifier`), so an Authentik login creates its own user even when a CLI user of the same name exists.
 
-**Bootstrap order for a new builder relationship** (a real chicken-and-egg: the preauth key can't exist before
-headscale, which only harmony hosts, is already running):
+harmony is the exception: it hosts Headscale, so `headscale-self-join` (`headscale.nix`) creates the CLI `oscar` user if
+missing, mints a single-use 5-minute preauth key, and runs `tailscale up` with it whenever tailscaled reports
+`NeedsLogin` - no human step.
 
-1. `nixos-rebuild switch` on harmony - needs only the generated `.pub` (already committed; `agenix generate` needs no
-   YubiKey), not the rekeyed secret. harmony then joins its own tailnet with no human step: `headscale-self-join`
-   (`headscale.nix`) creates the `oscar` Headscale user if missing, mints a single-use 5-minute preauth key, and runs
-   `tailscale up` with it, whenever tailscaled reports `NeedsLogin`.
-2. **Human step, on harmony**: `headscale users list` (for `oscar`'s numeric ID - 0.29's `--user` takes the ID, not the
-   name), then `headscale preauthkeys create --user <ID> --reusable --expiration <duration>`, and save the key to Proton
-   Pass as above.
-3. **Human step**: `agenix rekey -a` (YubiKey, per "Working with Secrets" above), then rebuild melaan/tensoon.
-4. **Human step**: `tailscale-join` once on each laptop.
+**Headplane** (`headplane.nix`, `headplane.harmony.silverlight-nex.us`) is the web UI: `protected` Authentik
+forward-auth, with Headplane's `proxy_auth` trusting the `X-authentik-*` headers nginx sets (loopback only). Headscale's
+own config is read-only there (it's in the Nix store); nodes, users, keys and the policy are editable. Its Headscale API
+key is minted on harmony by `headplane-api-key` (a 10-year key in `/var/lib/headplane-api-key/api-key`, replaced and the
+old one expired once it's revoked, expired or within 30 days of expiry), so there's no manual key to manage.
+
+**Bootstrap order for a new builder relationship**:
+
+1. **Human step**: `agenix rekey -a` (YubiKey, per "Working with Secrets" above) for the generated secrets.
+2. `nixos-rebuild switch` on harmony; its terranix service applies the new Authentik apps on its own (the plan only adds
+   resources). harmony then joins its own tailnet with no human step.
+3. Rebuild melaan/tensoon, then on each: `sudo tailscale up --login-server=… --accept-dns` and sign in through
+   Authentik.
 
 AI agents can verify the Nix wiring with `nix build .#nixosConfigurations.<host>.config.system.build.toplevel --dry-run`
-(fails only on the remote-builder key not being rekeyed yet, until step 3 above) and can run `agenix generate`, but
-cannot run any step 2 or 4 command (no access to harmony's running `headscale`/`tailscale` state or to Proton Pass) or
-confirm an actual remote build succeeded end to end.
+(fails only on secrets not being rekeyed yet, until step 1 above) and can run `agenix generate`, but cannot rekey, run
+any command on harmony's live `headscale`/`tailscale` state, or sign in through Authentik.
 
 **GitHub Actions** (`.github/workflows/test.yml`'s `build-linux` job) joins the tailnet per-run instead of having a
 standing host config: a `tailscale/github-action` step before `cachix/install-nix-action`, then a
