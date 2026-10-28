@@ -25,7 +25,7 @@
           text = ''
             key=$(mktemp)
             trap 'rm -f "$key"' EXIT
-            secret=$(pass-cli item view --vault-name Personal --item-title 'Headscale preauth key' --field Password --output human)
+            secret=$(pass-cli item view --vault-name Personal --item-title 'Headscale preauth key' --field 'API Key' --output human)
             printf '%s' "$secret" > "$key"
             sudo ${config.services.tailscale.package}/bin/tailscale up \
               --accept-dns \

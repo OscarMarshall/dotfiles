@@ -10,8 +10,8 @@
 #   sudo headscale users create oscar
 #   sudo headscale users list   # `--user` below takes this numeric ID, not the name
 #   sudo headscale preauthkeys create --user <ID> --reusable --expiration 87600h
-# Save the printed key in Proton Pass (Personal vault, item "Headscale preauth key", Password
-# field), then run `tailscale-join` on each host, harmony included - see my.tailscale's own header.
+# Save the printed key in Proton Pass (Personal vault, Custom item "Headscale preauth key", hidden
+# "API Key" field), then run `tailscale-join` on each host, harmony included - see my.tailscale's own header.
 {
   my.headscale =
     { host, ... }:

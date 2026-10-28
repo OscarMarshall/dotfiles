@@ -534,11 +534,11 @@ Two dedicated credentials, neither reusing a personal one:
   two speak incompatible handshakes. It uses a custom script rather than agenix-rekey's built-in `ssh-ed25519`
   generator, whose per-host key comment would make melaan's and tensoon's definitions of the one shared file differ.
 - A reusable, long-lived Headscale preauth key, deliberately NOT in agenix: it lives in Proton Pass (Personal vault,
-  item `Headscale preauth key`, `Password` field), so a credential that can add any machine to the tailnet isn't sitting
-  decrypted on every host's disk. `my.tailscale` installs `tailscale-join`, which reads it with `pass-cli` (as the
-  logged-in user - pass-cli can't run at boot as root, which is why this isn't `services.tailscale.authKeyFile`) and
-  runs `sudo tailscale up` with it. That's a one-time step per install: `/var/lib/tailscale` is preserved (including on
-  tensoon's ephemeral root), so tailscaled reconnects on its own after that.
+  Custom item `Headscale preauth key`, hidden `API Key` field), so a credential that can add any machine to the tailnet
+  isn't sitting decrypted on every host's disk. `my.tailscale` installs `tailscale-join`, which reads it with `pass-cli`
+  (as the logged-in user - pass-cli can't run at boot as root, which is why this isn't `services.tailscale.authKeyFile`)
+  and runs `sudo tailscale up` with it. That's a one-time step per install: `/var/lib/tailscale` is preserved (including
+  on tensoon's ephemeral root), so tailscaled reconnects on its own after that.
 
 **Bootstrap order for a new builder relationship** (a real chicken-and-egg: the preauth key can't exist before
 headscale, which only harmony hosts, is already running):
