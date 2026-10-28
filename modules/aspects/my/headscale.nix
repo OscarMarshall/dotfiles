@@ -129,6 +129,12 @@
         icon = "headscale.svg";
         name = "headscale";
         port = 8080;
+        # Tailscale clients reach headscale's control protocol (ts2021) by sending an HTTP
+        # `Upgrade: tailscale-control-protocol` request, the same mechanism as a WebSocket upgrade.
+        # Without it nginx strips `Connection`/`Upgrade` (see nginx.nix's `proxyWebsockets` comment),
+        # headscale answers 500, and `tailscale up` retries `/machine/register` forever - `/key`
+        # still works, so it looks reachable from outside.
+        websockets = true;
       };
     };
 }
