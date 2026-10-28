@@ -5,7 +5,7 @@
     # `AuthSubnetWhitelist` (see qbittorrent.nix) already covers this connection, the same reason
     # the Radarr/Sonarr/Bookshelf download clients don't carry one either. That also means this
     # field, unlike `secrets` below, can safely request the `torrent-client` quirk
-    # (torrent-client.nix) directly: nixos/darwin/homeManager module evaluations already declare a
+    # (torrent-client.nix) directly: nixos/homeManager module evaluations already declare a
     # real `warnings` option, so Den's collision-validator shim (see modules/terranix.nix's header
     # comment) has somewhere to land - `age.secrets` doesn't, which is exactly why `secrets` below
     # can't do the same.

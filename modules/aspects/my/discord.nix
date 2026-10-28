@@ -7,7 +7,6 @@
       ])
     ];
 
-    darwin.homebrew.casks = [ "discord" ];
-    hmLinux = { pkgs, ... }: { home.packages = [ pkgs.discord ]; };
+    homeManager = { pkgs, ... }: { home.packages = [ pkgs.discord ]; };
   };
 }

@@ -31,7 +31,7 @@
       settings.terraform = true;
     };
 
-    terranix = _: {
+    terranix = {
       # Credentials aren't set here - the provider reads api_key from MAILGUN_API_KEY, so nothing
       # sensitive lands in this config or in Terraform state.
       provider.mailgun = { };

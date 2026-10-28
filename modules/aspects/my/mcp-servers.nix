@@ -1,6 +1,6 @@
-_: {
+{
   # context7 is genuinely shared: it's plain doc lookup with no secrets, and
-  # useful to every MCP-integrated program (Claude Code, Codex, ...). Servers
+  # useful to every MCP-integrated program (Claude Code, OpenCode, ...). Servers
   # that are Claude-specific (or need a secret) live in `my.claude` instead,
   # under `programs.claude-code.mcpServers`.
   my.mcp-servers.homeManager = { pkgs, ... }: {

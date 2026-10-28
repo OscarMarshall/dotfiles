@@ -1,7 +1,6 @@
 {
   lib,
   den,
-  inputs,
   my,
   ...
 }:
@@ -19,7 +18,7 @@ let
       };
     };
 
-    # nixos/modules/config/nix.nix and nix-darwin's equivalent both set
+    # nixos/modules/config/nix.nix sets
     # `nix.settings.trusted-users = [ "root" ]` as a real config-level definition
     # (not just an mkOption default), and trusted-users is a listOf — definitions
     # concatenate rather than override, so root can't be dropped by adding to this list.
@@ -35,9 +34,9 @@ in
     }:
     let
       # `home` is checked before `host`: a standalone home named `user@undeclared-host`
-      # (e.g. dev203) gets a synthetic `host = { name = ...; }` from den purely so
-      # host-keyed cross-entity policies can match on `host.name` - it never carries
-      # `work`/`graphical`. The real attributes always live on `home` for those.
+      # gets a synthetic `host = { name = ...; }` from den purely so host-keyed
+      # cross-entity policies can match on `host.name` - it never carries `graphical`.
+      # The real attributes always live on `home` for those.
       scope =
         if home != null then
           home
@@ -49,18 +48,17 @@ in
     {
       includes = [
         (den._.user-shell "fish")
-        (my.claude { gh-token = !(scope.work or false); })
-        (my.fish { gh-token = !(scope.work or false); })
         (my.git {
           inherit name;
           email = "3111765+OscarMarshall@users.noreply.github.com";
         })
         (my.logseq { cli-only = !(scope.graphical or false); })
         den._.primary-user
-        den.aspects.oscar.provides.work
         my.bat
+        my.claude
         my.direnv
         my.emacs
+        my.fish
         my.gpg
         my.nh
         my.nix-index
@@ -72,35 +70,15 @@ in
       ++ lib.optionals (scope.graphical or false) [
         den.aspects.oscar.provides.zen-browser
         my.catppuccin
-        my.doc-browser
-        my.ghostty
-        my.programmer-dvorak
-      ]
-      # Hobby apps (gaming, 3D printing, media) have no place on a work machine, so they're
-      # additionally gated off whenever `work` is set - see `scope` comment above.
-      ++ lib.optionals ((scope.graphical or false) && !(scope.work or false)) [
         my.chart-manager
         my.discord
-        my.mkvtoolnix
+        my.doc-browser
+        my.ghostty
         my.orca-slicer
+        my.programmer-dvorak
         my.prusa-slicer
         my.steam
       ];
-
-      darwin = {
-        homebrew.casks = [
-          "arc"
-          "domzilla-caffeine"
-        ]
-        ++ lib.optionals (scope.work or false) [ "google-chrome" ]
-        # Personal email has no place on a work machine.
-        ++ lib.optionals (!(scope.work or false)) [ "proton-mail" ];
-
-        users = {
-          knownUsers = [ "oscar" ];
-          users.oscar.uid = 501;
-        };
-      };
 
       homeManager = { pkgs, ... }: {
         # age uses this key when rekeying home-manager-level secrets. age has
@@ -123,54 +101,13 @@ in
             ripgrep
             rsync
           ]
-          # Hobby packages (design, media, gaming) have no place on a work machine.
-          ++ lib.optionals ((scope.graphical or false) && !(scope.work or false)) [
+          ++ lib.optionals (scope.graphical or false) [
             gthumb
             inkscape
+            mkvtoolnix
             mpv
             prismlauncher
           ];
-
-        nixpkgs.overlays = [
-          (final: prev: {
-            pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
-              (_pyFinal: pyPrev: {
-                # curl-cffi's compiled extension links against curl-impersonate's
-                # dylib but nixpkgs never gives it an LC_RPATH on Darwin, so
-                # importing it (and therefore mpv, which pulls it in through
-                # yt-dlp) fails at build time with "Library not loaded:
-                # @rpath/libcurl-impersonate.4.dylib". Add the missing rpath
-                # ourselves, only on Darwin - doCheck is likewise only dropped
-                # there, because curl-cffi's own test suite has unrelated
-                # TLS/cookie failures specific to that platform.
-                curl-cffi = pyPrev.curl-cffi.overridePythonAttrs (
-                  old:
-                  # Pinned so a curl-cffi version bump forces a check of whether
-                  # nixpkgs has started setting an LC_RPATH for
-                  # libcurl-impersonate on Darwin itself - if so, delete this
-                  # overlay; if not, bump the version pinned here.
-                  assert old.version == "0.16.3" || throw "curl-cffi ${old.version}: re-check the Darwin rpath workaround in oscar.nix";
-                  {
-                    doCheck = (old.doCheck or true) && !prev.stdenv.hostPlatform.isDarwin;
-
-                    postFixup =
-                      (old.postFixup or "")
-                      + prev.lib.optionalString prev.stdenv.hostPlatform.isDarwin ''
-                        for f in $(find "$out" -name "*.so"); do
-                          if ! otool -L "$f" | grep -q "@rpath/libcurl-impersonate"; then
-                            continue
-                          fi
-                          if ! otool -l "$f" | grep -q "${prev.curl-impersonate}/lib"; then
-                            install_name_tool -add_rpath "${prev.curl-impersonate}/lib" "$f"
-                          fi
-                        done
-                      '';
-                  }
-                );
-              })
-            ];
-          })
-        ];
 
         programs = {
           eza = {
@@ -183,12 +120,7 @@ in
           gh.enable = true;
         };
 
-        programs.codex.plugins = [ inputs.ponytail ];
-
-        # On work machines, the agent needs SSH keys from both the Personal and Meraki
-        # vaults - pass-cli's ssh-agent only accepts a single --vault-name, so the only way
-        # to cover more than one named vault is to omit the flag and let it scan all vaults.
-        services.proton-pass-agent.extraArgs = lib.optionals (!(scope.work or false)) [
+        services.proton-pass-agent.extraArgs = [
           "--vault-name"
           "Personal"
         ];
@@ -226,21 +158,6 @@ in
       };
 
       user.description = name;
-
-      provides."dev203.meraki.com" = {
-        hm64bit = { };
-        hmAarch64 = { };
-        hmDarwin = { };
-        # See the comment on provides.oscar in OMARSHAL-M-T2QF.nix for why these sentinels are needed:
-        # this home entity's re-walked spawn scope doesn't re-run the user aspect's own includes, so
-        # hmLinux is absent at compile time without this and the forward falls through to resolveSourceFallback.
-        hmLinux = { };
-
-        homeManager.home = {
-          sessionVariables.PATH = "$HOME/.nix-profile/bin:$PATH";
-          stateVersion = "26.05";
-        };
-      };
     };
 
   # `nix run .#install-ssh-key` - bootstraps `~/.ssh/id_ed25519` on a fresh

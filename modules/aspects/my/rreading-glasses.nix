@@ -37,7 +37,7 @@ let
 
 in
 {
-  my.rreading-glasses = _: {
+  my.rreading-glasses = {
     # Only the Postgres backend is stateful - rreading-glasses itself just caches Hardcover
     # responses through it (see its own README: "Metadata is periodically refreshed", "the
     # published image doesn't require any large data dumps and will gradually grow your database

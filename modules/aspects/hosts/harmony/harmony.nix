@@ -110,13 +110,6 @@
     #
     # You can update Home Manager without changing this value. See the Home Manager release notes for a list of state
     # version changes in each release.
-    provides.oscar = {
-      hm64bit = { };
-      hmAarch64 = { };
-      hmDarwin = { };
-      # See the comment in OMARSHAL-M-T2QF.nix for why these sentinels are needed.
-      hmLinux = { };
-      homeManager.home.stateVersion = "25.05";
-    };
+    provides.oscar.homeManager.home.stateVersion = "25.05";
   };
 }

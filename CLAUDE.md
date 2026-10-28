@@ -7,14 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Apply Configuration
 
 ```bash
-# NixOS (harmony, melaan)
+# NixOS (harmony, melaan, tensoon)
 sudo nixos-rebuild switch --flake .#<hostname>
-
-# macOS
-darwin-rebuild switch --flake .#OMARSHAL-M-T2QF
-
-# Standalone Home Manager
-home-manager switch --flake .#"omarshal@dev203.meraki.com"
 ```
 
 ### Build Without Applying
@@ -22,7 +16,13 @@ home-manager switch --flake .#"omarshal@dev203.meraki.com"
 ```bash
 nix build .#nixosConfigurations.harmony.config.system.build.toplevel
 nix build .#nixosConfigurations.melaan.config.system.build.toplevel
-nix build .#darwinConfigurations.OMARSHAL-M-T2QF.config.system.build.toplevel
+nix build .#nixosConfigurations.tensoon.config.system.build.toplevel
+```
+
+### Check
+
+```bash
+nix flake check # evaluates every output and runs the flake's checks (also run in CI)
 ```
 
 ### Format
@@ -56,35 +56,32 @@ This repo uses **Den**, an aspect-oriented configuration framework built on flak
 
 Each aspect can provide configuration through named classes:
 
-| Class                  | Target                                                                         |
-| ---------------------- | ------------------------------------------------------------------------------ |
-| `os`                   | Both NixOS and Darwin (avoids duplication)                                     |
-| `nixos`                | NixOS only                                                                     |
-| `darwin`               | macOS (nix-darwin) only                                                        |
-| `homeManager`          | Home Manager (cross-platform)                                                  |
-| `hmLinux` / `hmDarwin` | Platform-specific Home Manager, forwarded into `homeManager` by `defaults.nix` |
-| `secrets`              | Forwarded to `age.secrets` on all platforms                                    |
-| `nixosSecrets`         | Forwarded only to NixOS `age.secrets` (e.g. hashed passwords)                  |
+| Class          | Target                                                        |
+| -------------- | ------------------------------------------------------------- |
+| `os`           | OS-level config (NixOS)                                       |
+| `nixos`        | NixOS only                                                    |
+| `homeManager`  | Home Manager (cross-platform)                                 |
+| `secrets`      | Forwarded to `age.secrets` on all platforms                   |
+| `nixosSecrets` | Forwarded only to NixOS `age.secrets` (e.g. hashed passwords) |
 
 ### Module Layout
 
 - **`modules/aspects/my/`** — Reusable service/feature aspects (the `my` namespace). These are the building blocks.
 - **`modules/aspects/hosts/<hostname>/`** — Host-specific aspects that compose `my.*` aspects via `includes`.
 - **`modules/aspects/users/<username>/`** — User-specific aspects.
-- **`modules/aspects/defaults.nix`** — Applied to all configurations: forwards `hmLinux`/`hmDarwin` → `homeManager`, and
-  `secrets` → `age.secrets` on all platforms.
+- **`modules/aspects/defaults.nix`** — Applied to all configurations: forwards `secrets` → `age.secrets` on all
+  platforms, and (via `den.batteries.host-aspects`) projects `homeManager` config from a host's aspects onto its users.
 - **`modules/den.nix`** — Declares all hosts and their users; also defines the schema defaults (what every host/user
   gets automatically).
-- **`modules/inputs.nix`** — Base flake inputs (nixpkgs, home-manager, darwin, etc.).
+- **`modules/inputs.nix`** — Base flake inputs (nixpkgs, home-manager, etc.).
 
 ### Hosts
 
-| Hostname                     | Arch           | Type                                        |
-| ---------------------------- | -------------- | ------------------------------------------- |
-| `harmony`                    | x86_64-linux   | NixOS home server (media, Minecraft, infra) |
-| `melaan`                     | x86_64-linux   | NixOS Framework laptop with GNOME           |
-| `OMARSHAL-M-T2QF`            | aarch64-darwin | MacBook (nix-darwin)                        |
-| `omarshal@dev203.meraki.com` | x86_64-linux   | Standalone Home Manager (work machine)      |
+| Hostname  | Arch         | Type                                                  |
+| --------- | ------------ | ----------------------------------------------------- |
+| `harmony` | x86_64-linux | NixOS home server (media, Minecraft, infra)           |
+| `melaan`  | x86_64-linux | NixOS Framework laptop with GNOME                     |
+| `tensoon` | x86_64-linux | NixOS Framework 13 laptop with Noctalia/Umbriel, LUKS |
 
 ### Adding a New Service Aspect
 
@@ -100,7 +97,7 @@ includes = [ (my.<service> { param = value; }) ];
 ```
 
 Use `{ host, lib, ... }:` as the aspect function signature when you need conditional logic based on host properties
-(`host.graphical`, `host.work`, etc.).
+(`host.graphical`, etc.).
 
 ## Secrets
 
@@ -117,7 +114,7 @@ agenix rekey -a && git add secrets/rekeyed/*/  # rekey for all hosts
 ```
 
 In aspect code, use the `secrets` class (not `age.secrets` directly) — `defaults.nix` forwards it to the right place on
-every platform. Use `nixosSecrets` only when a secret must be excluded from Darwin/Home Manager.
+every platform. Use `nixosSecrets` only when a secret must be excluded from Home Manager.
 
 ## Formatting
 

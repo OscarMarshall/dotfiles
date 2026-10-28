@@ -37,13 +37,6 @@
       "s-o" #'portal.api/open)
 
 
-;;; inf-ruby
-
-(after! inf-ruby
-  (add-to-list 'inf-ruby-implementations
-               `("spring" . "/Users/omarshal/co/manage/script/spring_remote rails console")))
-
-
 ;;; rspec-mode
 
 (add-hook 'after-init-hook 'inf-ruby-switch-setup)

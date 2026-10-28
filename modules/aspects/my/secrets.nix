@@ -20,7 +20,7 @@ in
 
       inputs = {
         agenix.inputs = {
-          darwin.follows = "darwin";
+          darwin.follows = "";
           home-manager.follows = "home-manager";
           nixpkgs.follows = "nixpkgs";
           systems.follows = "systems";
@@ -33,7 +33,7 @@ in
 
   my.secrets =
     # user is non-null only in user-entity context (user on a host). We check
-    # this to avoid applying darwin/nixos age.rekey twice — once at host level
+    # this to avoid applying nixos age.rekey twice — once at host level
     # and again at the user level, which would cause a duplicate-definition error.
     {
       home ? null,
@@ -73,15 +73,6 @@ in
         // lib.optionalAttrs (homeManagerEntityName != null) { age.rekey = rekey homeManagerEntityName pkgs; };
     }
     // lib.optionalAttrs isHostEntity {
-      darwin = { pkgs, ... }: {
-        imports = [
-          (inputs.ragenix.darwinModules.default or { })
-          (inputs.agenix-rekey.darwinModules.default or { })
-        ];
-
-        age.rekey = rekey host.name pkgs;
-      };
-
       nixos = { pkgs, ... }: {
         imports = [
           (inputs.ragenix.nixosModules.default or { })

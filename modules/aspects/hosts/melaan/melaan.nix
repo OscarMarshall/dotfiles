@@ -56,24 +56,9 @@
     #
     # You can update Home Manager without changing this value. See the Home Manager release notes for a list of state
     # version changes in each release.
-    provides =
-      let
-        # See the comment in OMARSHAL-M-T2QF.nix for why these sentinels are needed.
-        hmSentinels = {
-          hm64bit = { };
-          hmAarch64 = { };
-          hmDarwin = { };
-          hmLinux = { };
-        };
-      in
-      {
-        adelline = hmSentinels // {
-          homeManager.home.stateVersion = "25.05";
-        };
-
-        oscar = hmSentinels // {
-          homeManager.home.stateVersion = "25.05";
-        };
-      };
+    provides = {
+      adelline.homeManager.home.stateVersion = "25.05";
+      oscar.homeManager.home.stateVersion = "25.05";
+    };
   };
 }

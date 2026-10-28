@@ -8,7 +8,7 @@
 # operation, but the two no longer hard-conflict.
 {
   my.yubikey = {
-    hmLinux.programs.gpg.scdaemonSettings.disable-ccid = true;
+    homeManager.programs.gpg.scdaemonSettings.disable-ccid = true;
     nixos.services.pcscd.enable = true;
   };
 }

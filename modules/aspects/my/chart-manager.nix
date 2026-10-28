@@ -11,7 +11,7 @@
     # distributed from https://chartmanager.pages.dev/) only ships electron-builder artifacts
     # (AppImage on Linux, dmg/exe elsewhere) - built from `chart-manager-src` instead of fetching
     # one of those.
-    hmLinux =
+    homeManager =
       { lib, pkgs, ... }:
       let
         inherit (builtins.fromJSON (builtins.readFile "${appSrc}/package.json")) version;

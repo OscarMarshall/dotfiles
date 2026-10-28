@@ -99,7 +99,7 @@
 
         # Fold in every `preserve` quirk contribution (modules/aspects/my/preserve.nix): system
         # paths from host-scoped aspects land here directly, per-user home paths from
-        # hmLinux/homeManager aspects arrive via the `expose-preserve` pipe policy. Each entry is
+        # homeManager aspects arrive via the `expose-preserve` pipe policy. Each entry is
         # already a `preserveAt."/persist"` fragment, so a bare mkMerge is the whole consumer.
         # `mkMerge [ ]` (no producers) is a no-op, so this stays inert until an aspect opts in.
         { preservation.preserveAt."/persist" = lib.mkMerge preserve; }
