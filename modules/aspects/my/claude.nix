@@ -112,7 +112,7 @@
             exec ${pkgs.github-mcp-server}/bin/github-mcp-server stdio
           ''}";
 
-          nixos.command = "${pkgs.mcp-nixos}/bin/mcp-nixos";
+          nixos.command = "${inputs.mcp-nixos.packages.${pkgs.stdenv.hostPlatform.system}.mcp-nixos}/bin/mcp-nixos";
         };
 
         plugins.ponytail = inputs.ponytail;

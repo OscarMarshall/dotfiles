@@ -33,7 +33,7 @@
             };
 
             nixos = {
-              command = [ "${pkgs.mcp-nixos}/bin/mcp-nixos" ];
+              command = [ "${inputs.mcp-nixos.packages.${pkgs.stdenv.hostPlatform.system}.mcp-nixos}/bin/mcp-nixos" ];
               type = "local";
             };
           };
