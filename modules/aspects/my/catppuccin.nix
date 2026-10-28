@@ -4,7 +4,6 @@
 #
 # my.noctalia-greeter references the same catppuccin-cursors.mochaDark package directly.
 {
-  # hmLinux: home.pointerCursor is Linux-only, and macOS manages the cursor itself.
   my.catppuccin.hmLinux = { pkgs, ... }: {
     home.pointerCursor = {
       enable = true;

@@ -59,14 +59,11 @@ in
         }
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           # Zen's own wheel/touchpad scroll delta runs fast on the Framework 13 panel even under
-          # Umbriel's scroll_factor; 50 = 0.5x the Firefox default of 100. Linux-only - macOS
-          # trackpad scrolling in Zen is not part of this compounding.
+          # Umbriel's scroll_factor; 50 = 0.5x the Firefox default of 100.
           "mousewheel.default.delta_multiplier_x" = 50;
           "mousewheel.default.delta_multiplier_y" = 50;
         };
 
-        # No-op on Darwin (it only wires up xdg.mimeApps); already the actual
-        # default browser here via macOS's LaunchServices, set outside Nix.
         setAsDefaultBrowser = true;
       }
       // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {

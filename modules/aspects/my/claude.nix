@@ -101,15 +101,8 @@
         enableMcpIntegration = true;
 
         # Claude-specific MCP servers (as opposed to `my.mcp-servers`, which
-        # holds servers shared with other MCP-integrated programs like Codex).
+        # holds servers shared with other MCP-integrated programs like OpenCode).
         mcpServers = {
-          # `programs.mcp`'s env.*.file support single-quotes the path before
-          # `cat`-ing it, but agenix's Darwin secret paths are themselves an
-          # unexpanded `$(getconf DARWIN_USER_TEMP_DIR)/agenix/...` shell
-          # command substitution — single-quoting prevents that expansion, so
-          # the token file is never found. Read it ourselves in a wrapper
-          # script instead, where the substitution is left unquoted for bash
-          # to expand at runtime.
           github.command = "${pkgs.writeShellScript "github-mcp-server-wrapper" ''
             export GITHUB_PERSONAL_ACCESS_TOKEN="$(cat ${config.age.secrets.github-mcp-server-github-access-token.path})"
             exec ${pkgs.github-mcp-server}/bin/github-mcp-server stdio

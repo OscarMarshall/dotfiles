@@ -18,9 +18,6 @@
           autoupdate = false;
 
           mcp = {
-            # Wrapped for the same reason as my.claude's github MCP server: agenix's Darwin secret
-            # path is an unexpanded `$(getconf DARWIN_USER_TEMP_DIR)/...` substitution, which
-            # OpenCode's `{file:...}` env interpolation would take literally.
             github = {
               command = [
                 "${pkgs.writeShellScript "opencode-github-mcp-server-wrapper" ''

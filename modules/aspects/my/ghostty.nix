@@ -4,8 +4,7 @@
     # re-quantises the scaled delta into its own wheel detents using mouse-scroll-multiplier,
     # whose touchpad ("precision") default is 1 - so scrolling inside a full-screen TUI (claude)
     # still runs far faster than everything else. precision:0.3 brings the terminal back in line;
-    # discrete mice keep the default 3. Linux-only: macOS has no such compounding, and slowing
-    # scroll there would just feel sluggish.
+    # discrete mice keep the default 3.
     hmLinux.programs.ghostty.settings.mouse-scroll-multiplier = "precision:0.3,discrete:3";
 
     homeManager.programs.ghostty = {
