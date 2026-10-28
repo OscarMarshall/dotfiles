@@ -117,6 +117,10 @@ Use an aspect function signature (`{ host, lib, ... }:`) when you need context-a
 - **Home Automation**: Home Assistant, with SSO via Authentik's `auth_oidc` integration
 - **Infrastructure**: Nginx reverse proxy with Let's Encrypt, Samba file sharing, ZFS storage, offsite backups
   (Restic/Backblaze B2)
+- **Remote builds**: a self-hosted Headscale coordination server on harmony (`my.headscale`) puts every host on one
+  tailnet (`my.tailscale`), so melaan/tensoon can offload CPU-heavy builds to harmony (`my.remote-builder`) from
+  anywhere - no SSH (or anything else) exposed to the WAN. CI (`.github/workflows/test.yml`) joins the same tailnet
+  per-run to offload its Linux builds too
 
 The VPN input and service confinement opt-in are provided by a reusable `my.vpn-confinement` aspect, while qBittorrent
 declares the `proton0` namespace directly in its own aspect.

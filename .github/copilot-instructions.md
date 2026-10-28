@@ -33,7 +33,7 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
     - **`users/`**: User-specific aspects (one directory per user)
       - **`oscar/`**: oscar.nix, zen-browser.nix
       - **`adelline/`**: adelline.nix
-    - **`my/`**: Reusable aspects in the `my` namespace (~43 aspects)
+    - **`my/`**: Reusable aspects in the `my` namespace (~46 aspects)
       - Core: boot.nix, locale.nix, nix.nix, fonts.nix
       - Services: nginx.nix, minecraft-servers.nix, paperless.nix, plex.nix, jellyfin.nix, prowlarr.nix,
         qbittorrent.nix, radarr.nix, sonarr.nix, unpackerr.nix, home-assistant.nix, mousehole.nix
@@ -47,6 +47,9 @@ This repository uses a Den-based architecture with flake-parts and import-tree f
       - Infrastructure: zfs.nix, samba.nix, lm-sensors.nix, networkmanager.nix, secrets.nix, vpn-confinement.nix,
         backup.nix (offsite backups - see "Working with Offsite Backups" below), disko.nix, preservation.nix (ephemeral
         root + `/persist` bind mounts), yubikey.nix (pcscd for the PIV/age-plugin-yubikey smartcard interface)
+      - Remote building: headscale.nix (self-hosted Tailscale coordination server, harmony only), tailscale.nix (joins a
+        host to that tailnet via a one-time `tailscale-join`), remote-builder.nix (offloads builds to another tailnet
+        host over `nix.buildMachines`, see "Working with the Remote Builder" below)
       - VM: vm.nix, vm-bootable.nix, ci-no-boot.nix
 - **`secrets/`**: Directory containing ragenix/agenix-rekey-encrypted secrets (`.age` files). Primitive secrets are
   encrypted to the YubiKey master identity. Do not expose plaintext. Rekeyed OS-level host secrets live in
@@ -103,7 +106,7 @@ Example: `modules/aspects/users/oscar/oscar.nix` includes emacs, git config, gpg
 
 ### Reusable Aspects (`my.*`)
 
-The `my` namespace contains ~43 reusable aspects for services, applications, and features. These are functions that
+The `my` namespace contains ~46 reusable aspects for services, applications, and features. These are functions that
 return configuration and can accept parameters (e.g., `qbittorrent { administrators = [ "oscar" ]; }`).
 
 ### Aspect Routing
@@ -315,7 +318,7 @@ The configuration uses Den aspects organized into three main categories:
   - Includes Home Manager configuration
   - Uses direct host checks for conditional desktop apps
 
-### Reusable Aspects (`my.*` - 43 aspects)
+### Reusable Aspects (`my.*` - 46 aspects)
 
 Organized by category:
 
@@ -331,6 +334,8 @@ Organized by category:
 - **Infrastructure**: zfs, samba, lm-sensors, secrets, auto-upgrade, auto-login, vpn-confinement, backup (offsite
   backups via Restic/Backblaze B2), disko, preservation (ephemeral root + `/persist` bind mounts), yubikey (pcscd for
   the PIV/age-plugin-yubikey smartcard interface)
+- **Remote building**: headscale (self-hosted Tailscale coordination server), tailscale (joins a host to that tailnet),
+  remote-builder (offloads builds to another tailnet host via `nix.buildMachines`)
 - **Utilities**: host-flag, routes, vm, vm-bootable, ci-no-boot
 
 Each `my.*` aspect is a self-contained module that can be included by hosts or users.
@@ -511,6 +516,59 @@ nix-minecraft bump can't move a world onto a Minecraft version its mods don't su
 - AI agents can run the updater and verify with
   `nix build .#nixosConfigurations.harmony.config.services.minecraft-servers.servers.<world>.{symlinks.mods,package}`;
   whether the server actually starts is only visible on harmony (`logs/latest.log` in the world's directory).
+
+### Working with the Remote Builder (my.headscale/my.tailscale/my.remote-builder)
+
+harmony (32 threads, 125GiB RAM) is a `nix.buildMachines` entry for melaan/tensoon (`my.remote-builder` on each,
+`protocol = "ssh-ng"`), reachable from anywhere via a self-hosted Headscale coordination server on harmony
+(`my.headscale`) instead of exposing sshd to the WAN - every host joins that tailnet with `my.tailscale`, and MagicDNS
+gives harmony a stable name (`harmony.ts.silverlight-nex.us`) any tailnet member, including root (the actual nix-daemon
+connecting, not the interactive user), can resolve.
+
+Two dedicated credentials, neither reusing a personal one:
+
+- `remote-builder-harmony-ssh-key` - a generated agenix secret (`secrets/generated/`), root-readable (the nix-daemon
+  opens this connection, not oscar interactively). Its generator also writes the public half to
+  `secrets/generated/remote-builder-harmony-ssh-key.pub`, which `harmony.nix` reads into an `authorizedKeys` entry
+  forced to `nix-daemon --stdio` only - it MUST be that, not `nix-store --serve`, to match the `ssh-ng` protocol; the
+  two speak incompatible handshakes. It uses a custom script rather than agenix-rekey's built-in `ssh-ed25519`
+  generator, whose per-host key comment would make melaan's and tensoon's definitions of the one shared file differ.
+- A reusable, long-lived Headscale preauth key, deliberately NOT in agenix: it lives in Proton Pass (Personal vault,
+  Custom item `Headscale preauth key`, hidden `API Key` field), so a credential that can add any machine to the tailnet
+  isn't sitting decrypted on every host's disk. `my.tailscale` installs `tailscale-join`, which reads it with `pass-cli`
+  (as the logged-in user - pass-cli can't run at boot as root, which is why this isn't `services.tailscale.authKeyFile`)
+  and runs `sudo tailscale up` with it. That's a one-time step per install: `/var/lib/tailscale` is preserved (including
+  on tensoon's ephemeral root), so tailscaled reconnects on its own after that.
+
+**Bootstrap order for a new builder relationship** (a real chicken-and-egg: the preauth key can't exist before
+headscale, which only harmony hosts, is already running):
+
+1. `nixos-rebuild switch` on harmony - needs only the generated `.pub` (already committed; `agenix generate` needs no
+   YubiKey), not the rekeyed secret. harmony then joins its own tailnet with no human step: `headscale-self-join`
+   (`headscale.nix`) creates the `oscar` Headscale user if missing, mints a single-use 5-minute preauth key, and runs
+   `tailscale up` with it, whenever tailscaled reports `NeedsLogin`.
+2. **Human step, on harmony**: `headscale users list` (for `oscar`'s numeric ID - 0.29's `--user` takes the ID, not the
+   name), then `headscale preauthkeys create --user <ID> --reusable --expiration <duration>`, and save the key to Proton
+   Pass as above.
+3. **Human step**: `agenix rekey -a` (YubiKey, per "Working with Secrets" above), then rebuild melaan/tensoon.
+4. **Human step**: `tailscale-join` once on each laptop.
+
+AI agents can verify the Nix wiring with `nix build .#nixosConfigurations.<host>.config.system.build.toplevel --dry-run`
+(fails only on the remote-builder key not being rekeyed yet, until step 3 above) and can run `agenix generate`, but
+cannot run any step 2 or 4 command (no access to harmony's running `headscale`/`tailscale` state or to Proton Pass) or
+confirm an actual remote build succeeded end to end.
+
+**GitHub Actions** (`.github/workflows/test.yml`'s `build-linux` job) joins the tailnet per-run instead of having a
+standing host config: a `tailscale/github-action` step before `cachix/install-nix-action`, then a
+`builders = ssh-ng://...` line in that same step's `extra_nix_config`. Two secrets live in GitHub's own secret store
+instead of agenix - `REMOTE_BUILDER_CI_SSH_KEY` (a second dedicated keypair, separate from the one melaan/tensoon share,
+so it's independently revocable) and `TAILSCALE_CI_AUTHKEY` (a reusable, **ephemeral** Headscale preauth key -
+`--ephemeral` so each run's tailnet node self-removes on disconnect instead of piling up in `headscale nodes list`).
+Both are standing credentials with real build access to harmony, readable by any workflow run with secrets access -
+GitHub already redacts them to empty strings on a fork PR's plain `pull_request` run (not `pull_request_target`), the
+same protection `secrets.CACHIX_AUTH_TOKEN` already relies on in this same workflow, so this doesn't change the trust
+model, just extends it. AI agents can validate the workflow YAML itself (`actionlint`) but cannot create the GitHub
+secrets, mint the Headscale preauth key, or observe a real CI run using the builder.
 
 ## Documentation Update Policy
 
