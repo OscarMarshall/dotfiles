@@ -4,14 +4,13 @@
 # my.tailscale clients (melaan/tensoon, and harmony itself) reach each other from
 # anywhere without exposing sshd - or anything else - to WAN; see remote-builder.nix's own header.
 #
-# One-time bootstrap after the first `nixos-rebuild switch` that deploys this (headscale needs to
-# actually be running before any of this works):
+# harmony joins its own tailnet on its own (headscale-self-join below). The laptops need a reusable
+# preauth key, minted once after the first `nixos-rebuild switch` that deploys this:
 #   ssh harmony
-#   sudo headscale users create oscar
 #   sudo headscale users list   # `--user` below takes this numeric ID, not the name
 #   sudo headscale preauthkeys create --user <ID> --reusable --expiration 87600h
 # Save the printed key in Proton Pass (Personal vault, Custom item "Headscale preauth key", hidden
-# "API Key" field), then run `tailscale-join` on each host, harmony included - see my.tailscale's own header.
+# "API Key" field), then run `tailscale-join` once on each laptop - see my.tailscale's own header.
 {
   my.headscale =
     { host, ... }:
@@ -20,7 +19,7 @@
       url = "headscale.${host.name}.${domain}";
     in
     {
-      nixos = {
+      nixos = { config, pkgs, ... }: {
         # harmony's own my.tailscale node (harmony.nix) talks to this same server_url, which is a
         # DNS-only record pointing at the router's dynamic-DNS WAN hostname (dns.nix). Most
         # consumer routers - the Meraki MX included - don't do NAT hairpin/loopback for their own
@@ -58,6 +57,65 @@
 
             server_url = "https://${url}";
           };
+        };
+
+        # harmony is the one tailnet member that can mint its own preauth key, so it joins itself
+        # instead of needing `tailscale-join` and the Proton Pass key (pass-cli can't unlock over a
+        # headless SSH session anyway). The key is single-use and expires in 5 minutes, so nothing
+        # long-lived is left behind. A no-op on every boot after the first - /var/lib/tailscale is
+        # persistent, so tailscaled comes back up already logged in - and also whenever tailscaled is
+        # in any state other than NeedsLogin (e.g. a deliberate `tailscale down`), so it never fights
+        # a manual change. Goes through nginx at the public URL (looped back by extraHosts above) so
+        # harmony's control URL matches server_url like every other node's.
+        systemd.services.headscale-self-join = {
+          wantedBy = [ "multi-user.target" ];
+
+          after = [
+            "headscale.service"
+            "network-online.target"
+            "nginx.service"
+            "tailscaled.service"
+          ];
+
+          path = [
+            config.services.headscale.package
+            config.services.tailscale.package
+            pkgs.jq
+          ];
+
+          requires = [ "headscale.service" ];
+
+          script = ''
+            # tailscaled reports NoState (or nothing) until it has finished loading its state.
+            state=
+            for _ in $(seq 30); do
+              state=$(tailscale status --json 2>/dev/null | jq -r '.BackendState // empty') || true
+              if [ -n "$state" ] && [ "$state" != NoState ]; then break; fi
+              sleep 1
+            done
+            if [ "$state" != NeedsLogin ]; then exit 0; fi
+
+            # headscale's CLI socket appears a moment after the unit is marked started.
+            for _ in $(seq 30); do
+              if headscale users list >/dev/null 2>&1; then break; fi
+              sleep 1
+            done
+
+            id=$(headscale users list --name oscar -o json | jq -r '.[0].id // empty')
+            if [ -z "$id" ]; then id=$(headscale users create oscar -o json | jq -r .id); fi
+
+            key=$(mktemp)
+            trap 'rm -f "$key"' EXIT
+            headscale preauthkeys create --user "$id" --expiration 5m -o json | jq -j .key > "$key"
+            tailscale up --accept-dns --auth-key="file:$key" --login-server=https://${url}
+          '';
+
+          serviceConfig.Type = "oneshot";
+
+          wants = [
+            "network-online.target"
+            "tailscaled.service"
+          ];
         };
       };
 

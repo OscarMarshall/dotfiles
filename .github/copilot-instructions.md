@@ -544,13 +544,14 @@ Two dedicated credentials, neither reusing a personal one:
 headscale, which only harmony hosts, is already running):
 
 1. `nixos-rebuild switch` on harmony - needs only the generated `.pub` (already committed; `agenix generate` needs no
-   YubiKey), not the rekeyed secret.
-2. **Human step, on harmony**: `headscale users create <user>`, `headscale users list` (for its numeric ID - 0.29's
-   `--user` takes the ID, not the name), then
-   `headscale preauthkeys create --user <ID> --reusable --expiration <duration>`, and save the key to Proton Pass as
-   above.
+   YubiKey), not the rekeyed secret. harmony then joins its own tailnet with no human step: `headscale-self-join`
+   (`headscale.nix`) creates the `oscar` Headscale user if missing, mints a single-use 5-minute preauth key, and runs
+   `tailscale up` with it, whenever tailscaled reports `NeedsLogin`.
+2. **Human step, on harmony**: `headscale users list` (for `oscar`'s numeric ID - 0.29's `--user` takes the ID, not the
+   name), then `headscale preauthkeys create --user <ID> --reusable --expiration <duration>`, and save the key to Proton
+   Pass as above.
 3. **Human step**: `agenix rekey -a` (YubiKey, per "Working with Secrets" above), then rebuild melaan/tensoon.
-4. **Human step**: `tailscale-join` once on each host, harmony included.
+4. **Human step**: `tailscale-join` once on each laptop.
 
 AI agents can verify the Nix wiring with `nix build .#nixosConfigurations.<host>.config.system.build.toplevel --dry-run`
 (fails only on the remote-builder key not being rekeyed yet, until step 3 above) and can run `agenix generate`, but

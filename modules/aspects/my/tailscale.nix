@@ -9,8 +9,8 @@
 # `services.tailscale.authKeyFile`: pass-cli only works inside a logged-in session (its key is in
 # gnome-keyring, see proton-pass.nix), never at boot as root.
 #
-# harmony runs the same `tailscale-join` - or the plain `tailscale up` it wraps - as part of
-# headscale.nix's bootstrap, once headscale itself is up.
+# harmony doesn't need `tailscale-join`: it hosts headscale, so headscale.nix's
+# headscale-self-join mints a throwaway key and joins it automatically.
 {
   my.tailscale = { loginServer }: {
     nixos = { config, pkgs, ... }: {
