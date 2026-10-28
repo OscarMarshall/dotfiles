@@ -46,6 +46,9 @@ jobs:
           }
           EOF
 
+      - name: Flake check
+        run: nix flake check
+
       - name: Build harmony
         run: nix build .#nixosConfigurations.harmony.config.system.build.toplevel
 

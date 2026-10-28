@@ -19,6 +19,12 @@ nix build .#nixosConfigurations.melaan.config.system.build.toplevel
 nix build .#nixosConfigurations.tensoon.config.system.build.toplevel
 ```
 
+### Check
+
+```bash
+nix flake check # evaluates every output and runs the flake's checks (also run in CI)
+```
+
 ### Format
 
 ```bash

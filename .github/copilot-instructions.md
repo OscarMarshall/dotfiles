@@ -188,8 +188,7 @@ Note: Build/switch commands typically require appropriate permissions and are ru
 
 ## Validation
 
-- **Syntax check**: `nix flake check` validates flake and all configurations (note: currently fails due to
-  nix-doom-emacs-unstraightened cross-architecture build issues)
+- **Syntax check**: `nix flake check` evaluates every flake output and runs the flake's checks (run in CI)
 - **Show outputs**: `nix flake show` displays all flake outputs (hosts, homes, packages, etc.)
 - **Metadata**: `nix flake metadata` shows input information
 - **Build check (NixOS)**: `nixos-rebuild build --flake .#<host>` builds a NixOS configuration

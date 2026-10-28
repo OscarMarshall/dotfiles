@@ -35,8 +35,10 @@ sudo nixos-rebuild switch --flake .#<hostname>
 ### Validate Configuration
 
 ```console
-# nix flake check currently fails due to cross-architecture issues
-# Use platform-specific builds instead:
+# Evaluate every output and run the flake's checks (formatting, flake.nix drift, DNS uniqueness)
+nix flake check
+
+# Build each host
 nix build .#nixosConfigurations.harmony.config.system.build.toplevel
 nix build .#nixosConfigurations.melaan.config.system.build.toplevel
 nix build .#nixosConfigurations.tensoon.config.system.build.toplevel
