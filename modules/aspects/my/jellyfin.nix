@@ -151,23 +151,23 @@
           # imported library, where bug #1 still applies) - which won't happen again for these two,
           # already-imported resources, but keeps a third jellyfin_library added later from hitting
           # bug #1 on its own first apply.
+          #
+          # Deliberately omits `cache_images_in_library`, `download_images_in_advance`,
+          # `extract_media_information_during_library_scan`, `import_missing_episodes`,
+          # `metadata_refresh_mode` and `save_local_thumbnail_sets`: since provider 0.4.0 these are
+          # "Unsupported library option"s - Jellyfin has no such keys, the provider never sent them
+          # anyway, and declaring any of them (even with `ignore_changes`) is now a plan-time error.
           jellyfin_library =
             let
               stockDefaults = {
-                cache_images_in_library = false;
                 disabled = false;
-                download_images_in_advance = false;
                 enable_chapter_image_extraction = true;
                 enable_photos = true;
                 enable_realtime_monitor = true;
                 extract_chapters_during_library_scan = false;
-                extract_media_information_during_library_scan = true;
-                import_missing_episodes = false;
                 metadata_country_code = "US";
-                metadata_refresh_mode = "Default";
                 preferred_metadata_language = "en";
                 save_local_metadata = true;
-                save_local_thumbnail_sets = false;
                 season_zero_display_name = "Specials";
               };
             in

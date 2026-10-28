@@ -37,7 +37,7 @@ let
 
 in
 {
-  my.rreading-glasses = _: {
+  my.rreading-glasses = {
     # Only the Postgres backend is stateful - rreading-glasses itself just caches Hardcover
     # responses through it (see its own README: "Metadata is periodically refreshed", "the
     # published image doesn't require any large data dumps and will gradually grow your database
@@ -142,7 +142,7 @@ in
           # This crash-looped when renovate auto-bumped straight from 17 to 18 in place against the
           # old mount path; a future major bump like this one won't auto-merge again - see
           # renovate.json's own major-Docker-image packageRule.
-          image = "postgres:18@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336";
+          image = "postgres:18@sha256:edb0c08dc33befd0262ab3b5cf1c4f3f8cfd8b09e88c05b45adee29d6761ddb6";
           networks = [ network ];
           volumes = [ "/metalminds/${dbName}:/var/lib/postgresql" ];
         };

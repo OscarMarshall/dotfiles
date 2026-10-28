@@ -4,9 +4,8 @@
 # No tagged releases yet; the flake input tracks `main`. The `git+https` URL with `?submodules=1` is
 # required so the patched SceneFX fork in `subprojects/scenefx` is fetched.
 #
-# `hmLinux` forwarded from a host-level include only carries plain config, not module `imports`, so
-# the flake's home-manager module is wired in via `home-manager.sharedModules` on the NixOS side and
-# the user-facing `programs.umbriel` settings live under `hmLinux`.
+# The flake's home-manager module is wired in via `home-manager.sharedModules` on the NixOS side, and
+# the user-facing `programs.umbriel` settings live under `homeManager`.
 { lib, inputs, ... }:
 let
   # Laptop function row. `allow_when_locked` so volume/brightness still work at the lock screen.
@@ -179,7 +178,7 @@ in
   };
 
   my.umbriel = {
-    hmLinux.programs.umbriel = {
+    homeManager.programs.umbriel = {
       enable = true;
 
       settings = {

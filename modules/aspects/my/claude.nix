@@ -1,4 +1,5 @@
 {
+  lib,
   den,
   inputs,
   my,
@@ -12,7 +13,7 @@
     };
 
     ponytail = {
-      url = "github:DietrichGebert/ponytail/2ed6c52c9d7e5e56942508591085fd45dea277d3";
+      url = "github:DietrichGebert/ponytail";
       flake = false;
     };
   };
@@ -22,8 +23,6 @@
       (den._.unfree [ "claude-code" ])
       my.mcp-servers
     ];
-
-    darwin.homebrew.casks = [ "claude" ];
 
     homeManager = { config, pkgs, ... }: {
       age.secrets = {
@@ -83,10 +82,16 @@
             paths = [ unwrapped ];
 
             postBuild = ''
-              wrapProgram $out/bin/claude \
-                --run 'export BESZEL_API_KEY="$(cat ${config.age.secrets.beszel-api-key.path})"' \
-                --run 'export BESZEL_PASSWORD="$(cat ${config.age.secrets.beszel-password.path})"' \
-                --run 'export GH_TOKEN="''${GH_TOKEN:-$(cat ${config.age.secrets.github-mcp-server-github-access-token.path})}"'
+              wrapProgram $out/bin/claude ${
+                lib.escapeShellArgs [
+                  "--run"
+                  ''export BESZEL_API_KEY="$(cat ${config.age.secrets.beszel-api-key.path})"''
+                  "--run"
+                  ''export BESZEL_PASSWORD="$(cat ${config.age.secrets.beszel-password.path})"''
+                  "--run"
+                  ''export GH_TOKEN="''${GH_TOKEN:-$(cat ${config.age.secrets.github-mcp-server-github-access-token.path})}"''
+                ]
+              }
             '';
           }
           // {
@@ -96,15 +101,12 @@
         enableMcpIntegration = true;
 
         # Claude-specific MCP servers (as opposed to `my.mcp-servers`, which
-        # holds servers shared with other MCP-integrated programs like Codex).
+        # holds servers shared with other MCP-integrated programs like OpenCode).
         mcpServers = {
-          # `programs.mcp`'s env.*.file support single-quotes the path before
-          # `cat`-ing it, but agenix's Darwin secret paths are themselves an
-          # unexpanded `$(getconf DARWIN_USER_TEMP_DIR)/agenix/...` shell
-          # command substitution — single-quoting prevents that expansion, so
-          # the token file is never found. Read it ourselves in a wrapper
-          # script instead, where the substitution is left unquoted for bash
-          # to expand at runtime.
+          # agenix's Home Manager secret paths are an unexpanded `${XDG_RUNTIME_DIR}/agenix/...`,
+          # and `programs.mcp`'s env.*.file support single-quotes the path before `cat`-ing it, so
+          # the variable never expands and the token file is never found. Read it ourselves in a
+          # wrapper script instead, where bash expands it at runtime.
           github.command = "${pkgs.writeShellScript "github-mcp-server-wrapper" ''
             export GITHUB_PERSONAL_ACCESS_TOKEN="$(cat ${config.age.secrets.github-mcp-server-github-access-token.path})"
             exec ${pkgs.github-mcp-server}/bin/github-mcp-server stdio

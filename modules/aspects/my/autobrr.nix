@@ -8,20 +8,15 @@
       port = 7474;
     in
     {
-      nixos = { config, ... }: {
-        services.autobrr = {
-          enable = true;
-          secretFile = config.age.secrets.autobrr-session-secret.path;
+      nixos.services.autobrr = {
+        enable = true;
 
-          settings = {
-            inherit port;
-            checkForUpdates = true;
-            host = "127.0.0.1";
-          };
+        settings = {
+          inherit port;
+          checkForUpdates = true;
+          host = "127.0.0.1";
         };
       };
-
-      secrets.autobrr-session-secret.generator.script = "alnum";
 
       # No `homepage` block: deliberately not a dashboard tile, but `icon`/`group` still feed its
       # Authentik application (see virtual-host.nix). No `label` either - "autobrr" IS the brand's

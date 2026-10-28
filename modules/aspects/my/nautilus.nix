@@ -35,7 +35,7 @@
     # is the git-checkout tree - my.preservation keeps it outright, and this flake lives
     # in it. It is not one of the freedesktop-standard dirs, so my.preservation lists it
     # explicitly rather than in its XDG-dir loop.
-    hmLinux.xdg.userDirs = {
+    homeManager.xdg.userDirs = {
       enable = true;
       createDirectories = true;
     };

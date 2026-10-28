@@ -48,7 +48,7 @@ jobs:
           ping: harmony.ts.silverlight-nex.us
 
       - name: Install Nix
-        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+        uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
         with:
           extra_nix_config: |
             accept-flake-config = true
@@ -71,6 +71,9 @@ jobs:
           }
           EOF
 
+      - name: Flake check
+        run: nix flake check
+
       - name: Build harmony
         run: nix build .#nixosConfigurations.harmony.config.system.build.toplevel
 
@@ -79,39 +82,3 @@ jobs:
 
       - name: Build tensoon
         run: nix build .#nixosConfigurations.tensoon.config.system.build.toplevel
-
-      - name: Build omarshal@dev203.meraki.com
-        run: nix build '.#homeConfigurations."omarshal@dev203.meraki.com".activationPackage'
-
-  build-darwin:
-    name: Build Darwin hosts
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.head_ref || github.ref }}
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
-        with:
-          extra_nix_config: |
-            accept-flake-config = true
-
-      - name: Setup Nix cache
-        uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
-        with:
-          name: oscarmarshall
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          extraPullNames: nix-community
-
-      - run: nix flake metadata
-
-      - run: |
-          cat <<-EOF > modules/ci-runtime.nix
-          {
-            _module.args.CI = true;
-          }
-          EOF
-
-      - name: Build OMARSHAL-M-T2QF
-        run: nix build .#darwinConfigurations.OMARSHAL-M-T2QF.config.system.build.toplevel

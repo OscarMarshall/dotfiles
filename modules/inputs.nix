@@ -5,15 +5,8 @@
 # as close as possible to their actual usage.
 # See: https://denful.github.io/dendrix/Dendritic.html#minimal-and-focused-flakenix
 #
-# For our template, we enable home-manager and nix-darwin by default, but
-# you are free to remove them if not being used by you.
-_: {
+{
   flake-file.inputs = {
-    darwin = {
-      url = "github:nix-darwin/nix-darwin";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     # Follow targets
     flake-compat.url = "github:NixOS/flake-compat";
 
