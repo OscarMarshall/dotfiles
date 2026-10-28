@@ -17,6 +17,11 @@ jobs:
   build-linux:
     name: Build Linux hosts
     runs-on: ubuntu-latest
+    env:
+      # Dependabot and fork PRs don't get Actions secrets, so both come through empty there - and
+      # tailscale/github-action hard-fails on an empty auth key. Gate the remote builder on them
+      # instead, so those runs just build on the runner as before.
+      REMOTE_BUILDER: ${{ secrets.TAILSCALE_CI_AUTHKEY != '' && secrets.REMOTE_BUILDER_CI_SSH_KEY != '' }}
     steps:
       - uses: wimpysworld/nothing-but-nix@687c797a730352432950c707ab493fcc951818d7 # v10
 
@@ -30,10 +35,11 @@ jobs:
       # derivations that don't substitute from Cachix. Secrets are a standing credential living in
       # GitHub's own secret store, NOT agenix - see harmony.nix's own comment on why that's a
       # deliberately separate, independently-revocable key from the one melaan/tensoon use.
-      # GitHub already redacts both secrets to empty strings on a fork PR's
-      # `pull_request`-triggered run (not `pull_request_target`), same protection
-      # secrets.CACHIX_AUTH_TOKEN below already relies on.
+      # GitHub withholds both secrets from a fork PR's `pull_request`-triggered run (not
+      # `pull_request_target`), same protection secrets.CACHIX_AUTH_TOKEN below already relies on -
+      # see REMOTE_BUILDER above for how those runs skip the builder.
       - name: Write remote-builder SSH key
+        if: env.REMOTE_BUILDER == 'true'
         run: |
           umask 077
           printf '%s' "$REMOTE_BUILDER_SSH_KEY" > "$RUNNER_TEMP/remote-builder-ci-key"
@@ -41,6 +47,7 @@ jobs:
           REMOTE_BUILDER_SSH_KEY: ${{ secrets.REMOTE_BUILDER_CI_SSH_KEY }}
 
       - name: Connect to tailnet
+        if: env.REMOTE_BUILDER == 'true'
         uses: tailscale/github-action@99a8333667fff04fdd6cffb46dfd409f8329a7bf # v4.3.0
         with:
           authkey: ${{ secrets.TAILSCALE_CI_AUTHKEY }}
@@ -52,7 +59,7 @@ jobs:
         with:
           extra_nix_config: |
             accept-flake-config = true
-            builders = ssh-ng://oscar@harmony.ts.silverlight-nex.us x86_64-linux ${{ runner.temp }}/remote-builder-ci-key 24 1 big-parallel,kvm,nixos-test - c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSU1rTTV1Tlkwck15MlFNRzZJcHRseGdWbDRzUVdvZVNTTm1VcDcvZjJ6MUIK
+            ${{ env.REMOTE_BUILDER == 'true' && format('builders = ssh-ng://oscar@harmony.ts.silverlight-nex.us x86_64-linux {0}/remote-builder-ci-key 24 1 big-parallel,kvm,nixos-test - c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSU1rTTV1Tlkwck15MlFNRzZJcHRseGdWbDRzUVdvZVNTTm1VcDcvZjJ6MUIK', runner.temp) || '' }}
             builders-use-substitutes = true
 
       - name: Setup Nix cache
