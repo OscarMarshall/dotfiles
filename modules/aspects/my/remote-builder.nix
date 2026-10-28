@@ -57,6 +57,11 @@
           ];
 
           distributedBuilds = true;
+          # Lets the builder fetch missing inputs from the binary caches itself rather than having
+          # this host upload them over the tailnet - far faster when this host is a laptop on a slow
+          # connection away from home. CI's own `builders` line (.github/workflows/test.yml) sets
+          # the same.
+          settings.builders-use-substitutes = true;
         };
       };
 
