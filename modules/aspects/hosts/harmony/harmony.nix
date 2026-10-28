@@ -1,4 +1,10 @@
-{ den, my, ... }: {
+{
+  lib,
+  den,
+  my,
+  ...
+}:
+{
   den.aspects.harmony = {
     includes = with my; [
       (authentik { global = true; })
@@ -119,11 +125,13 @@
       # URI, which makes the client speak the worker protocol over this same SSH session - `--serve`
       # speaks a different, incompatible protocol and the handshake would just fail.
       #
-      # CI gets its OWN key (not the one above) - a standing credential that lives in GitHub's
-      # secret store rather than behind the YubiKey/agenix like every other secret in this repo, so
-      # it's kept independently revocable/rotatable without touching the real machines' access.
+      # The clients' key is the public half my.remote-builder's generator writes next to its
+      # generated secret, so `agenix generate` has to have run before harmony evaluates. CI gets its
+      # OWN key (not that one) - a standing credential that lives in GitHub's secret store rather
+      # than behind the YubiKey/agenix like every other secret in this repo, so it's kept
+      # independently revocable/rotatable without touching the real machines' access.
       users.users.oscar.openssh.authorizedKeys.keys = [
-        ''command="nice -n19 nix-daemon --stdio",restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPQDr4fQSUeD4J0rnJoh80UM+txjrYBT1sLZ04b7qgeF remote-builder@harmony''
+        ''command="nice -n19 nix-daemon --stdio",restrict ${lib.removeSuffix "\n" (builtins.readFile ../../../../secrets/generated/remote-builder-harmony-ssh-key.pub)}''
         ''command="nice -n19 nix-daemon --stdio",restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIUpLx2LhyMTIrVwH0aWAKg+mav7mBxV1ZrFpN8YKkLT remote-builder-ci@harmony''
       ];
     };

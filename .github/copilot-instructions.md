@@ -527,29 +527,33 @@ connecting, not the interactive user), can resolve.
 
 Two dedicated secrets, neither reusing a personal credential:
 
-- `remote-builder-harmony-ssh-key` - root-readable (the nix-daemon opens this connection, not oscar interactively). The
-  matching public key's `authorizedKeys` entry on harmony (`harmony.nix`) is forced to `nix-daemon --stdio` only - it
-  MUST be that, not `nix-store --serve`, to match the `ssh-ng` protocol; the two speak incompatible handshakes.
+- `remote-builder-harmony-ssh-key` - a generated secret (`secrets/generated/`), root-readable (the nix-daemon opens this
+  connection, not oscar interactively). Its generator also writes the public half to
+  `secrets/generated/remote-builder-harmony-ssh-key.pub`, which `harmony.nix` reads into an `authorizedKeys` entry
+  forced to `nix-daemon --stdio` only - it MUST be that, not `nix-store --serve`, to match the `ssh-ng` protocol; the
+  two speak incompatible handshakes. It uses a custom script rather than agenix-rekey's built-in `ssh-ed25519`
+  generator, whose per-host key comment would make melaan's and tensoon's definitions of the one shared file differ.
 - `tailscale-authkey` - a single reusable, long-lived Headscale preauth key shared by every `unattended = true`
   `my.tailscale` inclusion, letting NixOS hosts join (and re-join on every boot) with zero interaction.
 
 **Bootstrap order for a new builder relationship** (a real chicken-and-egg: the preauth key can't exist before
 headscale, which only harmony hosts, is already running):
 
-1. `nixos-rebuild switch` on harmony - needs neither secret yet; `my.tailscale` on harmony itself omits `unattended`, so
-   nothing there blocks on `tailscale-authkey` either.
+1. `nixos-rebuild switch` on harmony - needs only the generated `.pub` (already committed; `agenix generate` needs no
+   YubiKey), not either rekeyed secret; `my.tailscale` on harmony itself omits `unattended`, so nothing there blocks on
+   `tailscale-authkey` either.
 2. **Human step, on harmony**: `headscale users create <user>`,
    `tailscale up --login-server=<harmony's headscale URL> --accept-dns`,
    `headscale nodes register --user <user> --key <printed nodekey>`, then
    `headscale preauthkeys create --user <user> --reusable --expiration <duration>`.
-3. **Human step**: `agenix edit` both new secrets with the generated SSH keypair and that preauth key, `agenix rekey -a`
-   (YubiKey, per "Working with Secrets" above).
+3. **Human step**: `agenix edit secrets/tailscale-authkey.age` with that preauth key, then `agenix rekey -a` (YubiKey,
+   per "Working with Secrets" above).
 4. Rebuild the client hosts.
 
 AI agents can verify the Nix wiring with `nix build .#nixosConfigurations.<host>.config.system.build.toplevel --dry-run`
-(fails only on the two secrets not existing yet, until step 3 above), but cannot run any step 2 command (no access to
-harmony's YubiKey-gated secrets or its running `headscale`/`tailscale` state) or confirm an actual remote build
-succeeded end to end.
+(fails only on secrets not being rekeyed or created yet, until step 3 above) and can run `agenix generate`, but cannot
+run any step 2 command (no access to harmony's YubiKey-gated secrets or its running `headscale`/`tailscale` state) or
+confirm an actual remote build succeeded end to end.
 
 **GitHub Actions** (`.github/workflows/test.yml`'s `build-linux` job) joins the tailnet per-run instead of having a
 standing host config: a `tailscale/github-action` step before `cachix/install-nix-action`, then a
