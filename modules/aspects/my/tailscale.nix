@@ -30,7 +30,8 @@
             sudo ${config.services.tailscale.package}/bin/tailscale up \
               --accept-dns \
               --auth-key="file:$key" \
-              --login-server=${loginServer}
+              --login-server=${loginServer} \
+              --timeout=2m
           '';
         })
       ];

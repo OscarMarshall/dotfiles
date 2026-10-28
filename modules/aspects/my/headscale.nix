@@ -107,7 +107,10 @@
             key=$(mktemp)
             trap 'rm -f "$key"' EXIT
             headscale preauthkeys create --user "$id" --expiration 5m -o json | jq -j .key > "$key"
-            tailscale up --accept-dns --auth-key="file:$key" --login-server=https://${url}
+            # `tailscale up` otherwise retries a failing registration forever, which would leave this
+            # oneshot "activating" and a `nixos-rebuild switch` waiting on it. The key outlives this,
+            # so a timed-out attempt fails visibly and the next boot (or a restart) mints a new one.
+            tailscale up --accept-dns --auth-key="file:$key" --login-server=https://${url} --timeout=2m
           '';
 
           serviceConfig.Type = "oneshot";
