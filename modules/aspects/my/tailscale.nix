@@ -31,6 +31,12 @@
           ];
         };
       };
+
+      # The node's identity (machine/node keys) and login live here. Without it an ephemeral-root
+      # host (tensoon) would re-register as a brand-new node from the preauth key on every boot,
+      # piling up stale entries in `headscale nodes list` and getting a fresh tailnet IP each time.
+      # Inert on hosts without my.preservation (see preserve.nix).
+      preserve.directories = [ "/var/lib/tailscale" ];
     }
     // lib.optionalAttrs unattended { secrets.tailscale-authkey.rekeyFile = ../../../secrets/tailscale-authkey.age; };
 }
