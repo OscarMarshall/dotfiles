@@ -101,11 +101,11 @@
     "chart-manager-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1791486692,
-        "narHash": "sha256-DVnYt1tcRQQ+TP7HpXybk+qGN9nP04N/el/X6yuU8ao=",
+        "lastModified": 1791668299,
+        "narHash": "sha256-/HS4wm1/ytk7mh9Wqq0wj7kmM39iBUg5jOjMpAN+CQc=",
         "owner": "xlzipx",
         "repo": "clone-hero-chart-manager",
-        "rev": "80a9f14961c16387c1d547ec06a33a6fb4efcc30",
+        "rev": "9c1a46ce5a7f64953607b4b64a95676db3b7e40e",
         "type": "github"
       },
       "original": {
