@@ -88,6 +88,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    nixpkgs-qbittorrent.url = "github:nixos/nixpkgs/55ba7f49ef2962b42cbd126522b7df5f95037679";
     noctalia = {
       url = "github:noctalia-dev/noctalia";
       inputs.nixpkgs.follows = "nixpkgs";

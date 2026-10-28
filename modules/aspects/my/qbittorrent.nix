@@ -1,3 +1,4 @@
+{ inputs, ... }:
 let
   crossSeedPort = 2468;
   namespace = "proton0";
@@ -15,6 +16,13 @@ let
   wgInterface = "${namespace}0";
 in
 {
+  # Pinned to the nixpkgs commit that shipped qbittorrent-nox 5.2.3, the last 5.2.x release -
+  # MyAnonamouse doesn't allow 5.3.0 on its client whitelist. A bare commit URL (rather than a
+  # branch) means neither `nix flake update` nor Dependabot can move it; bump the commit by hand
+  # once MAM allows a newer version. No `nixpkgs.follows` on purpose: following would discard the
+  # pin entirely.
+  flake-file.inputs.nixpkgs-qbittorrent.url = "github:nixos/nixpkgs/55ba7f49ef2962b42cbd126522b7df5f95037679";
+
   my.qbittorrent =
     {
       administrators,
@@ -62,7 +70,7 @@ in
         {
           services.qbittorrent = {
             enable = true;
-            package = pkgs.qbittorrent-nox;
+            package = inputs.nixpkgs-qbittorrent.legacyPackages.${pkgs.stdenv.hostPlatform.system}.qbittorrent-nox;
             group = "qbittorrent";
             profileDir = "/var/lib/qBittorrent";
 
