@@ -8,7 +8,12 @@
 { inputs, ... }: {
   # preservation's flake takes no inputs (the module uses the consumer's pkgs), so there is no
   # nixpkgs to make follow.
-  flake-file.inputs.preservation.url = "github:nix-community/preservation";
+  #
+  # Pinned to the head of nix-community/preservation#36 rather than upstream main: nixpkgs removed
+  # scripted initrd (and with it the `boot.initrd.systemd.enable` option, which now throws on any
+  # read), but upstream's module still asserts on that option, so evaluation fails outright. That PR
+  # just drops the assertion. Go back to `github:nix-community/preservation` once it merges.
+  flake-file.inputs.preservation.url = "github:mjm/preservation/ed8dbeaac0ad240341259c814cade7163a53fc1f";
 
   my.preservation.nixos =
     {
@@ -105,7 +110,7 @@
         { preservation.preserveAt."/persist" = lib.mkMerge preserve; }
       ];
 
-      # preservation forces systemd-in-initrd, which makes agenix decrypt during
+      # systemd-in-initrd (the only initrd nixpkgs has now) makes agenix decrypt during
       # `initrd-nixos-activation` - before `/etc/ssh/ssh_host_ed25519_key` (a stage-2 tmpfs symlink)
       # exists, so it finds "no readable identities" and every secret fails. `/persist` is
       # `neededForBoot` and mounted by then, so add the persisted host keys as identities; the
