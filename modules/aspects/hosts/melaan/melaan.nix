@@ -30,13 +30,13 @@
 
         system = "x86_64-linux";
       })
-      (tailscale { loginServer = "https://headscale.harmony.silverlight-nex.us"; })
       boot
       gnome
       locale
       networkmanager
       pipewire
       steam
+      tailscale
     ];
 
     nixos = {
