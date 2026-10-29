@@ -1,4 +1,10 @@
-{ den, my, ... }: {
+{
+  lib,
+  den,
+  my,
+  ...
+}:
+{
   den.aspects.harmony = {
     includes = with my; [
       (authentik { global = true; })
@@ -33,6 +39,7 @@
       (seerr { global = true; })
       (sonarr { administrators = [ "oscar" ]; })
       (storyteller { global = true; })
+      (tailscale { loginServer = "https://headscale.harmony.silverlight-nex.us"; })
       (tautulli { })
       (zfs [ "metalminds" ])
       boot
@@ -40,6 +47,7 @@
       den.aspects.harmony.provides.minecraft-servers
       dns
       fail2ban
+      headscale
       homepage
       lm-sensors
       locale
@@ -103,6 +111,27 @@
       # For more information, see `man configuration.nix` or
       # https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
       system.stateVersion = "25.05"; # Did you read the comment?
+
+      # Lets melaan/tensoon (my.remote-builder) and GitHub Actions (.github/workflows/
+      # test.yml) offload builds here over SSH. `openssh.authorizedKeys.keys` is a listOf, so this
+      # concatenates with oscar's personal login key from userAspect (oscar.nix) rather than
+      # replacing it. Each forced command restricts its key to running the nix-daemon's own
+      # worker-protocol server - it can't open an interactive shell even though it authenticates as
+      # the (trusted-user) oscar account, which is what lets the daemon accept builds/substitutions
+      # from it without further restriction. MUST be `nix-daemon --stdio`, not `nix-store --serve`:
+      # both remote-builder.nix and the workflow set `protocol = "ssh-ng"`/use the `ssh-ng://` store
+      # URI, which makes the client speak the worker protocol over this same SSH session - `--serve`
+      # speaks a different, incompatible protocol and the handshake would just fail.
+      #
+      # The clients' key is the public half my.remote-builder's generator writes next to its
+      # generated secret, so `agenix generate` has to have run before harmony evaluates. CI gets its
+      # OWN key (not that one) - a standing credential that lives in GitHub's secret store rather
+      # than behind the YubiKey/agenix like every other secret in this repo, so it's kept
+      # independently revocable/rotatable without touching the real machines' access.
+      users.users.oscar.openssh.authorizedKeys.keys = [
+        ''command="nice -n19 nix-daemon --stdio",restrict ${lib.removeSuffix "\n" (builtins.readFile ../../../../secrets/generated/remote-builder-harmony-ssh-key.pub)}''
+        ''command="nice -n19 nix-daemon --stdio",restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIUpLx2LhyMTIrVwH0aWAKg+mav7mBxV1ZrFpN8YKkLT remote-builder-ci@harmony''
+      ];
     };
 
     # This value determines the Home Manager release that your configuration is compatible with. This helps avoid
@@ -110,13 +139,6 @@
     #
     # You can update Home Manager without changing this value. See the Home Manager release notes for a list of state
     # version changes in each release.
-    provides.oscar = {
-      hm64bit = { };
-      hmAarch64 = { };
-      hmDarwin = { };
-      # See the comment in OMARSHAL-M-T2QF.nix for why these sentinels are needed.
-      hmLinux = { };
-      homeManager.home.stateVersion = "25.05";
-    };
+    provides.oscar.homeManager.home.stateVersion = "25.05";
   };
 }

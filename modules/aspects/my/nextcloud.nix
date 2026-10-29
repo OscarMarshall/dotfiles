@@ -298,7 +298,7 @@
       # Cross-references `mailgun_domain.default`, defined in mailgun.nix's own `terranix` field -
       # see that file's header comment for why each consumer (this, and authentik.nix) owns its own
       # mailbox under Mailgun's one domain resource rather than mailgun.nix owning them all.
-      terranix = _: {
+      terranix = {
         resource.mailgun_domain_credential.nextcloud = {
           domain = "\${mailgun_domain.default.name}";
           login = "nextcloud";

@@ -38,14 +38,6 @@
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    codex-cli-nix = {
-      url = "github:sadjow/codex-cli-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    darwin = {
-      url = "github:nix-darwin/nix-darwin";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     den.url = "github:denful/den";
     disko = {
       url = "github:nix-community/disko";
@@ -69,6 +61,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     import-tree.url = "github:denful/import-tree";
+    mcp-nixos.url = "github:utensils/mcp-nixos";
     nix-cachyos-kernel.url = "github:xddxdd/nix-cachyos-kernel/release";
     nix-doom-emacs-unstraightened = {
       url = "github:marienz/nix-doom-emacs-unstraightened";
@@ -116,7 +109,7 @@
       url = "github:yaxitech/ragenix";
       inputs = {
         agenix.inputs = {
-          darwin.follows = "darwin";
+          darwin.follows = "";
           home-manager.follows = "home-manager";
           nixpkgs.follows = "nixpkgs";
           systems.follows = "systems";

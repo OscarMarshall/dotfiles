@@ -1,4 +1,4 @@
-# The `preserve` quirk: any aspect contributes one alongside its `nixos` / `hmLinux` config to
+# The `preserve` quirk: any aspect contributes one alongside its `nixos` / `homeManager` config to
 # have a filesystem path bind-mounted from `/persist` on hosts with an ephemeral root
 # (my.preservation - currently just tensoon, see modules/aspects/hosts/tensoon/disk.nix). Declared
 # once here and consumed by my.preservation; lives in its own file, like port-forward.nix /
@@ -8,7 +8,7 @@
 # options only exist where `inputs.preservation.nixosModules.default` is imported, which happens
 # only inside my.preservation, included only by tensoon. An aspect like my.orca-slicer (pulled in
 # by modules/aspects/users/oscar/oscar.nix, so present on every host oscar has an account on -
-# harmony, melaan, the Mac, the dev203 home) that referenced `preservation.*` directly would fail
+# harmony, melaan) that referenced `preservation.*` directly would fail
 # to evaluate everywhere else with "The option `preservation` does not exist". Emitting a
 # `preserve` quirk instead is inert on any host without my.preservation: the value is collected
 # scope-locally and simply never read.
@@ -22,7 +22,7 @@
 #   files                          - system files, same shape with `file` instead of `directory`.
 #   users.<name>.directories/files - per-user paths, interpreted relative to that user's home.
 #
-# A home-directory contribution comes from a user-scoped aspect (hmLinux/homeManager, included
+# A home-directory contribution comes from a user-scoped aspect (homeManager, included
 # per-user), so it takes the den `user` context arg and stamps its own `user.userName`; the
 # `expose-preserve` policy (registered in modules/aspects/defaults.nix) then lifts it to the host
 # scope where my.preservation's consumer reads it (den's pipe.expose - user-scope quirk data

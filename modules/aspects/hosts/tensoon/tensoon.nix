@@ -8,6 +8,24 @@
     includes = with my; [
       (auto-upgrade { allowReboot = false; })
       (cachyos-kernel { })
+      # 24/32 of harmony's threads - see the same comment in melaan.nix.
+      (remote-builder {
+        # MagicDNS name - see the same comment in melaan.nix.
+        builder = "harmony";
+        hostName = "harmony.ts.silverlight-nex.us";
+        maxJobs = 24;
+        publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSU1rTTV1Tlkwck15MlFNRzZJcHRseGdWbDRzUVdvZVNTTm1VcDcvZjJ6MUIK";
+        speedFactor = 4;
+
+        supportedFeatures = [
+          "big-parallel"
+          "kvm"
+          "nixos-test"
+        ];
+
+        system = "x86_64-linux";
+      })
+      (tailscale { loginServer = "https://headscale.harmony.silverlight-nex.us"; })
       boot
       disko
       locale
@@ -101,20 +119,6 @@
     #
     # You can update Home Manager without changing this value. See the Home Manager release notes for a list of state
     # version changes in each release.
-    provides =
-      let
-        # See the comment in OMARSHAL-M-T2QF.nix for why these sentinels are needed.
-        hmSentinels = {
-          hm64bit = { };
-          hmAarch64 = { };
-          hmDarwin = { };
-          hmLinux = { };
-        };
-      in
-      {
-        oscar = hmSentinels // {
-          homeManager.home.stateVersion = "26.11";
-        };
-      };
+    provides.oscar.homeManager.home.stateVersion = "26.11";
   };
 }

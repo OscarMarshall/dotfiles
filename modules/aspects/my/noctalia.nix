@@ -6,8 +6,8 @@
 # the flake's own source build (matches the "follow main" choice). Point `package` at `pkgs.noctalia`
 # if the source rebuilds get tiresome.
 #
-# As with my.umbriel, the home-manager module is wired via `home-manager.sharedModules` (a host-level
-# `hmLinux` forward carries only plain config, not module `imports`).
+# As with my.umbriel, the home-manager module is wired via `home-manager.sharedModules` on the NixOS
+# side, and the user-facing `programs.noctalia` settings live under `homeManager`.
 { inputs, ... }: {
   flake-file.inputs.noctalia = {
     url = "github:noctalia-dev/noctalia";
@@ -15,7 +15,7 @@
   };
 
   my.noctalia = {
-    hmLinux = { config, ... }: {
+    homeManager = { config, ... }: {
       programs.noctalia = {
         enable = true;
 

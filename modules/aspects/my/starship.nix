@@ -71,10 +71,10 @@ in
               # provisioning a second GitHub PAT just for this rate-limit
               # workaround.
               #
-              # On host-embedded users (melaan/harmony/the MacBook), my.nix's
+              # On host-embedded users (melaan/harmony/tensoon), my.nix's
               # secret lives in the system (osConfig), not this home-manager
-              # config; on a standalone home (dev203) it lives in this config
-              # directly and osConfig is empty. Check both.
+              # config; on a standalone home it lives in this config directly
+              # and osConfig is empty. Check both.
               tokenPath =
                 let
                   osPath = osConfig.age.secrets.nix-github-access-token.path or null;

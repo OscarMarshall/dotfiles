@@ -6,24 +6,6 @@
   ...
 }:
 let
-  hmPlatforms =
-    { aspect-chain, ... }:
-    den._.forward {
-      adaptArgs = { config, ... }: { osConfig = config; };
-
-      each = [
-        "Linux"
-        "Darwin"
-        "Aarch64"
-        "64bit"
-      ];
-
-      fromAspect = _: lib.head aspect-chain;
-      fromClass = platform: "hm${platform}";
-      guard = { pkgs, ... }: platform: lib.mkIf pkgs.stdenv."is${platform}";
-      intoClass = _: "homeManager";
-      intoPath = _: [ ];
-    };
   nixosSecrets =
     { aspect-chain, ... }:
     den._.forward {
@@ -56,7 +38,6 @@ let
 
       each = [
         "nixos"
-        "darwin"
         "homeManager"
       ];
 
@@ -77,7 +58,6 @@ in
       den.batteries.define-user
       den.batteries.hostname
       den.policies.expose-preserve # lift per-user `preserve` quirk entries to the host - see my/preserve.nix
-      hmPlatforms
       my.secrets
     ];
 
@@ -105,7 +85,13 @@ in
       };
 
       user = {
-        includes = [ my.starship ];
+        includes = [
+          # Projects `homeManager` config from the host's aspect tree (e.g. my.umbriel/my.noctalia,
+          # included by tensoon) onto each of its users.
+          den.batteries.host-aspects
+          my.starship
+        ];
+
         classes = lib.mkDefault [ "homeManager" ];
       };
     };
