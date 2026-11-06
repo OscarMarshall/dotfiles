@@ -10,6 +10,20 @@
 
       programs.opencode = {
         enable = true;
+
+        # nixpkgs' opencode 2.2.5 shipped one node_modules hash for every platform, but the output
+        # differs on Linux, so it fails to build. Fixed upstream in NixOS/nixpkgs#582675 (not yet in
+        # nixpkgs-unstable as of 2026-11-06); borrow its Linux hash until it lands, then drop this.
+        package = pkgs.opencode.overrideAttrs (
+          old:
+          assert
+            old.node_modules.outputHash == "sha256-xfOVcw1+waLVNhFDwzOtzxrUSQEogvn88YomydOlhwc="
+            || throw "opencode.nix: pkgs.opencode's node_modules hash changed - NixOS/nixpkgs#582675 has likely landed; drop the node_modules override.";
+          {
+            node_modules = old.node_modules.overrideAttrs { outputHash = "sha256-prx9dX7kUvs/E3zopkaPk5LXh3xJAy5sZeum/W8L7cA="; };
+          }
+        );
+
         # Picks up `my.mcp-servers`' shared servers (context7) from `programs.mcp`.
         enableMcpIntegration = true;
 
