@@ -108,11 +108,11 @@ in
           package = pkgs.seerr.overrideAttrs (
             old:
             # Pinned so a seerr version bump forces a check of whether upstream has released OIDC
-            # support (seerr-team/seerr#2715, still an open, unmerged PR as of 2026-10-24) - if so,
+            # support (seerr-team/seerr#2715, still an open, unmerged PR as of 2026-11-06) - if so,
             # drop the oidcFork override above and go back to the stock package.
             assert
-              old.version == "3.5.0"
-              || throw "seerr.nix: pkgs.seerr is now ${old.version} (was 3.5.0) - re-check whether seerr-team/seerr#2715 (OIDC support) has merged/released; if so, drop the oidcFork override.";
+              old.version == "3.5.1"
+              || throw "seerr.nix: pkgs.seerr is now ${old.version} (was 3.5.1) - re-check whether seerr-team/seerr#2715 (OIDC support) has merged/released; if so, drop the oidcFork override.";
             rec {
               # Seerr's OIDC login has no group/role claim mapping (not in `oidcFork`, nor at
               # seerr-team/seerr#2715's head or any other upstream PR as of 2026-10-24) - OIDC users
