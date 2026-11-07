@@ -3,7 +3,7 @@ let
   profileName = "default";
 in
 {
-  den.aspects.oscar.provides.zen-browser = {
+  den.aspects.oscar.provides.zen-browser = { user, ... }: {
     includes = [ my.zen-browser ];
 
     homeManager.programs.zen-browser = {
@@ -70,5 +70,9 @@ in
 
       setAsDefaultBrowser = true;
     };
+
+    # The profile, at ~/.config/zen now that MOZ_LEGACY_PROFILES is cleared above. `preserve`
+    # (modules/aspects/my/preserve.nix) is inert without my.preservation.
+    preserve.users.${user.userName}.directories = [ ".config/zen" ];
   };
 }

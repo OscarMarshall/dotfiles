@@ -15,15 +15,15 @@ let
     allow_when_locked = true;
   };
   mediaKeybinds = {
-    XF86AudioLowerVolume = lockable "spawn:wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-";
-    XF86AudioMicMute = lockable "spawn:wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle";
-    XF86AudioMute = lockable "spawn:wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle";
-    XF86AudioNext = "spawn:playerctl next";
-    XF86AudioPlay = "spawn:playerctl play-pause";
-    XF86AudioPrev = "spawn:playerctl previous";
-    XF86AudioRaiseVolume = lockable "spawn:wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+";
-    XF86MonBrightnessDown = lockable "spawn:brightnessctl set 5%-";
-    XF86MonBrightnessUp = lockable "spawn:brightnessctl set 5%+";
+    XF86AudioLowerVolume = lockable "spawn wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-";
+    XF86AudioMicMute = lockable "spawn wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle";
+    XF86AudioMute = lockable "spawn wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle";
+    XF86AudioNext = "spawn playerctl next";
+    XF86AudioPlay = "spawn playerctl play-pause";
+    XF86AudioPrev = "spawn playerctl previous";
+    XF86AudioRaiseVolume = lockable "spawn wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+";
+    XF86MonBrightnessDown = lockable "spawn brightnessctl set 5%-";
+    XF86MonBrightnessUp = lockable "spawn brightnessctl set 5%+";
   };
   # Scrolling layout: Left/Right walk the strip, Up/Down walk a column, Shift moves instead of focuses.
   navigationKeybinds = {
@@ -61,25 +61,25 @@ let
   # Keybinds, grouped so the merged result stays readable after the formatter sorts each attrset.
   # `Mod` is Super in a real session. Actions: see the Umbriel docs (docs/user/{keybinds,actions}.md).
   shellKeybinds = {
-    Mod = "spawn:noctalia msg panel-toggle launcher";
-    "Mod+B" = "spawn:noctalia msg panel-toggle wallpaper";
-    "Mod+Escape" = "spawn:noctalia msg panel-toggle session";
-    "Mod+Return" = "spawn:ghostty";
+    Mod = "spawn noctalia msg panel-toggle launcher";
+    "Mod+B" = "spawn noctalia msg panel-toggle wallpaper";
+    "Mod+Escape" = "spawn noctalia msg panel-toggle session";
+    "Mod+Return" = "spawn ghostty";
     # Umbriel's own overlay listing every active keybind (also shown once at startup).
     "Mod+Slash" = "cheatsheet-toggle";
-    "Mod+V" = "spawn:noctalia msg panel-toggle clipboard";
-    "Mod+X" = "spawn:noctalia msg bar-toggle";
-    Print = "spawn:noctalia msg screenshot-region";
-    "Shift+Print" = "spawn:noctalia msg screenshot-fullscreen";
+    "Mod+V" = "spawn noctalia msg panel-toggle clipboard";
+    "Mod+X" = "spawn noctalia msg bar-toggle";
+    Print = "spawn noctalia msg screenshot-region";
+    "Shift+Print" = "spawn noctalia msg screenshot-fullscreen";
     # The hardware power button. logind's HandlePowerKey is "ignore" (tensoon.nix) so the press
     # reaches us here; a long press still powers off via logind's HandlePowerKeyLongPress.
-    XF86PowerOff = "spawn:noctalia msg panel-toggle session";
+    XF86PowerOff = "spawn noctalia msg panel-toggle session";
   };
   windowKeybinds = {
     # Noctalia's fullscreen grid switcher. It takes a keyboard grab the moment it opens, so this
     # single bind is the whole interaction: keep Alt held and tap Tab to advance (Shift+Tab to go
     # back), arrow keys walk the grid, releasing Alt raises the highlighted window, Escape cancels.
-    "Alt+Tab" = "spawn:noctalia msg window-switcher";
+    "Alt+Tab" = "spawn noctalia msg window-switcher";
     "Mod+C" = "column-center";
     "Mod+F" = "window-toggle-fullscreen";
     "Mod+M" = "window-toggle-maximize";
@@ -102,8 +102,8 @@ let
       in
       lib.concatMap
         (key: [
-          (lib.nameValuePair "Mod+${key}" "workspace-switch:${target}")
-          (lib.nameValuePair "Mod+Shift+${key}" "window-move-to-workspace:${target}")
+          (lib.nameValuePair "Mod+${key}" "workspace-switch ${target}")
+          (lib.nameValuePair "Mod+Shift+${key}" "window-move-to-workspace ${target}")
         ])
         [
           digit
@@ -178,6 +178,12 @@ in
   };
 
   my.umbriel = {
+    # Keep Noctalia's generated theme sidecar (noctalia.toml, pulled in by the [include] below)
+    # across boots. Without it, Umbriel starts before Noctalia regenerates the file and logs a
+    # missing-include warning every login. `preserve` (modules/aspects/my/preserve.nix) is inert
+    # without my.preservation.
+    includes = [ ({ user, ... }: { preserve.users.${user.userName}.directories = [ ".config/umbriel" ]; }) ];
+
     homeManager.programs.umbriel = {
       enable = true;
 

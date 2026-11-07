@@ -6,6 +6,28 @@
   ...
 }:
 let
+  # Core system state every NixOS host needs across reboots on an ephemeral root (my.preservation).
+  # `preserve` (modules/aspects/my/preserve.nix) is inert everywhere else. my.preservation
+  # suppresses systemd-machine-id-commit, which has nothing to do with this machine-id bind mount.
+  corePreserve.preserve = {
+    directories = [
+      # NixOS uid/gid map - losing this reassigns user/group IDs.
+      {
+        directory = "/var/lib/nixos";
+        inInitrd = true;
+      }
+
+      "/var/lib/systemd" # random-seed, timers, backlight, rfkill, coredump
+      "/var/log"
+    ];
+
+    files = [
+      {
+        file = "/etc/machine-id";
+        inInitrd = true;
+      }
+    ];
+  };
   nixosSecrets =
     { aspect-chain, ... }:
     den._.forward {
@@ -70,6 +92,7 @@ in
 
       host = {
         includes = [
+          corePreserve
           my.fonts
           my.nix
           nixosSecrets
