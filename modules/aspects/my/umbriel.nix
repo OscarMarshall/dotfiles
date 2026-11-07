@@ -178,6 +178,12 @@ in
   };
 
   my.umbriel = {
+    # Keep Noctalia's generated theme sidecar (noctalia.toml, pulled in by the [include] below)
+    # across boots. Without it, Umbriel starts before Noctalia regenerates the file and logs a
+    # missing-include warning every login. `preserve` (modules/aspects/my/preserve.nix) is inert
+    # without my.preservation.
+    includes = [ ({ user, ... }: { preserve.users.${user.userName}.directories = [ ".config/umbriel" ]; }) ];
+
     homeManager.programs.umbriel = {
       enable = true;
 

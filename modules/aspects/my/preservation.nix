@@ -2,9 +2,9 @@
 #
 # On tensoon `/` is tmpfs and `/home` is a btrfs subvolume reset to an empty snapshot on every
 # boot (see rollback-home below and modules/aspects/hosts/tensoon/disk.nix). Everything that must
-# survive a reboot is listed here and bind-mounted (or symlinked) from `/persist`.
-#
-# The user list below is oscar-specific; generalise it if another host ever adopts this aspect.
+# survive a reboot is bind-mounted (or symlinked) from `/persist`. Nothing is listed here: each
+# aspect declares its own paths via the `preserve` quirk (modules/aspects/my/preserve.nix), merged
+# in below.
 { inputs, ... }: {
   # preservation's flake takes no inputs (the module uses the consumer's pkgs), so there is no
   # nixpkgs to make follow.
@@ -12,41 +12,13 @@
 
   my.preservation.nixos =
     {
+      config,
       lib,
       pkgs,
       preserve,
       ...
     }:
     let
-      # A preserved directory sitting directly under $HOME. Two glib quirks to paper over:
-      #
-      #   - x-gvfs-hide: glib's "should this mount show in the file manager?" heuristic answers yes
-      #     for anything mounted directly below $HOME, so every such bind mount would otherwise
-      #     appear in Nautilus's sidebar as an ejectable drive. (The dotfile entries are already
-      #     exempt - glib skips any mount path containing "/.".)
-      #
-      #   - x-gvfs-trash: glib's g_local_file_trash marks every mount whose /proc/self/mountinfo
-      #     "root" field is not "/" as "system internal" (guess_system_internal, gio/gunixmounts.c)
-      #     - which is every bind mount - and then refuses to trash files on it ("Trashing on
-      #     system internal mounts is not supported"), so Nautilus only offers permanent delete.
-      #     x-gvfs-trash is checked before that heuristic and forces trashing back on. glib then
-      #     creates a per-directory ~/<dir>/.Trash-<uid>/ on first use (freedesktop spec behaviour
-      #     for a non-$HOME filesystem); Nautilus's trash view aggregates them. Those live inside
-      #     the persisted bind mount, so trashed files survive the per-boot /home wipe too, until
-      #     the trash is emptied. See https://gitlab.gnome.org/GNOME/glib/-/issues/1271.
-      #
-      # Setting mountOptions replaces preservation's default [ "bind" "X-fstrim.notrim" ], so both
-      # are respelled here.
-      hiddenHomeBind = directory: {
-        inherit directory;
-
-        mountOptions = [
-          "bind"
-          "X-fstrim.notrim"
-          "x-gvfs-hide"
-          "x-gvfs-trash"
-        ];
-      };
       # Manage those snapshots from a running system (list is unprivileged; rm/prune need root).
       homeSnapshots = pkgs.writeShellApplication {
         name = "tensoon-home-snapshots";
@@ -197,136 +169,7 @@
         fsType = "btrfs";
       };
 
-      preservation = {
-        enable = true;
-
-        preserveAt."/persist" = {
-          directories = [
-            # NixOS uid/gid map - losing this reassigns user/group IDs.
-            {
-              directory = "/var/lib/nixos";
-              inInitrd = true;
-            }
-
-            "/var/log"
-            "/var/lib/systemd" # random-seed, timers, backlight, rfkill, coredump
-            "/var/lib/bluetooth" # pairings
-            "/var/lib/fprint" # enrolled fingerprints
-            "/var/lib/upower" # battery history
-            "/var/lib/power-profiles-daemon" # last selected profile
-            "/var/lib/NetworkManager" # DHCP leases, secret_key, timestamps
-            "/var/lib/AccountsService" # user metadata / avatars (greeter)
-            "/var/lib/cups" # configured printers
-            "/var/lib/noctalia-greeter" # sync.toml (wallpaper/palette from "Sync Now")
-
-            {
-              directory = "/etc/NetworkManager/system-connections";
-              mode = "0700";
-            } # saved Wi-Fi
-          ];
-
-          files = [
-            {
-              file = "/etc/machine-id";
-              inInitrd = true;
-            }
-            {
-              configureParent = true;
-              file = "/etc/ssh/ssh_host_ed25519_key";
-              how = "symlink";
-            }
-            {
-              configureParent = true;
-              file = "/etc/ssh/ssh_host_ed25519_key.pub";
-              how = "symlink";
-            }
-            {
-              configureParent = true;
-              file = "/etc/ssh/ssh_host_rsa_key";
-              how = "symlink";
-            }
-            {
-              configureParent = true;
-              file = "/etc/ssh/ssh_host_rsa_key.pub";
-              how = "symlink";
-            }
-          ];
-
-          users.oscar = {
-            directories = [
-              {
-                directory = ".ssh";
-                mode = "0700";
-              } # holds id_ed25519 (home-manager age key)
-              {
-                directory = ".gnupg";
-                mode = "0700";
-              }
-              {
-                directory = ".local/share/keyrings";
-                mode = "0700";
-              } # libsecret / gnome-keyring
-
-              # Local git clones (~/Projects, i.e. home-manager's XDG_PROJECTS_DIR - see
-              # xdg.userDirs in my.nautilus). Preserved outright, not just snapshotted, so
-              # uncommitted work survives even after the pre-rollback snapshots are pruned -
-              # losing this tree to a reboot is what prompted it.
-              (hiddenHomeBind "Projects")
-
-              ".local/share/fish" # shell history
-              ".local/state/nix" # per-user nix profile (incl. home-manager generations)
-              ".local/state/home-manager" # hm gcroots / news-read state
-              ".local/state/wireplumber" # per-device audio volume/routing
-              ".local/share/direnv" # direnv allow-list
-              ".local/share/nix" # trusted-settings.json
-              ".config/noctalia" # Noctalia GUI-mutable settings + custom palettes
-              # Noctalia plugin state: the git checkout + materialised runtime of the enabled
-              # community plugins (re-fetched on start if missing, so this is just to skip the
-              # network round trip) and, more importantly, plugins/data/ - VPN Manager keeps its
-              # trusted-network list and default-VPN choice there (noctalia.pluginDataDir()), which
-              # would otherwise reset every boot.
-              ".local/state/noctalia/plugins"
-              # Keep Noctalia's generated theme sidecar (noctalia.toml, pulled in by
-              # programs.umbriel's [include]) across boots. Without it, Umbriel starts before
-              # Noctalia regenerates the file and logs a missing-include warning every login.
-              ".config/umbriel"
-              ".config/discord"
-              ".claude" # Claude Code: project memory, history, todos
-              ".local/share/opencode" # OpenCode: provider auth (auth.json), sessions, snapshots
-              ".local/state/opencode" # OpenCode: prompt history, recent models
-              ".config/zen" # zen-browser profile (moved off ~/.zen via MOZ_LEGACY_PROFILES="")
-              # pass-cli's encrypted session DB (session.json, user_keys.enc, pass-cli.db). The DB
-              # key lives in gnome-keyring (PROTON_PASS_LINUX_KEYRING=dbus, see my.proton-pass) and
-              # persists via .local/share/keyrings; this is the other half - without it pass-cli
-              # comes up logged out every boot even with the key kept.
-              ".local/share/proton-pass-cli"
-
-              # Large; drop if you will not game on this machine.
-              ".local/share/Steam"
-              ".steam"
-            ]
-            ++ map hiddenHomeBind [
-              # The XDG user dirs. my.nautilus's xdg.userDirs writes ~/.config/user-dirs.dirs
-              # pointing at these default names; persist them so their contents survive the
-              # per-boot /home wipe. (~/.config/user-dirs.dirs itself is regenerated by
-              # home-manager on every activation, so it needs no entry.)
-              "Desktop"
-              "Documents"
-              "Downloads"
-              "Music"
-              "Pictures"
-              "Public"
-              "Templates"
-              "Videos"
-            ];
-
-            # Bind-mounted (not symlinked, no configureParent): preservation already creates
-            # /persist/home/oscar via its home-dir rule, and adding a configureParent rule for the
-            # same path collides with that rule's mode (homeMode "700" vs parent default "0755").
-            files = [ ".claude.json" ]; # Claude Code auth + config
-          };
-        };
-      };
+      preservation.enable = true;
 
       systemd = {
         # /etc/machine-id is bind-mounted, so the commit service (which expects to persist a tmpfs
@@ -334,25 +177,25 @@
         suppressedSystemUnits = [ "systemd-machine-id-commit.service" ];
 
         # @home is recreated from an empty root-owned @home-blank every boot. preservation only
-        # owns the persistent side (/persist/home/oscar); the volatile /home/oscar ends up root:root
-        # when systemd-tmpfiles auto-creates it as the parent of a persisted subdir, so home-manager
-        # (running as oscar) can't write to it. Create it - and ~/.cache, which isn't a parent of
-        # anything persisted - explicitly, owned by oscar. Shorter paths are processed first, so
-        # /home/oscar gets the right owner before its children.
-        tmpfiles.settings.preservation =
+        # owns the persistent side (/persist/home/<user>); the volatile home ends up root:root when
+        # systemd-tmpfiles auto-creates it as the parent of a persisted subdir, so home-manager
+        # (running as the user) can't write to it. Create every normal user's home - and its
+        # ~/.cache, which isn't a parent of anything persisted - explicitly, owned by that user.
+        # Shorter paths are processed first, so the home gets the right owner before its children.
+        tmpfiles.settings.preservation = lib.concatMapAttrs (
+          _: u:
           let
-            oscarDir = mode: {
-              d = {
-                inherit mode;
-                group = "users";
-                user = "oscar";
-              };
+            userDir.d = {
+              inherit (u) group;
+              mode = "0700";
+              user = u.name;
             };
           in
           {
-            "/home/oscar" = oscarDir "0700";
-            "/home/oscar/.cache" = oscarDir "0700";
-          };
+            ${u.home} = userDir;
+            "${u.home}/.cache" = userDir;
+          }
+        ) (lib.filterAttrs (_: u: u.isNormalUser) config.users.users);
       };
     };
 }

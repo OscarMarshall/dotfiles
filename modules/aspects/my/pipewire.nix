@@ -1,16 +1,21 @@
 {
-  my.pipewire.nixos = {
-    security.rtkit.enable = true;
+  my.pipewire = {
+    # WirePlumber's per-device volume/routing. `preserve` (modules/aspects/my/preserve.nix) is inert without my.preservation.
+    includes = [ ({ user, ... }: { preserve.users.${user.userName}.directories = [ ".local/state/wireplumber" ]; }) ];
 
-    services.pipewire = {
-      enable = true;
+    nixos = {
+      security.rtkit.enable = true;
 
-      alsa = {
+      services.pipewire = {
         enable = true;
-        support32Bit = true;
-      };
 
-      pulse.enable = true;
+        alsa = {
+          enable = true;
+          support32Bit = true;
+        };
+
+        pulse.enable = true;
+      };
     };
   };
 }

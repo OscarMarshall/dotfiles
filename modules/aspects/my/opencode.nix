@@ -1,5 +1,5 @@
 { inputs, my, ... }: {
-  my.opencode = {
+  my.opencode = { user, ... }: {
     includes = [ my.mcp-servers ];
 
     homeManager = { config, pkgs, ... }: {
@@ -56,5 +56,11 @@
         };
       };
     };
+
+    # `preserve` (modules/aspects/my/preserve.nix) is inert without my.preservation.
+    preserve.users.${user.userName}.directories = [
+      ".local/share/opencode" # provider auth (auth.json), sessions, snapshots
+      ".local/state/opencode" # prompt history, recent models
+    ];
   };
 }
