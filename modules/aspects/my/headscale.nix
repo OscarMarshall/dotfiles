@@ -4,13 +4,9 @@
 # my.tailscale clients (melaan/tensoon, and harmony itself) reach each other from
 # anywhere without exposing sshd - or anything else - to WAN; see remote-builder.nix's own header.
 #
-# harmony joins its own tailnet on its own (headscale-self-join below). The laptops need a reusable
-# preauth key, minted once after the first `nixos-rebuild switch` that deploys this:
-#   ssh harmony
-#   sudo headscale users list   # `--user` below takes this numeric ID, not the name
-#   sudo headscale preauthkeys create --user <ID> --reusable --expiration 87600h
-# Save the printed key in Proton Pass (Personal vault, Custom item "Headscale preauth key", hidden
-# "API Key" field), then run `tailscale-join` once on each laptop - see my.tailscale's own header.
+# harmony joins its own tailnet on its own (headscale-self-join below). Every other machine logs in
+# through Authentik (`oidc` below): `tailscale up` prints a URL, and signing in there registers the
+# node to that Authentik user - see my.tailscale's own header for the command.
 {
   my.headscale =
     { host, ... }:
@@ -55,13 +51,32 @@
               ];
             };
 
+            # Interactive logins (`tailscale up` with no auth key) go through Authentik, whose app for
+            # this is admin-only (`group = "Infra"` below - see authentik.nix's binding-entries-for).
+            # Preauth keys keep working alongside it, for harmony's own self-join and CI.
+            oidc = {
+              client_id = "headscale";
+              client_secret_path = config.age.secrets.headscale-oidc-client-secret.path;
+              issuer = "https://${config.services.authentik.nginx.host}/application/o/headscale/";
+              # Headscale otherwise refuses to start while Authentik is unreachable (e.g. still
+              # starting at boot), taking the whole tailnet's control plane - and harmony's
+              # self-join and CI's preauth keys - down with it. Only new browser logins need it.
+              only_start_if_oidc_is_available = false;
+
+              scope = [
+                "openid"
+                "profile"
+                "email"
+              ];
+            };
+
             server_url = "https://${url}";
           };
         };
 
         # harmony is the one tailnet member that can mint its own preauth key, so it joins itself
-        # instead of needing `tailscale-join` and the Proton Pass key (pass-cli can't unlock over a
-        # headless SSH session anyway). The key is single-use and expires in 5 minutes, so nothing
+        # instead of needing a browser login through Authentik - which, being a headless server it
+        # hosts itself, it has no good way to do. The key is single-use and expires in 5 minutes, so nothing
         # long-lived is left behind. A no-op on every boot after the first - /var/lib/tailscale is
         # persistent, so tailscaled comes back up already logged in - and also whenever tailscaled is
         # in any state other than NeedsLogin (e.g. a deliberate `tailscale down`), so it never fights
@@ -122,15 +137,29 @@
         };
       };
 
-      # No `oidc` (unlike Authentik's other native-login apps, e.g. storyteller.nix) - a reusable
-      # preauth key is simpler for a small, fixed set of already-known machines and skips having to
-      # hand-copy an Authentik-generated client_id into headscale's config as a second manual step.
+      # NOT `intermediary`: headscale reads it on the host (client_secret_path above) as well as
+      # feeding Authentik's side through Terraform, like immich.nix's equivalent.
+      secrets.headscale-oidc-client-secret = {
+        generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 32";
+        owner = "headscale";
+        settings.terraform = "variable";
+      };
+
       virtual-host = {
         group = "Infra";
         homepage.description = "Self-hosted Tailscale coordination server";
         host = host.name;
         icon = "headscale.svg";
+        label = "Headscale";
         name = "headscale";
+
+        # Requests the matching OAuth2 Provider + Application from Authentik (authentik.nix);
+        # `/oidc/callback` is headscale's fixed callback route.
+        oidc = {
+          client-secret = "headscale-oidc-client-secret";
+          redirect-paths = [ "/oidc/callback" ];
+        };
+
         port = 8080;
         # Tailscale clients reach headscale's control protocol (ts2021) by sending an HTTP
         # `Upgrade: tailscale-control-protocol` request, the same mechanism as a WebSocket upgrade.
