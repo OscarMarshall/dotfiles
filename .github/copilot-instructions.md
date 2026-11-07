@@ -559,7 +559,7 @@ cannot run any step 2 or 4 command (no access to harmony's running `headscale`/`
 confirm an actual remote build succeeded end to end.
 
 **GitHub Actions** (`.github/workflows/test.yml`'s `build-linux` job) joins the tailnet per-run instead of having a
-standing host config: a `tailscale/github-action` step before `cachix/install-nix-action`, then a
+standing host config: a `tailscale/github-action` step before `samueldr/lix-gha-installer-action`, then a
 `builders = ssh-ng://...` line in that same step's `extra_nix_config`. Two secrets live in GitHub's own secret store
 instead of agenix - `REMOTE_BUILDER_CI_SSH_KEY` (a second dedicated keypair, separate from the one melaan/tensoon share,
 so it's independently revocable) and `TAILSCALE_CI_AUTHKEY` (a reusable, **ephemeral** Headscale preauth key -
