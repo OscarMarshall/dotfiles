@@ -142,7 +142,7 @@ in
           # This crash-looped when renovate auto-bumped straight from 17 to 18 in place against the
           # old mount path; a future major bump like this one won't auto-merge again - see
           # renovate.json's own major-Docker-image packageRule.
-          image = "postgres:18@sha256:979bccfde35445db618c65107d27d08c6c21339d8dc3ad4c830c6633947be0e4";
+          image = "postgres:18@sha256:e3d24f6906d0760bf4da0dae872415391ededefad23fd471c47dc53b0ddf3c42";
           networks = [ network ];
           volumes = [ "/metalminds/${dbName}:/var/lib/postgresql" ];
         };

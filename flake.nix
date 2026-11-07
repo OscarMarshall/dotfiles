@@ -61,7 +61,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     import-tree.url = "github:denful/import-tree";
-    mcp-nixos.url = "github:utensils/mcp-nixos";
     nix-cachyos-kernel.url = "github:xddxdd/nix-cachyos-kernel/release";
     nix-doom-emacs-unstraightened = {
       url = "github:marienz/nix-doom-emacs-unstraightened";
@@ -105,7 +104,7 @@
       url = "github:DietrichGebert/ponytail";
       flake = false;
     };
-    preservation.url = "github:mjm/preservation/ed8dbeaac0ad240341259c814cade7163a53fc1f";
+    preservation.url = "github:nix-community/preservation";
     ragenix = {
       url = "github:yaxitech/ragenix";
       inputs = {
