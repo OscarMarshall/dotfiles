@@ -39,7 +39,6 @@
       (seerr { global = true; })
       (sonarr { administrators = [ "oscar" ]; })
       (storyteller { global = true; })
-      (tailscale { loginServer = "https://headscale.harmony.silverlight-nex.us"; })
       (tautulli { })
       (zfs [ "metalminds" ])
       boot
@@ -47,6 +46,7 @@
       den.aspects.harmony.provides.minecraft-servers
       dns
       fail2ban
+      headplane
       headscale
       homepage
       lm-sensors
@@ -61,6 +61,7 @@
       samba
       satisfactory-server
       ssh-server
+      tailscale
       terranix
       unpackerr
       vpn-confinement
