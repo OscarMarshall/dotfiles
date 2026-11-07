@@ -157,8 +157,10 @@ The **tensoon** laptop (x86_64-linux) includes:
 - **Desktop Environment**: Noctalia (Wayland shell) on Umbriel (wlroots/SceneFX compositor), via a noctalia-greeter
   greetd session
 - **Disk**: disko-managed LUKS + btrfs layout with an ephemeral (`tmpfs`) root; `my.preservation` bind-mounts/symlinks
-  everything that must survive a reboot from `/persist`; both LUKS containers can also be unlocked with a FIDO2-enrolled
-  YubiKey (`my.yubikey` provides the pcscd smartcard interface)
+  everything that must survive a reboot from `/persist`. It lists no paths itself: each aspect declares the state it
+  owns through the `preserve` quirk (`modules/aspects/my/preserve.nix`), and core OS state comes from `defaults.nix`;
+  both LUKS containers can also be unlocked with a FIDO2-enrolled YubiKey (`my.yubikey` provides the pcscd smartcard
+  interface)
 - **Applications**: Ghostty, Zen Browser, Discord, Steam
 
 ## Building and Deploying
@@ -311,8 +313,8 @@ The configuration uses Den aspects organized into three main categories:
 - **oscar**: Primary user with full desktop environment, development tools, emacs, git config
   - Graphical apps (Discord, Ghostty, Zen Browser, PrusaSlicer) via direct `host.graphical` checks
   - AI coding agents on every host: Claude Code (`my.claude`) and OpenCode (`my.opencode`). OpenCode's state
-    (`~/.local/share/opencode`, `~/.local/state/opencode`) is listed in `my.preservation` so it survives tensoon's
-    ephemeral home
+    (`~/.local/share/opencode`, `~/.local/state/opencode`) is declared via `my.opencode`'s `preserve` entry so it
+    survives tensoon's ephemeral home
 - **adelline**: Secondary user on melaan with basic GNOME setup
 - Each user aspect:
   - Defines user account details (name via `user.description`, hashed password, SSH keys)
