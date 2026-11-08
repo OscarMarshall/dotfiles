@@ -16,165 +16,176 @@
       url = "headscale.${host.name}.${domain}";
     in
     {
-      nixos = { config, pkgs, ... }: {
-        # harmony's own my.tailscale node (harmony.nix) talks to this same server_url, which is a
-        # DNS-only record pointing at the router's dynamic-DNS WAN hostname (dns.nix). Most
-        # consumer routers - the Meraki MX included - don't do NAT hairpin/loopback for their own
-        # forwarded ports, so a request to that hostname from harmony's own LAN interface would
-        # time out or bounce off the router instead of coming back to itself. Force it to loopback.
-        networking.extraHosts = "127.0.0.1 ${url}";
+      nixos =
+        {
+          config,
+          lib,
+          pkgs,
+          ...
+        }:
+        {
+          # harmony's own my.tailscale node (harmony.nix) talks to this same server_url, which is a
+          # DNS-only record pointing at the router's dynamic-DNS WAN hostname (dns.nix). Most
+          # consumer routers - the Meraki MX included - don't do NAT hairpin/loopback for their own
+          # forwarded ports, so a request to that hostname from harmony's own LAN interface would
+          # time out or bounce off the router instead of coming back to itself. Force it to loopback.
+          networking.extraHosts = "127.0.0.1 ${url}";
 
-        services.headscale = {
-          enable = true;
-          port = 8080;
+          services.headscale = {
+            enable = true;
+            port = 8080;
 
-          settings = {
-            derp = {
-              # Not self-hosting a DERP relay - `urls` (Tailscale's own public map) is enough to get
-              # NAT traversal without running yet another service.
-              server.enabled = false;
-              urls = [ "https://controlplane.tailscale.com/derpmap/default" ];
+            settings = {
+              derp = {
+                # Not self-hosting a DERP relay - `urls` (Tailscale's own public map) is enough to get
+                # NAT traversal without running yet another service.
+                server.enabled = false;
+                urls = [ "https://controlplane.tailscale.com/derpmap/default" ];
+              };
+
+              dns = {
+                # MUST differ from server_url's domain (headscale refuses to start otherwise) - this
+                # namespace is only ever resolved by tailnet members via MagicDNS, never published to
+                # public DNS, so it doesn't need to be a real delegated subdomain.
+                base_domain = "ts.${domain}";
+                magic_dns = true;
+
+                # Required by the module regardless of `override_local_dns` (left at its false
+                # default - clients keep their own resolver for everything outside base_domain, this
+                # is only the fallback used for the tailnet's OWN forward/reverse lookups).
+                nameservers.global = [
+                  "1.1.1.1"
+                  "1.0.0.1"
+                ];
+              };
+
+              # Interactive logins (`tailscale up` with no auth key) go through Authentik, whose app for
+              # this is admin-only (`group = "Infra"` below - see authentik.nix's binding-entries-for).
+              # Preauth keys keep working alongside it, for harmony's own self-join and CI.
+              oidc = {
+                client_id = "headscale";
+                client_secret_path = config.age.secrets.headscale-oidc-client-secret.path;
+                issuer = "https://${config.services.authentik.nginx.host}/application/o/headscale/";
+                # Headscale otherwise refuses to start while Authentik is unreachable (e.g. still
+                # starting at boot), taking the whole tailnet's control plane - and harmony's
+                # self-join and CI's preauth keys - down with it. Only new browser logins need it.
+                only_start_if_oidc_is_available = false;
+
+                scope = [
+                  "openid"
+                  "profile"
+                  "email"
+                ];
+              };
+
+              server_url = "https://${url}";
+            };
+          };
+
+          systemd.services = {
+            # Headscale sets up its OIDC provider exactly once, at startup, and with
+            # `only_start_if_oidc_is_available = false` an unreachable issuer silently downgrades it to
+            # CLI registration (`headscale auth register ...`) until its next restart. Confirmed live on
+            # 2026-11-07: a switch restarted headscale at 00:37:10, six seconds before authentik.service
+            # came back (00:37:16), so it got a 502 and stayed CLI-only. Same race as terranix.nix's
+            # terraform unit: `after` only orders the starts, it doesn't wait for gunicorn to actually
+            # listen, hence the bounded poll on the issuer's discovery document as well. Never fails the
+            # start - after 2 minutes headscale comes up anyway, CLI-only, rather than taking the
+            # control plane down with Authentik. Doesn't cover the very first deploy, where Terraform
+            # only creates the Authentik app after this; restart headscale once by hand then.
+            headscale = {
+              after = [
+                "authentik.service"
+                "nginx.service"
+              ];
+
+              # A deadline on bash's SECONDS (not a try count, whose wall time depends on how each curl
+              # fails), reset here in case anything merged ahead of this already ran, and no `exit 0` on
+              # success, so nothing merged after this is skipped. The URL is built the way go-oidc
+              # (headscale's OIDC client) builds it - issuer minus any trailing slash, then
+              # `/.well-known/...`, following redirects - so this succeeds exactly when headscale would.
+              preStart = ''
+                SECONDS=0
+                until ${pkgs.curl}/bin/curl -sfLo /dev/null --max-time 5 \
+                  ${lib.removeSuffix "/" config.services.headscale.settings.oidc.issuer}/.well-known/openid-configuration; do
+                  if [ "$SECONDS" -ge 120 ]; then
+                    echo "OIDC issuer still unreachable, starting with CLI-only registration" >&2
+                    break
+                  fi
+                  sleep 2
+                done
+              '';
+
+              # The wait above counts against the start timeout (90s by default), which would
+              # otherwise kill the start - and the control plane with it - instead of falling back.
+              serviceConfig.TimeoutStartSec = "4min";
             };
 
-            dns = {
-              # MUST differ from server_url's domain (headscale refuses to start otherwise) - this
-              # namespace is only ever resolved by tailnet members via MagicDNS, never published to
-              # public DNS, so it doesn't need to be a real delegated subdomain.
-              base_domain = "ts.${domain}";
-              magic_dns = true;
+            # harmony is the one tailnet member that can mint its own preauth key, so it joins itself
+            # instead of needing a browser login through Authentik - which, being a headless server it
+            # hosts itself, it has no good way to do. The key is single-use and expires in 5 minutes, so nothing
+            # long-lived is left behind. A no-op on every boot after the first - /var/lib/tailscale is
+            # persistent, so tailscaled comes back up already logged in - and also whenever tailscaled is
+            # in any state other than NeedsLogin (e.g. a deliberate `tailscale down`), so it never fights
+            # a manual change. Goes through nginx at the public URL (looped back by extraHosts above) so
+            # harmony's control URL matches server_url like every other node's.
+            headscale-self-join = {
+              wantedBy = [ "multi-user.target" ];
 
-              # Required by the module regardless of `override_local_dns` (left at its false
-              # default - clients keep their own resolver for everything outside base_domain, this
-              # is only the fallback used for the tailnet's OWN forward/reverse lookups).
-              nameservers.global = [
-                "1.1.1.1"
-                "1.0.0.1"
+              after = [
+                "headscale.service"
+                "network-online.target"
+                "nginx.service"
+                "tailscaled.service"
+              ];
+
+              path = [
+                config.services.headscale.package
+                config.services.tailscale.package
+                pkgs.jq
+              ];
+
+              requires = [ "headscale.service" ];
+
+              script = ''
+                # tailscaled reports NoState (or nothing) until it has finished loading its state.
+                state=
+                for _ in $(seq 30); do
+                  state=$(tailscale status --json 2>/dev/null | jq -r '.BackendState // empty') || true
+                  if [ -n "$state" ] && [ "$state" != NoState ]; then break; fi
+                  sleep 1
+                done
+                if [ "$state" != NeedsLogin ]; then exit 0; fi
+
+                # headscale's CLI socket appears a moment after the unit is marked started.
+                for _ in $(seq 30); do
+                  if headscale users list >/dev/null 2>&1; then break; fi
+                  sleep 1
+                done
+
+                # Its own user rather than a person's: it's a server, not anyone's device, and keeping it
+                # off `oscar` leaves that name to the Authentik user the laptops log in as.
+                id=$(headscale users list --name harmony -o json | jq -r '.[0].id // empty')
+                if [ -z "$id" ]; then id=$(headscale users create harmony -o json | jq -r .id); fi
+
+                key=$(mktemp)
+                trap 'rm -f "$key"' EXIT
+                headscale preauthkeys create --user "$id" --expiration 5m -o json | jq -j .key > "$key"
+                # `tailscale up` otherwise retries a failing registration forever, which would leave this
+                # oneshot "activating" and a `nixos-rebuild switch` waiting on it. The key outlives this,
+                # so a timed-out attempt fails visibly and the next boot (or a restart) mints a new one.
+                tailscale up --accept-dns --auth-key="file:$key" --login-server=https://${url} --timeout=2m
+              '';
+
+              serviceConfig.Type = "oneshot";
+
+              wants = [
+                "network-online.target"
+                "tailscaled.service"
               ];
             };
-
-            # Interactive logins (`tailscale up` with no auth key) go through Authentik, whose app for
-            # this is admin-only (`group = "Infra"` below - see authentik.nix's binding-entries-for).
-            # Preauth keys keep working alongside it, for harmony's own self-join and CI.
-            oidc = {
-              client_id = "headscale";
-              client_secret_path = config.age.secrets.headscale-oidc-client-secret.path;
-              issuer = "https://${config.services.authentik.nginx.host}/application/o/headscale/";
-              # Headscale otherwise refuses to start while Authentik is unreachable (e.g. still
-              # starting at boot), taking the whole tailnet's control plane - and harmony's
-              # self-join and CI's preauth keys - down with it. Only new browser logins need it.
-              only_start_if_oidc_is_available = false;
-
-              scope = [
-                "openid"
-                "profile"
-                "email"
-              ];
-            };
-
-            server_url = "https://${url}";
           };
         };
-
-        systemd.services = {
-          # Headscale sets up its OIDC provider exactly once, at startup, and with
-          # `only_start_if_oidc_is_available = false` an unreachable issuer silently downgrades it to
-          # CLI registration (`headscale auth register ...`) until its next restart. Confirmed live on
-          # 2026-11-07: a switch restarted headscale at 00:37:10, six seconds before authentik.service
-          # came back (00:37:16), so it got a 502 and stayed CLI-only. Same race as terranix.nix's
-          # terraform unit: `after` only orders the starts, it doesn't wait for gunicorn to actually
-          # listen, hence the bounded poll on the issuer's discovery document as well. Never fails the
-          # start - after 2 minutes headscale comes up anyway, CLI-only, rather than taking the
-          # control plane down with Authentik. Doesn't cover the very first deploy, where Terraform
-          # only creates the Authentik app after this; restart headscale once by hand then.
-          headscale = {
-            after = [
-              "authentik.service"
-              "nginx.service"
-            ];
-
-            # A deadline on bash's SECONDS (not a try count, whose wall time depends on how each curl
-            # fails), and no `exit 0` on success, so nothing merged after this is skipped.
-            preStart = ''
-              until ${pkgs.curl}/bin/curl -sfo /dev/null --max-time 5 \
-                ${config.services.headscale.settings.oidc.issuer}.well-known/openid-configuration; do
-                if [ "$SECONDS" -ge 120 ]; then
-                  echo "OIDC issuer still unreachable, starting with CLI-only registration" >&2
-                  break
-                fi
-                sleep 2
-              done
-            '';
-
-            # The wait above counts against the start timeout (90s by default), which would
-            # otherwise kill the start - and the control plane with it - instead of falling back.
-            serviceConfig.TimeoutStartSec = "4min";
-          };
-
-          # harmony is the one tailnet member that can mint its own preauth key, so it joins itself
-          # instead of needing a browser login through Authentik - which, being a headless server it
-          # hosts itself, it has no good way to do. The key is single-use and expires in 5 minutes, so nothing
-          # long-lived is left behind. A no-op on every boot after the first - /var/lib/tailscale is
-          # persistent, so tailscaled comes back up already logged in - and also whenever tailscaled is
-          # in any state other than NeedsLogin (e.g. a deliberate `tailscale down`), so it never fights
-          # a manual change. Goes through nginx at the public URL (looped back by extraHosts above) so
-          # harmony's control URL matches server_url like every other node's.
-          headscale-self-join = {
-            wantedBy = [ "multi-user.target" ];
-
-            after = [
-              "headscale.service"
-              "network-online.target"
-              "nginx.service"
-              "tailscaled.service"
-            ];
-
-            path = [
-              config.services.headscale.package
-              config.services.tailscale.package
-              pkgs.jq
-            ];
-
-            requires = [ "headscale.service" ];
-
-            script = ''
-              # tailscaled reports NoState (or nothing) until it has finished loading its state.
-              state=
-              for _ in $(seq 30); do
-                state=$(tailscale status --json 2>/dev/null | jq -r '.BackendState // empty') || true
-                if [ -n "$state" ] && [ "$state" != NoState ]; then break; fi
-                sleep 1
-              done
-              if [ "$state" != NeedsLogin ]; then exit 0; fi
-
-              # headscale's CLI socket appears a moment after the unit is marked started.
-              for _ in $(seq 30); do
-                if headscale users list >/dev/null 2>&1; then break; fi
-                sleep 1
-              done
-
-              # Its own user rather than a person's: it's a server, not anyone's device, and keeping it
-              # off `oscar` leaves that name to the Authentik user the laptops log in as.
-              id=$(headscale users list --name harmony -o json | jq -r '.[0].id // empty')
-              if [ -z "$id" ]; then id=$(headscale users create harmony -o json | jq -r .id); fi
-
-              key=$(mktemp)
-              trap 'rm -f "$key"' EXIT
-              headscale preauthkeys create --user "$id" --expiration 5m -o json | jq -j .key > "$key"
-              # `tailscale up` otherwise retries a failing registration forever, which would leave this
-              # oneshot "activating" and a `nixos-rebuild switch` waiting on it. The key outlives this,
-              # so a timed-out attempt fails visibly and the next boot (or a restart) mints a new one.
-              tailscale up --accept-dns --auth-key="file:$key" --login-server=https://${url} --timeout=2m
-            '';
-
-            serviceConfig.Type = "oneshot";
-
-            wants = [
-              "network-online.target"
-              "tailscaled.service"
-            ];
-          };
-        };
-      };
 
       # NOT `intermediary`: headscale reads it on the host (client_secret_path above) as well as
       # feeding Authentik's side through Terraform, like immich.nix's equivalent.
