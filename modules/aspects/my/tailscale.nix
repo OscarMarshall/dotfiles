@@ -8,7 +8,7 @@
 # persists its login in /var/lib/tailscale and reconnects on its own every boot.
 #
 # harmony doesn't need that: it hosts headscale, so headscale.nix's headscale-self-join mints a
-# throwaway key and joins it automatically.
+# throwaway key and joins it automatically, as its own `harmony` user.
 {
   my.tailscale = {
     nixos.services.tailscale.enable = true;
