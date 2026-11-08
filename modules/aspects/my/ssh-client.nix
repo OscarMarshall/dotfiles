@@ -56,5 +56,17 @@ in
           };
         };
       };
+
+      # known_hosts, plus id_ed25519 - the home-manager age key (see modules/aspects/users/oscar). Only
+      # with a host `user` (a standalone home has no my.preservation). `preserve`
+      # (modules/aspects/my/preserve.nix) is inert without my.preservation.
+      preserve = lib.optionalAttrs (user != null) {
+        users.${user.userName}.directories = [
+          {
+            directory = ".ssh";
+            mode = "0700";
+          }
+        ];
+      };
     };
 }

@@ -18,7 +18,7 @@
     };
   };
 
-  my.claude = {
+  my.claude = { user, ... }: {
     includes = [
       (den._.unfree [ "claude-code" ])
       my.mcp-servers
@@ -239,6 +239,16 @@
           };
         };
       };
+    };
+
+    # Claude Code's state, for ephemeral-root hosts. `preserve` (modules/aspects/my/preserve.nix) is
+    # inert without my.preservation. ~/.claude.json is bind-mounted, not symlinked with
+    # configureParent: preservation already creates /persist/home/<user> via its home-dir rule, and a
+    # configureParent rule for the same path collides with that rule's mode (homeMode "700" vs
+    # parent default "0755").
+    preserve.users.${user.userName} = {
+      directories = [ ".claude" ]; # project memory, history, todos
+      files = [ ".claude.json" ]; # auth + config
     };
   };
 }

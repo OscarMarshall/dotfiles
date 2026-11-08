@@ -27,6 +27,7 @@
       })
       boot
       disko
+      fingerprint
       locale
       nautilus
       networkmanager
@@ -34,6 +35,7 @@
       noctalia-greeter
       pipewire
       preservation
+      printing
       ssh-server
       tailscale
       umbriel
@@ -66,15 +68,6 @@
       # this host's tmpfs root drops every boot - so it lectures on the first sudo after each
       # reboot. Turn it off.
       security.sudo.extraConfig = "Defaults lecture = never";
-
-      services = {
-        avahi = {
-          enable = true;
-          nssmdns4 = true;
-        };
-
-        printing.enable = true;
-      };
 
       # A short power-button press opens Noctalia's session panel (bound as XF86PowerOff in
       # my.umbriel) instead of an instant poweroff; hold it to force off. Closing the lid

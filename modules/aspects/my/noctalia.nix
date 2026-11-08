@@ -15,6 +15,23 @@
   };
 
   my.noctalia = {
+    # Noctalia's mutable state, for ephemeral-root hosts. `preserve` (modules/aspects/my/preserve.nix)
+    # is inert without my.preservation.
+    #   ~/.config/noctalia       GUI-mutable settings + custom palettes
+    #   ~/.local/state/noctalia  runtime settings.toml, the launcher's ranking (usage_counts.json,
+    #                            recently_used.json), clipboard + notification history, and
+    #                            plugins/ - the enabled community plugins' checkout (re-fetched if
+    #                            missing) and plugins/data/, where VPN Manager keeps its
+    #                            trusted-network list and default VPN (noctalia.pluginDataDir())
+    includes = [
+      ({ user, ... }: {
+        preserve.users.${user.userName}.directories = [
+          ".config/noctalia"
+          ".local/state/noctalia"
+        ];
+      })
+    ];
+
     homeManager = { config, ... }: {
       programs.noctalia = {
         enable = true;
@@ -97,7 +114,7 @@
           # protocol, plus auto connect/disconnect keyed on a trusted-network list. Noctalia fetches
           # it from the built-in "community" source on first start and re-materialises it after
           # tensoon's per-boot state wipe (ensureEnabledMaterialized); the nixos block below adds its
-          # optional GUI helpers and my.preservation keeps its ~/.local/state/noctalia/plugins data
+          # optional GUI helpers and the `preserve` entry at the top keeps its plugins/data
           # (trusted networks, default VPN) across reboots. Per-plugin toggles (auto_connect_enabled,
           # poll_interval_seconds, ...) are left to the UI.
           plugins.enabled = [ "andrewdems/vpn-manager" ];
@@ -228,5 +245,12 @@
         platformTheme = "qt5ct";
       };
     };
+
+    # State of the services recommendedServices turns on (NetworkManager's is my.networkmanager's).
+    preserve.directories = [
+      "/var/lib/bluetooth" # pairings
+      "/var/lib/power-profiles-daemon" # last selected profile
+      "/var/lib/upower" # battery history
+    ];
   };
 }
