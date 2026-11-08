@@ -43,6 +43,19 @@ in
   flake.nixConfig = flakeFileNixConfig;
 
   my.nix = {
+    # Per-user nix state. Via `includes` because my.nix also applies at host and standalone-home
+    # scope, where there is no `user`. `preserve` (modules/aspects/my/preserve.nix) is inert
+    # without my.preservation.
+    includes = [
+      ({ user, ... }: {
+        preserve.users.${user.userName}.directories = [
+          ".local/share/nix" # trusted-settings.json
+          ".local/state/home-manager" # hm gcroots / news-read state
+          ".local/state/nix" # per-user nix profile (incl. home-manager generations)
+        ];
+      })
+    ];
+
     homeManager = { config, pkgs, ... }: mkNixConfig { inherit config pkgs; };
 
     os =
