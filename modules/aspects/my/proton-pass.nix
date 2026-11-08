@@ -9,7 +9,7 @@ let
   linuxKeyProvider = "dbus";
 in
 {
-  my.proton-pass = {
+  my.proton-pass = { user, ... }: {
     includes = [ (den._.unfree [ "proton-pass-cli" ]) ];
 
     homeManager = {
@@ -21,5 +21,12 @@ in
       # the shell can't read. Same value, one source, so they can't drift.
       systemd.user.services.proton-pass-agent.Service.Environment = [ "PROTON_PASS_LINUX_KEYRING=${linuxKeyProvider}" ];
     };
+
+    # pass-cli's encrypted session DB (session.json, user_keys.enc, pass-cli.db). The DB key lives in
+    # gnome-keyring (see linuxKeyProvider above) and persists via my.noctalia-greeter's
+    # ~/.local/share/keyrings entry; this is the other half - without it pass-cli comes up logged out
+    # every boot even with the key kept. `preserve` (modules/aspects/my/preserve.nix) is inert without
+    # my.preservation.
+    preserve.users.${user.userName}.directories = [ ".local/share/proton-pass-cli" ];
   };
 }
