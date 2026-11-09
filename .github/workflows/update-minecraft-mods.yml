@@ -69,8 +69,9 @@ jobs:
             nix build --no-link "$prefix.symlinks.mods" "$prefix.package"
           done
 
-          # A Minecraft upgrade rewrites a world irreversibly, so it always waits for a human;
-          # mod-only bumps within the same game version auto-merge.
+          # Every PR waits for a human: mods are arbitrary code running on harmony (a hijacked
+          # author account would otherwise reach it within a day via auto-upgrade), and a
+          # Minecraft upgrade rewrites a world irreversibly, so those also get a label.
           versions='map_values(.gameVersion)'
           if [ "$(git show "HEAD:$lock" | jq -cS "$versions")" = "$(jq -cS "$versions" "$lock")" ]; then
             echo "game-version-changed=false" >> "$GITHUB_OUTPUT"
@@ -89,9 +90,8 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Open PR
-        id: pr
         if: steps.check.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        uses: peter-evans/create-pull-request@15733dbdfeedb4f7fdb73d13c6f5ac83b710fab8 # v8.1.2
         with:
           # See terraform-provider-lock.yml for why the PAT (Test only runs on PRs it opens).
           token: ${{ secrets.PAT || github.token }}
@@ -102,11 +102,3 @@ jobs:
           labels: ${{ steps.check.outputs.game-version-changed == 'true' && 'minecraft-game-version' || '' }}
           branch: update-minecraft-mods
           delete-branch: true
-
-      - name: Enable auto-merge on mod-only bumps
-        if: >
-          steps.pr.outputs.pull-request-number && steps.check.outputs.game-version-changed == 'false'
-        env:
-          GH_TOKEN: ${{ secrets.PAT || github.token }}
-          PR_URL: ${{ steps.pr.outputs.pull-request-url }}
-        run: gh pr merge --auto --squash "$PR_URL"

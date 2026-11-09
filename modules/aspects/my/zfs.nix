@@ -52,10 +52,6 @@
 #                 newly-created files/dirs inherit it too, regardless of the writing process's own
 #                 umask - stronger, for this specific purpose, than `qbittorrent.nix`'s own `UMask`,
 #                 though that stays too as a reasonable baseline independent of this).
-#   options     - (optional, attrset) ZFS property name/value pairs (e.g. `{ compression = "lz4";
-#                 quota = "10G"; }`), passed as `-o property=value` flags to `zfs create`. Only
-#                 applied at CREATION time, same as `zfs create` itself - not retroactively applied
-#                 to a dataset that already exists.
 #   units       - (optional, list of str) `systemd.services.<name>` keys (bare names, no `.service`
 #                 suffix - e.g. `"podman-profilarr"`, one of nix-minecraft's own
 #                 `"minecraft-server-<world>"` names) that read/write this dataset and must not
@@ -69,11 +65,13 @@
 
   my.zfs = pools: {
     nixos =
-      { pkgs, dataset, ... }:
+      {
+        config,
+        pkgs,
+        dataset,
+        ...
+      }:
       let
-        # Use the default ZFS package for compatibility checking to avoid infinite recursion
-        # We can't use config.boot.zfs.package here because it depends on kernelPackages which we're trying to determine
-        defaultZfsPackage = pkgs.zfs;
         # One oneshot service per dataset, named `zfs-dataset-<pool>-<name>` - `units` (see the
         # record-shape comment above) is how a consumer gets ordered against it; nothing does so
         # automatically otherwise.
@@ -97,15 +95,10 @@
 
             serviceConfig = {
               ExecStart = pkgs.writeShellScript "ensure-zfs-dataset-${d.pool}-${d.name}" (
-                let
-                  createOptions = lib.concatStrings (
-                    lib.mapAttrsToList (property: value: " -o ${lib.escapeShellArg "${property}=${value}"}") (d.options or { })
-                  );
-                in
                 ''
                   set -eu
-                  ${defaultZfsPackage}/bin/zfs list -H ${lib.escapeShellArg "${d.pool}/${d.name}"} >/dev/null 2>&1 \
-                    || ${defaultZfsPackage}/bin/zfs create -p${createOptions} ${lib.escapeShellArg "${d.pool}/${d.name}"}
+                  ${zfs}/bin/zfs list -H ${lib.escapeShellArg "${d.pool}/${d.name}"} >/dev/null 2>&1 \
+                    || ${zfs}/bin/zfs create -p ${lib.escapeShellArg "${d.pool}/${d.name}"}
                 ''
                 + lib.optionalString (d ? user) ''
                   ${pkgs.coreutils}/bin/chown -R ${lib.escapeShellArg "${d.user}:${d.group}"} ${lib.escapeShellArg "/${d.pool}/${d.name}"}
@@ -113,7 +106,7 @@
                 ''
                 + lib.optionalString ((d.aclUsers or [ ]) != [ ]) (
                   ''
-                    ${defaultZfsPackage}/bin/zfs set acltype=posixacl ${lib.escapeShellArg "${d.pool}/${d.name}"}
+                    ${zfs}/bin/zfs set acltype=posixacl ${lib.escapeShellArg "${d.pool}/${d.name}"}
                   ''
                   + lib.concatMapStrings (aclUser: ''
                     ${pkgs.acl}/bin/setfacl -R -m ${lib.escapeShellArg "u:${aclUser}:rwX,d:u:${aclUser}:rwX"} ${lib.escapeShellArg "/${d.pool}/${d.name}"}
@@ -126,10 +119,6 @@
             };
           };
         };
-        # Select the latest compatible kernel version
-        latestKernelPackage = lib.last (
-          lib.sort (a: b: (lib.versionOlder a.kernel.version b.kernel.version)) (builtins.attrValues zfsCompatibleKernelPackages)
-        );
         # One `{ unit; datasetService; }` pair per (dataset, consuming unit) - flattened first,
         # then grouped BACK by unit below, since a single unit could plausibly need to wait on more
         # than one dataset (not true of anything currently in this repo, but `lib.recursiveUpdate`-
@@ -147,19 +136,14 @@
           after = map (p: p.datasetService) pairs;
           requires = map (p: p.datasetService) pairs;
         }) (lib.groupBy (p: p.unit) unitDatasetPairs);
-        # Find all ZFS-compatible kernel packages
-        zfsCompatibleKernelPackages = lib.filterAttrs (
-          name: kernelPackages:
-          (builtins.match "linux_[0-9]+_[0-9]+" name) != null
-          && (builtins.tryEval kernelPackages).success
-          && (builtins.tryEval (!kernelPackages.${defaultZfsPackage.kernelModuleAttribute}.meta.broken)).value or false
-        ) pkgs.linuxKernel.packages;
+        # The userland matching whichever kernel module is actually loaded (e.g. cachyos-kernel.nix's
+        # `zfs_cachyos`), not nixpkgs' default `pkgs.zfs`.
+        zfs = config.boot.zfs.package;
       in
       {
+        # No kernel choice here: the host's kernel aspect owns that (harmony's my.cachyos-kernel
+        # ships its own ZFS module), and NixOS fails the build if the chosen kernel can't build ZFS.
         boot = {
-          # Use latest ZFS-compatible kernel instead of absolute latest
-          # Note: this might jump back and forth as kernels are added or removed
-          kernelPackages = latestKernelPackage;
           supportedFilesystems = [ "zfs" ];
 
           zfs = {

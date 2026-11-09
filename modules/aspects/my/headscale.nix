@@ -16,6 +16,24 @@
       url = "headscale.${host.name}.${domain}";
     in
     {
+      # headscale's state (every node registration, plus the Noise key clients pin the server by)
+      # lives in /var/lib/headscale on the root disk. This dataset only holds a copy of it for the
+      # offsite backup - sqlite3's `.backup` is safe against the live DB, unlike copying the file.
+      dataset = {
+        backup = pkgs: {
+          backupCleanupCommand = "rm -f /metalminds/headscale/db.sqlite /metalminds/headscale/noise_private.key";
+
+          backupPrepareCommand = ''
+            umask 077
+            ${pkgs.sqlite}/bin/sqlite3 /var/lib/headscale/db.sqlite ".backup /metalminds/headscale/db.sqlite"
+            cp /var/lib/headscale/noise_private.key /metalminds/headscale/noise_private.key
+          '';
+        };
+
+        name = "headscale";
+        pool = "metalminds";
+      };
+
       nixos =
         {
           config,

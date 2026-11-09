@@ -117,6 +117,10 @@
         nixpkgs.follows = "nixpkgs";
       };
     };
+    seerr-oidc-src = {
+      url = "github:michaelhthomas/seerr/feat/oidc-login-basic";
+      flake = false;
+    };
     systems.url = "github:nix-systems/default";
     terranix = {
       url = "github:terranix/terranix";

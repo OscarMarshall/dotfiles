@@ -1,16 +1,17 @@
+{ inputs, ... }:
 let
-
-  # Seerr has no released OIDC support yet (seerr-team/seerr#2715 is still open). Build from
-  # michaelhthomas's PR branch until it lands in a release, then drop this override.
-  oidcFork = {
-    hash = "sha256-k8qWhsSBnQXfGk/xEmb2+4tlw6xY8viwWzEQUBxtrNs=";
-    owner = "michaelhthomas";
-    repo = "seerr";
-    rev = "2e523125e8e7262af44309c70db20fe2d7ca28a3";
-  };
   port = 5055;
 in
 {
+  # Seerr has no released OIDC support yet (seerr-team/seerr#2715 is still open). Build from
+  # michaelhthomas's PR branch until it lands in a release, then drop this input and the override
+  # below. Tracks the branch (not a rev), so Dependabot's flake.lock bumps follow it - only
+  # `pnpmDeps`'s hash below still needs a hand refresh when a bump touches `pnpm-lock.yaml`.
+  flake-file.inputs.seerr-oidc-src = {
+    url = "github:michaelhthomas/seerr/feat/oidc-login-basic";
+    flake = false;
+  };
+
   my.seerr =
     {
       global ? false,
@@ -109,12 +110,12 @@ in
             old:
             # Pinned so a seerr version bump forces a check of whether upstream has released OIDC
             # support (seerr-team/seerr#2715, still an open, unmerged PR as of 2026-11-06) - if so,
-            # drop the oidcFork override above and go back to the stock package.
+            # drop the `seerr-oidc-src` override and go back to the stock package.
             assert
               old.version == "3.5.1"
-              || throw "seerr.nix: pkgs.seerr is now ${old.version} (was 3.5.1) - re-check whether seerr-team/seerr#2715 (OIDC support) has merged/released; if so, drop the oidcFork override.";
+              || throw "seerr.nix: pkgs.seerr is now ${old.version} (was 3.5.1) - re-check whether seerr-team/seerr#2715 (OIDC support) has merged/released; if so, drop the seerr-oidc-src override.";
             rec {
-              # Seerr's OIDC login has no group/role claim mapping (not in `oidcFork`, nor at
+              # Seerr's OIDC login has no group/role claim mapping (not in `seerr-oidc-src`, nor at
               # seerr-team/seerr#2715's head or any other upstream PR as of 2026-10-24) - OIDC users
               # only ever get `defaultPermissions`. This adds an `adminGroups` provider field (set
               # to authentik.nix's `admin` group by `configureOidc` above) that syncs the ADMIN
@@ -123,27 +124,27 @@ in
               # account (ID 1) is never touched. Same group -> admin mapping jellyfin.nix
               # (`AdminRoles`) and nextcloud.nix (group provisioning) get natively. `groups` comes
               # from Authentik's `profile` scope (see authentik.nix's `oidc-defaults`), which
-              # `scopes` above already requests. Re-check it still applies whenever `oidcFork` moves.
+              # `scopes` above already requests. Re-check it still applies whenever `seerr-oidc-src`
+              # moves (a bump that breaks it fails the build at patchPhase, not silently).
               patches = (old.patches or [ ]) ++ [ ./seerr-oidc-admin-groups.patch ];
               pname = "seerr";
 
+              # A `seerr-oidc-src` bump that changes `pnpm-lock.yaml` fails here with a hash
+              # mismatch - copy the `got:` hash from the build error.
               pnpmDeps = pkgs.fetchPnpmDeps {
                 inherit pname src version;
                 fetcherVersion = 3;
-                hash = "sha256-bfdmNLBypcoJ79/lMRSgRKSIddQJJohcn3/dL21edog=";
+                hash = "sha256-gqjz0DM0VYdFKTkoKPG9fjAwZlKeQZS1GB4wwUcwZ9M=";
                 pnpm = pkgs.pnpm_10.override { nodejs-slim = pkgs.nodejs-slim_22; };
               };
 
-              src = pkgs.fetchFromGitHub {
-                inherit (oidcFork)
-                  hash
-                  owner
-                  repo
-                  rev
-                  ;
-              };
+              src = inputs.seerr-oidc-src;
 
-              version = "unstable-2026-10-10";
+              version =
+                let
+                  date = src.lastModifiedDate;
+                in
+                "unstable-${lib.substring 0 4 date}-${lib.substring 4 2 date}-${lib.substring 6 2 date}";
             }
           );
         in
@@ -195,7 +196,7 @@ in
         # `radarr-api-key` comment for that pattern). This fork (unlike stock seerr-team/seerr)
         # DOES honor an `API_KEY` env var though, both to fill a missing key and to override an
         # existing one on every load (server/lib/settings/index.ts's `load()`/`generateApiKey()`,
-        # confirmed against `oidcFork.rev`'s tree) - so this pins Seerr's key to one Nix already
+        # confirmed against `seerr-oidc-src`'s tree) - so this pins Seerr's key to one Nix already
         # knows, giving the `seerr` Terraform provider (this file's own `terranix` field, below) a
         # stable credential instead of one that would otherwise only exist after minting it by hand
         # through the UI post-setup.
@@ -311,7 +312,7 @@ in
         # Requests the matching OAuth2 Provider + Application from Authentik (authentik.nix) - see
         # virtual-host.nix's `oidc` field for the shape. Redirect paths are the `returnUrl`s this
         # exact fork revision sends to the provider (server/routes/auth.ts's `getOidcRedirectUrl` at
-        # `oidcFork.rev` above - its docs/ tree, which used to list them, is gone since the rebase).
+        # `seerr-oidc-src` above - its docs/ tree, which used to list them, is gone since the rebase).
         oidc = {
           client-secret = "seerr-oidc-client-secret";
 
