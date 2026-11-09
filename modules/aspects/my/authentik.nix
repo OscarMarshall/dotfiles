@@ -249,11 +249,13 @@
       # ATTRIBUTES here, not provider-level auth like AUTHENTIK_TOKEN above - Authentik's API has
       # to persist the actual value to work at all, so unlike everything else in this file, these
       # DO end up in Terraform's state file in plaintext once applied (an inherent Terraform
-      # limitation, not something the env-var trick can route around) - and harmony-tf's state is
-      # committed to this (public) repo (see #516). modules/terranix.nix's `terraform.encryption`
-      # (contributed unconditionally for every host, see its own comment) is what actually keeps
-      # these out of the plaintext git history; `settings.terraform = "variable";` (below, on each
-      # secret) is just how their values reach the `variable`s that encryption config wraps.
+      # limitation, not something the env-var trick can route around). harmony-tf's state lives on
+      # the `metalminds/terranix` dataset (and its offsite restic backup), no longer in git (#622),
+      # though older encrypted copies remain in this public repo's history (#516).
+      # modules/terranix.nix's `terraform.encryption` (contributed unconditionally for every host,
+      # see its own comment) is what keeps these out of plaintext in every one of those copies;
+      # `settings.terraform = "variable";` (below, on each secret) is just how their values reach
+      # the `variable`s that encryption config wraps.
       #
       # The LOGIN experience (as opposed to everything above, which is all about what happens
       # AFTER a session exists) is a fourth, separate concern: which flow answers when someone
