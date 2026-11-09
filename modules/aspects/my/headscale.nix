@@ -213,9 +213,12 @@
         settings.terraform = "variable";
       };
 
+      # No `homepage` tile and `hidden` from Authentik's library: headscale's only browser-facing
+      # pages are the OIDC login `tailscale up` sends people through - Headplane (headplane.nix) is
+      # the actual admin UI.
       virtual-host = {
         group = "Infra";
-        homepage.description = "Self-hosted Tailscale coordination server";
+        hidden = true;
         host = host.name;
         icon = "headscale.svg";
         label = "Headscale";
