@@ -1383,6 +1383,7 @@
         "ponytail": "ponytail",
         "preservation": "preservation",
         "ragenix": "ragenix",
+        "seerr-oidc-src": "seerr-oidc-src",
         "systems": "systems_6",
         "terranix": "terranix",
         "treefmt-nix": "treefmt-nix_3",
@@ -1409,6 +1410,23 @@
       "original": {
         "owner": "oxalica",
         "repo": "rust-overlay",
+        "type": "github"
+      }
+    },
+    "seerr-oidc-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1794070071,
+        "narHash": "sha256-VUZbYfHGluBF58nuTueTZfEfK5EIKtQTwtfdAbePbNU=",
+        "owner": "michaelhthomas",
+        "repo": "seerr",
+        "rev": "b1312ccd8776de04420a825f23b3f2d9aab2f2f9",
+        "type": "github"
+      },
+      "original": {
+        "owner": "michaelhthomas",
+        "ref": "feat/oidc-login-basic",
+        "repo": "seerr",
         "type": "github"
       }
     },
