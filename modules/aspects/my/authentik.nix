@@ -910,7 +910,8 @@
                       slug = vh.name;
                     }
                     // lib.optionalAttrs (vh ? icon) { meta_icon = icon-url-of vh.icon; }
-                    // lib.optionalAttrs (vh ? group) { inherit (vh) group; };
+                    // lib.optionalAttrs (vh ? group) { inherit (vh) group; }
+                    // lib.optionalAttrs (vh.hidden or false) { meta_launch_url = "blank://blank"; };
                   }) protected-hosts
                 );
 
@@ -1007,7 +1008,8 @@
                       slug = vh.name;
                     }
                     // lib.optionalAttrs (vh ? icon) { meta_icon = icon-url-of vh.icon; }
-                    // lib.optionalAttrs (vh ? group) { inherit (vh) group; };
+                    // lib.optionalAttrs (vh ? group) { inherit (vh) group; }
+                    // lib.optionalAttrs (vh.hidden or false) { meta_launch_url = "blank://blank"; };
                   }) oidc-hosts
                 );
 
