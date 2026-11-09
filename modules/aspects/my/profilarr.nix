@@ -5,10 +5,6 @@
     }:
     { host, ... }:
     let
-      # Matches virtual-host.nix's own derived hostname (`${name}.${host.name}.<domain>`) - no
-      # shared domain constant exists in this repo (authentik.nix/dns.nix/nginx.nix each carry this
-      # same literal), so this matches that convention rather than introducing one.
-      domain = "silverlight-nex.us";
       port = 6868;
     in
     {
@@ -31,8 +27,10 @@
             AUTH = "off";
             # v2 is a SvelteKit app, whose CSRF check rejects form POSTs whose Origin doesn't
             # match the URL it thinks it's served from - behind nginx that's `http://127.0.0.1`
-            # unless told otherwise.
-            ORIGIN = "https://profilarr.${host.name}.${domain}";
+            # unless told otherwise. Matches virtual-host.nix's derived hostname. ORIGIN takes a
+            # single value, so with `global = true` form POSTs only work from this host-scoped name,
+            # not the bare `profilarr.${host.domain}` alias nginx.nix adds alongside it.
+            ORIGIN = "https://profilarr.${host.name}.${host.domain}";
             TZ = config.time.timeZone;
           };
 
