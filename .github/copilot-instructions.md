@@ -446,10 +446,10 @@ Each host that uses this gets its own `nix run .#<host>-tf*` commands (currently
 `.destroy`, `nix develop .#<host>-tf` for a shell with `opentofu`, `nix build .#<host>-tf.config` to inspect the
 generated `config.tf.json`. The bare `nix run .#<host>-tf` (no suffix) **applies**.
 
-**All but `.config` only work when run as root on the host itself** (e.g. `sudo nix run .#harmony-tf.plan` on harmony,
-never from a dev laptop or CI) - the wrapper's working directory (`/run/<host>-tf-cli`), plugin cache, state and
-decrypted secrets env file are all root-owned. Both Terraform state and the decrypted secrets env file are host-local
-now, not repo- or YubiKey-backed -
+**The `nix run .#<host>-tf*` commands only work when run as root on the host itself** (e.g.
+`sudo nix run .#harmony-tf.plan` on harmony, never from a dev laptop or CI) - the wrapper's working directory
+(`/run/<host>-tf-cli`), plugin cache, state and decrypted secrets env file are all root-owned. Both Terraform state and
+the decrypted secrets env file are host-local now, not repo- or YubiKey-backed -
 
 - **State**: lives on the host's own ZFS dataset (`backend.local.path` in `modules/terranix.nix`), not committed to git.
   Moving it requires a one-time `tofu init -migrate-state`, done by hand.

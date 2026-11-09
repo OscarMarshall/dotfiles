@@ -206,12 +206,12 @@ nix develop .#harmony-tf            # shell with opentofu
 nix build .#harmony-tf.config       # inspect the generated config.tf.json
 ```
 
-All but `.config` only work when run **as root on the host itself** (e.g. `sudo` on harmony, never from a dev laptop):
-both Terraform state and the decrypted secrets env file live on the host's own local ZFS dataset/`/run/agenix`, not in
-this repo or on the YubiKey master identity. `harmony-tf-apply.service` also plans and applies automatically on every
-`nixos-rebuild switch` that changes anything Terraform-relevant, so running these by hand is normally only needed to
-preview a change or investigate a failure — a plan containing any destroy action is never auto-applied; it fails the
-service instead, surfaced through the same Netdata → Discord alerting used for host health.
+The `nix run .#<host>-tf*` commands only work when run **as root on the host itself** (e.g. `sudo` on harmony, never
+from a dev laptop): both Terraform state and the decrypted secrets env file live on the host's own local ZFS
+dataset/`/run/agenix`, not in this repo or on the YubiKey master identity. `harmony-tf-apply.service` also plans and
+applies automatically on every `nixos-rebuild switch` that changes anything Terraform-relevant, so running these by hand
+is normally only needed to preview a change or investigate a failure — a plan containing any destroy action is never
+auto-applied; it fails the service instead, surfaced through the same Netdata → Discord alerting used for host health.
 
 ## Offsite Backups (Restic/Backblaze B2)
 
