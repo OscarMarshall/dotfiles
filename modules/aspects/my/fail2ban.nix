@@ -1,7 +1,7 @@
 # Bans IPs that repeatedly fail authentication. harmony's DNS records are `proxied = false`
-# (dns.nix) and its port-forward rules aren't restricted to Cloudflare's IPs (nginx.nix), so real
-# client traffic - and real attacker traffic - reaches nginx directly; the origin server has to be
-# its own first line of defense, not just an edge WAF.
+# (dns.nix) and its port-forward rules accept any source IP (meraki.nix), so real client traffic -
+# and real attacker traffic - reaches nginx directly; the origin server has to be its own first
+# line of defense, not just an edge WAF.
 #
 # The sshd jail comes free from NixOS's fail2ban module once `services.openssh.enable` is on
 # (ssh-server.nix) - no config needed here. The nginx jails below need an explicit `backend =

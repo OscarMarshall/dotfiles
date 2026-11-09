@@ -413,7 +413,10 @@ let
   # meaningful diff to review, especially encrypted; only ever moves forward). This dataset gives
   # it a stable, host-local home with the same backup/snapshot coverage as every other ZFS-backed
   # service here, once the wrapper's backend `path` is pointed at it instead of the repo checkout.
+  # `backup` is a no-op on a host without my.backup. The state is already passphrase-encrypted
+  # (`terraform.encryption` above), so the offsite copy is too.
   terranix-dataset = {
+    backup = true;
     name = "terranix";
     pool = "metalminds";
   };

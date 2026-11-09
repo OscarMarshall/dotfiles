@@ -184,7 +184,20 @@
                           # for any request under it (e.g. Bookshelf's own `/api/v1/search`, the
                           # actual endpoint `proxyTimeout` exists to cover), and nginx locations
                           # don't inherit each other's directives.
-                          extraConfig = lib.optionalString (vh ? proxyTimeout) ''
+                          #
+                          # The identity headers are blanked (an empty value makes nginx drop the
+                          # header) since nothing here overwrites them the way `"/"`'s
+                          # auth_request_set does - otherwise a client could send its own
+                          # `X-authentik-username` straight through to a backend that trusts it
+                          # (Paperless, Headplane), skipping Authentik entirely.
+                          extraConfig = ''
+                            proxy_set_header X-authentik-username "";
+                            proxy_set_header X-authentik-groups "";
+                            proxy_set_header X-authentik-email "";
+                            proxy_set_header X-authentik-name "";
+                            proxy_set_header X-authentik-uid "";
+                          ''
+                          + lib.optionalString (vh ? proxyTimeout) ''
                             proxy_connect_timeout ${toString vh.proxyTimeout}s;
                             proxy_send_timeout ${toString vh.proxyTimeout}s;
                             proxy_read_timeout ${toString vh.proxyTimeout}s;
