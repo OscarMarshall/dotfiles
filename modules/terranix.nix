@@ -553,7 +553,10 @@ in
           # 12.1) long after the committed lock had moved to 0.9.0. One fixed directory, on tmpfs
           # (nothing worth keeping lives here - state is at `backend.local.path`), and distinct from
           # the apply service's own `RuntimeDirectory` (`/run/<host>-tf`), which systemd wipes out
-          # from under anything else using it.
+          # from under anything else using it. Root-only, like everything else this touches (the
+          # 0400 `/run/agenix/<host>-tf.env`, the root-owned state dir, the shared plugin cache
+          # below) - a non-root run stops right at terranix's own `mkdir -p` of this, before
+          # `prefixText` gets a chance to, instead of failing confusingly mid-plan as it used to.
           workdir = "/run/${key}-cli";
         }
       ) terranix-modules;
