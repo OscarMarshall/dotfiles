@@ -21,6 +21,24 @@
       url = if global then "auth.${host.domain}" else "auth.${host.name}.${host.domain}";
     in
     {
+      # Authentik's Postgres DB (authentik-nix's `createDatabase`, on the root disk) is the only
+      # copy of every account, passkey, and group membership - none of which is in this config.
+      # This dataset exists only to hold a dump of it for the offsite backup, same shape as
+      # paperless.nix's own DB dump.
+      dataset = {
+        backup = pkgs: {
+          backupCleanupCommand = "rm -f /metalminds/authentik/db.sql";
+
+          backupPrepareCommand = ''
+            umask 077
+            ${pkgs.sudo}/bin/sudo -u postgres ${pkgs.postgresql}/bin/pg_dump authentik > /metalminds/authentik/db.sql
+          '';
+        };
+
+        name = "authentik";
+        pool = "metalminds";
+      };
+
       nixos = { config, ... }: {
         imports = [ (inputs.authentik-nix.nixosModules.default or { }) ];
 
