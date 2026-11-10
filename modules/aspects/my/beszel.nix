@@ -9,6 +9,7 @@ in
 {
   my.beszel =
     {
+      administrators,
       global ? false,
     }:
     { host, ... }: {
@@ -78,54 +79,69 @@ in
           ...
         }:
         {
-          services.beszel = {
-            agent = {
-              enable = true;
+          services = {
+            beszel = {
+              agent = {
+                enable = true;
 
-              environment = {
-                HUB_URL = "http://127.0.0.1:${toString hubPort}";
-                # Written by beszel-fetch-hub-key.service below, once the hub has actually
-                # minted one - see that service's own comment for why this one piece still
-                # can't be done through the Terraform provider (my.terranix below) the way
-                # TOKEN_FILE is.
-                KEY_FILE = "/var/lib/beszel-agent/id_ed25519.pub";
-                # Netdata's stock `unit_name=!*` matcher (see the old netdata.nix, now removed)
-                # matched nothing by design until overridden - Beszel's own default is unset
-                # (undocumented whether that means "everything" or "nothing"), so this pins it to
-                # the same "watch every unit" intent explicitly rather than relying on a guess.
-                SERVICE_PATTERNS = "*";
-                SYSTEM_NAME = host.name;
-                # `TOKEN_FILE`, not `environmentFile`: the latter wires straight into systemd's
-                # `EnvironmentFile=`, which only parses `KEY=VALUE` lines - `beszel-agent-token`'s
-                # raw `openssl rand -hex 32` output has no `TOKEN=` prefix, so that would leave
-                # `$TOKEN` unset (or fail the file's parse outright). Points straight at the
-                # agenix secret Terraform is ALSO handed (as
-                # `beszel_universal_token.${host.name}.token` below) - both sides agree on the
-                # token's value without either one having to read the other's output, which this
-                # repo has no mechanism for in the Terraform -> NixOS direction (every other
-                # `settings.terraform` secret only ever flows the other way).
-                TOKEN_FILE = config.age.secrets.beszel-agent-token.path;
+                environment = {
+                  HUB_URL = "http://127.0.0.1:${toString hubPort}";
+                  # Written by beszel-fetch-hub-key.service below, once the hub has actually
+                  # minted one - see that service's own comment for why this one piece still
+                  # can't be done through the Terraform provider (my.terranix below).
+                  KEY_FILE = "/var/lib/beszel-agent/id_ed25519.pub";
+                  # Netdata's stock `unit_name=!*` matcher (see the old netdata.nix, now removed)
+                  # matched nothing by design until overridden - Beszel's own default is unset
+                  # (undocumented whether that means "everything" or "nothing"), so this pins it to
+                  # the same "watch every unit" intent explicitly rather than relying on a guess.
+                  SERVICE_PATTERNS = "*";
+                  SYSTEM_NAME = host.name;
+                  # `TOKEN_FILE`, not `environmentFile`: the latter wires straight into systemd's
+                  # `EnvironmentFile=`, which only parses `KEY=VALUE` lines - `beszel-agent-token`'s
+                  # raw `openssl rand -hex 32` output has no `TOKEN=` prefix, so that would leave
+                  # `$TOKEN` unset (or fail the file's parse outright). The hub only accepts it once
+                  # beszel-agent-register.service below has registered it against Terraform's
+                  # `beszel_system`.
+                  TOKEN_FILE = config.age.secrets.beszel-agent-token.path;
+                };
+
+                smartmon.enable = true;
               };
 
-              smartmon.enable = true;
-            };
+              hub = {
+                enable = true;
 
-            hub = {
-              enable = true;
+                environment = {
+                  # Used for links in Beszel's own emails/notifications, not for routing - nginx
+                  # still fronts the real traffic.
+                  APP_URL = "https://beszel.${host.name}.${host.domain}";
+                  # Logs a browser straight into the Beszel account whose email matches the one
+                  # Authentik's forward-auth already vouched for (nginx.nix sets this header on every
+                  # `protected` request), instead of showing Beszel's own login form. Beszel only
+                  # looks the email up, never creates an account for it - each administrator's is
+                  # created to match by Terraform (`beszel_user` below). Honored only from loopback,
+                  # where nginx is; the hub itself listens on 127.0.0.1 too (the module's default), so
+                  # nothing else can reach it to forge the header.
+                  TRUSTED_AUTH_HEADER = "X-authentik-email";
+                  TRUSTED_PROXY_IPS = "127.0.0.1";
+                  USER_EMAIL = adminEmail;
+                };
 
-              environment = {
-                # Used for links in Beszel's own emails/notifications, not for routing - nginx
-                # still fronts the real traffic.
-                APP_URL = "https://beszel.${host.name}.${host.domain}";
-                USER_EMAIL = adminEmail;
+                environmentFile = config.age.secrets."beszel-hub.env".path;
               };
-
-              environmentFile = config.age.secrets."beszel-hub.env".path;
             };
+
+            # The beszel-api vhost also reaches the hub from loopback but skips Authentik (Basic Auth
+            # instead - see this aspect's own `includes`), so nothing there overwrites a
+            # client-supplied X-authentik-email the way a `protected` vhost does. Blanked, or anyone
+            # holding the Basic Auth credential could sign in as any administrator just by sending it.
+            nginx.virtualHosts."beszel-api.${host.name}.${host.domain}".locations."/".extraConfig = ''
+              proxy_set_header X-authentik-email "";
+            '';
           };
 
           # Only the hub's own SSH public key still needs a raw REST call: it's minted at
-          # runtime (nothing to pre-seed via agenix) and, unlike system/token/alert management
+          # runtime (nothing to pre-seed via agenix) and, unlike system/alert management
           # below, `leo-lem/terraform-provider-beszel` doesn't model the `/api/beszel/getkey`
           # route at all (it only covers Beszel's PocketBase collections, and this is a custom
           # route outside them - see that provider's own README). Authenticates as the same
@@ -156,15 +172,122 @@ in
               # target - without this, the agent can start (and fail to read KEY_FILE, or read a
               # stale one from a previous boot) before this has written this boot's copy.
               #
-              # Deliberately NOT also ordered after "${host.name}-tf-apply.service" (which is
-              # what actually creates the `beszel_system`/`beszel_universal_token` records the
-              # agent's TOKEN_FILE above depends on) - the upstream module's own
+              # Deliberately NOT also ordered after beszel-agent-register.service (and so
+              # "${host.name}-tf-apply.service", which that waits on) - the upstream module's own
               # `Restart = "on-failure"; RestartSec = "30s";` already retries a rejected token
               # every 30s, the same way terranix.nix's own apply retries a transient failure
               # rather than needing perfect ordering (see its own comment on why ordering alone
               # was never enough there either).
               after = [ "beszel-fetch-hub-key.service" ];
               requires = [ "beszel-fetch-hub-key.service" ];
+            };
+
+            # Ties the agent's token to the `beszel_system` Terraform manages - the provider has no
+            # resource for the `fingerprints` record that does that. It used to be a universal token
+            # instead, but the hub answers a universal token it can't match to a fingerprint by
+            # creating a brand-new system of its own, so the agent's first connect landed on an
+            # unmanaged duplicate `${host.name}` (invisible to the administrators, holding all the
+            # data) while Terraform's stayed empty and down. A per-system token can only ever bind
+            # to the system it's registered against: until this has run, the hub just rejects the
+            # agent and it retries (see `beszel-agent` above).
+            #
+            # Wanted by the Terraform apply (not only at boot), since that's what creates the system
+            # in the first place. Leaves an existing registration alone, so the fingerprint the hub
+            # pinned on the agent's first connect survives. If the system doesn't exist yet - that
+            # apply failed, or stopped at its destroy guard and the system only appears once
+            # someone runs `nix run .#${host.name}-tf` by hand, which never starts this - it keeps
+            # retrying every 30s until it does, instead of exiting and waiting for the next boot.
+            beszel-agent-register = {
+              description = "Register ${host.name}'s Beszel agent token with its Terraform-managed system";
+
+              wantedBy = [
+                "multi-user.target"
+                "${host.name}-tf-apply.service"
+              ];
+
+              after = [
+                "beszel-hub.service"
+                "${host.name}-tf-apply.service"
+              ];
+
+              requires = [ "beszel-hub.service" ];
+
+              serviceConfig = {
+                DynamicUser = true;
+                EnvironmentFile = config.age.secrets."beszel-hub.env".path;
+
+                ExecStart = pkgs.writeShellScript "beszel-agent-register" ''
+                  set -euo pipefail
+                  hub_url="http://127.0.0.1:${toString hubPort}"
+                  agent_token="$(< "$CREDENTIALS_DIRECTORY/agent-token")"
+
+                  attempt=1
+                  max_attempts=60
+                  until ${pkgs.curl}/bin/curl -fs "$hub_url/api/health" >/dev/null; do
+                    if [ "$attempt" -ge "$max_attempts" ]; then
+                      echo "beszel-hub never became healthy after $max_attempts attempts" >&2
+                      exit 1
+                    fi
+                    attempt=$((attempt + 1))
+                    sleep 1
+                  done
+
+                  token="$(
+                    ${pkgs.curl}/bin/curl -fsS -X POST "$hub_url/api/collections/users/auth-with-password" \
+                      -H 'Content-Type: application/json' \
+                      -d "$(${pkgs.jq}/bin/jq -cn --arg identity ${lib.escapeShellArg adminEmail} --arg password "$USER_PASSWORD" '{identity:$identity,password:$password}')" \
+                      | ${pkgs.jq}/bin/jq -r '.token'
+                  )"
+
+                  api() {
+                    ${pkgs.curl}/bin/curl -fsS -H "Authorization: $token" "$@"
+                  }
+
+                  # Only systems the admin account belongs to are visible, and Terraform's always
+                  # includes it (`beszel_system` below).
+                  mapfile -t systems < <(
+                    api -G "$hub_url/api/collections/systems/records" \
+                      --data-urlencode ${lib.escapeShellArg "filter=name = '${host.name}'"} \
+                      | ${pkgs.jq}/bin/jq -r '.items[].id'
+                  )
+
+                  case "''${#systems[@]}" in
+                    0)
+                      echo "No ${host.name} system yet - Terraform hasn't created it; retrying in 30s." >&2
+                      exit 75 # EX_TEMPFAIL - see RestartForceExitStatus below
+                      ;;
+                    1) system="''${systems[0]}" ;;
+                    *)
+                      echo "Several systems named ${host.name} (''${systems[*]}) - delete all but Terraform's." >&2
+                      exit 1
+                      ;;
+                  esac
+
+                  registered="$(
+                    api -G "$hub_url/api/collections/fingerprints/records" \
+                      --data-urlencode "filter=system = '$system' && token = '$agent_token'" \
+                      | ${pkgs.jq}/bin/jq '.totalItems'
+                  )"
+
+                  if [ "$registered" -gt 0 ]; then
+                    echo "Agent token already registered with system $system."
+                    exit 0
+                  fi
+
+                  api -X POST "$hub_url/api/collections/fingerprints/records" \
+                    -H 'Content-Type: application/json' \
+                    -d "$(${pkgs.jq}/bin/jq -cn --arg system "$system" --arg token "$agent_token" '{system:$system,token:$token,fingerprint:""}')" \
+                    >/dev/null
+                  echo "Registered agent token with system $system."
+                '';
+
+                LoadCredential = "agent-token:${config.age.secrets.beszel-agent-token.path}";
+                # Only the "no system yet" exit retries; anything else (e.g. duplicate systems)
+                # needs a human, so it fails once and stays failed rather than looping.
+                RestartForceExitStatus = 75;
+                RestartSec = "30s";
+                Type = "oneshot";
+              };
             };
 
             beszel-fetch-hub-key = {
@@ -229,11 +352,6 @@ in
           # reason.
           group = "beszel-agent";
           owner = "beszel-agent";
-          # Handed to Terraform as `beszel_universal_token.${host.name}.token` (my.terranix
-          # below) - a genuine RESOURCE ATTRIBUTE Beszel's API has to persist, not read from an
-          # env var by the provider itself, so `"variable"` (not `true`) - see
-          # modules/terranix.nix's header comment on the two modes.
-          settings.terraform = "variable";
         };
 
         # Beszel's alert notifications are configured entirely through its web UI (Settings >
@@ -303,7 +421,17 @@ in
       # and Discord/webhook notification config (beszel-discord-webhook above) - neither has a
       # resource or route this provider (or, as far as could be found, any other) exposes.
       terranix = { lib, ... }: {
-        data.beszel_user.admin.email = adminEmail;
+        data = {
+          # Each administrator's email is read off their Authentik account rather than written
+          # down here - it has to match what TRUSTED_AUTH_HEADER above receives exactly, and
+          # Authentik is where it can change (self-service "Change sign-in email"), so the next
+          # apply follows it instead of the login silently breaking.
+          authentik_user = lib.genAttrs administrators (username: {
+            inherit username;
+          });
+
+          beszel_user.admin.email = adminEmail;
+        };
 
         # `password` isn't set here - the provider reads it from BESZEL_PASSWORD (see that
         # secret's own comment); `endpoint`/`email` aren't secret, so they're set directly
@@ -321,83 +449,101 @@ in
           # LoadAvg1/5/15/Battery) has no ZFS-specific kind, so whether pool-health alerting -
           # the entire reason for this migration (see #772) - is reachable through this
           # resource at all is still unconfirmed; check the hub UI directly once deployed.
+          #
+          # Owned by each administrator rather than the bootstrap admin account: an alert notifies
+          # through its owner's own Settings > Notifications, and the administrators are who
+          # actually sign in (TRUSTED_AUTH_HEADER above) to fill that in.
           beszel_alert = lib.listToAttrs (
-            map
-              (
-                alert:
-                lib.nameValuePair "${host.name}-${alert.name}" (
-                  {
-                    system = "\${beszel_system.${host.name}.id}";
-                    user = "\${data.beszel_user.admin.id}";
-                  }
-                  // alert
+            lib.concatMap (
+              username:
+              map
+                (
+                  alert:
+                  lib.nameValuePair "${username}-${host.name}-${alert.name}" (
+                    {
+                      system = "\${beszel_system.${host.name}.id}";
+                      user = "\${beszel_user.${username}.id}";
+                    }
+                    // alert
+                  )
                 )
-              )
-              [
-                # `min`/`value` explicit (not left unset, unlike this provider's own docs example
-                # for a Status alert) to route around a real provider bug: Beszel's API always
-                # returns 0 for an alert's unset numeric fields rather than omitting them (or
-                # returning null), and the provider's Read trusts that 0 as a real value - so an
-                # alert created with these genuinely unset comes back holding 0 on the very next
-                # read, which OpenTofu then rejects outright ("Provider produced inconsistent
-                # result after apply ... .min: was null, but now cty.NumberIntVal(0)"). Setting
-                # them to 0 up front makes planned and applied state agree from the start; for a
-                # binary up/down check, 0 reads naturally anyway (no lag, no threshold).
-                {
-                  min = 0;
-                  name = "Status";
-                  value = 0;
-                }
-                {
-                  min = 10;
-                  name = "CPU";
-                  value = 90;
-                }
-                {
-                  min = 10;
-                  name = "Memory";
-                  value = 90;
-                }
-                {
-                  min = 10;
-                  name = "Disk";
-                  value = 90;
-                }
-                {
-                  min = 5;
-                  name = "Temperature";
-                  value = 80;
-                }
-              ]
+                [
+                  # `min`/`value` explicit (not left unset, unlike this provider's own docs example
+                  # for a Status alert) to route around a real provider bug: Beszel's API always
+                  # returns 0 for an alert's unset numeric fields rather than omitting them (or
+                  # returning null), and the provider's Read trusts that 0 as a real value - so an
+                  # alert created with these genuinely unset comes back holding 0 on the very next
+                  # read, which OpenTofu then rejects outright ("Provider produced inconsistent
+                  # result after apply ... .min: was null, but now cty.NumberIntVal(0)"). Setting
+                  # them to 0 up front makes planned and applied state agree from the start; for a
+                  # binary up/down check, 0 reads naturally anyway (no lag, no threshold).
+                  {
+                    min = 0;
+                    name = "Status";
+                    value = 0;
+                  }
+                  {
+                    min = 10;
+                    name = "CPU";
+                    value = 90;
+                  }
+                  {
+                    min = 10;
+                    name = "Memory";
+                    value = 90;
+                  }
+                  {
+                    min = 10;
+                    name = "Disk";
+                    value = 90;
+                  }
+                  {
+                    min = 5;
+                    name = "Temperature";
+                    value = 80;
+                  }
+                ]
+            ) administrators
           );
 
           beszel_system.${host.name} = {
             inherit (host) name;
             host = "127.0.0.1";
-            users = [ "\${data.beszel_user.admin.id}" ];
+            users = [ "\${data.beszel_user.admin.id}" ] ++ map (username: "\${beszel_user.${username}.id}") administrators;
           };
 
-          # Explicit `token` (not left for Beszel to generate, unlike this provider's own
-          # getting-started guide) so the exact same value can be handed to the agent's own
-          # `environmentFile` above - see `beszel-agent-token`'s own comment for why.
-          beszel_universal_token.${host.name} = {
-            permanent = true;
-            token = "\${var.BESZEL_AGENT_TOKEN}";
-            user = "\${data.beszel_user.admin.id}";
+          # The account TRUSTED_AUTH_HEADER above signs each administrator into. Its password is
+          # never used (Authentik is the way in), but Beszel requires one - kept in Terraform's own
+          # (encrypted) state rather than as an agenix secret, since nothing outside Terraform ever
+          # needs to read it.
+          beszel_user = lib.genAttrs administrators (username: {
+            email = "\${data.authentik_user.${username}.email}";
+            password = "\${random_password.beszel-${username}.result}";
+            role = "admin";
+            verified = true;
+          });
+
+          random_password = lib.listToAttrs (
+            map (username: lib.nameValuePair "beszel-${username}" { length = 32; }) administrators
+          );
+        };
+
+        terraform.required_providers = {
+          beszel = {
+            # Full hostname required, same reasoning (and same fix) as jellyfin.nix's own
+            # `registry.terraform.io/ThePhaseless/jellyfin` - OpenTofu's own default registry
+            # (registry.opentofu.org, what a bare "leo-lem/beszel" source resolves against)
+            # doesn't mirror this provider either: `tofu init` failed outright with "provider
+            # registry.opentofu.org/leo-lem/beszel: provider not found" until this was qualified.
+            source = "registry.terraform.io/leo-lem/beszel";
+            version = "0.3.0";
+          };
+
+          random = {
+            source = "hashicorp/random";
+            version = "3.9.1";
           };
         };
-
-        terraform.required_providers.beszel = {
-          # Full hostname required, same reasoning (and same fix) as jellyfin.nix's own
-          # `registry.terraform.io/ThePhaseless/jellyfin` - OpenTofu's own default registry
-          # (registry.opentofu.org, what a bare "leo-lem/beszel" source resolves against)
-          # doesn't mirror this provider either: `tofu init` failed outright with "provider
-          # registry.opentofu.org/leo-lem/beszel: provider not found" until this was qualified.
-          source = "registry.terraform.io/leo-lem/beszel";
-          version = "0.3.0";
-        };
-
-        variable.BESZEL_AGENT_TOKEN.sensitive = true;
       };
 
       virtual-host = {
@@ -408,8 +554,7 @@ in
           description = "System monitoring & alerts";
           # No `widget`, unlike netdata.nix's: Homepage's Beszel widget needs a `systemId` that
           # only exists once Terraform has actually applied `beszel_system.${host.name}` above -
-          # a value in Terraform's own state, which this static config has no way to read (same
-          # gap `beszel_universal_token`'s own comment notes, just in the other direction). Add
+          # a value in Terraform's own state, which this static config has no way to read. Add
           # one by hand later (Settings > Widgets in Homepage's docs) once that id is known, if
           # live stats on the tile are worth it over just linking through.
         };

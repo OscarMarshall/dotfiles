@@ -14,7 +14,7 @@
         applicationKeyId = "004119677af80560000000002";
         bucket = "coppermind-harmony";
       })
-      (beszel { })
+      (beszel { administrators = [ "oscar" ]; })
       (bookshelf-audiobooks { })
       (bookshelf-ebooks { })
       (cachyos-kernel { variant = "server"; })
