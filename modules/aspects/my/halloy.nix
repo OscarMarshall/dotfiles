@@ -1,5 +1,5 @@
 let
-  # Default nick; a network's own `nickname` overrides it. LST requires it to be the site username.
+  # Default nick; a network's own `nickname` overrides it.
   defaultNickname = "OscarMarshall";
   # Ports, TLS and auth styles come from autobrr's indexer definitions
   # (internal/indexer/definitions/*.yaml). `nickserv` sends NICKSERV IDENTIFY after connecting;
@@ -18,29 +18,35 @@ let
       server = "irc.digitalcore.club";
     };
 
+    # The nick must be the site username.
     lst = {
       auth = "server";
+      nickname = "ashamed";
       server = "irc.lst.gg";
     };
 
     myanonamouse = {
       auth = "nickserv";
+      nickname = "AshamedMunchkin";
       server = "irc.myanonamouse.net";
     };
 
     # No autobrr definition; Halloy's 6697/TLS defaults are a guess.
     p2p-network = {
       auth = "nickserv";
+      nickname = "Ashamed";
       server = "irc.p2p-network.net";
     };
 
     seedpool = {
       auth = "server";
-      server = "chat.seedpool.org";
+      nickname = "Ashamed";
+      server = "irc.seedpool.com";
     };
 
     torrentleech = {
       auth = "nickserv";
+      nickname = "AshamedMunchkin";
       port = 7021;
       server = "irc.torrentleech.org";
     };
