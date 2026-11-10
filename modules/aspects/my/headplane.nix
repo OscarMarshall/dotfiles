@@ -31,16 +31,16 @@
             {
               assertion =
                 let
+                  filteredDrv =
+                    (lib.filterAttrsRecursive (_: v: v != null) {
+                      drv = {
+                        probe = null;
+                        type = "derivation";
+                      };
+                    }).drv;
                   headscaleOptions = (options.services.headplane.settings.type.getSubOptions [ ]).headscale;
                 in
-                lib.isDerivation (headscaleOptions.type.getSubOptions [ ]).config_path.default
-                && !(lib.filterAttrsRecursive (_: v: v != null) {
-                  drv = {
-                    probe = null;
-                    type = "derivation";
-                  };
-                }).drv
-                  ? probe;
+                lib.isDerivation (headscaleOptions.type.getSubOptions [ ]).config_path.default && !(filteredDrv ? probe);
 
               message = "my.headplane: the headscale.config_path string workaround may no longer be needed - drop it and check eval for stdenv.is* warnings.";
             }
