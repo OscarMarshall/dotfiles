@@ -74,8 +74,10 @@ let
     let
       dataset-service-name = "zfs-dataset-${terranix-dataset.pool}-${terranix-dataset.name}";
       # `my.terranix` is opt-in (see harmony.nix) - a host only reaches this code by asking for it,
-      # and is expected to run `nix run .#<host>-tf.init` once (generating and committing this
-      # file) before its first `nixos-rebuild switch`. No `builtins.pathExists` guard: if that
+      # and is expected to generate and commit this file once (plain `tofu init` against `nix
+      # build .#<host>-tf.config`, as terraform-provider-lock.yml does - NOT `nix run
+      # .#<host>-tf.init`, whose wrapper only ever reads the committed copy, see its `workdir`
+      # below) before its first `nixos-rebuild switch`. No `builtins.pathExists` guard: if that
       # step hasn't happened yet, evaluating this host's config should fail loudly on the missing
       # file, the same way referencing a not-yet-`agenix edit`ed secret would - not silently no-op
       # until someone notices the lock file is missing.
@@ -520,6 +522,19 @@ in
               export TF_CLI_ARGS_destroy="''${TF_CLI_ARGS_destroy:-} -parallelism=1"
               export TF_CLI_ARGS_plan="''${TF_CLI_ARGS_plan:-} -parallelism=1"
 
+              # Always the committed lock file, same as the apply service: OpenTofu has no flag or
+              # env var to read a lock file from anywhere but its working directory, so it's
+              # symlinked in - re-pointed every run, so the running flake revision's lock always
+              # wins. `-lockfile=readonly` makes a lock that doesn't satisfy the config fail
+              # outright instead of OpenTofu trying to rewrite a read-only store path. Refreshing
+              # the lock is terraform-provider-lock.yml's job, which bypasses this wrapper. Plugins
+              # share the apply service's own `CacheDirectory`, so neither re-downloads what the
+              # other already fetched.
+              ln -sf ${../. + "/${key}/.terraform.lock.hcl"} .terraform.lock.hcl
+              export TF_CLI_ARGS_init="''${TF_CLI_ARGS_init:-} -lockfile=readonly"
+              export TF_PLUGIN_CACHE_DIR="/var/cache/${key}"
+              mkdir -p "$TF_PLUGIN_CACHE_DIR"
+
               decrypted_env_file="/run/agenix/${host-name}-tf.env"
               if [ -r "$decrypted_env_file" ]; then
                 set -a
@@ -529,6 +544,20 @@ in
               fi
             '';
           };
+
+          # Absolute, not terranix's default (`key`, i.e. `./harmony-tf` relative to wherever the
+          # app happens to be run from): that default left a separate working directory - each with
+          # its OWN `.terraform.lock.hcl` - behind everywhere it was ever run, and a plain `tofu
+          # init` honours whatever lock file it finds there over the committed one. Confirmed live:
+          # a stale `~/harmony-tf` kept loading jellyfin provider 0.3.7 (tested against Jellyfin
+          # 12.1) long after the committed lock had moved to 0.9.0. One fixed directory, on tmpfs
+          # (nothing worth keeping lives here - state is at `backend.local.path`), and distinct from
+          # the apply service's own `RuntimeDirectory` (`/run/<host>-tf`), which systemd wipes out
+          # from under anything else using it. Root-only, like everything else this touches (the
+          # 0400 `/run/agenix/<host>-tf.env`, the root-owned state dir, the shared plugin cache
+          # below) - a non-root run stops right at terranix's own `mkdir -p` of this, before
+          # `prefixText` gets a chance to, instead of failing confusingly mid-plan as it used to.
+          workdir = "/run/${key}-cli";
         }
       ) terranix-modules;
     };
