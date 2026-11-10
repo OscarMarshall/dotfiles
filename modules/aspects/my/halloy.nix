@@ -1,6 +1,4 @@
 let
-  # Default nick; a network's own `nickname` overrides it.
-  defaultNickname = "OscarMarshall";
   # Ports, TLS and auth styles come from autobrr's indexer definitions
   # (internal/indexer/definitions/*.yaml). `nickserv` sends NICKSERV IDENTIFY after connecting;
   # `server` sends the secret as the connection PASS (LST's IRC key, seedpool's passkey).
@@ -14,6 +12,7 @@ let
     # Joining #announce also needs `/msg ENDOR !invite <user> <irckey>`, sent by hand.
     digitalcore = {
       auth = "nickserv";
+      nickname = "Ashamed";
       port = 7000;
       server = "irc.digitalcore.club";
     };
@@ -62,8 +61,8 @@ in
           _:
           {
             auth,
+            nickname,
             server,
-            nickname ? defaultNickname,
             port ? null,
           }:
           let
