@@ -62,13 +62,15 @@ in
             # Each secret is the `password` field of the Proton Pass item titled after the server host.
             # Halloy runs this via `sh -c`, which - launched from the desktop rather than a shell -
             # never sees home.sessionVariables, so the keyring provider my.proton-pass sets has to be
-            # repeated here or pass-cli looks for its DB key in the wrong store. A locked or
-            # logged-out pass-cli fails the command and Halloy skips connecting instead of sending a
-            # blank secret.
+            # repeated here or pass-cli looks for its DB key in the wrong store. Halloy treats a failing
+            # command as a config error and refuses to start at all, so a missing item (a network not
+            # yet registered) or a locked pass-cli must fall back to an empty secret: NickServ just
+            # rejects the blank IDENTIFY, and a blank PASS only fails that one network's login.
             passwordCommand = lib.concatStringsSep " " [
               "PROTON_PASS_LINUX_KEYRING=dbus"
               (lib.getExe' pkgs.proton-pass-cli "pass-cli")
               "item view --vault-name Personal --item-title ${server} --field password --output human"
+              "2>/dev/null || true"
             ];
           in
           {
