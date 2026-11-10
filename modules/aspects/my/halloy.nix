@@ -1,10 +1,13 @@
 let
+  # Default nick; a network's own `nickname` overrides it. LST requires it to be the site username.
+  defaultNickname = "OscarMarshall";
   # Ports, TLS and auth styles come from autobrr's indexer definitions
   # (internal/indexer/definitions/*.yaml). `nickserv` sends NICKSERV IDENTIFY after connecting;
   # `server` sends the secret as the connection PASS (LST's IRC key, seedpool's passkey).
   networks = {
     darkpeers = {
       auth = "nickserv";
+      nickname = "Ashamed";
       server = "irc.darkpeers.org";
     };
 
@@ -42,8 +45,6 @@ let
       server = "irc.torrentleech.org";
     };
   };
-  # Same nick on every network until told otherwise. LST requires it to be the site username.
-  nickname = "OscarMarshall";
 in
 {
   my.halloy = { user, ... }: {
@@ -56,6 +57,7 @@ in
           {
             auth,
             server,
+            nickname ? defaultNickname,
             port ? null,
           }:
           let
