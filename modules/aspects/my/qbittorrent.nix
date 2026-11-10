@@ -231,7 +231,14 @@ in
 
                     # No auth needed - AuthSubnetWhitelist above covers this namespace's own
                     # loopback, which is what this connects from.
-                    current_port="$(${pkgs.curl}/bin/curl -fsS "http://127.0.0.1:${toString port}/api/v2/app/preferences" \
+                    #
+                    # The retries cover a fresh qBittorrent start: `after` only orders this behind
+                    # the unit being started, but qBittorrent's WebUI comes up ~1s later ("WebUI will
+                    # be started shortly after internal preparations"). Seen live on a switch that
+                    # restarted qBittorrent - this ran in that gap, got "connection refused", and
+                    # failed the whole activation. Once this call gets through, the WebUI is up for
+                    # the `setPreferences` call below too.
+                    current_port="$(${pkgs.curl}/bin/curl -fsS --retry 30 --retry-connrefused --retry-delay 1 "http://127.0.0.1:${toString port}/api/v2/app/preferences" \
                       | ${pkgs.jq}/bin/jq -r '.listen_port')"
 
                     if [ "$current_port" != "$mapped_port" ]; then
