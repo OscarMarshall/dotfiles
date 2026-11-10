@@ -327,9 +327,7 @@ in
           # Each administrator's email is read off their Authentik account rather than written
           # down here - it has to match what TRUSTED_AUTH_HEADER above receives exactly, and
           # Authentik is where it can change (self-service "Change sign-in email"), so the next
-          # apply follows it instead of the login silently breaking. So `administrators` are
-          # Authentik usernames, not Linux ones (unlike immich.nix's/paperless.nix's), and the
-          # lookup is case-sensitive: "oscar" found no one, the account is "Oscar".
+          # apply follows it instead of the login silently breaking.
           authentik_user = lib.genAttrs administrators (username: {
             inherit username;
           });
