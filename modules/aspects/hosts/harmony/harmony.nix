@@ -35,6 +35,7 @@
       (profilarr { })
       (prowlarr { })
       (qbittorrent { administrators = [ "oscar" ]; })
+      (qui { })
       (radarr { administrators = [ "oscar" ]; })
       (seerr { global = true; })
       (sonarr { administrators = [ "oscar" ]; })
