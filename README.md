@@ -199,19 +199,19 @@ wiring, DNS records, the Meraki router. These are managed as Terraform/OpenTofu 
 Each host that uses this gets its own `nix run .#<host>-tf*` commands (currently only `harmony-tf`):
 
 ```console
-nix run .#harmony-tf.plan      # preview changes
-nix run .#harmony-tf           # apply
-nix run .#harmony-tf.destroy
-nix develop .#harmony-tf       # shell with opentofu
-nix build .#harmony-tf.config  # inspect the generated config.tf.json
+sudo nix run .#harmony-tf.plan      # preview changes
+sudo nix run .#harmony-tf           # apply
+sudo nix run .#harmony-tf.destroy
+nix develop .#harmony-tf            # shell with opentofu
+nix build .#harmony-tf.config       # inspect the generated config.tf.json
 ```
 
-These only work when run **on the host itself** (e.g. on harmony, never from a dev laptop): both Terraform state and the
-decrypted secrets env file live on the host's own local ZFS dataset/`/run/agenix`, not in this repo or on the YubiKey
-master identity. `harmony-tf-apply.service` also plans and applies automatically on every `nixos-rebuild switch` that
-changes anything Terraform-relevant, so running these by hand is normally only needed to preview a change or investigate
-a failure — a plan containing any destroy action is never auto-applied; it fails the service instead, surfaced through
-the same Netdata → Discord alerting used for host health.
+The `nix run .#<host>-tf*` commands only work when run **as root on the host itself** (e.g. `sudo` on harmony, never
+from a dev laptop): both Terraform state and the decrypted secrets env file live on the host's own local ZFS
+dataset/`/run/agenix`, not in this repo or on the YubiKey master identity. `harmony-tf-apply.service` also plans and
+applies automatically on every `nixos-rebuild switch` that changes anything Terraform-relevant, so running these by hand
+is normally only needed to preview a change or investigate a failure — a plan containing any destroy action is never
+auto-applied; it fails the service instead, surfaced through the same Netdata → Discord alerting used for host health.
 
 ## Offsite Backups (Restic/Backblaze B2)
 
@@ -234,7 +234,7 @@ Credentials: an account-level Backblaze application key (shared across every hos
 its ID is a plain constant in `backup.nix` itself, not a per-host parameter) authenticates the `b2` Terraform provider
 that creates the bucket; a second, bucket-scoped key (per host, named `backup-b2-application-key-<hostname>`) is what
 restic actually uses day to day. The bucket-scoped key can't exist before its bucket does, so a new host's bootstrap
-order is: wire in `my.backup` with just `bucket` set, `nix run .#<hostname>-tf` to create the bucket (see
+order is: wire in `my.backup` with just `bucket` set, `sudo nix run .#<hostname>-tf` to create the bucket (see
 [Infrastructure as Code](#infrastructure-as-code-terranixopentofu) above), create the bucket-scoped key against it, then
 set `applicationKeyId` and rebuild. Until `applicationKeyId` is set, no restic jobs are scheduled at all — see
 `backup.nix`'s own comments for why that matters.
