@@ -43,7 +43,6 @@
       (tautulli { })
       (zfs [ "metalminds" ])
       boot
-      cross-seed
       den.aspects.harmony.provides.minecraft-servers
       dns
       fail2ban

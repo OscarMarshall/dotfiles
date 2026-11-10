@@ -1,6 +1,5 @@
 { inputs, ... }:
 let
-  crossSeedPort = 2468;
   namespace = "proton0";
   # Pinned explicitly (rather than left at VPN-Confinement's own default) so this value can be
   # referenced here for the `virtual-host` upstream, without needing `config` in a scope that
@@ -75,19 +74,6 @@ in
             profileDir = "/var/lib/qBittorrent";
 
             serverConfig = {
-              AutoRun = {
-                enabled = true;
-
-                program = ''
-                  ${pkgs.curl}/bin/curl -XPOST http://${
-                    config.vpnNamespaces.${namespace}.bridgeAddress
-                  }:${toString crossSeedPort}/api/webhook \
-                    -H "X-Api-Key: $CROSS_SEED_API_KEY" \
-                    -d "infoHash=%I" \
-                    -d "includeSingleEpisodes=true"
-                '';
-              };
-
               BitTorrent.Session = {
                 DefaultSavePath = "/metalminds/torrents/downloads";
                 # Carried over from the gluetun setup's 20-day seed cap (GlobalMaxSeedingMinutes)
@@ -168,7 +154,6 @@ in
           systemd = {
             services = {
               qbittorrent.serviceConfig = {
-                EnvironmentFile = [ config.age.secrets."qbittorrent.env".path ];
                 # Default umask (022) creates completed-download files/directories `rw-r--r--`/
                 # `rwxr-xr-x` - readable by the `qbittorrent` group, but not writable, which starves
                 # every OTHER app that reaches in as a group member (rather than as `qbittorrent`
@@ -291,7 +276,7 @@ in
             inherit namespaceAddress;
             enable = true;
 
-            # Deliberately no `accessibleFrom`: nginx and cross-seed both already reach the
+            # Deliberately no `accessibleFrom`: nginx and qui both already reach the
             # namespace fine without it, via the connected route the veth pair's own
             # address assignment creates automatically (192.168.15.0/24, dev veth-proton0).
             # Adding the wider LAN here would let any device on it route straight into the
@@ -311,27 +296,10 @@ in
 
       nixosSecrets."Harmony-US-CA-888.conf".rekeyFile = ../../../secrets/Harmony-US-CA-888.conf.age;
 
-      secrets = { secrets, ... }: {
-        "qbittorrent.env".generator = {
-          dependencies = { inherit (secrets) cross-seed-api-key; };
-
-          script =
-            {
-              lib,
-              decrypt,
-              deps,
-              ...
-            }:
-            ''
-              printf 'CROSS_SEED_API_KEY="%s"\n' "$(${decrypt} ${lib.escapeShellArg deps."cross-seed-api-key".file})"
-            '';
-        };
-      };
-
       # Describes qBittorrent's own connection details via the `torrent-client` quirk
       # (torrent-client.nix) - this is the ONE place that actually knows them (namespace address,
       # port), so every consumer (radarr.nix/sonarr.nix/bookshelf.nix's own devopsarr terranix
-      # download-client resources, cross-seed.nix's own JSON config) reads this entry and formats
+      # download-client resources) reads this entry and formats
       # it into whatever shape its own config needs, rather than this aspect prescribing that shape
       # itself. `namespaceAddress` (not `127.0.0.1`) because every consumer runs in the DEFAULT
       # network namespace, while qBittorrent itself lives inside the `proton0` VPN namespace above -
