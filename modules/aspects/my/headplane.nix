@@ -21,7 +21,13 @@
             enable = true;
 
             settings = {
-              headscale.api_key_path = "/var/lib/headplane-api-key/api-key";
+              headscale = {
+                api_key_path = "/var/lib/headplane-api-key/api-key";
+                # Upstream's default is the configFile derivation itself, and the module's
+                # filterAttrsRecursive then walks into it - down through its stdenv, tripping every
+                # deprecated `stdenv.is*` alias warning on each eval. Same store path, as a string.
+                config_path = "${config.services.headscale.configFile}";
+              };
 
               server = {
                 inherit port;
