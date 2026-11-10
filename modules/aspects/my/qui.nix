@@ -13,11 +13,6 @@
       # `torrent-client` quirk here - point it at qbittorrent.nix's `namespaceAddress`:8080
       # (192.168.15.1:8080), with no credentials needed: qui connects from the default namespace's
       # side of the veth/bridge pair, already inside qBittorrent's `AuthSubnetWhitelist`.
-      #
-      # qui's own login stays enabled on top of Authentik's forward-auth, same as autobrr.nix -
-      # `authDisabled` (plus the `I_ACKNOWLEDGE_THIS_IS_A_BAD_IDEA` it requires) is deliberately
-      # left for a human to opt into, since anything that can reach the port then gets full
-      # control of qui and every torrent client behind it.
       nixos = { config, ... }: {
         services.qui = {
           enable = true;
@@ -25,6 +20,16 @@
 
           settings = {
             inherit port;
+            I_ACKNOWLEDGE_THIS_IS_A_BAD_IDEA = true;
+            # qui's own login is off, leaving Authentik's forward-auth (`protected` below) as the
+            # only gate - same arrangement as qbittorrent.nix's `AuthSubnetWhitelist`. Anything that
+            # reaches the port gets full control of qui and every torrent client behind it, so this
+            # was an explicit opt-in.
+            authDisabled = true;
+            # qui checks this against the raw socket address, ahead of its own `RealIP` middleware
+            # (internal/api/server.go), so nginx's forwarded headers can't widen it - loopback is
+            # exactly nginx, given `host` below.
+            authDisabledAllowedCIDRs = [ "127.0.0.1/32" ];
             host = "127.0.0.1";
           };
         };
