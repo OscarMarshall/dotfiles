@@ -40,7 +40,7 @@ let
     seedpool = {
       auth = "server";
       nickname = "Ashamed";
-      server = "irc.seedpool.com";
+      server = "irc.seedpool.org";
     };
 
     torrentleech = {
