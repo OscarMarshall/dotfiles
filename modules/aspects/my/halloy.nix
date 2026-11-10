@@ -17,11 +17,8 @@ let
       server = "irc.digitalcore.club";
     };
 
-    # The nick must be the site username. autobrr on harmony holds it around the clock and the
-    # server has no multi-client support, so without a fallback Halloy sits on "Nickname is already
-    # in use" until LST drops it for Registration Timeout, then reconnects and repeats.
+    # The nick must be the site username.
     lst = {
-      altNicks = [ "ashamed_" ];
       auth = "server";
       nickname = "ashamed";
       server = "irc.lst.gg";
@@ -66,7 +63,6 @@ in
             auth,
             nickname,
             server,
-            altNicks ? [ ],
             port ? null,
           }:
           let
@@ -89,7 +85,6 @@ in
             ${if auth == "server" then "password_command" else "nick_password_command"} = passwordCommand;
             channels = [ ];
           }
-          // lib.optionalAttrs (altNicks != [ ]) { alt_nicks = altNicks; }
           // lib.optionalAttrs (port != null) { inherit port; }
         ) networks;
       };
