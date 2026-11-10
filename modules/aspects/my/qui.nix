@@ -16,6 +16,12 @@
       nixos = { config, ... }: {
         services.qui = {
           enable = true;
+          # Runs as qBittorrent's own user (qbittorrent.nix), same as the standalone cross-seed it
+          # replaced: qui's reflink-mode cross-seed needs "Local filesystem access" to read
+          # `/metalminds/torrents` and write its link trees there (`link-dir`). Running as the
+          # dataset's owner leaves those trees owned exactly like everything else in it, so
+          # qBittorrent can still write into them when a cross-seed downloads missing extras.
+          group = "qbittorrent";
           secretFile = config.age.secrets.qui-session-secret.path;
 
           settings = {
@@ -32,10 +38,12 @@
             authDisabledAllowedCIDRs = [ "127.0.0.1/32" ];
             host = "127.0.0.1";
           };
+
+          user = "qbittorrent";
         };
       };
 
-      # Read by systemd itself via the module's own `LoadCredential`, not by the `qui` user, so the
+      # Read by systemd itself via the module's own `LoadCredential`, not by qui's user, so the
       # default root-only ownership is fine.
       secrets.qui-session-secret.generator.script = "hex";
 
