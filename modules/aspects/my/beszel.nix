@@ -193,7 +193,10 @@ in
             #
             # Wanted by the Terraform apply (not only at boot), since that's what creates the system
             # in the first place. Leaves an existing registration alone, so the fingerprint the hub
-            # pinned on the agent's first connect survives.
+            # pinned on the agent's first connect survives. If the system doesn't exist yet - that
+            # apply failed, or stopped at its destroy guard and the system only appears once
+            # someone runs `nix run .#${host.name}-tf` by hand, which never starts this - it keeps
+            # retrying every 30s until it does, instead of exiting and waiting for the next boot.
             beszel-agent-register = {
               description = "Register ${host.name}'s Beszel agent token with its Terraform-managed system";
 
@@ -250,8 +253,8 @@ in
 
                   case "''${#systems[@]}" in
                     0)
-                      echo "No ${host.name} system yet - Terraform hasn't created it; nothing to register."
-                      exit 0
+                      echo "No ${host.name} system yet - Terraform hasn't created it; retrying in 30s." >&2
+                      exit 75 # EX_TEMPFAIL - see RestartForceExitStatus below
                       ;;
                     1) system="''${systems[0]}" ;;
                     *)
@@ -279,6 +282,10 @@ in
                 '';
 
                 LoadCredential = "agent-token:${config.age.secrets.beszel-agent-token.path}";
+                # Only the "no system yet" exit retries; anything else (e.g. duplicate systems)
+                # needs a human, so it fails once and stays failed rather than looping.
+                RestartForceExitStatus = 75;
+                RestartSec = "30s";
                 Type = "oneshot";
               };
             };
