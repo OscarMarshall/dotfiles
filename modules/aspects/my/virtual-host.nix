@@ -65,6 +65,11 @@
 #                         scanning for `settings.homepage = "<this name>";` on that same aspect's
 #                         `secrets` field (modules/aspects/my/homepage.nix), rather than this record
 #                         naming the secret directly.
+#   hidden              - (optional, bool) keep the service's Authentik application (and its policy
+#                         bindings) but leave it out of Authentik's application library, via
+#                         Authentik's own `blank://blank` launch-URL convention - for a service whose
+#                         only browser-facing pages are its login flow (e.g. headscale), so there's
+#                         nothing to launch. Homepage needs no equivalent: omit `homepage` instead.
 #   oidc                - (optional) `{ redirect-paths; client-secret; }` - requests a native
 #                         OAuth2/OIDC Provider + Application from Authentik, for a service that
 #                         handles its own OIDC login rather than sitting behind Authentik's
