@@ -35,6 +35,7 @@
       (profilarr { })
       (prowlarr { })
       (qbittorrent { administrators = [ "oscar" ]; })
+      (qui { })
       (radarr { administrators = [ "oscar" ]; })
       (seerr { global = true; })
       (sonarr { administrators = [ "oscar" ]; })
@@ -42,7 +43,6 @@
       (tautulli { })
       (zfs [ "metalminds" ])
       boot
-      cross-seed
       den.aspects.harmony.provides.minecraft-servers
       dns
       fail2ban
