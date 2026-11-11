@@ -57,6 +57,11 @@
             config.dbtype = "pgsql";
             enable = true;
             package = pkgs.nextcloud35;
+            # Apps come only from `extraApps` below (built into the webroot in the store). Left at
+            # its `null` default the in-browser App Store stays on and installs into
+            # `${home}/store-apps` (/var/lib/nextcloud) - mutable state outside the dataset, which
+            # an ephemeral root would drop every boot while the DB still marks the app enabled.
+            appstoreEnable = false;
             database.createLocally = true;
             datadir = "/metalminds/nextcloud"; # holds both config/ (config.php) and data/ (user files)
 
