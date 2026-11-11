@@ -25,7 +25,7 @@
       my.proton-pass
     ];
 
-    homeManager = { config, pkgs, ... }: {
+    homeManager = { pkgs, ... }: {
       home.packages = with pkgs; [
         gh
         jq
@@ -73,11 +73,11 @@
               wrapProgram $out/bin/claude ${
                 lib.escapeShellArgs [
                   "--run"
-                  ''export BESZEL_API_KEY="$(cat ${config.proton-pass.secrets.beszel-api-key.path})"''
+                  ''export BESZEL_API_KEY="$(pass-cli item view 'pass://Personal/Beszel API/password' 2>/dev/null)"''
                   "--run"
-                  ''export BESZEL_PASSWORD="$(cat ${config.proton-pass.secrets.beszel-password.path})"''
+                  ''export BESZEL_PASSWORD="$(pass-cli item view 'pass://Personal/Beszel/password' 2>/dev/null)"''
                   "--run"
-                  ''export GH_TOKEN="''${GH_TOKEN:-$(cat ${config.proton-pass.secrets.github-mcp-server-github-access-token.path})}"''
+                  ''export GH_TOKEN="''${GH_TOKEN:-$(pass-cli item view 'pass://Personal/GitHub MCP Server/API Key' 2>/dev/null)}"''
                 ]
               }
             '';
@@ -91,12 +91,10 @@
         # Claude-specific MCP servers (as opposed to `my.mcp-servers`, which
         # holds servers shared with other MCP-integrated programs like OpenCode).
         mcpServers = {
-          # `proton-pass.secrets` paths are an unexpanded `${XDG_RUNTIME_DIR}/proton-pass/...`,
-          # and `programs.mcp`'s env.*.file support single-quotes the path before `cat`-ing it, so
-          # the variable never expands and the token file is never found. Read it ourselves in a
-          # wrapper script instead, where bash expands it at runtime.
+          # `programs.mcp` has no way to source an env var from a command, so the token is looked
+          # up in Proton Pass by a wrapper script instead.
           github.command = "${pkgs.writeShellScript "github-mcp-server-wrapper" ''
-            export GITHUB_PERSONAL_ACCESS_TOKEN="$(cat ${config.proton-pass.secrets.github-mcp-server-github-access-token.path})"
+            export GITHUB_PERSONAL_ACCESS_TOKEN="$(pass-cli item view 'pass://Personal/GitHub MCP Server/API Key')"
             exec ${pkgs.github-mcp-server}/bin/github-mcp-server stdio
           ''}";
 
@@ -226,15 +224,6 @@
             type = "command";
           };
         };
-      };
-
-      proton-pass.secrets = {
-        # Copies of the generated secrets beszel.nix's beszel-api vhost (Basic Auth user `beszel`)
-        # and hub admin account use on harmony (secrets/generated/beszel-*.age) - if either is ever
-        # regenerated there, update its Proton Pass item to match.
-        beszel-api-key.uri = "pass://Personal/Beszel API/password";
-        beszel-password.uri = "pass://Personal/Beszel/password";
-        github-mcp-server-github-access-token.uri = "pass://Personal/GitHub MCP Server/API Key";
       };
     };
 
