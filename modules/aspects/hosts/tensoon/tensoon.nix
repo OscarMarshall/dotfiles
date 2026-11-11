@@ -37,6 +37,9 @@
       preservation
       printing
       ssh-server
+      # Host-scoped so `programs.steam.enable` lands - oscar's own my.steam include only carries
+      # its home/preserve parts to the host (den#694). Same as melaan.
+      steam
       tailscale
       umbriel
       yubikey
