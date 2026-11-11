@@ -1,13 +1,11 @@
 { inputs, my, ... }: {
   my.opencode = { user, ... }: {
-    includes = [ my.mcp-servers ];
+    includes = [
+      my.mcp-servers
+      my.proton-pass
+    ];
 
     homeManager = { config, pkgs, ... }: {
-      # Same primitive secret my.claude rekeys for its GitHub MCP server - declared again here so
-      # OpenCode doesn't silently depend on my.claude also being included. Identical `rekeyFile`
-      # definitions merge cleanly.
-      age.secrets.github-mcp-server-github-access-token.rekeyFile = ../../../secrets/github-mcp-server-github-access-token.age;
-
       programs.opencode = {
         enable = true;
 
@@ -32,13 +30,13 @@
           autoupdate = false;
 
           mcp = {
-            # Wrapped for the same reason as my.claude's github MCP server: agenix's Home Manager
-            # secret path is an unexpanded `${XDG_RUNTIME_DIR}/...`, which OpenCode's `{file:...}`
+            # Wrapped for the same reason as my.claude's github MCP server: a `proton-pass.secrets`
+            # path is an unexpanded `${XDG_RUNTIME_DIR}/...`, which OpenCode's `{file:...}`
             # env interpolation would take literally.
             github = {
               command = [
                 "${pkgs.writeShellScript "opencode-github-mcp-server-wrapper" ''
-                  export GITHUB_PERSONAL_ACCESS_TOKEN="$(cat ${config.age.secrets.github-mcp-server-github-access-token.path})"
+                  export GITHUB_PERSONAL_ACCESS_TOKEN="$(cat ${config.proton-pass.secrets.github-mcp-server-github-access-token.path})"
                   exec ${pkgs.github-mcp-server}/bin/github-mcp-server stdio
                 ''}"
               ];
@@ -55,6 +53,11 @@
           plugin = [ inputs.ponytail ];
         };
       };
+
+      # Same Proton Pass item my.claude reads for its GitHub MCP server - declared again here so
+      # OpenCode doesn't silently depend on my.claude also being included. Identical `uri`
+      # definitions merge cleanly.
+      proton-pass.secrets.github-mcp-server-github-access-token.uri = "pass://Personal/GitHub MCP Server/API Key";
     };
 
     # `preserve` (modules/aspects/my/preserve.nix) is inert without my.preservation.
