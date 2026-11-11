@@ -3,10 +3,6 @@
     includes = [
       (den._.user-shell "fish")
       (my.fish { })
-      ({ user, ... }: {
-        nixos.users.users.${user.userName}.hashedPassword =
-          "$y$j9T$PIOU1O0/eDXQdlTWkzuf5.$AhnTDMJLgzM04nt6pzz/ae.3U.3LUWhte6PiBw.Mzb2";
-      })
       den._.primary-user
       my.chrome
       my.discord
@@ -35,6 +31,11 @@
       };
     };
 
-    user.description = "Adelline Marshall";
+    # The `user` class (users.users.adelline) rather than `nixos`, which no longer leaves a user
+    # aspect for its hosts (den#694).
+    user = {
+      description = "Adelline Marshall";
+      hashedPassword = "$y$j9T$PIOU1O0/eDXQdlTWkzuf5.$AhnTDMJLgzM04nt6pzz/ae.3U.3LUWhte6PiBw.Mzb2";
+    };
   };
 }

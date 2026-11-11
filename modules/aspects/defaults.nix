@@ -83,6 +83,11 @@ in
       my.secrets
     ];
 
+    # Adopt den#694 now: a user aspect's bare `nixos` / `os` content stays with the user, and
+    # reaches a host only through the `user` class, `provides.to-hosts` (mutual-provider, below) or
+    # a host-level include. Remove after 2027-01-01, when this becomes den's only behaviour.
+    migrations.user-host-content.acknowledged = true;
+
     schema = {
       home.includes = [
         my.nix
@@ -93,6 +98,9 @@ in
       host = {
         includes = [
           corePreserve
+          # Delivers users' `provides.to-hosts` (e.g. oscar's trusted-users, my.steam) -
+          # opt-in since den#694.
+          den.batteries.mutual-provider
           my.fonts
           my.nix
           nixosSecrets
