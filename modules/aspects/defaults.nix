@@ -98,7 +98,7 @@ in
       host = {
         includes = [
           corePreserve
-          # Delivers users' `provides.to-hosts` (e.g. oscar's password file and trusted-users) -
+          # Delivers users' `provides.to-hosts` (e.g. oscar's trusted-users, my.steam) -
           # opt-in since den#694.
           den.batteries.mutual-provider
           my.fonts
