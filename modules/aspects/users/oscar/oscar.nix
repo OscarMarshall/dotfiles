@@ -74,6 +74,7 @@ in
         my.discord
         my.doc-browser
         my.ghostty
+        my.halloy
         my.orca-slicer
         my.programmer-dvorak
         my.prusa-slicer
