@@ -102,6 +102,7 @@ in
             rsync
           ]
           ++ lib.optionals (scope.graphical or false) [
+            freecad
             gthumb
             inkscape
             mkvtoolnix
