@@ -14,14 +14,17 @@
     homeManager =
       { lib, pkgs, ... }:
       let
+        # Same import-from-derivation `autoPubspecLock` does, done here so `gitHashes` below can read
+        # it too - pubspec.lock never needs regenerating by hand.
+        pubspecLock = lib.importJSON (
+          pkgs.runCommand "moonfin-pubspec-lock-json" { nativeBuildInputs = [ pkgs.yq ]; } "yq . '${src}/pubspec.lock' > $out"
+        );
         src = inputs.moonfin-src;
       in
       {
         home.packages = [
           (pkgs.flutter347.buildFlutterApplication {
-            inherit src;
-            # Reads pubspec.lock via import-from-derivation, so it never needs regenerating by hand.
-            autoPubspecLock = "${src}/pubspec.lock";
+            inherit pubspecLock src;
 
             buildInputs = with pkgs; [
               alsa-lib
@@ -50,14 +53,19 @@
               })
             ];
 
-            # pubspec.lock's `source: git` deps (upstream's own forks). The one part a `moonfin-src`
-            # bump can still break: when upstream moves one of these refs, set its hash to "" and
-            # rebuild to get the new one.
-            gitHashes = {
-              background_downloader = "sha256-4EGBC6cyOAmK9BLs4B9iYmeYuzmoIAQHuepr4PzRguE=";
-              media_kit_libs_windows_video = "sha256-0DEfXGih/WsbHp8oCbsjCPgLiloDMYAXeaqwReC3tH0=";
-              media_kit_video = "sha256-0DEfXGih/WsbHp8oCbsjCPgLiloDMYAXeaqwReC3tH0=";
-            };
+            # pubspec.lock's `source: git` deps (upstream's own forks) need a hash pub doesn't record.
+            # `builtins.fetchGit` needs none for a pinned rev, and its narHash is exactly what
+            # pub2nix's `fetchgit` checks for (submodules included, matching fetchgit's default) -
+            # so whatever refs a `moonfin-src` bump moves these to, nothing to update by hand.
+            gitHashes = lib.mapAttrs (
+              _: dep:
+              (fetchGit {
+                inherit (dep.description) url;
+                allRefs = true;
+                rev = dep.description.resolved-ref;
+                submodules = true;
+              }).narHash
+            ) (lib.filterAttrs (_: dep: dep.source == "git") pubspecLock.packages);
 
             nativeBuildInputs = [ pkgs.copyDesktopItems ];
             pname = "moonfin";
