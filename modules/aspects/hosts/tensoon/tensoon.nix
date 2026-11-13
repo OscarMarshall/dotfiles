@@ -36,6 +36,7 @@
       pipewire
       preservation
       printing
+      (rescue-boot { })
       ssh-server
       tailscale
       umbriel
@@ -48,6 +49,10 @@
       # during install. `agenix generate -a && agenix rekey -a` (YubiKey) rekeys against this and
       # writes secrets/rekeyed/tensoon* + secrets/rekeyed/tensoon-home-oscar*.
       age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDYa0oNYU887KosG7tsNrbTU8c49QiKaJdB1X6TWZyUh root@tensoon";
+
+      # The 1 GiB ESP also holds the my.rescue-boot image (~a few hundred MiB), so keep fewer
+      # generations' kernels + initrds than the default 10.
+      boot.loader.systemd-boot.configurationLimit = 5;
 
       # The PIXA3854 clickpad defaults to libinput's "button-areas" click method: a physical press
       # is a right-click only in the bottom-right corner, finger count ignored. Umbriel exposes no
