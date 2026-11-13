@@ -112,6 +112,7 @@
             "systemd-cryptsetup@cryptroot.service"
             "systemd-hibernate-resume.service"
           ];
+
           before = [ "sysroot-home.mount" ];
           requires = [ "systemd-cryptsetup@cryptroot.service" ];
 
