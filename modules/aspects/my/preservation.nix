@@ -100,7 +100,19 @@
         services.rollback-home = {
           description = "Reset /home to a pristine btrfs snapshot";
           wantedBy = [ "initrd.target" ];
-          after = [ "systemd-cryptsetup@cryptroot.service" ];
+
+          # Must wait for the hibernation-resume attempt. If a hibernation image exists, the btrfs
+          # filesystem is still "mounted" by the frozen kernel in that image; writing to it here
+          # (snapshot/delete/recreate @home) and then resuming leaves the resumed kernel with stale
+          # in-memory metadata, which corrupts the filesystem (transid errors, unmountable root).
+          # DefaultDependencies=no drops the implicit `After=local-fs-pre.target` that orders real
+          # mounts after systemd-hibernate-resume.service, so restore it explicitly.
+          after = [
+            "local-fs-pre.target"
+            "systemd-cryptsetup@cryptroot.service"
+            "systemd-hibernate-resume.service"
+          ];
+
           before = [ "sysroot-home.mount" ];
           requires = [ "systemd-cryptsetup@cryptroot.service" ];
 
