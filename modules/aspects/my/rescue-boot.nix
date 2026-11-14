@@ -9,7 +9,7 @@
 #
 # Built on the bare netboot module rather than the netboot *installer* profile, which pulls in
 # Python, Perl, vim, docs, a build toolchain and a copy of nixpkgs (~600 MiB in total). Only what a
-# rescue needs is included: LUKS, btrfs/ext4/vfat/xfs tools, partitioning, rsync and
+# rescue needs is included: LUKS, btrfs/ext4/vfat tools, partitioning, rsync and
 # `nixos-install` (which takes a `--flake github:...` directly, so no git). Root is logged in
 # automatically on the console with no password.
 #
@@ -84,8 +84,12 @@
                       "btrfs"
                       "ext4"
                       "vfat"
-                      "xfs"
                     ];
+                  };
+
+                  documentation = {
+                    enable = false;
+                    man.enable = false;
                   };
 
                   environment.systemPackages = with pkgs; [
@@ -148,8 +152,19 @@
                     hostPlatform = system;
                   };
 
-                  services.getty.autologinUser = "root";
-                  system.stateVersion = lib.trivial.release;
+                  services = {
+                    getty.autologinUser = "root";
+                    # Replaces the Perl user/group activation script.
+                    userborn.enable = true;
+                  };
+
+                  system = {
+                    # The default NixOS tools pull in Python (nixos-rebuild-ng) among others;
+                    # nixos-install-tools above provides what a rescue needs.
+                    disableInstallerTools = true;
+                    stateVersion = lib.trivial.release;
+                  };
+
                   users.users.root.initialHashedPassword = "";
                 }
               )
