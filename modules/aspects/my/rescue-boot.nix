@@ -21,6 +21,17 @@
       nixos =
         { pkgs, ... }:
         let
+          build = rescue.config.system.build;
+          # Fail the build (and CI) instead of overflowing the ESP.
+          initrd = pkgs.runCommand "rescue-initrd" { } ''
+            size=$(stat -L -c %s ${build.netbootRamdisk}/initrd)
+            echo "rescue initrd: $((size / 1048576)) MiB (limit ${toString maxInitrdMiB} MiB)"
+            if [ "$size" -gt $((${toString maxInitrdMiB} * 1048576)) ]; then
+              echo "rescue initrd is too big for the ESP" >&2
+              exit 1
+            fi
+            cp ${build.netbootRamdisk}/initrd $out
+          '';
           rescue = inputs.nixpkgs.lib.nixosSystem {
             modules = [
               (
@@ -76,19 +87,6 @@
               )
             ];
           };
-
-          build = rescue.config.system.build;
-
-          # Fail the build (and CI) instead of overflowing the ESP.
-          initrd = pkgs.runCommand "rescue-initrd" { } ''
-            size=$(stat -L -c %s ${build.netbootRamdisk}/initrd)
-            echo "rescue initrd: $((size / 1048576)) MiB (limit ${toString maxInitrdMiB} MiB)"
-            if [ "$size" -gt $((${toString maxInitrdMiB} * 1048576)) ]; then
-              echo "rescue initrd is too big for the ESP" >&2
-              exit 1
-            fi
-            cp ${build.netbootRamdisk}/initrd $out
-          '';
         in
         {
           boot.loader.systemd-boot = {
