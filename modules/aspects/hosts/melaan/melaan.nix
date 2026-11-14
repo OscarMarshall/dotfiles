@@ -30,13 +30,13 @@
 
         system = "x86_64-linux";
       })
+      (rescue-boot { })
       boot
       gnome
       locale
       networkmanager
       pipewire
       printing
-      (rescue-boot { })
       steam
       tailscale
     ];
