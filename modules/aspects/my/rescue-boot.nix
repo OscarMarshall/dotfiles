@@ -25,7 +25,6 @@
             modules = [
               (
                 {
-                  config,
                   lib,
                   pkgs,
                   modulesPath,
