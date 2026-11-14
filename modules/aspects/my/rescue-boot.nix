@@ -6,15 +6,27 @@
 # Wi-Fi works once it's booted (NetworkManager: `nmtui`); true firmware netboot (PXE/HTTP boot)
 # would not, since the firmware network stack is Ethernet-only.
 #
-# The image is trimmed to stay small enough to sit on a 1 GiB ESP next to the regular
-# generations: Intel Wi-Fi + graphics firmware only (instead of all of linux-firmware), no ZFS.
-# The build fails if the initrd grows past `maxInitrdMiB`, rather than filling the ESP later.
+# Host-agnostic; the only hardware-specific knob is firmware. The image is trimmed to stay small
+# enough to sit on the ESP next to the regular generations: only the linux-firmware paths in
+# `firmware` are included (default: Intel Wi-Fi + graphics, which covers every current host), and
+# no ZFS. `firmware = null` ships all redistributable firmware instead (much bigger). The build fails
+# if the initrd grows past `maxInitrdMiB`, rather than filling the ESP later; hosts with a small ESP
+# may also want a lower `boot.loader.systemd-boot.configurationLimit`.
+#
+# Usage: `(rescue-boot { })`, or e.g. `(rescue-boot { firmware = [ "rtw89" "i915" ]; })` for a
+# Realtek Wi-Fi host. Entries are paths/globs relative to linux-firmware's lib/firmware.
 #
 # Inside the rescue system: `cryptsetup open`, `btrfs`, `mkfs.*`, `nixos-install` and `git` are
 # available; root has no password on the console (the netboot installer default).
 { inputs, ... }: {
   my.rescue-boot =
     {
+      firmware ? [
+        "iwlwifi-*"
+        "intel/iwlwifi"
+        "i915"
+        "xe"
+      ],
       maxInitrdMiB ? 400,
     }:
     {
@@ -34,25 +46,26 @@
                   imports = [ (modulesPath + "/installer/netboot/netboot-minimal.nix") ];
 
                   boot = {
-                    # Newest kernel for current Framework hardware (Wi-Fi, graphics).
+                    # Newest kernel, for the newest hardware (Wi-Fi, graphics).
                     kernelPackages = lib.mkForce pkgs.linuxPackages_latest;
                     supportedFilesystems.zfs = lib.mkForce false;
                   };
 
                   environment.systemPackages = [ pkgs.git ];
 
-                  hardware = {
+                  # Only what's needed for networking and a working console (see `firmware` above).
+                  hardware = lib.mkIf (firmware != null) {
                     enableAllFirmware = lib.mkForce false;
                     enableRedistributableFirmware = lib.mkForce false;
 
-                    # Only what's needed for networking and a working console.
                     firmware = lib.mkForce [
                       (pkgs.runCommand "rescue-firmware" { } ''
-                        mkdir -p $out/lib/firmware/intel
+                        mkdir -p $out/lib/firmware
                         cd ${pkgs.linux-firmware}/lib/firmware
                         shopt -s nullglob
-                        cp -a iwlwifi-* i915 xe $out/lib/firmware/
-                        if [ -e intel/iwlwifi ]; then cp -a intel/iwlwifi $out/lib/firmware/intel/; fi
+                        for f in ${lib.concatStringsSep " " firmware}; do
+                          if [ -e "$f" ]; then cp -a --parents "$f" $out/lib/firmware/; fi
+                        done
                       '')
                     ];
                   };
