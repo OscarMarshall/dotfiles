@@ -1,23 +1,27 @@
 # rescue-boot - a self-contained NixOS rescue system in the systemd-boot menu.
 #
 # Adds a "NixOS rescue" entry whose kernel + initrd live on the ESP. The initrd carries its own
-# squashfs Nix store (nixpkgs' netboot image), so it runs entirely from RAM and never touches the
+# squashfs Nix store (nixpkgs' netboot module), so it runs entirely from RAM and never touches the
 # root filesystem - recovery doesn't need install media even when the main btrfs won't mount.
-# Wi-Fi works once it's booted (iwd: `iwctl station wlan0 connect <SSID>`); true firmware netboot (PXE/HTTP boot)
-# would not, since the firmware network stack is Ethernet-only.
+# Wi-Fi works once it's booted (iwd: `iwctl station wlan0 connect <SSID>`); wired Ethernet gets DHCP
+# automatically. True firmware netboot (PXE/HTTP boot) would not work over Wi-Fi, since the
+# firmware network stack is Ethernet-only.
 #
-# Host-agnostic; the only hardware-specific knob is firmware. The image is trimmed to stay small
-# enough to sit on the ESP next to the regular generations: only the linux-firmware paths in
-# `firmware` are included (default: Intel Wi-Fi + graphics, which covers every current host), and
-# no ZFS. `firmware = null` ships all redistributable firmware instead (much bigger). The build fails
-# if the initrd grows past `maxInitrdMiB`, rather than filling the ESP later; hosts with a small ESP
-# may also want a lower `boot.loader.systemd-boot.configurationLimit`.
+# Built on the bare netboot module rather than the netboot *installer* profile, which pulls in
+# Python, Perl, vim, docs, a build toolchain and a copy of nixpkgs (~600 MiB in total). Only what a
+# rescue needs is included: LUKS, btrfs/ext4/vfat/xfs tools, partitioning, rsync and
+# `nixos-install` (which takes a `--flake github:...` directly, so no git). Root is logged in
+# automatically on the console with no password.
+#
+# Host-agnostic; the only hardware-specific knob is firmware: only the linux-firmware paths in
+# `firmware` are included (default: Intel Wi-Fi + graphics, which covers every current host).
+# `firmware = null` ships all redistributable firmware instead (much bigger). The build fails if the
+# initrd grows past `maxInitrdMiB`, rather than filling the ESP later, and lists the largest store
+# paths with what pulls them in; hosts with a small ESP may also want a lower
+# `boot.loader.systemd-boot.configurationLimit`.
 #
 # Usage: `(rescue-boot { })`, or e.g. `(rescue-boot { firmware = [ "rtw89" "i915" ]; })` for a
 # Realtek Wi-Fi host. Entries are paths/globs relative to linux-firmware's lib/firmware.
-#
-# Inside the rescue system: `cryptsetup open`, `btrfs`, `mkfs.*` and `nixos-install` (which takes
-# a `--flake github:...` directly, no git needed) are available; root has no password on the console (the netboot installer default).
 { inputs, ... }: {
   my.rescue-boot =
     {
@@ -40,17 +44,19 @@
             size=$(stat -L -c %s ${build.netbootRamdisk}/initrd)
             echo "rescue initrd: $((size / 1048576)) MiB (limit ${toString maxInitrdMiB} MiB)"
             if [ "$size" -gt $((${toString maxInitrdMiB} * 1048576)) ]; then
-              echo "rescue initrd is too big for the ESP. Largest store paths in the rescue system:" >&2
+              echo "rescue initrd is too big for the ESP. Largest store paths (<- what references them):" >&2
               # closureInfo's registration: path, hash, narSize, deriver, ref count, refs...
               awk '
                 s == 0 { p = $0; s = 1; next }
                 s == 1 { s = 2; next }
-                s == 2 { z = $0; s = 3; next }
+                s == 2 { size[p] = $0; s = 3; next }
                 s == 3 { s = 4; next }
-                s == 4 { n = $0; print z, p; s = n > 0 ? 5 : 0; next }
-                s == 5 { if (--n == 0) s = 0 }
+                s == 4 { n = $0; s = n > 0 ? 5 : 0; next }
+                s == 5 { if ($0 != p) by[$0] = by[$0] " " substr(p, 45); if (--n == 0) s = 0 }
+                END { for (q in size) printf "%s %s%s\n", size[q], substr(q, 45), by[q] }
               ' ${pkgs.closureInfo { rootPaths = [ build.toplevel ]; }}/registration \
-                | sort -n | tail -n 25 | awk '{ printf "%8.1f MiB  %s\n", $1 / 1048576, $2 }' >&2
+                | sort -n | tail -n 25 \
+                | awk '{ r = ""; for (i = 3; i <= NF; i++) r = r " " $i; printf "%8.1f MiB  %s  <-%s\n", $1 / 1048576, $2, substr(r, 1, 120) }' >&2
               exit 1
             fi
             cp ${build.netbootRamdisk}/initrd $out
@@ -65,15 +71,16 @@
                   ...
                 }:
                 {
-                  imports = [ (modulesPath + "/installer/netboot/netboot-minimal.nix") ];
+                  imports = [
+                    (modulesPath + "/installer/netboot/netboot.nix")
+                    (modulesPath + "/profiles/minimal.nix")
+                  ];
 
                   boot = {
                     # Newest kernel, for the newest hardware (Wi-Fi, graphics).
-                    kernelPackages = lib.mkForce pkgs.linuxPackages_latest;
+                    kernelPackages = pkgs.linuxPackages_latest;
 
-                    # Only what a rescue needs; the installer profile adds bcachefs, cifs, f2fs, ntfs,
-                    # zfs and more.
-                    supportedFilesystems = lib.mkForce [
+                    supportedFilesystems = [
                       "btrfs"
                       "ext4"
                       "vfat"
@@ -81,11 +88,16 @@
                     ];
                   };
 
-                  # Size trims - the installer profile otherwise ships a whole build toolchain
-                  # (extraDependencies, for offline installs), docs, and a ~200 MiB copy of the
-                  # nixpkgs source (as a channel and in the flake registry); a rescue system can
-                  # fetch from the network instead.
-                  documentation.enable = lib.mkForce false;
+                  environment.systemPackages = with pkgs; [
+                    cryptsetup
+                    dosfstools
+                    efibootmgr
+                    gptfdisk
+                    nixos-install-tools
+                    pciutils
+                    rsync
+                    usbutils
+                  ];
 
                   # Only what's needed for networking and a working console (see `firmware` above).
                   hardware = lib.mkIf (firmware != null) {
@@ -104,24 +116,18 @@
                     ];
                   };
 
-                  i18n.supportedLocales = lib.mkForce [
+                  i18n.supportedLocales = [
                     "C.UTF-8/UTF-8"
                     "en_US.UTF-8/UTF-8"
                   ];
 
-                  # iwd rather than NetworkManager (a much smaller closure). Connect with
-                  # `iwctl station wlan0 connect <SSID>`; wired Ethernet gets DHCP automatically.
                   networking = {
-                    networkmanager.enable = lib.mkForce false;
-                    useDHCP = lib.mkForce true;
+                    hostName = "rescue";
+                    useDHCP = true;
 
-                    wireless = {
-                      enable = lib.mkForce false;
-
-                      iwd = {
-                        enable = true;
-                        settings.General.EnableNetworkConfiguration = true;
-                      };
+                    wireless.iwd = {
+                      enable = true;
+                      settings.General.EnableNetworkConfiguration = true;
                     };
                   };
 
@@ -130,21 +136,21 @@
                     "flakes"
                   ];
 
-                  # From the host's pkgs (the outer `system`), not this module's own `pkgs`, which
-                  # is derived from this very option.
                   nixpkgs = {
+                    # Don't pin a ~200 MiB copy of the nixpkgs source into the image.
                     flake = {
                       setFlakeRegistry = false;
                       setNixPath = false;
                     };
 
+                    # From the host's pkgs (the outer `system`), not this module's own `pkgs`, which
+                    # is derived from this very option.
                     hostPlatform = system;
                   };
 
-                  system = {
-                    extraDependencies = lib.mkForce [ ];
-                    installer.channel.enable = false;
-                  };
+                  services.getty.autologinUser = "root";
+                  system.stateVersion = lib.trivial.release;
+                  users.users.root.initialHashedPassword = "";
                 }
               )
             ];
