@@ -40,7 +40,6 @@
       ssh-server
       tailscale
       umbriel
-      yubikey
     ];
 
     nixos = { config, ... }: {
