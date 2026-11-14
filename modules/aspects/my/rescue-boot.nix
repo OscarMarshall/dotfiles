@@ -40,7 +40,17 @@
             size=$(stat -L -c %s ${build.netbootRamdisk}/initrd)
             echo "rescue initrd: $((size / 1048576)) MiB (limit ${toString maxInitrdMiB} MiB)"
             if [ "$size" -gt $((${toString maxInitrdMiB} * 1048576)) ]; then
-              echo "rescue initrd is too big for the ESP" >&2
+              echo "rescue initrd is too big for the ESP. Largest store paths in the rescue system:" >&2
+              # closureInfo's registration: path, hash, narSize, deriver, ref count, refs...
+              awk '
+                s == 0 { p = $0; s = 1; next }
+                s == 1 { s = 2; next }
+                s == 2 { z = $0; s = 3; next }
+                s == 3 { s = 4; next }
+                s == 4 { n = $0; print z, p; s = n > 0 ? 5 : 0; next }
+                s == 5 { if (--n == 0) s = 0 }
+              ' ${pkgs.closureInfo { rootPaths = [ build.toplevel ]; }}/registration \
+                | sort -n | tail -n 25 | awk '{ printf "%8.1f MiB  %s\n", $1 / 1048576, $2 }' >&2
               exit 1
             fi
             cp ${build.netbootRamdisk}/initrd $out
@@ -60,13 +70,25 @@
                   boot = {
                     # Newest kernel, for the newest hardware (Wi-Fi, graphics).
                     kernelPackages = lib.mkForce pkgs.linuxPackages_latest;
-                    supportedFilesystems.zfs = lib.mkForce false;
+                    # Only what a rescue needs; the installer profile adds bcachefs, cifs, f2fs, ntfs,
+                    # zfs and more.
+                    supportedFilesystems = lib.mkForce [
+                      "btrfs"
+                      "ext4"
+                      "vfat"
+                      "xfs"
+                    ];
                   };
 
                   # Size trims - the installer profile otherwise ships a whole build toolchain
                   # (extraDependencies, for offline installs) and docs; a rescue system can fetch
                   # from the binary cache instead.
                   documentation.enable = lib.mkForce false;
+
+                  i18n.supportedLocales = lib.mkForce [
+                    "C.UTF-8/UTF-8"
+                    "en_US.UTF-8/UTF-8"
+                  ];
                   environment.systemPackages = [ pkgs.gitMinimal ];
 
                   # Only what's needed for networking and a working console (see `firmware` above).
