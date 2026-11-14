@@ -70,6 +70,7 @@
                   boot = {
                     # Newest kernel, for the newest hardware (Wi-Fi, graphics).
                     kernelPackages = lib.mkForce pkgs.linuxPackages_latest;
+
                     # Only what a rescue needs; the installer profile adds bcachefs, cifs, f2fs, ntfs,
                     # zfs and more.
                     supportedFilesystems = lib.mkForce [
@@ -84,11 +85,6 @@
                   # (extraDependencies, for offline installs) and docs; a rescue system can fetch
                   # from the binary cache instead.
                   documentation.enable = lib.mkForce false;
-
-                  i18n.supportedLocales = lib.mkForce [
-                    "C.UTF-8/UTF-8"
-                    "en_US.UTF-8/UTF-8"
-                  ];
                   environment.systemPackages = [ pkgs.gitMinimal ];
 
                   # Only what's needed for networking and a working console (see `firmware` above).
@@ -107,6 +103,11 @@
                       '')
                     ];
                   };
+
+                  i18n.supportedLocales = lib.mkForce [
+                    "C.UTF-8/UTF-8"
+                    "en_US.UTF-8/UTF-8"
+                  ];
 
                   # iwd rather than NetworkManager (a much smaller closure). Connect with
                   # `iwctl station wlan0 connect <SSID>`; wired Ethernet gets DHCP automatically.
