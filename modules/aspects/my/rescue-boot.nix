@@ -3,7 +3,7 @@
 # Adds a "NixOS rescue" entry whose kernel + initrd live on the ESP. The initrd carries its own
 # squashfs Nix store (nixpkgs' netboot image), so it runs entirely from RAM and never touches the
 # root filesystem - recovery doesn't need install media even when the main btrfs won't mount.
-# Wi-Fi works once it's booted (NetworkManager: `nmtui`); true firmware netboot (PXE/HTTP boot)
+# Wi-Fi works once it's booted (iwd: `iwctl station wlan0 connect <SSID>`); true firmware netboot (PXE/HTTP boot)
 # would not, since the firmware network stack is Ethernet-only.
 #
 # Host-agnostic; the only hardware-specific knob is firmware. The image is trimmed to stay small
@@ -63,7 +63,11 @@
                     supportedFilesystems.zfs = lib.mkForce false;
                   };
 
-                  environment.systemPackages = [ pkgs.git ];
+                  # Size trims - the installer profile otherwise ships a whole build toolchain
+                  # (extraDependencies, for offline installs) and docs; a rescue system can fetch
+                  # from the binary cache instead.
+                  documentation.enable = lib.mkForce false;
+                  environment.systemPackages = [ pkgs.gitMinimal ];
 
                   # Only what's needed for networking and a working console (see `firmware` above).
                   hardware = lib.mkIf (firmware != null) {
@@ -82,13 +86,20 @@
                     ];
                   };
 
+                  # iwd rather than NetworkManager (a much smaller closure). Connect with
+                  # `iwctl station wlan0 connect <SSID>`; wired Ethernet gets DHCP automatically.
                   networking = {
-                    networkmanager = {
-                      enable = true;
-                      plugins = lib.mkForce [ ];
-                    };
+                    networkmanager.enable = lib.mkForce false;
+                    useDHCP = lib.mkForce true;
 
-                    wireless.enable = lib.mkForce false;
+                    wireless = {
+                      enable = lib.mkForce false;
+
+                      iwd = {
+                        enable = true;
+                        settings.General.EnableNetworkConfiguration = true;
+                      };
+                    };
                   };
 
                   nix.settings.experimental-features = [
@@ -99,6 +110,7 @@
                   # From the host's pkgs (the outer `system`), not this module's own `pkgs`, which
                   # is derived from this very option.
                   nixpkgs.hostPlatform = system;
+                  system.extraDependencies = lib.mkForce [ ];
                 }
               )
             ];
