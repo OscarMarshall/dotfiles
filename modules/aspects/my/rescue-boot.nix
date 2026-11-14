@@ -16,8 +16,8 @@
 # Usage: `(rescue-boot { })`, or e.g. `(rescue-boot { firmware = [ "rtw89" "i915" ]; })` for a
 # Realtek Wi-Fi host. Entries are paths/globs relative to linux-firmware's lib/firmware.
 #
-# Inside the rescue system: `cryptsetup open`, `btrfs`, `mkfs.*`, `nixos-install` and `git` are
-# available; root has no password on the console (the netboot installer default).
+# Inside the rescue system: `cryptsetup open`, `btrfs`, `mkfs.*` and `nixos-install` (which takes
+# a `--flake github:...` directly, no git needed) are available; root has no password on the console (the netboot installer default).
 { inputs, ... }: {
   my.rescue-boot =
     {
@@ -82,10 +82,10 @@
                   };
 
                   # Size trims - the installer profile otherwise ships a whole build toolchain
-                  # (extraDependencies, for offline installs) and docs; a rescue system can fetch
-                  # from the binary cache instead.
+                  # (extraDependencies, for offline installs), docs, and a ~200 MiB copy of the
+                  # nixpkgs source (as a channel and in the flake registry); a rescue system can
+                  # fetch from the network instead.
                   documentation.enable = lib.mkForce false;
-                  environment.systemPackages = [ pkgs.gitMinimal ];
 
                   # Only what's needed for networking and a working console (see `firmware` above).
                   hardware = lib.mkIf (firmware != null) {
@@ -132,8 +132,19 @@
 
                   # From the host's pkgs (the outer `system`), not this module's own `pkgs`, which
                   # is derived from this very option.
-                  nixpkgs.hostPlatform = system;
-                  system.extraDependencies = lib.mkForce [ ];
+                  nixpkgs = {
+                    flake = {
+                      setFlakeRegistry = false;
+                      setNixPath = false;
+                    };
+
+                    hostPlatform = system;
+                  };
+
+                  system = {
+                    extraDependencies = lib.mkForce [ ];
+                    installer.channel.enable = false;
+                  };
                 }
               )
             ];
