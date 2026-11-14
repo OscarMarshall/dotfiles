@@ -42,7 +42,11 @@ jobs:
         if: env.REMOTE_BUILDER == 'true'
         run: |
           umask 077
-          printf '%s' "$REMOTE_BUILDER_SSH_KEY" > "$RUNNER_TEMP/remote-builder-ci-key"
+          # OpenSSH rejects a private key without its trailing newline ("error in libcrypto"), and
+          # GitHub trims it from stored secrets - Nix then silently falls back to building locally.
+          # Strip any CRs from a Windows paste too, and check the key loads so a bad one fails here.
+          printf '%s\n' "$REMOTE_BUILDER_SSH_KEY" | tr -d '\r' > "$RUNNER_TEMP/remote-builder-ci-key"
+          ssh-keygen -y -f "$RUNNER_TEMP/remote-builder-ci-key" > /dev/null
         env:
           REMOTE_BUILDER_SSH_KEY: ${{ secrets.REMOTE_BUILDER_CI_SSH_KEY }}
 
