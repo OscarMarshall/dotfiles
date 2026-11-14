@@ -33,6 +33,7 @@
       nixos =
         { pkgs, ... }:
         let
+          inherit (pkgs.stdenv.hostPlatform) system;
           build = rescue.config.system.build;
           # Fail the build (and CI) instead of overflowing the ESP.
           initrd = pkgs.runCommand "rescue-initrd" { } ''
@@ -102,8 +103,6 @@
               )
             ];
           };
-
-          inherit (pkgs.stdenv.hostPlatform) system;
         in
         {
           boot.loader.systemd-boot = {
