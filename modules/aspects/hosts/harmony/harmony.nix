@@ -98,7 +98,7 @@
 
     nixos = {
       age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMkM5uNY0rMy2QMG6IptlxgVl4sQWoeSSNmUp7/f2z1B";
-      # The ESP also holds the my.rescue-boot image (up to a few hundred MiB), so keep fewer
+      # The ESP also holds the my.rescue-boot image (up to 512 MiB), so keep fewer
       # generations' kernels + initrds than the default 10.
       boot.loader.systemd-boot.configurationLimit = 5;
       networking.hostId = "7dab76c0";

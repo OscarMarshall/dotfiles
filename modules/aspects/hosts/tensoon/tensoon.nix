@@ -49,7 +49,7 @@
       # during install. `agenix generate -a && agenix rekey -a` (YubiKey) rekeys against this and
       # writes secrets/rekeyed/tensoon* + secrets/rekeyed/tensoon-home-oscar*.
       age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDYa0oNYU887KosG7tsNrbTU8c49QiKaJdB1X6TWZyUh root@tensoon";
-      # The 1 GiB ESP also holds the my.rescue-boot image (~a few hundred MiB), so keep fewer
+      # The 1 GiB ESP also holds the my.rescue-boot image (up to 512 MiB), so keep fewer
       # generations' kernels + initrds than the default 10.
       boot.loader.systemd-boot.configurationLimit = 5;
 

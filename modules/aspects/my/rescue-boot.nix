@@ -31,7 +31,7 @@
         "i915"
         "xe"
       ],
-      maxInitrdMiB ? 400,
+      maxInitrdMiB ? 512,
     }:
     {
       nixos =
