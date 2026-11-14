@@ -95,11 +95,15 @@
                     "flakes"
                   ];
 
-                  nixpkgs.hostPlatform = pkgs.stdenv.hostPlatform.system;
+                  # From the host's pkgs (the outer `system`), not this module's own `pkgs`, which
+                  # is derived from this very option.
+                  nixpkgs.hostPlatform = system;
                 }
               )
             ];
           };
+
+          inherit (pkgs.stdenv.hostPlatform) system;
         in
         {
           boot.loader.systemd-boot = {
