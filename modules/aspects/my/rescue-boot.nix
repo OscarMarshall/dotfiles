@@ -163,17 +163,6 @@
         in
         {
           boot.loader.systemd-boot = {
-            # nixpkgs' copy-extra-files doesn't stop on errors, so an ESP that fills up mid-copy
-            # would leave a truncated image behind a "successful" switch. Check the copies.
-            extraInstallCommands = ''
-              for f in ${bzImage}:bzImage ${initrd}:initrd; do
-                if ! ${pkgs.diffutils}/bin/cmp -s "''${f%%:*}" "${espRescueDir}/''${f##*:}"; then
-                  echo "rescue-boot: copying ''${f##*:} to the ESP failed (ESP full?)" >&2
-                  exit 1
-                fi
-              done
-            '';
-
             extraEntries."rescue.conf" = ''
               title NixOS rescue (runs from RAM)
               sort-key rescue
@@ -186,6 +175,17 @@
               "efi/rescue/bzImage" = bzImage;
               "efi/rescue/initrd" = initrd;
             };
+
+            # nixpkgs' copy-extra-files doesn't stop on errors, so an ESP that fills up mid-copy
+            # would leave a truncated image behind a "successful" switch. Check the copies.
+            extraInstallCommands = ''
+              for f in ${bzImage}:bzImage ${initrd}:initrd; do
+                if ! ${pkgs.diffutils}/bin/cmp -s "''${f%%:*}" "${espRescueDir}/''${f##*:}"; then
+                  echo "rescue-boot: copying ''${f##*:} to the ESP failed (ESP full?)" >&2
+                  exit 1
+                fi
+              done
+            '';
           };
         };
     };
