@@ -15,10 +15,9 @@
 #
 # Host-agnostic; the only hardware-specific knob is firmware: only the linux-firmware paths in
 # `firmware` are included (default: Intel Wi-Fi + graphics, which covers every current host).
-# `firmware = null` ships all redistributable firmware instead (much bigger). The build fails if the
-# initrd grows past `maxInitrdMiB`, rather than filling the ESP later, and lists the largest store
-# paths with what pulls them in; hosts with a small ESP may also want a lower
-# `boot.loader.systemd-boot.configurationLimit`.
+# The build fails if the initrd grows past `maxInitrdMiB`, and the switch fails if the copy to
+# the ESP comes out incomplete (ESP full), rather than leaving a broken entry. Hosts with a small
+# ESP may also want a lower `boot.loader.systemd-boot.configurationLimit`.
 #
 # Usage: `(rescue-boot { })`, or e.g. `(rescue-boot { firmware = [ "rtw89" "i915" ]; })` for a
 # Realtek Wi-Fi host. Entries are paths/globs relative to linux-firmware's lib/firmware.
@@ -35,28 +34,19 @@
     }:
     {
       nixos =
-        { pkgs, ... }:
+        { config, pkgs, ... }:
         let
           inherit (pkgs.stdenv.hostPlatform) system;
           build = rescue.config.system.build;
+          bzImage = "${build.kernel}/${rescue.config.system.boot.loader.kernelFile}";
+          espRescueDir = "${config.boot.loader.efi.efiSysMountPoint}/efi/rescue";
           # Fail the build (and CI) instead of overflowing the ESP.
           initrd = pkgs.runCommand "rescue-initrd" { } ''
             size=$(stat -L -c %s ${build.netbootRamdisk}/initrd)
             echo "rescue initrd: $((size / 1048576)) MiB (limit ${toString maxInitrdMiB} MiB)"
             if [ "$size" -gt $((${toString maxInitrdMiB} * 1048576)) ]; then
-              echo "rescue initrd is too big for the ESP. Largest store paths (<- what references them):" >&2
-              # closureInfo's registration: path, hash, narSize, deriver, ref count, refs...
-              awk '
-                s == 0 { p = $0; s = 1; next }
-                s == 1 { s = 2; next }
-                s == 2 { size[p] = $0; s = 3; next }
-                s == 3 { s = 4; next }
-                s == 4 { n = $0; s = n > 0 ? 5 : 0; next }
-                s == 5 { if ($0 != p) by[$0] = by[$0] " " substr(p, 45); if (--n == 0) s = 0 }
-                END { for (q in size) printf "%s %s%s\n", size[q], substr(q, 45), by[q] }
-              ' ${pkgs.closureInfo { rootPaths = [ build.toplevel ]; }}/registration \
-                | sort -n | tail -n 25 \
-                | awk '{ r = ""; for (i = 3; i <= NF; i++) r = r " " $i; printf "%8.1f MiB  %s  <-%s\n", $1 / 1048576, $2, substr(r, 1, 120) }' >&2
+              echo "rescue initrd is too big for the ESP. Largest paths in it:" >&2
+              echo "  nix path-info -rsSh ${build.toplevel} | sort -k2 -h | tail -n 25" >&2
               exit 1
             fi
             cp ${build.netbootRamdisk}/initrd $out
@@ -104,7 +94,7 @@
                   ];
 
                   # Only what's needed for networking and a working console (see `firmware` above).
-                  hardware = lib.mkIf (firmware != null) {
+                  hardware = {
                     enableAllFirmware = lib.mkForce false;
                     enableRedistributableFirmware = lib.mkForce false;
 
@@ -173,6 +163,17 @@
         in
         {
           boot.loader.systemd-boot = {
+            # nixpkgs' copy-extra-files doesn't stop on errors, so an ESP that fills up mid-copy
+            # would leave a truncated image behind a "successful" switch. Check the copies.
+            extraInstallCommands = ''
+              for f in ${bzImage}:bzImage ${initrd}:initrd; do
+                if ! ${pkgs.diffutils}/bin/cmp -s "''${f%%:*}" "${espRescueDir}/''${f##*:}"; then
+                  echo "rescue-boot: copying ''${f##*:} to the ESP failed (ESP full?)" >&2
+                  exit 1
+                fi
+              done
+            '';
+
             extraEntries."rescue.conf" = ''
               title NixOS rescue (runs from RAM)
               sort-key rescue
@@ -182,7 +183,7 @@
             '';
 
             extraFiles = {
-              "efi/rescue/bzImage" = "${build.kernel}/${rescue.config.system.boot.loader.kernelFile}";
+              "efi/rescue/bzImage" = bzImage;
               "efi/rescue/initrd" = initrd;
             };
           };

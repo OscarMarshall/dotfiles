@@ -37,12 +37,10 @@
       (qbittorrent { administrators = [ "oscar" ]; })
       (qui { })
       (radarr { administrators = [ "oscar" ]; })
-      # Wired-only server: the default Intel firmware for its graphics/Wi-Fi, plus Realtek NIC
-      # firmware in case the onboard Ethernet needs it (Intel NICs need none).
+      # Wired-only server: graphics firmware for the console, plus Realtek NIC firmware in case the
+      # onboard Ethernet needs it (Intel NICs need none). No Wi-Fi firmware.
       (rescue-boot {
         firmware = [
-          "iwlwifi-*"
-          "intel/iwlwifi"
           "i915"
           "xe"
           "rtl_nic"
