@@ -179,6 +179,9 @@ in
         # Authentik slug/OIDC client id - deliberately stays `immich`: Noodle Gallery speaks
         # Immich's API, so existing Immich mobile apps keep pointing at the same server URL.
         label = "Noodle Gallery";
+        # Immich's own recommended reverse-proxy limit (docs.immich.app/administration/reverse-proxy).
+        # nginx's 10m default silently 413'd every RAW (.ORF ~20MB), video, and large JPEG on upload.
+        maxBodySize = "50000M";
         name = "immich";
 
         # Requests the matching OAuth2 Provider + Application from Authentik (authentik.nix) - see
