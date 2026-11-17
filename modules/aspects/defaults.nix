@@ -103,6 +103,8 @@ in
           den.batteries.mutual-provider
           my.fonts
           my.nix
+          # pcscd for the YubiKey, so `agenix rekey` / `edit` (age-plugin-yubikey) work on any host.
+          my.yubikey
           nixosSecrets
           secrets
         ];
