@@ -71,12 +71,12 @@ in
             finalAttrs: previousAttrs:
             # Pinned (like seerr.nix's/oscar.nix's own overrides) so a nixpkgs Immich bump fails
             # evaluation with a "bump the fork" message, rather than quietly building this
-            # 3.3.5-based source against pnpm/esbuild/geodata pins meant for a different release.
+            # 3.4.1-based source against pnpm/esbuild/geodata pins meant for a different release.
             # On a bump: move `version` below to the Noodle release whose title names the new
             # Immich base, refresh both hashes, then update the version pinned here.
             assert
-              previousAttrs.version == "3.3.5"
-              || throw "immich.nix: pkgs.immich is now ${previousAttrs.version} (was 3.3.5) - bump Noodle Gallery's `version` to the open-noodle/gallery release based on Immich v${previousAttrs.version}, refresh its src/pnpmDeps hashes, then update this pin.";
+              previousAttrs.version == "3.4.1"
+              || throw "immich.nix: pkgs.immich is now ${previousAttrs.version} (was 3.4.1) - bump Noodle Gallery's `version` to the open-noodle/gallery release based on Immich v${previousAttrs.version}, refresh its src/pnpmDeps hashes, then update this pin.";
             {
               # The module runs `cfg.package.machine-learning`, built by nixpkgs from
               # `"${src}/machine-learning"` - so it picks up the fork's source on its own, but the
@@ -106,17 +106,17 @@ in
                 inherit (finalAttrs) pname src version;
                 inherit (previousAttrs.passthru) pnpm;
                 fetcherVersion = 4;
-                hash = "sha256-SwCOcHZq6bjWZNPpRd5NdS3YGInALFcKLnd0ayCkOYo=";
+                hash = "sha256-14kMBmGwp+9cF6SvyU+IUOZUqFarlOW+b+t3WZ4iKvw=";
               };
 
               src = pkgs.fetchFromGitHub {
-                hash = "sha256-7x+xMc+Gd0Fe8eQte+IqmeTfWLPnsp/GIoivVyPvW6c=";
+                hash = "sha256-fWMC8wWL6wJ2qJ0N3/CyaB8mPxGcmqgefZCp/wFwo/0=";
                 owner = "open-noodle";
                 repo = "gallery";
                 tag = "v${finalAttrs.version}";
               };
 
-              version = "5.9.0";
+              version = "5.11.0-rc.1";
             }
           );
 
