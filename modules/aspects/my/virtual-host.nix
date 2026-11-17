@@ -38,6 +38,9 @@
 #                         for a backend whose own request handling can legitimately take longer -
 #                         e.g. one that calls out to a slow external API synchronously. Same
 #                         `port`-only caveat as `protected` above applies.
+#   maxBodySize         - (optional, nginx size string e.g. "50000M") override nginx's 10m default
+#                         client_max_body_size for this vhost, for backends that accept large
+#                         uploads (photos/videos). Applies to every location, `port` or not.
 #   global              - (optional, bool) also serve at the bare `<name>.<domain>` alias (an
 #                         nginx `serverAlias`) and generate a `cloudflare_dns_record` for it.
 #   url                 - (optional) explicit override for the derived hostname.
