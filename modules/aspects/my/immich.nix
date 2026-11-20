@@ -109,6 +109,20 @@ in
                 hash = "sha256-14kMBmGwp+9cF6SvyU+IUOZUqFarlOW+b+t3WZ4iKvw=";
               };
 
+              # The fork ships a second workflow plugin, `@immich/plugin-gallery` (its space actions:
+              # "Add to space", "Add to space album"), which the server loads from
+              # `build/plugins/gallery-core` alongside upstream's core plugin. nixpkgs' build and
+              # install phases only know about `plugin-core`, so build and install this one too -
+              # same dev deps as plugin-core, already built by the main buildPhase.
+              postBuild = (previousAttrs.postBuild or "") + ''
+                pnpm --filter @immich/plugin-gallery build
+              '';
+
+              postInstall = (previousAttrs.postInstall or "") + ''
+                mkdir -p "$out/lib/node_modules/immich/build/plugins/gallery-core"
+                cp -r packages/plugin-gallery/{dist,manifest.json} "$out/lib/node_modules/immich/build/plugins/gallery-core/"
+              '';
+
               src = pkgs.fetchFromGitHub {
                 hash = "sha256-fWMC8wWL6wJ2qJ0N3/CyaB8mPxGcmqgefZCp/wFwo/0=";
                 owner = "open-noodle";
