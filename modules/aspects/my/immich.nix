@@ -124,13 +124,13 @@ in
               '';
 
               src = pkgs.fetchFromGitHub {
-                hash = "sha256-fWMC8wWL6wJ2qJ0N3/CyaB8mPxGcmqgefZCp/wFwo/0=";
+                hash = "sha256-Y+AJqIc9f3RieqR4OVdyARB/fMrbHVcmTUi7AupmNk8=";
                 owner = "open-noodle";
                 repo = "gallery";
                 tag = "v${finalAttrs.version}";
               };
 
-              version = "5.11.0-rc.1";
+              version = "5.11.0";
             }
           );
 
