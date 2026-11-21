@@ -25,6 +25,7 @@
         administrators = [ "oscar" ];
         global = true;
       })
+      (immich-stack { })
       (jellyfin { global = true; })
       (nextcloud { global = true; })
       (paperless {
