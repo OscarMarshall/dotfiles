@@ -87,15 +87,15 @@
       },
       "jei": {
         "channel": "beta",
-        "sha512": "93d8cb38cd555c3fa476ec8fe439d3f41fbd1da6f942c821384c3acc35059db3140fe3257622ea1097033e39c00c1211dd59e209db4e09068e979e336f0cb420",
-        "url": "https://cdn.modrinth.com/data/u6dRKJwZ/versions/zX75GFgt/jei-26.3-fabric-31.17.0.113.jar",
-        "version": "31.17.0.113"
+        "sha512": "45973949b0874400e90f7cbe2b252bd60cfb3dc89a05efcd0d4e0bb03b00f3553c0c0fd61bdd6bf2514e4bb47d97b2937227c7277522ec1c9abf1154b52d33f2",
+        "url": "https://cdn.modrinth.com/data/u6dRKJwZ/versions/m7yXXzZy/jei-26.3-fabric-31.18.0.121.jar",
+        "version": "31.18.0.121"
       },
       "lithium": {
         "channel": "release",
-        "sha512": "2ca92fb530135d2baddf0ba4cc4f93976234876a38c4aa02b487b2552400f005afcfbeebf5373fb4396fe2020537a42d7597b8da5a52b904355ef51d5fef07ad",
-        "url": "https://cdn.modrinth.com/data/gvQqBUqZ/versions/fWv5bnZk/lithium-fabric-0.26.3%2Bmc26.3.jar",
-        "version": "mc26.3-0.26.3-fabric"
+        "sha512": "033f85813b0bcafe848a55dd741b9b1a30685dcdf774a922507bf63716b16bfd0fc12856ffc4ca3c76a36f6dc73310a7dfdc4b6dc9e35c21a4482627b1d30b85",
+        "url": "https://cdn.modrinth.com/data/gvQqBUqZ/versions/Lal8mJGR/lithium-fabric-0.26.4%2Bmc26.3.jar",
+        "version": "mc26.3-0.26.4-fabric"
       }
     }
   }
