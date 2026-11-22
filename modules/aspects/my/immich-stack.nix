@@ -8,68 +8,61 @@
 # YubiKey) to store it - several users' keys go comma-separated on one line - and `agenix rekey -a`
 # to make it available to the host.
 {
-  my.immich-stack =
-    {
-      # systemd calendar expression (systemd.time(7)) for each run.
-      interval ? "hourly",
-    }:
-    {
-      nixos = { config, pkgs, ... }: {
-        systemd = {
-          services.immich-stack = {
-            description = "Immich Stack";
-            after = [ "immich-server.service" ];
+  my.immich-stack = {
+    nixos = { config, pkgs, ... }: {
+      systemd = {
+        services.immich-stack = {
+          description = "Immich Stack";
+          after = [ "immich-server.service" ];
 
-            environment = {
-              API_KEY_FILE = "%d/api-key";
-              API_URL = "http://${config.services.immich.host}:${toString config.services.immich.port}/api";
-              # A one-shot run per timer tick, rather than its own long-running `cron` mode, so
-              # each run's success/failure shows up as a systemd unit result.
-              RUN_MODE = "once";
-            };
-
-            serviceConfig = {
-              DynamicUser = true;
-
-              ExecStart = pkgs.lib.getExe (
-                pkgs.buildGoModule (finalAttrs: {
-                  pname = "immich-stack";
-                  # Upstream builds `./cmd/...` to `immich-stack`; Go names it after the directory.
-                  postInstall = "mv $out/bin/cmd $out/bin/immich-stack";
-
-                  src = pkgs.fetchFromGitHub {
-                    hash = "sha256-mHSILgIuEzhlGu9eTjJNNQzrycxGgbzgWw4yNNnPyCg=";
-                    owner = "majorfi";
-                    repo = "immich-stack";
-                    tag = "v${finalAttrs.version}";
-                  };
-
-                  subPackages = [ "cmd" ];
-                  # Upstream commits its own `vendor/` directory.
-                  vendorHash = null;
-                  version = "0.2.44";
-                  meta.mainProgram = "immich-stack";
-                })
-              );
-
-              # Read by systemd itself, not the dynamic user, so the default root-only ownership
-              # of the decrypted secret is fine.
-              LoadCredential = "api-key:${config.age.secrets.immich-stack-api-key.path}";
-              Type = "oneshot";
-            };
+          environment = {
+            API_KEY_FILE = "%d/api-key";
+            API_URL = "http://${config.services.immich.host}:${toString config.services.immich.port}/api";
+            # A one-shot run per timer tick, rather than its own long-running `cron` mode, so
+            # each run's success/failure shows up as a systemd unit result.
+            RUN_MODE = "once";
           };
 
-          timers.immich-stack = {
-            timerConfig = {
-              OnCalendar = interval;
-              Persistent = true;
-            };
+          serviceConfig = {
+            DynamicUser = true;
 
-            wantedBy = [ "timers.target" ];
+            ExecStart = pkgs.lib.getExe (
+              pkgs.buildGoModule (finalAttrs: {
+                pname = "immich-stack";
+                # Upstream builds `./cmd/...` to `immich-stack`; Go names it after the directory.
+                postInstall = "mv $out/bin/cmd $out/bin/immich-stack";
+
+                src = pkgs.fetchFromGitHub {
+                  hash = "sha256-mHSILgIuEzhlGu9eTjJNNQzrycxGgbzgWw4yNNnPyCg=";
+                  owner = "majorfi";
+                  repo = "immich-stack";
+                  tag = "v${finalAttrs.version}";
+                };
+
+                subPackages = [ "cmd" ];
+                # Upstream commits its own `vendor/` directory.
+                vendorHash = null;
+                version = "0.2.44";
+                meta.mainProgram = "immich-stack";
+              })
+            );
+
+            # Read by systemd itself, not the dynamic user, so the default root-only ownership
+            # of the decrypted secret is fine.
+            LoadCredential = "api-key:${config.age.secrets.immich-stack-api-key.path}";
+            Type = "oneshot";
           };
         };
-      };
 
-      secrets.immich-stack-api-key.rekeyFile = ../../../secrets/immich-stack-api-key.age;
+        timers.immich-stack = {
+          # No `Persistent`: each run rescans the whole library, so a missed run costs nothing,
+          # while a catch-up run at boot would race immich-server still starting up.
+          timerConfig.OnCalendar = "hourly";
+          wantedBy = [ "timers.target" ];
+        };
+      };
     };
+
+    secrets.immich-stack-api-key.rekeyFile = ../../../secrets/immich-stack-api-key.age;
+  };
 }
