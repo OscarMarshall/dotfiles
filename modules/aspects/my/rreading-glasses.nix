@@ -87,6 +87,14 @@ in
             Type = "oneshot";
           };
         };
+
+        # `socketDir` is postgresql.service's own `RuntimeDirectory`, which systemd deletes on every
+        # stop and recreates on start by default - a NEW directory, invisible to the container's
+        # bind mount below (still pinned to the old, deleted one), so any Postgres restart (e.g. a
+        # nixpkgs bump changing its package) would cut this container off until it's restarted
+        # too. Keeping the directory lets Postgres recreate its socket inside the same one, and
+        # pgx's pool just reconnects.
+        postgresql.serviceConfig.RuntimeDirectoryPreserve = "yes";
       };
 
       # A dedicated `rreading-glasses` user/group, same numbering convention as bookshelf.nix's own
@@ -139,7 +147,8 @@ in
         networks = [ network ];
         user = "${toString config.users.users.${name}.uid}:${toString config.users.groups.${name}.gid}";
         # The whole directory, not just the socket file - Postgres recreates the socket on every
-        # restart, which a file-level bind mount would keep pointing at the old, deleted inode.
+        # restart, which a file-level bind mount would keep pointing at the old, deleted inode. The
+        # directory itself must survive too - see `RuntimeDirectoryPreserve` above.
         volumes = [ "${socketDir}:${socketDir}" ];
       };
     };
