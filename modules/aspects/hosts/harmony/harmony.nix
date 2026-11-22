@@ -58,6 +58,7 @@
       headplane
       headscale
       homepage
+      immich-stack
       lm-sensors
       locale
       mailgun
