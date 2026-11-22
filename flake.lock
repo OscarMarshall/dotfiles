@@ -1116,6 +1116,22 @@
         "type": "github"
       }
     },
+    "noodle-gallery": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1795022220,
+        "narHash": "sha256-Y+AJqIc9f3RieqR4OVdyARB/fMrbHVcmTUi7AupmNk8=",
+        "owner": "open-noodle",
+        "repo": "gallery",
+        "rev": "522919d1720d6fa57d5054de237b7b5c36776e53",
+        "type": "github"
+      },
+      "original": {
+        "owner": "open-noodle",
+        "repo": "gallery",
+        "type": "github"
+      }
+    },
     "opam-nix": {
       "inputs": {
         "flake-compat": "flake-compat_7",
@@ -1379,6 +1395,7 @@
         "nixpkgs-qbittorrent": "nixpkgs-qbittorrent",
         "noctalia": "noctalia",
         "noctalia-greeter": "noctalia-greeter",
+        "noodle-gallery": "noodle-gallery",
         "pedantix": "pedantix",
         "ponytail": "ponytail",
         "preservation": "preservation",

@@ -96,6 +96,10 @@
       url = "github:noctalia-dev/noctalia-greeter";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    noodle-gallery = {
+      url = "github:open-noodle/gallery";
+      flake = false;
+    };
     pedantix = {
       url = "github:Swarsel/pedantix";
       inputs.nixpkgs.follows = "nixpkgs";

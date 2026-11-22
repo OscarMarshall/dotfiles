@@ -1,8 +1,17 @@
-{ lib, ... }:
+{ lib, inputs, ... }:
 let
   port = 2283;
 in
 {
+  # Noodle Gallery's source (see `services.immich.package` below). Tracks upstream's default branch
+  # rather than a release tag so Dependabot's daily flake.lock bumps flag new Noodle work - but the
+  # lock has to sit on a release commit whose Immich base matches nixpkgs', so a bump PR is a prompt
+  # to re-pin by hand (the override's `assert` fails it otherwise), not something to merge as-is.
+  flake-file.inputs.noodle-gallery = {
+    url = "github:open-noodle/gallery";
+    flake = false;
+  };
+
   my.immich =
     {
       administrators,
@@ -66,17 +75,22 @@ in
           # so nixpkgs' build/install phases apply unchanged - but only while each Noodle release's
           # Immich base (in its release title, e.g. "v5.9.0 (immich 3.3.5)") matches
           # `pkgs.immich.version`, since nixpkgs pins pnpm/esbuild/geodata for that exact release.
-          # Bump `version` here alongside every nixpkgs Immich bump.
           package = pkgs.immich.overrideAttrs (
             finalAttrs: previousAttrs:
-            # Pinned (like seerr.nix's/oscar.nix's own overrides) so a nixpkgs Immich bump fails
-            # evaluation with a "bump the fork" message, rather than quietly building this
-            # 3.4.1-based source against pnpm/esbuild/geodata pins meant for a different release.
-            # On a bump: move `version` below to the Noodle release whose title names the new
-            # Immich base, refresh both hashes, then update the version pinned here.
+            let
+              # The fork leaves upstream's version in its package.json files, so this is the
+              # locked source's Immich base - the Noodle release number is only in its tag.
+              # Read from the input directly, not `finalAttrs.src`: the `assert` gates the whole
+              # attrset, so going through `finalAttrs` would make its own attr names recursive.
+              immichBase = (lib.importJSON "${inputs.noodle-gallery}/server/package.json").version;
+            in
+            # Checked (like seerr.nix's/oscar.nix's own overrides) so a mismatch fails evaluation
+            # with a "re-pin" message, rather than quietly building the fork against pnpm/esbuild/
+            # geodata pins meant for a different Immich release. Trips from either side: a nixpkgs
+            # Immich bump, or a Dependabot bump of `noodle-gallery` onto a newer-based `main`.
             assert
-              previousAttrs.version == "3.4.1"
-              || throw "immich.nix: pkgs.immich is now ${previousAttrs.version} (was 3.4.1) - bump Noodle Gallery's `version` to the open-noodle/gallery release based on Immich v${previousAttrs.version}, refresh its src/pnpmDeps hashes, then update this pin.";
+              previousAttrs.version == immichBase
+              || throw "immich.nix: pkgs.immich is ${previousAttrs.version} but the locked noodle-gallery source is based on Immich ${immichBase} - re-lock it onto the open-noodle/gallery release based on Immich v${previousAttrs.version} (`nix flake lock --override-input noodle-gallery github:open-noodle/gallery/<release tag's commit>`), then update its `version` and pnpmDeps hash.";
             {
               # The module runs `cfg.package.machine-learning`, built by nixpkgs from
               # `"${src}/machine-learning"` - so it picks up the fork's source on its own, but the
@@ -123,13 +137,9 @@ in
                 cp -r packages/plugin-gallery/{dist,manifest.json} "$out/lib/node_modules/immich/build/plugins/gallery-core/"
               '';
 
-              src = pkgs.fetchFromGitHub {
-                hash = "sha256-Y+AJqIc9f3RieqR4OVdyARB/fMrbHVcmTUi7AupmNk8=";
-                owner = "open-noodle";
-                repo = "gallery";
-                tag = "v${finalAttrs.version}";
-              };
-
+              src = inputs.noodle-gallery;
+              # The Noodle release `noodle-gallery` is locked to - not derivable from the source
+              # (see `immichBase` above), so kept by hand in step with the lock.
               version = "5.11.0";
             }
           );
