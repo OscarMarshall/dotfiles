@@ -146,6 +146,14 @@ in
                   "redis-immich.service"
                 ];
               };
+
+              # The server container reaches both sockets through bind mounts of their directories,
+              # which systemd otherwise deletes and recreates whenever either service restarts -
+              # leaving the container holding the old, empty directory. An explicit restart also
+              # restarts the container (its `requires` below), but an automatic one after a crash
+              # doesn't. Both clear out their own stale socket/lock file on start.
+              postgresql.serviceConfig.RuntimeDirectoryPreserve = "restart";
+              redis-immich.serviceConfig.RuntimeDirectoryPreserve = "restart";
             };
 
             # Was the native ML unit's `CacheDirectory` - kept for its already-downloaded models.
@@ -203,6 +211,11 @@ in
               # stay `/metalminds/pictures` (not the image's `/data`): Immich stores absolute asset
               # paths in its database.
               environment = cfg.environment // {
+                # `DB_URL` names no user, so the client falls back to the OS user's name - which the
+                # native unit got from systemd (`USER=immich`), but uid 982 has no entry in the
+                # image's own /etc/passwd, so without this it would connect with no user at all.
+                # Also read by `pg_dumpall` for Immich's own scheduled database backups.
+                PGUSER = cfg.database.user;
                 TZ = config.time.timeZone;
               };
 
