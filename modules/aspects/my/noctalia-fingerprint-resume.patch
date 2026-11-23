@@ -1,15 +1,51 @@
 --- a/src/auth/fingerprint_authenticator.cpp
 +++ b/src/auth/fingerprint_authenticator.cpp
-@@ -337,7 +337,11 @@
+@@ -28,6 +28,13 @@
+   constexpr auto kLoginManagerInterface = "org.freedesktop.login1.Manager";
+ 
+   constexpr int kMaxRetries = 3;
++  // fprintd device errors (verify-unknown-error) get their own budget, separate from no-matches:
++  // fprintd fails the in-flight verify around every sleep transition ("Cannot run while
++  // suspended", "transfer timed out"), and a lock can span many of them under
++  // suspend-then-hibernate. Charging those to kMaxRetries locked fingerprint out before the lid
++  // was even opened. This cap resets on each wake; it only stops a persistently failing sensor
++  // from re-arming forever.
++  constexpr int kMaxErrors = 3;
+   constexpr auto kRetryDelay = std::chrono::milliseconds(250);
+ 
+   enum class MatchResult {
+@@ -79,6 +86,7 @@
+         m_retryTimer.stop();
+         m_verifying = false;
+       } else if (m_active && !m_abort) {
++        m_errors = 0;
+         startVerify(false);
+       }
+     });
+@@ -104,6 +112,7 @@
+   m_active = true;
+   m_abort = false;
+   m_retries = 0;
++  m_errors = 0;
+   m_reclaimAttempted = false;
+   if (m_sleeping) {
+     return;
+@@ -337,7 +346,9 @@
        emitStatus(i18n::tr("auth.fingerprint.too-many-attempts"), true);
      } else {
        emitStatus(i18n::tr("auth.fingerprint.error"), true);
 -      m_retryTimer.start(kRetryDelay, [this] { startVerify(true); });
-+      // A device error is not a failed scan: fprintd fails the in-flight verify around every sleep
-+      // transition ("Cannot run while suspended", "transfer timed out"), and a lock can span many
-+      // of them under suspend-then-hibernate. Counting these used up the retry budget while the
-+      // lid was shut, so only real no-matches count.
-+      m_retryTimer.start(kRetryDelay, [this] { startVerify(false); });
++      if (++m_errors <= kMaxErrors) {
++        m_retryTimer.start(kRetryDelay, [this] { startVerify(false); });
++      }
      }
      break;
    }
+--- a/src/auth/fingerprint_authenticator.h
++++ b/src/auth/fingerprint_authenticator.h
+@@ -54,4 +54,5 @@
+   bool m_abort = false;
+   bool m_reclaimAttempted = false;
+   int m_retries = 0;
++  int m_errors = 0;
+ };
