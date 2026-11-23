@@ -58,56 +58,58 @@
       };
 
       nixos = { config, ... }: {
-        services.romm = {
-          inherit dataDir;
-          enable = true;
-          environmentFile = config.age.secrets."romm.env".path;
+        services = {
+          # The module's `/` location sets its own `add_header`s (cache control, the emulator's
+          # cross-origin isolation), and nginx then drops every inherited one there - nginx.nix's
+          # site-wide security headers included (the build's gixy check refuses that). Restored
+          # here, but with `SAMEORIGIN` rather than nginx.nix's `DENY`: RomM frames its own pages
+          # (the EasyRPG player, the text viewer).
+          nginx.virtualHosts.${url}.locations."/".extraConfig = ''
+            add_header Strict-Transport-Security $hsts_header;
+            add_header Referrer-Policy origin-when-cross-origin;
+            add_header X-Frame-Options SAMEORIGIN;
+            add_header X-Content-Type-Options nosniff;
+          '';
 
-          extraEnvironment = {
-            # Authentik is the only way in, same as immich.nix: no local password form, no
-            # first-run wizard (whose only job is creating a local admin), and the login page
-            # bounces straight to Authentik. Roles come from the `groups` claim Authentik's default
-            # `profile` scope already emits (see authentik.nix's `oidc-defaults`) - its `admin`
-            # group becomes a RomM admin, `user` a regular account. Authentik's own application
-            # bindings already keep everyone else out before RomM ever sees them.
-            DISABLE_SETUP_WIZARD = "true";
-            DISABLE_USERPASS_LOGIN = "true";
-            # Metadata sources that need no account. IGDB/ScreenScraper/SteamGridDB/RetroAchievements
-            # all need personal credentials - add them to `romm.env` below if wanted.
-            ENABLE_SCHEDULED_UPDATE_LAUNCHBOX_METADATA = "true";
-            HASHEOUS_API_ENABLED = "true";
-            HLTB_API_ENABLED = "true";
-            LAUNCHBOX_API_ENABLED = "true";
-            OIDC_AUTOLOGIN = "true";
-            OIDC_CLAIM_ROLES = "groups";
-            OIDC_CLIENT_ID = "romm";
-            OIDC_ENABLED = "true";
-            OIDC_PROVIDER = "Authentik";
-            OIDC_REDIRECT_URI = "https://${url}/api/oauth/openid";
-            OIDC_ROLE_ADMIN = "admin";
-            OIDC_ROLE_VIEWER = "user";
-            OIDC_SERVER_APPLICATION_URL = "https://${config.services.authentik.nginx.host}/application/o/romm/";
-            PLAYMATCH_API_ENABLED = "true";
+          romm = {
+            inherit dataDir;
+            enable = true;
+            environmentFile = config.age.secrets."romm.env".path;
+
+            extraEnvironment = {
+              # Authentik is the only way in, same as immich.nix: no local password form, no
+              # first-run wizard (whose only job is creating a local admin), and the login page
+              # bounces straight to Authentik. Roles come from the `groups` claim Authentik's default
+              # `profile` scope already emits (see authentik.nix's `oidc-defaults`) - its `admin`
+              # group becomes a RomM admin, `user` a regular account. Authentik's own application
+              # bindings already keep everyone else out before RomM ever sees them.
+              DISABLE_SETUP_WIZARD = "true";
+              DISABLE_USERPASS_LOGIN = "true";
+              # Metadata sources that need no account. IGDB/ScreenScraper/SteamGridDB/RetroAchievements
+              # all need personal credentials - add them to `romm.env` below if wanted.
+              ENABLE_SCHEDULED_UPDATE_LAUNCHBOX_METADATA = "true";
+              HASHEOUS_API_ENABLED = "true";
+              HLTB_API_ENABLED = "true";
+              LAUNCHBOX_API_ENABLED = "true";
+              OIDC_AUTOLOGIN = "true";
+              OIDC_CLAIM_ROLES = "groups";
+              OIDC_CLIENT_ID = "romm";
+              OIDC_ENABLED = "true";
+              OIDC_PROVIDER = "Authentik";
+              OIDC_REDIRECT_URI = "https://${url}/api/oauth/openid";
+              OIDC_ROLE_ADMIN = "admin";
+              OIDC_ROLE_VIEWER = "user";
+              OIDC_SERVER_APPLICATION_URL = "https://${config.services.authentik.nginx.host}/application/o/romm/";
+              PLAYMATCH_API_ENABLED = "true";
+            };
+
+            # Served under nginx.nix's own vhost for `url`: the module fills in its root/locations
+            # (frontend, API proxy, X-Accel ROM downloads), nginx.nix adds TLS - same split as
+            # nextcloud.nix. Also what the module derives ROMM_BASE_URL and the secure session
+            # cookie from.
+            nginx.virtualHost = url;
           };
-
-          # Served under nginx.nix's own vhost for `url`: the module fills in its root/locations
-          # (frontend, API proxy, X-Accel ROM downloads), nginx.nix adds TLS - same split as
-          # nextcloud.nix. Also what the module derives ROMM_BASE_URL and the secure session
-          # cookie from.
-          nginx.virtualHost = url;
         };
-
-        # The module's `/` location sets its own `add_header`s (cache control, the emulator's
-        # cross-origin isolation), and nginx then drops every inherited one there - nginx.nix's
-        # site-wide security headers included (the build's gixy check refuses that). Restored
-        # here, but with `SAMEORIGIN` rather than nginx.nix's `DENY`: RomM frames its own pages
-        # (the EasyRPG player, the text viewer).
-        services.nginx.virtualHosts.${url}.locations."/".extraConfig = ''
-          add_header Strict-Transport-Security $hsts_header;
-          add_header Referrer-Policy origin-when-cross-origin;
-          add_header X-Frame-Options SAMEORIGIN;
-          add_header X-Content-Type-Options nosniff;
-        '';
 
         # The module's tmpfiles rules run at boot before the pool is imported, so on a fresh
         # dataset its subdirectories don't exist yet - and the watcher fails outright without
