@@ -46,6 +46,10 @@
           "rtl_nic"
         ];
       })
+      (romm {
+        administrators = [ "oscar" ];
+        global = true;
+      })
       (seerr { global = true; })
       (sonarr { administrators = [ "oscar" ]; })
       (storyteller { global = true; })
