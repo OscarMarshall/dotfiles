@@ -106,47 +106,38 @@ in
               mv "$settings.tmp" "$settings"
             '';
           };
-          package = pkgs.seerr.overrideAttrs (
-            old:
-            # Pinned so a seerr version bump forces a check of whether upstream has released OIDC
-            # support (seerr-team/seerr#2715, still an open, unmerged PR as of 2026-11-06) - if so,
-            # drop the `seerr-oidc-src` override and go back to the stock package.
-            assert
-              old.version == "3.5.2"
-              || throw "seerr.nix: pkgs.seerr is now ${old.version} (was 3.5.2) - re-check whether seerr-team/seerr#2715 (OIDC support) has merged/released; if so, drop the seerr-oidc-src override.";
-            rec {
-              # Seerr's OIDC login has no group/role claim mapping (not in `seerr-oidc-src`, nor at
-              # seerr-team/seerr#2715's head or any other upstream PR as of 2026-10-24) - OIDC users
-              # only ever get `defaultPermissions`. This adds an `adminGroups` provider field (set
-              # to authentik.nix's `admin` group by `configureOidc` above) that syncs the ADMIN
-              # permission from the `groups` claim on EVERY login: granted if the user is in one of
-              # them, reset to `defaultPermissions` if they hold ADMIN but no longer are. The owner
-              # account (ID 1) is never touched. Same group -> admin mapping jellyfin.nix
-              # (`AdminRoles`) and nextcloud.nix (group provisioning) get natively. `groups` comes
-              # from Authentik's `profile` scope (see authentik.nix's `oidc-defaults`), which
-              # `scopes` above already requests. Re-check it still applies whenever `seerr-oidc-src`
-              # moves (a bump that breaks it fails the build at patchPhase, not silently).
-              patches = (old.patches or [ ]) ++ [ ./seerr-oidc-admin-groups.patch ];
-              pname = "seerr";
+          package = pkgs.seerr.overrideAttrs (old: rec {
+            # Seerr's OIDC login has no group/role claim mapping (not in `seerr-oidc-src`, nor at
+            # seerr-team/seerr#2715's head or any other upstream PR as of 2026-10-24) - OIDC users
+            # only ever get `defaultPermissions`. This adds an `adminGroups` provider field (set
+            # to authentik.nix's `admin` group by `configureOidc` above) that syncs the ADMIN
+            # permission from the `groups` claim on EVERY login: granted if the user is in one of
+            # them, reset to `defaultPermissions` if they hold ADMIN but no longer are. The owner
+            # account (ID 1) is never touched. Same group -> admin mapping jellyfin.nix
+            # (`AdminRoles`) and nextcloud.nix (group provisioning) get natively. `groups` comes
+            # from Authentik's `profile` scope (see authentik.nix's `oidc-defaults`), which
+            # `scopes` above already requests. Re-check it still applies whenever `seerr-oidc-src`
+            # moves (a bump that breaks it fails the build at patchPhase, not silently).
+            patches = (old.patches or [ ]) ++ [ ./seerr-oidc-admin-groups.patch ];
+            pname = "seerr";
 
-              # A `seerr-oidc-src` bump that changes `pnpm-lock.yaml` fails here with a hash
-              # mismatch - copy the `got:` hash from the build error.
-              pnpmDeps = pkgs.fetchPnpmDeps {
-                inherit pname src version;
-                fetcherVersion = 3;
-                hash = "sha256-gqjz0DM0VYdFKTkoKPG9fjAwZlKeQZS1GB4wwUcwZ9M=";
-                pnpm = pkgs.pnpm_10.override { nodejs-slim = pkgs.nodejs-slim_22; };
-              };
+            # A `seerr-oidc-src` bump that changes `pnpm-lock.yaml` fails here with a hash
+            # mismatch - copy the `got:` hash from the build error.
+            pnpmDeps = pkgs.fetchPnpmDeps {
+              inherit pname src version;
+              fetcherVersion = 3;
+              hash = "sha256-gqjz0DM0VYdFKTkoKPG9fjAwZlKeQZS1GB4wwUcwZ9M=";
+              pnpm = pkgs.pnpm_10.override { nodejs-slim = pkgs.nodejs-slim_22; };
+            };
 
-              src = inputs.seerr-oidc-src;
+            src = inputs.seerr-oidc-src;
 
-              version =
-                let
-                  date = src.lastModifiedDate;
-                in
-                "unstable-${lib.substring 0 4 date}-${lib.substring 4 2 date}-${lib.substring 6 2 date}";
-            }
-          );
+            version =
+              let
+                date = src.lastModifiedDate;
+              in
+              "unstable-${lib.substring 0 4 date}-${lib.substring 4 2 date}-${lib.substring 6 2 date}";
+          });
         in
         {
           services.seerr = {
