@@ -13,11 +13,10 @@ in
       url = "immich.${host.name}.${host.domain}";
     in
     {
-      # Owned by Immich's own native NixOS service user/group (`immich`, confirmed via
-      # `config.services.immich.user`/`.group`) - zfs.nix's generic `dataset`-quirk consumer chowns
-      # it once created, and `units` orders both immich-server and immich-machine-learning after
-      # that (avoids either starting before this exists/is mounted - see zfs.nix's own comment on
-      # why that's a real risk).
+      # Owned by `services.immich`'s own user/group (`immich`, which both containers below run as) -
+      # zfs.nix's generic `dataset`-quirk consumer chowns it once created, and `units` orders both
+      # containers after that (avoids either starting before this exists/is mounted - see zfs.nix's
+      # own comment on why that's a real risk).
       dataset = {
         # Immich's blobs live in this dataset but its Postgres DB (services.immich.database,
         # default-enabled, database name "immich") doesn't - a files-only backup would lose all
@@ -44,134 +43,198 @@ in
         samba = true;
 
         units = [
-          "immich-machine-learning"
-          "immich-server"
+          "podman-immich-machine-learning"
+          "podman-immich-server"
         ];
 
         user = "immich";
       };
 
-      nixos = { config, pkgs, ... }: {
-        services.immich = {
-          inherit port;
-          enable = true;
+      # Noodle Gallery (github.com/open-noodle/gallery) rather than upstream Immich - a soft fork
+      # (adds family/partner sharing and shared face recognition) that its own docs pitch as a
+      # drop-in: same database schema, same media layout, same config file, same mobile/OAuth
+      # endpoints. Run from the fork's own images rather than built from source on top of nixpkgs'
+      # `immich` derivation: that build is pinned to nixpkgs' exact Immich release, so it only
+      # worked while a Noodle release's Immich base happened to match it, and every fork feature
+      # that changed the build layout (its extra ML dependency, its second workflow plugin) needed
+      # more glue here. The images are what the fork itself tests and ships.
+      #
+      # `services.immich` stays enabled for everything around the app - Postgres with VectorChord
+      # and its extension setup/reindex SQL, the Redis instance, the `immich` user, the media
+      # directory's permissions - and its own `environment`/`settings` are reused verbatim below.
+      # Only its two app units are switched off and replaced by the containers.
+      nixos =
+        { config, utils, ... }:
+        let
+          cfg = config.services.immich;
 
-          # Noodle Gallery (github.com/open-noodle/gallery) rather than upstream Immich - a soft fork
-          # (adds family/partner sharing and shared face recognition) that its own docs pitch as a
-          # drop-in: same database schema, same media layout, same config file, same mobile/OAuth
-          # endpoints. So rather than switching to its Docker images, this keeps NixOS's own
-          # `services.immich` (Postgres + VectorChord, Redis, users, hardening, the backup hook
-          # above) and only swaps the source tree under nixpkgs' own `immich` derivation. The fork
-          # keeps upstream's pnpm workspace names (`immich`, `immich-web`, `@immich/plugin-core`),
-          # so nixpkgs' build/install phases apply unchanged - but only while each Noodle release's
-          # Immich base (in its release title, e.g. "v5.9.0 (immich 3.3.5)") matches
-          # `pkgs.immich.version`, since nixpkgs pins pnpm/esbuild/geodata for that exact release.
-          # Bump `version` here alongside every nixpkgs Immich bump.
-          package = pkgs.immich.overrideAttrs (
-            finalAttrs: previousAttrs:
-            # Pinned (like seerr.nix's/oscar.nix's own overrides) so a nixpkgs Immich bump fails
-            # evaluation with a "bump the fork" message, rather than quietly building this
-            # 3.4.1-based source against pnpm/esbuild/geodata pins meant for a different release.
-            # On a bump: move `version` below to the Noodle release whose title names the new
-            # Immich base, refresh both hashes, then update the version pinned here.
-            assert
-              previousAttrs.version == "3.4.1"
-              || throw "immich.nix: pkgs.immich is now ${previousAttrs.version} (was 3.4.1) - bump Noodle Gallery's `version` to the open-noodle/gallery release based on Immich v${previousAttrs.version}, refresh its src/pnpmDeps hashes, then update this pin.";
-            {
-              # The module runs `cfg.package.machine-learning`, built by nixpkgs from
-              # `"${src}/machine-learning"` - so it picks up the fork's source on its own, but the
-              # fork's ML adds one dependency upstream doesn't have (`prometheus-client`, for its
-              # metrics endpoint). Adding it to `dependencies` alone only satisfies the build's
-              # runtime-deps check: nixpkgs' `machine-learning` wrapper bakes its PYTHONPATH from
-              # the ORIGINAL `dependencies` list (a `rec` binding in its package.nix, which
-              # `overridePythonAttrs` can't reach), so the wrapper needs the extra path too or the
-              # service would fail importing it at startup.
-              passthru = previousAttrs.passthru // {
-                machine-learning =
-                  (pkgs.immich-machine-learning.override { immich = finalAttrs.finalPackage; }).overridePythonAttrs
-                    (previousMlAttrs: {
-                      dependencies = previousMlAttrs.dependencies ++ [ pkgs.python3.pkgs.prometheus-client ];
+          # Both run as the host's own `immich` user (uid/gid pinned below), on the host network:
+          # Postgres authenticates the server by peer (unix socket, OS user == role), every file
+          # it writes into the media dataset keeps its existing owner, and the server reaches ML
+          # at `localhost:3003` exactly as the native units did.
+          common = {
+            extraOptions = [ "--network=host" ];
+            user = "${toString config.users.users.immich.uid}:${toString config.users.groups.immich.gid}";
+          };
+        in
+        {
+          services.immich = {
+            inherit port;
+            enable = true;
+            host = "127.0.0.1";
+            # Replaced by the `immich-machine-learning` container below.
+            machine-learning.enable = false;
+            mediaLocation = "/metalminds/pictures";
 
-                      postInstall = previousMlAttrs.postInstall + ''
-                        wrapProgram "''${!outputBin}"/bin/machine-learning \
-                          --prefix PYTHONPATH : ${pkgs.python3.pkgs.makePythonPath [ pkgs.python3.pkgs.prometheus-client ]}
-                      '';
-                    });
+            settings = {
+              oauth = {
+                # Skip Immich's own login page and bounce straight to Authentik - there's nothing else
+                # to pick from it now that `passwordLogin` is off below. `/auth/login?autoLaunch=0`
+                # (also `?password=1`) still renders the form instead of redirecting, which is how to
+                # reach it if password login ever gets temporarily turned back on to recover.
+                autoLaunch = true;
+                clientId = "immich";
+                clientSecret._secret = config.age.secrets.immich-oidc-client-secret.path;
+                enabled = true;
+                issuerUrl = "https://${config.services.authentik.nginx.host}/application/o/immich/";
+                mobileOverrideEnabled = true;
+                mobileRedirectUri = "https://${url}/api/oauth/mobile-redirect";
+                scope = "openid email profile";
               };
 
-              pname = "noodle-gallery";
+              # Authentik is the only way in; Immich's own local accounts can no longer be used.
+              # Immich attaches an OAuth login to an existing account by EMAIL (its auth service
+              # looks the user up with `getByEmail`, then stamps the `oauthId` onto that row), so
+              # whoever administers this has to carry the same address in Authentik as on their
+              # Immich account - otherwise `autoRegister` (on by default, not set here) quietly
+              # makes them a SECOND, non-admin user instead of logging them into the existing one.
+              #
+              # Not a lockout risk despite that: `services.immich.settings` being set at all puts
+              # Immich in config-file mode, where the admin UI can't override any of this anyway, so
+              # the way back is flipping this line and rebuilding - not clicking through a UI that
+              # would refuse anyway.
+              passwordLogin.enabled = false;
+            };
+          };
 
-              # Same call as nixpkgs' own (fetcherVersion included) - only the lockfile differs.
-              pnpmDeps = pkgs.fetchPnpmDeps {
-                inherit (finalAttrs) pname src version;
-                inherit (previousAttrs.passthru) pnpm;
-                fetcherVersion = 4;
-                hash = "sha256-14kMBmGwp+9cF6SvyU+IUOZUqFarlOW+b+t3WZ4iKvw=";
+          systemd = {
+            services = {
+              # Replaced by the `immich-server` container below. Disabling the unit (rather than the
+              # whole module) keeps everything else `services.immich` sets up; nothing builds
+              # `cfg.package` any more, since only this unit referenced it.
+              immich-server.enable = false;
+
+              podman-immich-server = {
+                after = [
+                  "postgresql.target"
+                  "redis-immich.service"
+                ];
+
+                # The native unit's own config-file step (`settings` -> JSON, `_secret`s filled in),
+                # moved here since that unit no longer runs. Written as root, handed to `immich`. The
+                # directory is made here rather than with `RuntimeDirectory`, which oci-containers
+                # already sets on this unit for itself.
+                preStart = ''
+                  install -d -m 755 ${dirOf cfg.environment.IMMICH_CONFIG_FILE}
+                  umask 077
+                  ${(utils.genJqSecretsReplacement { } cfg.settings cfg.environment.IMMICH_CONFIG_FILE).script}
+                  chown immich:immich ${cfg.environment.IMMICH_CONFIG_FILE}
+                '';
+
+                requires = [
+                  "postgresql.target"
+                  "redis-immich.service"
+                ];
               };
 
-              # The fork ships a second workflow plugin, `@immich/plugin-gallery` (its space actions:
-              # "Add to space", "Add to space album"), which the server loads from
-              # `build/plugins/gallery-core` alongside upstream's core plugin. nixpkgs' build and
-              # install phases only know about `plugin-core`, so build and install this one too -
-              # same dev deps as plugin-core, already built by the main buildPhase.
-              postBuild = (previousAttrs.postBuild or "") + ''
-                pnpm --filter @immich/plugin-gallery build
-              '';
-
-              postInstall = (previousAttrs.postInstall or "") + ''
-                mkdir -p "$out/lib/node_modules/immich/build/plugins/gallery-core"
-                cp -r packages/plugin-gallery/{dist,manifest.json} "$out/lib/node_modules/immich/build/plugins/gallery-core/"
-              '';
-
-              src = pkgs.fetchFromGitHub {
-                hash = "sha256-Y+AJqIc9f3RieqR4OVdyARB/fMrbHVcmTUi7AupmNk8=";
-                owner = "open-noodle";
-                repo = "gallery";
-                tag = "v${finalAttrs.version}";
-              };
-
-              version = "5.11.0";
-            }
-          );
-
-          host = "127.0.0.1";
-          mediaLocation = "/metalminds/pictures";
-
-          settings = {
-            oauth = {
-              # Skip Immich's own login page and bounce straight to Authentik - there's nothing else
-              # to pick from it now that `passwordLogin` is off below. `/auth/login?autoLaunch=0`
-              # (also `?password=1`) still renders the form instead of redirecting, which is how to
-              # reach it if password login ever gets temporarily turned back on to recover.
-              autoLaunch = true;
-              clientId = "immich";
-              clientSecret._secret = config.age.secrets.immich-oidc-client-secret.path;
-              enabled = true;
-              issuerUrl = "https://${config.services.authentik.nginx.host}/application/o/immich/";
-              mobileOverrideEnabled = true;
-              mobileRedirectUri = "https://${url}/api/oauth/mobile-redirect";
-              scope = "openid email profile";
+              # The server container reaches both sockets through bind mounts of their directories,
+              # which systemd otherwise deletes and recreates whenever either service restarts -
+              # leaving the container holding the old, empty directory. An explicit restart also
+              # restarts the container (its `requires` below), but an automatic one after a crash
+              # doesn't. Both clear out their own stale socket/lock file on start. Postgres's is
+              # "yes" to match rreading-glasses.nix's identical definition (it mounts the same
+              # directory) - equal values merge, differing ones are an evaluation error.
+              postgresql.serviceConfig.RuntimeDirectoryPreserve = "yes";
+              redis-immich.serviceConfig.RuntimeDirectoryPreserve = "restart";
             };
 
-            # Authentik is the only way in; Immich's own local accounts can no longer be used.
-            # Immich attaches an OAuth login to an existing account by EMAIL (its auth service
-            # looks the user up with `getByEmail`, then stamps the `oauthId` onto that row), so
-            # whoever administers this has to carry the same address in Authentik as on their
-            # Immich account - otherwise `autoRegister` (on by default, not set here) quietly
-            # makes them a SECOND, non-admin user instead of logging them into the existing one.
-            #
-            # Not a lockout risk despite that: `services.immich.settings` being set at all puts
-            # Immich in config-file mode, where the admin UI can't override any of this anyway, so
-            # the way back is flipping this line and rebuilding - not clicking through a UI that
-            # would refuse anyway.
-            passwordLogin.enabled = false;
+            # Was the native ML unit's `CacheDirectory` - kept for its already-downloaded models.
+            tmpfiles.settings.immich."/var/cache/immich".d = {
+              group = "immich";
+              mode = "0700";
+              user = "immich";
+            };
+          };
+
+          users = {
+            # Pinned to the ids harmony's NixOS already allocated (read live with `id immich`/`getent
+            # group redis-immich`) - the containers need them as numbers, and NixOS never changes an
+            # existing user's uid anyway, so any other value would just leave the containers running
+            # as a different user than the one owning the media and the Postgres role.
+            groups = {
+              immich.gid = 979;
+              # So the server container can open Redis' unix socket (mode 660, this group).
+              redis-immich.gid = 978;
+            };
+
+            users =
+              lib.genAttrs administrators (user: {
+                extraGroups = [ "immich" ];
+              })
+              // {
+                immich.uid = 982;
+              };
+          };
+
+          virtualisation.oci-containers.containers = {
+            immich-machine-learning = common // {
+              environment = {
+                IMMICH_HOST = "127.0.0.1";
+                IMMICH_PORT = "3003";
+                # Same as nixpkgs' native unit, which this replaces.
+                MACHINE_LEARNING_WORKERS = "1";
+                MACHINE_LEARNING_WORKER_TIMEOUT = "120";
+                TZ = config.time.timeZone;
+                # The image already points its model/HF/JIT caches at `/cache`; this catches anything
+                # else that would otherwise try `$HOME/.cache` as a uid with no home directory.
+                XDG_CACHE_HOME = "/cache";
+              };
+
+              # Re-resolve with:
+              #   skopeo inspect --override-os linux --override-arch amd64 docker://ghcr.io/open-noodle/gallery-ml:<tag>
+              image = "ghcr.io/open-noodle/gallery-ml:v5.11.1@sha256:d84ba8a99138682d2bd9c0506bd7469acf9121919c02e690916ac33dd17e6c36";
+              volumes = [ "/var/cache/immich:/cache" ];
+            };
+
+            immich-server = common // {
+              # `services.immich`'s own environment (DB_URL over the Postgres socket, REDIS_SOCKET,
+              # IMMICH_MEDIA_LOCATION, IMMICH_CONFIG_FILE, ...) - usable as-is because every path
+              # it names is mounted at the same path below. The media location in particular has to
+              # stay `/metalminds/pictures` (not the image's `/data`): Immich stores absolute asset
+              # paths in its database.
+              environment = cfg.environment // {
+                # `DB_URL` names no user, so the client falls back to the OS user's name - which the
+                # native unit got from systemd (`USER=immich`), but uid 982 has no entry in the
+                # image's own /etc/passwd, so without this it would connect with no user at all.
+                # Also read by `pg_dumpall` for Immich's own scheduled database backups.
+                PGUSER = cfg.database.user;
+                TZ = config.time.timeZone;
+              };
+
+              extraOptions = common.extraOptions ++ [ "--group-add=${toString config.users.groups.redis-immich.gid}" ];
+              # Re-resolve with:
+              #   skopeo inspect --override-os linux --override-arch amd64 docker://ghcr.io/open-noodle/gallery-server:<tag>
+              image = "ghcr.io/open-noodle/gallery-server:v5.11.1@sha256:55084c1f2206dcc7bd1330e021cbcfe11f6a413919895d24133dac256dd5e589";
+
+              volumes = [
+                "${cfg.mediaLocation}:${cfg.mediaLocation}"
+                "${dirOf cfg.environment.IMMICH_CONFIG_FILE}:${dirOf cfg.environment.IMMICH_CONFIG_FILE}:ro"
+                "${cfg.database.host}:${cfg.database.host}"
+                "${dirOf cfg.redis.host}:${dirOf cfg.redis.host}"
+              ];
+            };
           };
         };
-
-        users.users = lib.genAttrs administrators (user: {
-          extraGroups = [ "immich" ];
-        });
-      };
 
       # `settings.terraform = "variable";` (not just any secret) - it now feeds a Terraform
       # `variable` (modules/terranix.nix's two modes) as well as Immich's own `environmentFile`-

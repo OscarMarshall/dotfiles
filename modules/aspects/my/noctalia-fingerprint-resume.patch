@@ -1,0 +1,15 @@
+--- a/src/auth/fingerprint_authenticator.cpp
++++ b/src/auth/fingerprint_authenticator.cpp
+@@ -337,7 +337,11 @@
+       emitStatus(i18n::tr("auth.fingerprint.too-many-attempts"), true);
+     } else {
+       emitStatus(i18n::tr("auth.fingerprint.error"), true);
+-      m_retryTimer.start(kRetryDelay, [this] { startVerify(true); });
++      // A device error is not a failed scan: fprintd fails the in-flight verify around every sleep
++      // transition ("Cannot run while suspended", "transfer timed out"), and a lock can span many
++      // of them under suspend-then-hibernate. Counting these used up the retry budget while the
++      // lid was shut, so only real no-matches count.
++      m_retryTimer.start(kRetryDelay, [this] { startVerify(false); });
+     }
+     break;
+   }
