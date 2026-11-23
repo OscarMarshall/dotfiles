@@ -34,6 +34,7 @@
       networkmanager
       noctalia
       noctalia-greeter
+      papers
       pipewire
       preservation
       printing

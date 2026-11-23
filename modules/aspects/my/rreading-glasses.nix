@@ -6,13 +6,17 @@
 # sharing (and contending for) the community one.
 #
 # Fully internal: no `virtual-host` (it's a JSON metadata API, not something a person browses to)
-# and no host port publish at all - it and its Postgres backend only need to be reachable from
-# Bookshelf's own containers, which they are via the dedicated `network` (below) all three
-# containers join. See that constant's own comment for why a shared podman network is used here
-# instead of the loopback-port-publish convention every OTHER service in this repo relies on.
+# and no host port publish at all - it only needs to be reachable from Bookshelf's own containers,
+# which it is via the dedicated `network` (below) they all join. See that constant's own comment
+# for why a shared podman network is used here instead of the loopback-port-publish convention
+# every OTHER service in this repo relies on.
+#
+# Its database lives in the host's native `services.postgresql` (the same instance authentik,
+# immich, nextcloud and paperless use), reached over the Unix socket rather than a second Postgres
+# container. It's only a cache of Hardcover responses (README: "Metadata is periodically
+# refreshed", "will gradually grow your database as it's queried over time"), so it's on the root
+# disk with no dataset and no backup - safe to lose and rebuild from scratch.
 let
-  dbName = "${name}-db";
-  dbPasswordSecret = "${dbName}-password";
   hardcoverAuthSecret = "${name}-hardcover-auth";
   name = "rreading-glasses";
   # A dedicated podman network (rather than the loopback `ports` publish every other oci-container
@@ -34,56 +38,40 @@ let
   # own network namespace, not published to the host at all. bookshelf.nix's `METADATA_URL` (above)
   # and its own unrelated `port = 8788;` (Bookshelf's own listen port, not this container's) both
   # hardcode the same number independently - there's no shared constant to reference from here.
+  socketDir = "/run/postgresql";
 
 in
 {
   my.rreading-glasses = {
-    # Only the Postgres backend is stateful - rreading-glasses itself just caches Hardcover
-    # responses through it (see its own README: "Metadata is periodically refreshed", "the
-    # published image doesn't require any large data dumps and will gradually grow your database
-    # as it's queried over time") - safe to lose/rebuild from scratch, so no `dataset` entry (and
-    # no backup) for the app container itself, only for `dbName`'s data directory below.
-    dataset = [
-      {
-        # `aclUsers = [ "999" ]` - the postgres image's own baked-in `postgres` user (see the
-        # `users.${name}` comment below for the full mechanism this works around). Confirmed live
-        # via `podman run --entrypoint bash ... -x docker-entrypoint.sh postgres`: root's own pass
-        # `mkdir`s and `chown`s ONLY `$PGDATA` (`/var/lib/postgresql/18/docker`) before re-execing
-        # itself as `postgres` (uid 999) via `gosu` - that second pass re-runs
-        # `docker_create_db_directories` AS uid 999, which needs to just TRAVERSE the mount point
-        # (`/var/lib/postgresql`, this dataset's own root) and its `18/` child to reach the
-        # already-chowned `docker/` leaf. Neither of those two directories is `$PGDATA` itself, so
-        # root's chown never touches them - they're left with `user`/`group`'s own
-        # `rreading-glasses:rreading-glasses` ownership, which grants uid 999 (neither the owner
-        # nor a group member) nothing at all: `mkdir: cannot create directory
-        # '/var/lib/postgresql': Permission denied` (misleadingly names the mount point itself,
-        # since that's where GNU `mkdir -p`'s path-walk first loses the ability to even `stat`
-        # deeper). Harmless under the OLD (pre-18) mount scheme - `$PGDATA` there WAS the mount
-        # point (`/var/lib/postgresql/data`, no nesting), so root's own chown covered the whole
-        # thing every start, matching the `users.${name}` comment below. 18+'s extra nesting level
-        # (see `volumes` below) is what exposes this.
-        aclUsers = [ "999" ];
-        group = name;
-        name = dbName;
-        pool = "metalminds";
-        units = [ "podman-${dbName}" ];
-        user = name;
-      }
-    ];
-
     nixos = { config, pkgs, ... }: {
-      systemd.services = {
-        # Both containers below join `network` (rather than the default podman bridge every other
-        # container in this repo implicitly gets) so they can resolve each other, and Bookshelf's
-        # own containers, by name - see `network`'s own comment above for why.
-        "podman-${dbName}" = {
-          after = [ "podman-network-${network}.service" ];
-          requires = [ "podman-network-${network}.service" ];
-        };
+      services.postgresql = {
+        enable = true;
+        ensureDatabases = [ name ];
 
+        ensureUsers = [
+          {
+            inherit name;
+            ensureDBOwnership = true;
+          }
+        ];
+      };
+
+      systemd.services = {
+        # `postgresql.target` (not just `postgresql.service`) - it also covers `postgresql-setup`,
+        # which is what actually creates the `ensureUsers`/`ensureDatabases` role and database.
+        # Joins `network` (rather than the default podman bridge every other container in this repo
+        # implicitly gets) so Bookshelf's own containers can resolve it by name - see `network`'s
+        # own comment above for why.
         "podman-${name}" = {
-          after = [ "podman-network-${network}.service" ];
-          requires = [ "podman-network-${network}.service" ];
+          after = [
+            "podman-network-${network}.service"
+            "postgresql.target"
+          ];
+
+          requires = [
+            "podman-network-${network}.service"
+            "postgresql.target"
+          ];
         };
 
         "podman-network-${network}" = {
@@ -99,17 +87,23 @@ in
             Type = "oneshot";
           };
         };
+
+        # `socketDir` is postgresql.service's own `RuntimeDirectory`, which systemd deletes on every
+        # stop and recreates on start by default - a NEW directory, invisible to the container's
+        # bind mount below (still pinned to the old, deleted one), so any Postgres restart (e.g. a
+        # nixpkgs bump changing its package) would cut this container off until it's restarted
+        # too. Keeping the directory lets Postgres recreate its socket inside the same one, and
+        # pgx's pool just reconnects.
+        postgresql.serviceConfig.RuntimeDirectoryPreserve = "yes";
       };
 
-      # A dedicated `rreading-glasses` user/group, same reasoning and numbering convention as
-      # bookshelf.nix's own `readarr` (31000), satisfactory-server.nix's (31001), and
-      # qbittorrent.nix's (31002) - next available id in that sequence. Unlike those, this
-      # doesn't actually need to match anything the postgres container itself reads as - the
-      # official `postgres` image chowns `$PGDATA` to its own baked-in `postgres` user (uid 999)
-      # itself, regardless of the host-side owner set here, on every start (as real root, before
-      # dropping to that user) - this is just what `ensureDatasetService` requires a dataset entry
-      # to name. See the `dataset` entry's own `aclUsers` comment above for the one thing this
-      # self-healing does NOT cover under 18+'s mount layout.
+      # A dedicated `rreading-glasses` user/group, same numbering convention as bookshelf.nix's own
+      # `readarr` (31000), satisfactory-server.nix's (31001), and qbittorrent.nix's (31002) - next
+      # available id in that sequence. The container runs as this uid (`user` below) so Postgres's
+      # default `local all all peer` rule maps the socket connection to the `rreading-glasses` role
+      # by OS username - no password to generate or store. That only works because podman here is
+      # rootful with no user-namespace remapping: the uid inside the container IS the host uid
+      # Postgres sees on the socket.
       users = {
         groups.${name}.gid = 31003;
 
@@ -121,89 +115,45 @@ in
         };
       };
 
-      virtualisation.oci-containers.containers = {
-        ${dbName} = {
-          environment = {
-            POSTGRES_DB = name;
-            POSTGRES_USER = name;
-          };
+      virtualisation.oci-containers.containers.${name} = {
+        cmd = [
+          "serve"
+          "--verbose"
+        ];
 
-          environmentFiles = [ config.age.secrets."${dbName}.env".path ];
-          # Short name - resolves via podman.nix's `unqualified-search-registries` (docker.io
-          # first). Re-resolve with:
-          #   skopeo inspect --override-os linux --override-arch amd64 docker://docker.io/library/postgres:18
-          #
-          # 18+'s image categorically refuses a bind mount landing directly at the old
-          # `/var/lib/postgresql/data` - doesn't matter whether it actually holds pre-18 data, an
-          # EMPTY mount there still gets rejected (confirmed live: the crash-looped container never
-          # got far enough to write anything, yet still hit this). It wants a mount one level up at
-          # `/var/lib/postgresql` instead, and creates its own versioned subdirectory
-          # (`18/docker`) inside that itself - see https://github.com/docker-library/postgres/pull/1259.
-          # This crash-looped when renovate auto-bumped straight from 17 to 18 in place against the
-          # old mount path; a future major bump like this one won't auto-merge again - see
-          # renovate.json's own major-Docker-image packageRule.
-          image = "postgres:18@sha256:eb63372c1e05c755f55fa30cbd07aecc443676fc6c0fa90b9002d01537841e1a";
-          networks = [ network ];
-          volumes = [ "/metalminds/${dbName}:/var/lib/postgresql" ];
+        entrypoint = "/main";
+
+        environment = {
+          POSTGRES_DATABASE = name;
+          # An absolute path makes rreading-glasses treat it as a Unix socket directory and drop
+          # the port from its DSN (`PGConfig.DSN`, cmd/root.go).
+          POSTGRES_HOST = socketDir;
+          # Never checked - peer auth ignores it. Still needed: the DSN is always built as
+          # `password=%s dbname=%s ...`, and pgx reads an EMPTY `password=` as swallowing the next
+          # `dbname=...` token as the password instead.
+          POSTGRES_PASSWORD = "unused";
+          POSTGRES_USER = name;
         };
 
-        ${name} = {
-          cmd = [
-            "serve"
-            "--verbose"
-          ];
-
-          dependsOn = [ dbName ];
-          entrypoint = "/main";
-
-          environment = {
-            POSTGRES_DATABASE = name;
-            POSTGRES_HOST = dbName;
-            POSTGRES_USER = name;
-          };
-
-          environmentFiles = [
-            config.age.secrets."${name}.env".path
-            config.age.secrets."${hardcoverAuthSecret}.env".path
-          ];
-
-          # README: "The app will use as much memory as it has available for in-memory
-          # caching, so it's recommended to run the container with a `--memory` limit" -
-          # matches its own reference docker-compose-hardcover.yml's `mem_limit: 128m`.
-          extraOptions = [ "--memory=128m" ];
-          # Short name - see the `postgres` image's own comment above.
-          # Re-resolve with:
-          #   skopeo inspect --override-os linux --override-arch amd64 docker://docker.io/blampe/rreading-glasses:hardcover
-          image = "blampe/rreading-glasses:hardcover@sha256:3f017a51d9007b715303a20f481c822e4df66485fc9e5f57f6fdf1de840dc02f";
-          networks = [ network ];
-        };
+        environmentFiles = [ config.age.secrets."${hardcoverAuthSecret}.env".path ];
+        # README: "The app will use as much memory as it has available for in-memory
+        # caching, so it's recommended to run the container with a `--memory` limit" -
+        # matches its own reference docker-compose-hardcover.yml's `mem_limit: 128m`.
+        extraOptions = [ "--memory=128m" ];
+        # Short name - resolves via podman.nix's `unqualified-search-registries` (docker.io
+        # first). Re-resolve with:
+        #   skopeo inspect --override-os linux --override-arch amd64 docker://docker.io/blampe/rreading-glasses:hardcover
+        image = "blampe/rreading-glasses:hardcover@sha256:3f017a51d9007b715303a20f481c822e4df66485fc9e5f57f6fdf1de840dc02f";
+        networks = [ network ];
+        user = "${toString config.users.users.${name}.uid}:${toString config.users.groups.${name}.gid}";
+        # The whole directory, not just the socket file - Postgres recreates the socket on every
+        # restart, which a file-level bind mount would keep pointing at the old, deleted inode. The
+        # directory itself must survive too - see `RuntimeDirectoryPreserve` above.
+        volumes = [ "${socketDir}:${socketDir}" ];
       };
     };
 
     secrets = { secrets, ... }: {
-      # Shared by both containers below - same password, generated once.
-      "${dbName}.env".generator = {
-        dependencies = {
-          ${dbPasswordSecret} = secrets.${dbPasswordSecret};
-        };
-
-        script =
-          {
-            lib,
-            decrypt,
-            deps,
-            ...
-          }:
-          ''
-            printf 'POSTGRES_PASSWORD=%s\n' "$(${decrypt} ${lib.escapeShellArg deps.${dbPasswordSecret}.file})"
-          '';
-      };
-
-      ${dbPasswordSecret} = {
-        generator.script = { pkgs, ... }: "${pkgs.openssl}/bin/openssl rand -hex 16";
-        intermediary = true;
-      };
-
       # No `generator` on this one - it's a personal credential only a human can obtain (a free
       # Hardcover account's own API token, per https://hardcover.app/account/api), so it's a
       # PRIMITIVE secret: create it with `agenix edit secrets/${hardcoverAuthSecret}.age`,
@@ -234,23 +184,6 @@ in
           }:
           ''
             printf 'HARDCOVER_AUTH=Bearer %s\n' "$(${decrypt} ${lib.escapeShellArg deps.${hardcoverAuthSecret}.file})"
-          '';
-      };
-
-      "${name}.env".generator = {
-        dependencies = {
-          ${dbPasswordSecret} = secrets.${dbPasswordSecret};
-        };
-
-        script =
-          {
-            lib,
-            decrypt,
-            deps,
-            ...
-          }:
-          ''
-            printf 'POSTGRES_PASSWORD=%s\n' "$(${decrypt} ${lib.escapeShellArg deps.${dbPasswordSecret}.file})"
           '';
       };
     };
