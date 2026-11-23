@@ -95,7 +95,7 @@
           "yarg-charts"
         ];
 
-    nixos = { pkgs, ... }: {
+    nixos = {
       age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMkM5uNY0rMy2QMG6IptlxgVl4sQWoeSSNmUp7/f2z1B";
       # The ESP also holds the my.rescue-boot image (up to 512 MiB), so keep fewer
       # generations' kernels + initrds than the default 10.
@@ -104,17 +104,7 @@
 
       services = {
         apcupsd.enable = true;
-
-        glances = {
-          enable = true;
-
-          # python-jose is marked insecure (CVE-2026-120459); glances only uses it for optional JWT auth on the REST
-          # API, which we don't enable.
-          package = pkgs.glances.overridePythonAttrs (old: {
-            dependencies = lib.filter (dep: (dep.pname or null) != "python-jose") old.dependencies;
-            pythonRemoveDeps = (old.pythonRemoveDeps or [ ]) ++ [ "python-jose" ];
-          });
-        };
+        glances.enable = true;
       };
 
       # This option defines the first version of NixOS you have installed on this particular machine, and is used to
