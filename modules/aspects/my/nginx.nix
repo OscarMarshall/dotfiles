@@ -98,9 +98,16 @@
                   # which browsers can silently refuse to store — breaking login for any backend
                   # that manages its own cookie security (e.g. Immich). Opt out per host via
                   # `preserveCookieFlags = true;` on the `virtual-host` record.
-                  extraConfig = lib.optionalString (vh.preserveCookieFlags or false) ''
-                    proxy_cookie_path / /;
-                  '';
+                  extraConfig =
+                    lib.optionalString (vh.preserveCookieFlags or false) ''
+                      proxy_cookie_path / /;
+                    ''
+                    # Server-level so it covers every location (incl. a `port`-less vhost's own).
+                    # Without it nginx's 10m default (services.nginx.clientMaxBodySize) 413s any
+                    # larger request before the backend ever sees it.
+                    + lib.optionalString (vh ? maxBodySize) ''
+                      client_max_body_size ${vh.maxBodySize};
+                    '';
 
                   forceSSL = true;
                   # Skips adding `global-url` when a service's own `url` override (e.g.

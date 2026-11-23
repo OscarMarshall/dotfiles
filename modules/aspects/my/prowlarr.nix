@@ -147,8 +147,8 @@
         resource = {
           prowlarr_application_radarr.radarr = {
             api_key = "\${var.RADARR_API_KEY}";
-            # radarr.nix's own `port` (7878), kept as a literal for the same reason
-            # cross-seed.nix's `webuiPort` is - see this field's own comment above. Update this if
+            # radarr.nix's own `port` (7878), kept as a literal since aspects can't
+            # read each other's `let` bindings. Update this if
             # radarr.nix's port ever changes.
             base_url = "http://localhost:7878";
             name = "Radarr";
@@ -179,8 +179,8 @@
             # above).
             bookshelf-audiobooks = {
               api_key = "\${var.BOOKSHELF_AUDIOBOOKS_API_KEY}";
-              # bookshelf.nix's own `port` (8788), kept as a literal for the same reason
-              # cross-seed.nix's `webuiPort` is - see this field's own comment above. Update this
+              # bookshelf.nix's own `port` (8788), kept as a literal since aspects can't
+              # read each other's `let` bindings. Update this
               # if bookshelf.nix's audiobooks port ever changes.
               base_url = "http://localhost:8788";
               name = "Bookshelf (Audiobooks)";
@@ -191,8 +191,8 @@
 
             bookshelf-ebooks = {
               api_key = "\${var.BOOKSHELF_EBOOKS_API_KEY}";
-              # bookshelf.nix's own `port` (8787), kept as a literal for the same reason
-              # cross-seed.nix's `webuiPort` is - see this field's own comment above. Update this
+              # bookshelf.nix's own `port` (8787), kept as a literal since aspects can't
+              # read each other's `let` bindings. Update this
               # if bookshelf.nix's ebooks port ever changes.
               base_url = "http://localhost:8787";
               name = "Bookshelf (Ebooks)";
@@ -218,8 +218,8 @@
             # devopsarr's schema treats them as two separate lists.
             anime_sync_categories = [ 5070 ];
             api_key = "\${var.SONARR_API_KEY}";
-            # sonarr.nix's own `port` (8989), kept as a literal for the same reason
-            # cross-seed.nix's `webuiPort` is - see this field's own comment above. Update this if
+            # sonarr.nix's own `port` (8989), kept as a literal since aspects can't
+            # read each other's `let` bindings. Update this if
             # sonarr.nix's port ever changes.
             base_url = "http://localhost:8989";
             name = "Sonarr";

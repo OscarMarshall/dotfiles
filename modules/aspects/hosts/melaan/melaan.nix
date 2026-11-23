@@ -30,6 +30,7 @@
 
         system = "x86_64-linux";
       })
+      (rescue-boot { })
       boot
       gnome
       locale
@@ -43,6 +44,9 @@
     nixos = {
       imports = [ (inputs.nixos-hardware.nixosModules.framework-12-13th-gen-intel or { }) ];
       age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILqFHtkApjVtbJj4hR4sEyHJhwrZ74+gR3OviJk9VxYb";
+      # The ESP also holds the my.rescue-boot image (up to 512 MiB), so keep fewer
+      # generations' kernels + initrds than the default 10.
+      boot.loader.systemd-boot.configurationLimit = 5;
 
       services = {
         flatpak.enable = true;

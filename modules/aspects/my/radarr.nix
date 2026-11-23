@@ -200,7 +200,7 @@ in
       virtual-host = {
         inherit global port;
         # Radarr serves its REST API under /api; nginx.nix lets that through the Authentik
-        # forward-auth gate untouched since cross-seed/unpackerr call it directly with an API key,
+        # forward-auth gate untouched since unpackerr calls it directly with an API key,
         # machine-to-machine, with no browser session to carry an Authentik cookie.
         bypassAuthPaths = [ "^/api" ];
         group = "Arr Stack";

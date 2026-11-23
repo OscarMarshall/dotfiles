@@ -109,7 +109,7 @@ Use an aspect function signature (`{ host, lib, ... }:`) when you need context-a
 
 ### Services
 
-- **Media**: Plex, Jellyfin, Tautulli, Radarr, Sonarr, Prowlarr, Unpackerr, Autobrr, Cross-seed
+- **Media**: Plex, Jellyfin, Tautulli, Radarr, Sonarr, Prowlarr, Unpackerr, Autobrr, qui
 - **Documents**: Paperless-ngx, behind Authentik forward-auth
 - **Downloads**: native qBittorrent confined with VPN-Confinement, Mousehole keeping MAM's seen-IP in sync with the same
   VPN egress

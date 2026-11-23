@@ -130,7 +130,7 @@ Use direct context flag checks in aspect code (hosted users or standalone homes)
 
 The **harmony** server (x86_64-linux) runs:
 
-- **Media Stack**: Plex, Jellyfin, Tautulli, Radarr, Sonarr, Prowlarr, Autobrr, Cross-seed
+- **Media Stack**: Plex, Jellyfin, Tautulli, Radarr, Sonarr, Prowlarr, Autobrr, qui
 - **Downloads**: native qBittorrent under VPN-Confinement, Mousehole keeping MAM's seen-IP in sync with the same VPN
   egress
 - **Minecraft**: Multiple servers via nix-minecraft
@@ -327,8 +327,8 @@ Organized by category:
 
 - **Core**: boot, locale, nix, fonts
 - **Networking**: networkmanager, nginx
-- **Services**: minecraft-servers, plex, jellyfin, prowlarr, qbittorrent, radarr, sonarr, unpackerr, autobrr,
-  cross-seed, homepage, home-assistant
+- **Services**: minecraft-servers, plex, jellyfin, prowlarr, qbittorrent, radarr, sonarr, unpackerr, autobrr, qui,
+  homepage, home-assistant
 - **Containers**: profilarr
 - **Desktop**: gnome, pipewire, steam, discord, ghostty, zen-browser, prusa-slicer, xfce-desktop, umbriel
   (wlroots/SceneFX compositor), noctalia (Wayland shell), noctalia-greeter (greetd greeter)
