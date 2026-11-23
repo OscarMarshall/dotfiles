@@ -202,7 +202,7 @@ in
 
               # Re-resolve with:
               #   skopeo inspect --override-os linux --override-arch amd64 docker://ghcr.io/open-noodle/gallery-ml:<tag>
-              image = "ghcr.io/open-noodle/gallery-ml:v5.11.0@sha256:0688149a40fb202a71e70e31dda2a4948191d65e4f7a06a42ac0dc9ce421b925";
+              image = "ghcr.io/open-noodle/gallery-ml:v5.11.1@sha256:d84ba8a99138682d2bd9c0506bd7469acf9121919c02e690916ac33dd17e6c36";
               volumes = [ "/var/cache/immich:/cache" ];
             };
 
@@ -224,7 +224,7 @@ in
               extraOptions = common.extraOptions ++ [ "--group-add=${toString config.users.groups.redis-immich.gid}" ];
               # Re-resolve with:
               #   skopeo inspect --override-os linux --override-arch amd64 docker://ghcr.io/open-noodle/gallery-server:<tag>
-              image = "ghcr.io/open-noodle/gallery-server:v5.11.0@sha256:82d1710fa48fa57c16f923d074c90350d91d86ac6cf98458908d7a4b2b5c6761";
+              image = "ghcr.io/open-noodle/gallery-server:v5.11.1@sha256:55084c1f2206dcc7bd1330e021cbcfe11f6a413919895d24133dac256dd5e589";
 
               volumes = [
                 "${cfg.mediaLocation}:${cfg.mediaLocation}"
