@@ -18,8 +18,11 @@ let
   # when a lock starts, but a lock spans every suspend-then-hibernate wake. fprintd fails the
   # in-flight verify around each transition ("Cannot run while suspended", "transfer timed out"),
   # each failure counts as a retry, and by the time the lid opens after hibernating the lock screen
-  # says "Fingerprint disabled (too many attempts)". The patch resets the budget on every wake.
-  # Drop it once upstream handles this.
+  # says "Fingerprint disabled (too many attempts)". The patch makes only real no-matches count,
+  # so device errors re-arm for free while the 3-try cap still holds for the whole lock (resetting
+  # it on wake instead would let anyone get fresh tries by cycling the lid). Trade-off: a sensor
+  # that errors persistently re-arms every 250 ms for as long as the lock lasts. Drop the patch
+  # once upstream handles this.
   noctaliaPackage =
     pkgs:
     inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default.overrideAttrs (old: {
