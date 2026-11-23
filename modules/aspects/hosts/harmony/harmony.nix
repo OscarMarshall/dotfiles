@@ -37,6 +37,15 @@
       (qbittorrent { administrators = [ "oscar" ]; })
       (qui { })
       (radarr { administrators = [ "oscar" ]; })
+      # Wired-only server: graphics firmware for the console, plus Realtek NIC firmware in case the
+      # onboard Ethernet needs it (Intel NICs need none). No Wi-Fi firmware.
+      (rescue-boot {
+        firmware = [
+          "i915"
+          "xe"
+          "rtl_nic"
+        ];
+      })
       (seerr { global = true; })
       (sonarr { administrators = [ "oscar" ]; })
       (storyteller { global = true; })
@@ -49,6 +58,7 @@
       headplane
       headscale
       homepage
+      immich-stack
       lm-sensors
       locale
       mailgun
@@ -85,13 +95,26 @@
           "yarg-charts"
         ];
 
-    nixos = {
+    nixos = { pkgs, ... }: {
       age.rekey.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMkM5uNY0rMy2QMG6IptlxgVl4sQWoeSSNmUp7/f2z1B";
+      # The ESP also holds the my.rescue-boot image (up to 512 MiB), so keep fewer
+      # generations' kernels + initrds than the default 10.
+      boot.loader.systemd-boot.configurationLimit = 5;
       networking.hostId = "7dab76c0";
 
       services = {
         apcupsd.enable = true;
-        glances.enable = true;
+
+        glances = {
+          enable = true;
+
+          # python-jose is marked insecure (CVE-2026-120459); glances only uses it for optional JWT auth on the REST
+          # API, which we don't enable.
+          package = pkgs.glances.overridePythonAttrs (old: {
+            dependencies = lib.filter (dep: (dep.pname or null) != "python-jose") old.dependencies;
+            pythonRemoveDeps = (old.pythonRemoveDeps or [ ]) ++ [ "python-jose" ];
+          });
+        };
       };
 
       # This option defines the first version of NixOS you have installed on this particular machine, and is used to

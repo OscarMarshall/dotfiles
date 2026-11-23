@@ -36,6 +36,12 @@
       "matchUpdateTypes": ["major"],
       "automerge": false,
       "addLabels": ["major-docker-image"]
+    },
+    {
+      "description": "Noodle Gallery's server and ML images ship together and can run database migrations, so update them in one PR and leave it for a human to merge.",
+      "matchPackageNames": ["ghcr.io/open-noodle/**"],
+      "groupName": "Noodle Gallery",
+      "automerge": false
     }
   ]
 }

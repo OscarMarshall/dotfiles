@@ -6,23 +6,29 @@
 }:
 let
   name = "Oscar Marshall";
-  userAspect = { user, ... }: {
-    nixos = { config, ... }: {
-      users.users.${user.userName} = {
-        # `.path` (the decrypted /run/agenix/... location), not `.file` (the encrypted .age in the
-        # store) - otherwise `/etc/shadow` gets the age ciphertext as the "hash". On a persistent
-        # `/etc` this is masked by whatever shadow already held; on tensoon's tmpfs root it locks
-        # the account on every boot.
-        hashedPasswordFile = config.age.secrets.oscar-hashed-password.path;
-        openssh.authorizedKeys.keys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGt95coA4j19+fPxpOLRfIFb7AvAXdSmf1MyOPibmhe/" ];
-      };
+  # A user aspect's bare `nixos` / `os` content stays with the user (den#694), so anything that must
+  # land on oscar's hosts is delivered explicitly: the `user` class for his own account entry, and
+  # `provides.to-hosts` (den.batteries.mutual-provider, included in modules/aspects/defaults.nix)
+  # for what lives outside `users.users`.
+  userAspect = {
+    # `osConfig` is the host's config (den's user-to-host route injects it), where the age secrets
+    # live; the module's own `config` is just this `users.users.<name>` entry.
+    user = { osConfig, ... }: {
+      # `.path` (the decrypted /run/agenix/... location), not `.file` (the encrypted .age in the
+      # store) - otherwise `/etc/shadow` gets the age ciphertext as the "hash". On a persistent
+      # `/etc` this is masked by whatever shadow already held; on tensoon's tmpfs root it locks
+      # the account on every boot.
+      hashedPasswordFile = osConfig.age.secrets.oscar-hashed-password.path;
+      openssh.authorizedKeys.keys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGt95coA4j19+fPxpOLRfIFb7AvAXdSmf1MyOPibmhe/" ];
     };
 
-    # nixos/modules/config/nix.nix sets
-    # `nix.settings.trusted-users = [ "root" ]` as a real config-level definition
-    # (not just an mkOption default), and trusted-users is a listOf — definitions
-    # concatenate rather than override, so root can't be dropped by adding to this list.
-    os.nix.settings.trusted-users = [ user.userName ];
+    provides.to-hosts = { user, ... }: {
+      # nixos/modules/config/nix.nix sets
+      # `nix.settings.trusted-users = [ "root" ]` as a real config-level definition
+      # (not just an mkOption default), and trusted-users is a listOf — definitions
+      # concatenate rather than override, so root can't be dropped by adding to this list.
+      os.nix.settings.trusted-users = [ user.userName ];
+    };
   };
 in
 {

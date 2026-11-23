@@ -17,5 +17,9 @@
     ];
 
     nixos.programs.steam.enable = true;
+    # The same, for when a user includes my.steam rather than the host (tensoon via oscar): a user
+    # aspect's bare `nixos` stays with the user (den#694), so deliver it to the user's hosts
+    # explicitly (den.batteries.mutual-provider, included in modules/aspects/defaults.nix).
+    provides.to-hosts.nixos.programs.steam.enable = true;
   };
 }
