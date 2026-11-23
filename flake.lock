@@ -1416,11 +1416,11 @@
     "seerr-oidc-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1794070071,
-        "narHash": "sha256-VUZbYfHGluBF58nuTueTZfEfK5EIKtQTwtfdAbePbNU=",
+        "lastModified": 1794782896,
+        "narHash": "sha256-VZN6C02nVuF6tunTLQhDYF+nYS99jZlP/uywXRdkwZ4=",
         "owner": "michaelhthomas",
         "repo": "seerr",
-        "rev": "b1312ccd8776de04420a825f23b3f2d9aab2f2f9",
+        "rev": "0aa680565233bcfd67bfa4bce5b12f9f89f134da",
         "type": "github"
       },
       "original": {
