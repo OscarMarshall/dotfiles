@@ -17,9 +17,9 @@
 # remaining questions (printer admission, storage). Sign-in is already fixed by this config, so the
 # wizard skips it - `administrator` below is the Authentik username that gets admin.
 let
+  dataDir = "/metalminds/prusa-connect";
   port = 8088;
   printerPort = 8089;
-  dataDir = "/metalminds/prusa-connect";
   version = "0.1.0-beta.1";
 in
 {
@@ -50,15 +50,15 @@ in
         let
           package = pkgs.stdenvNoCC.mkDerivation {
             inherit version;
+            dontUnpack = true;
+            installPhase = "install -Dm755 $src $out/bin/prusa-connect";
             pname = "prusa-connect";
 
             src = pkgs.fetchurl {
-              url = "https://github.com/prusa3d/prusa-connect/releases/download/v${version}/prusa_connect_amd64";
               hash = "sha256-o6H2lhG8WexdrUlKvQ/QTbeVL9esb1Gc4JeCF+jPY6U=";
+              url = "https://github.com/prusa3d/prusa-connect/releases/download/v${version}/prusa_connect_amd64";
             };
 
-            dontUnpack = true;
-            installPhase = "install -Dm755 $src $out/bin/prusa-connect";
             meta.platforms = [ "x86_64-linux" ];
           };
 
@@ -103,6 +103,8 @@ in
 
           systemd.services.prusa-connect = {
             description = "Prusa Connect, a local server for 3D printers";
+            wantedBy = [ "multi-user.target" ];
+
             # The server reads Authentik's discovery document before serving anything, and exits if
             # it can't - so wait for it, and keep retrying (no start limit) if Authentik is slow.
             after = [
@@ -110,10 +112,6 @@ in
               "network-online.target"
               "nginx.service"
             ];
-
-            startLimitIntervalSec = 0;
-            wantedBy = [ "multi-user.target" ];
-            wants = [ "network-online.target" ];
 
             # config.yaml lives in the data dir rather than the store: the setup wizard writes its
             # answers (and installed extensions) into `config.d/` beside it.
@@ -146,6 +144,8 @@ in
               ProtectSystem = "strict";
               ReadWritePaths = [ dataDir ];
               RemoveIPC = true;
+              Restart = "on-failure";
+              RestartSec = "10s";
 
               RestrictAddressFamilies = [
                 "AF_INET"
@@ -157,8 +157,6 @@ in
               RestrictNamespaces = true;
               RestrictRealtime = true;
               RestrictSUIDSGID = true;
-              Restart = "on-failure";
-              RestartSec = "10s";
               SystemCallArchitectures = "native";
 
               SystemCallFilter = [
@@ -171,6 +169,9 @@ in
               User = "prusa-connect";
               WorkingDirectory = dataDir;
             };
+
+            startLimitIntervalSec = 0;
+            wants = [ "network-online.target" ];
           };
 
           users = {
