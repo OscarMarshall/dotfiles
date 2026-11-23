@@ -1,0 +1,14 @@
+--- a/src/auth/fingerprint_authenticator.cpp
++++ b/src/auth/fingerprint_authenticator.cpp
+@@ -79,6 +79,11 @@
+         m_retryTimer.stop();
+         m_verifying = false;
+       } else if (m_active && !m_abort) {
++        // A lock can span many sleep cycles (suspend-then-hibernate wakes to check the battery,
++        // then hibernates). fprintd fails the in-flight verify around each transition, which
++        // lands as verify-unknown-error and would otherwise burn the retry budget while the lid
++        // is shut. Give each wake a fresh budget.
++        m_retries = 0;
+         startVerify(false);
+       }
+     });

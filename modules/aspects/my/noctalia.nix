@@ -8,7 +8,25 @@
 #
 # As with my.umbriel, the home-manager module is wired via `home-manager.sharedModules` on the NixOS
 # side, and the user-facing `programs.noctalia` settings live under `homeManager`.
-{ inputs, ... }: {
+{ inputs, ... }:
+let
+  # The flake's source build plus local fixes. Shared by the NixOS and home-manager modules (the
+  # latter's user service is what actually runs the shell and its lock screen) so both resolve to
+  # one build.
+  #
+  # noctalia-fingerprint-resume.patch: the lock screen's fingerprint retry budget (3) only resets
+  # when a lock starts, but a lock spans every suspend-then-hibernate wake. fprintd fails the
+  # in-flight verify around each transition ("Cannot run while suspended", "transfer timed out"),
+  # each failure counts as a retry, and by the time the lid opens after hibernating the lock screen
+  # says "Fingerprint disabled (too many attempts)". The patch resets the budget on every wake.
+  # Drop it once upstream handles this.
+  noctaliaPackage =
+    pkgs:
+    inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default.overrideAttrs (old: {
+      patches = (old.patches or [ ]) ++ [ ./noctalia-fingerprint-resume.patch ];
+    });
+in
+{
   flake-file.inputs.noctalia = {
     url = "github:noctalia-dev/noctalia";
     inputs.nixpkgs.follows = "nixpkgs";
@@ -32,9 +50,10 @@
       })
     ];
 
-    homeManager = { config, ... }: {
+    homeManager = { config, pkgs, ... }: {
       programs.noctalia = {
         enable = true;
+        package = noctaliaPackage pkgs;
 
         # Promoted from the Noctalia settings menu (~/.local/state/noctalia/settings.toml).
         # Runtime edits through the UI still take precedence; this is the declarative baseline.
@@ -234,6 +253,7 @@
           # The NixOS `enable` is separate from the home-manager one; without it the module's whole
           # config block (recommendedServices included) is inert.
           enable = true;
+          package = noctaliaPackage pkgs;
           # NetworkManager, bluetooth, UPower and power-profiles-daemon - the services Noctalia's
           # control center drives.
           recommendedServices.enable = true;
