@@ -14,8 +14,10 @@
 #
 # One-time first run after deploying: the server prints a setup code in its log
 # (`journalctl -u prusa-connect | grep -i code`); open the vhost, enter it, and answer the wizard's
-# remaining questions (printer admission, storage). Sign-in is already fixed by this config, so the
-# wizard skips it - `administrator` below is the Authentik username that gets admin.
+# remaining questions. Sign-in is already fixed by this config, so the wizard skips it -
+# `administrator` below is the Authentik username that gets admin. Its storage answer is ignored too:
+# the wizard only declares storage when none exists, and `resources.storage.local` below already
+# puts print files in `${dataDir}/storage`, inside the backed-up dataset.
 let
   dataDir = "/metalminds/prusa-connect";
   port = 8088;
@@ -33,7 +35,36 @@ in
     {
       dataset = {
         inherit name;
-        backup = true;
+
+        # Restic copies files straight off the live dataset, and the server writes its SQLite
+        # databases (config.d/authz.db, config.d/history.db, each extension's database.sqlite)
+        # constantly while printers report in - a copy taken mid-write can restore torn. So snapshot
+        # each one with SQLite's own online backup into `.backup/<path>.bak` first, and leave the
+        # live files (and their -wal/-shm/-journal) out: restore by renaming the .bak copies back.
+        # Run as the service user, so any -shm file sqlite3 creates stays openable by the server.
+        backup = pkgs: {
+          backupCleanupCommand = "rm -rf ${dataDir}/.backup";
+
+          backupPrepareCommand = "${pkgs.util-linux}/bin/runuser -u prusa-connect -- ${pkgs.writeShellScript "prusa-connect-backup-prepare" ''
+            set -euo pipefail
+            umask 077
+            cd ${dataDir}
+            rm -rf .backup
+            find . -path ./.backup -prune -o -type f \( -name '*.db' -o -name '*.sqlite' \) -print |
+              while read -r db; do
+                mkdir -p ".backup/$(dirname "$db")"
+                ${pkgs.sqlite}/bin/sqlite3 "$db" ".backup '.backup/$db.bak'"
+              done
+          ''}";
+
+          exclude = [
+            "*.db"
+            "*.db-*"
+            "*.sqlite"
+            "*.sqlite-*"
+          ];
+        };
+
         group = "prusa-connect";
         pool = "metalminds";
         units = [ "prusa-connect" ];
