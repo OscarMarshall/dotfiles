@@ -81,6 +81,7 @@ in
         my.doc-browser
         my.ghostty
         my.halloy
+        my.moonfin
         my.orca-slicer
         my.programmer-dvorak
         my.prusa-slicer

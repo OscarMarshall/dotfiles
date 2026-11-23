@@ -783,6 +783,22 @@
         "type": "github"
       }
     },
+    "moonfin-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1794427177,
+        "narHash": "sha256-ND3faUALDiaQlCsSuHuBPolp3gBhJovSt86xPgtpVCM=",
+        "owner": "Moonfin-Client",
+        "repo": "Moonfin-Core",
+        "rev": "15cc33d535dbd965afb23eaacd250e533c2c9790",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Moonfin-Client",
+        "repo": "Moonfin-Core",
+        "type": "github"
+      }
+    },
     "nix-cachyos-kernel": {
       "inputs": {
         "flake-compat": "flake-compat_5",
@@ -1369,6 +1385,7 @@
         "git-hooks": "git-hooks",
         "home-manager": "home-manager",
         "import-tree": "import-tree",
+        "moonfin-src": "moonfin-src",
         "nix-cachyos-kernel": "nix-cachyos-kernel",
         "nix-doom-emacs-unstraightened": "nix-doom-emacs-unstraightened",
         "nix-index-database": "nix-index-database",
