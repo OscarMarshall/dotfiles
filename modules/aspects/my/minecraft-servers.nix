@@ -68,7 +68,7 @@
         # quiesce it is harmless and must not abort backing up the OTHER worlds sharing this
         # dataset.
         backup =
-          pkgs:
+          { pkgs, ... }:
           let
             enabledWorldNames = builtins.attrNames (lib.filterAttrs (_: world: (world.server pkgs).enable or true) worlds);
             sendCommand =

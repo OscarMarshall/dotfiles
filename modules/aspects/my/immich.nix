@@ -26,13 +26,13 @@ in
         # subdirectory: Immich only scans this location via its own upload workflow, not as an
         # External Library import path, so a dotfile here is never treated as media - but hidden
         # anyway, in case that ever changes.
-        backup = pkgs: {
+        backup = { config, pkgs, ... }: {
           backupCleanupCommand = "rm -f /metalminds/pictures/.backup/db.sql";
 
           backupPrepareCommand = ''
             umask 077
             mkdir -p /metalminds/pictures/.backup
-            ${pkgs.sudo}/bin/sudo -u postgres ${pkgs.postgresql}/bin/pg_dump immich > /metalminds/pictures/.backup/db.sql
+            ${pkgs.sudo}/bin/sudo -u postgres ${config.services.postgresql.package}/bin/pg_dump immich > /metalminds/pictures/.backup/db.sql
           '';
         };
 

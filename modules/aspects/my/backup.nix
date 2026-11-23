@@ -55,11 +55,11 @@ in
           ...
         }:
         let
-          # `backup` is either `true` (defaults below, untouched) or a `pkgs: {...}` function
+          # `backup` is either `true` (defaults below, untouched) or a `{ config, pkgs, ... }: {...}` function
           # returning restic job option overrides - the same deferred-value pattern
           # minecraft-servers.nix uses for `worlds.<name>.server`, needed here because `dataset`
           # is plain data assembled before `pkgs` exists at an owning aspect's own call site.
-          optsFor = d: if lib.isFunction d.backup then d.backup pkgs else { };
+          optsFor = d: if lib.isFunction d.backup then d.backup { inherit config pkgs; } else { };
           stageServices = (map (d: "restic-backups-${d.name}.service") targets) ++ [ "restic-backups-maintenance.service" ];
           targets = lib.filter (d: (d.backup or false) != false) dataset;
         in
@@ -84,7 +84,7 @@ in
                     # Overridden AFTER `optsFor d`, not before - these three keys are what
                     # actually implement the "one shared timer, one shared maintenance job"
                     # design (`restic-backups-daily`/`maintenance`, below), so a per-dataset
-                    # `backup = pkgs: {...}` override (`optsFor`, above - meant for things like
+                    # `backup = { pkgs, ... }: {...}` override (`optsFor`, above - meant for things like
                     # `backupPrepareCommand`/`backupCleanupCommand`) must not be able to silently
                     # reintroduce a dataset's own timer or its own `forget --prune`/`check`.
                     pruneOpts = [ ];

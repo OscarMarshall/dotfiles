@@ -112,8 +112,8 @@ in
             # support (seerr-team/seerr#2715, still an open, unmerged PR as of 2026-11-06) - if so,
             # drop the `seerr-oidc-src` override and go back to the stock package.
             assert
-              old.version == "3.5.1"
-              || throw "seerr.nix: pkgs.seerr is now ${old.version} (was 3.5.1) - re-check whether seerr-team/seerr#2715 (OIDC support) has merged/released; if so, drop the seerr-oidc-src override.";
+              old.version == "3.5.2"
+              || throw "seerr.nix: pkgs.seerr is now ${old.version} (was 3.5.2) - re-check whether seerr-team/seerr#2715 (OIDC support) has merged/released; if so, drop the seerr-oidc-src override.";
             rec {
               # Seerr's OIDC login has no group/role claim mapping (not in `seerr-oidc-src`, nor at
               # seerr-team/seerr#2715's head or any other upstream PR as of 2026-10-24) - OIDC users
