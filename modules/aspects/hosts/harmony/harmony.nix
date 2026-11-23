@@ -34,6 +34,7 @@
       (plex { global = true; })
       (profilarr { })
       (prowlarr { })
+      (prusa-connect { administrator = "oscar"; })
       (qbittorrent { administrators = [ "oscar" ]; })
       (qui { })
       (radarr { administrators = [ "oscar" ]; })
