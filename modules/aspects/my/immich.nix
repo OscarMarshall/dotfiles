@@ -87,6 +87,15 @@ in
             mediaLocation = "/metalminds/pictures";
 
             settings = {
+              # Immich's own nightly `pg_dumpall` (into the media dataset's `backups/`) runs the
+              # client matching the server's major, from `/usr/lib/postgresql/<major>` inside the
+              # image - and Immich's base image (as of Noodle v5.11.1) only ships clients 14-18, so
+              # on Postgres 19 every run would fail. The offsite restic job's own nightly dump
+              # (`dataset.backup` above) still covers the database. Re-enable once the
+              # gallery-server image ships `postgresql-client-19` (immich-app/base-images'
+              # server/Dockerfile).
+              backup.database.enabled = false;
+
               oauth = {
                 # Skip Immich's own login page and bounce straight to Authentik - there's nothing else
                 # to pick from it now that `passwordLogin` is off below. `/auth/login?autoLaunch=0`
