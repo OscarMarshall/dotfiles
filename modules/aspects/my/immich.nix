@@ -151,8 +151,10 @@ in
               # which systemd otherwise deletes and recreates whenever either service restarts -
               # leaving the container holding the old, empty directory. An explicit restart also
               # restarts the container (its `requires` below), but an automatic one after a crash
-              # doesn't. Both clear out their own stale socket/lock file on start.
-              postgresql.serviceConfig.RuntimeDirectoryPreserve = "restart";
+              # doesn't. Both clear out their own stale socket/lock file on start. Postgres's is
+              # "yes" to match rreading-glasses.nix's identical definition (it mounts the same
+              # directory) - equal values merge, differing ones are an evaluation error.
+              postgresql.serviceConfig.RuntimeDirectoryPreserve = "yes";
               redis-immich.serviceConfig.RuntimeDirectoryPreserve = "restart";
             };
 
