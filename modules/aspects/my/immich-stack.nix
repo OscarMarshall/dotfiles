@@ -13,7 +13,8 @@
       systemd = {
         services.immich-stack = {
           description = "Immich Stack";
-          after = [ "immich-server.service" ];
+          # immich.nix runs the server as a container, not nixpkgs' native `immich-server` unit.
+          after = [ "podman-immich-server.service" ];
 
           environment = {
             API_KEY_FILE = "%d/api-key";
