@@ -26,12 +26,12 @@
       # This dataset exists only to hold a dump of it for the offsite backup, same shape as
       # paperless.nix's own DB dump.
       dataset = {
-        backup = pkgs: {
+        backup = { config, pkgs, ... }: {
           backupCleanupCommand = "rm -f /metalminds/authentik/db.sql";
 
           backupPrepareCommand = ''
             umask 077
-            ${pkgs.sudo}/bin/sudo -u postgres ${pkgs.postgresql}/bin/pg_dump authentik > /metalminds/authentik/db.sql
+            ${pkgs.sudo}/bin/sudo -u postgres ${config.services.postgresql.package}/bin/pg_dump authentik > /metalminds/authentik/db.sql
           '';
         };
 

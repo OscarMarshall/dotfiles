@@ -12,7 +12,7 @@
         # Nextcloud's files live in this dataset but its Postgres DB (database.createLocally
         # below) doesn't - a files-only backup would be unrestorable without it, so dump it into
         # the dataset right before every backup run and remove the dump again after.
-        backup = pkgs: {
+        backup = { config, pkgs, ... }: {
           backupCleanupCommand = "rm -f /metalminds/nextcloud/.backup/db.sql";
 
           # `umask 077` first: the redirect below is opened by THIS shell (root, restic's default
@@ -22,7 +22,7 @@
           backupPrepareCommand = ''
             umask 077
             mkdir -p /metalminds/nextcloud/.backup
-            ${pkgs.sudo}/bin/sudo -u postgres ${pkgs.postgresql}/bin/pg_dump nextcloud > /metalminds/nextcloud/.backup/db.sql
+            ${pkgs.sudo}/bin/sudo -u postgres ${config.services.postgresql.package}/bin/pg_dump nextcloud > /metalminds/nextcloud/.backup/db.sql
           '';
         };
 

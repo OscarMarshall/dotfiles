@@ -20,7 +20,7 @@
       # lives in /var/lib/headscale on the root disk. This dataset only holds a copy of it for the
       # offsite backup - sqlite3's `.backup` is safe against the live DB, unlike copying the file.
       dataset = {
-        backup = pkgs: {
+        backup = { pkgs, ... }: {
           backupCleanupCommand = "rm -f /metalminds/headscale/db.sqlite /metalminds/headscale/noise_private.key";
 
           backupPrepareCommand = ''

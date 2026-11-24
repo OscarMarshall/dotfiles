@@ -32,6 +32,7 @@
         global = true;
       })
       (plex { global = true; })
+      (postgresql { version = "19"; })
       (profilarr { })
       (prowlarr { })
       (qbittorrent { administrators = [ "oscar" ]; })

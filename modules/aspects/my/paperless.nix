@@ -28,13 +28,13 @@
         # would lose all tags/correspondents/search index without it, so dump it into the dataset
         # right before every backup run and remove the dump again after. Same shape as
         # nextcloud.nix's own DB dump - see its comment for the umask reasoning.
-        backup = pkgs: {
+        backup = { config, pkgs, ... }: {
           backupCleanupCommand = "rm -f /metalminds/documents/.backup/db.sql";
 
           backupPrepareCommand = ''
             umask 077
             mkdir -p /metalminds/documents/.backup
-            ${pkgs.sudo}/bin/sudo -u postgres ${pkgs.postgresql}/bin/pg_dump paperless > /metalminds/documents/.backup/db.sql
+            ${pkgs.sudo}/bin/sudo -u postgres ${config.services.postgresql.package}/bin/pg_dump paperless > /metalminds/documents/.backup/db.sql
           '';
         };
 
