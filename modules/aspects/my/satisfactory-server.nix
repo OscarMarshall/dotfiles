@@ -46,7 +46,7 @@ in
           PUID = toString config.users.users.satisfactory-server.uid;
         };
 
-        image = "wolveix/satisfactory-server:latest@sha256:ac252dba41653eb21c6feed94b577f98fa152f5792b1aeff2ce11fe364355137";
+        image = "wolveix/satisfactory-server:latest@sha256:ca895e72c78a586c4b9f50774a852f53915dc7299977af5ba26978607fad9213";
 
         ports = [
           "${toString gamePort}:${toString gamePort}/tcp"
