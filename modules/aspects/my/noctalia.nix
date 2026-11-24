@@ -148,14 +148,28 @@ in
               "English (programmer Dvorak)" = "DV";
             };
 
-            # Session panel: only these four buttons (replaces Noctalia's default set). Suspend runs
-            # suspend-then-hibernate - S3 now, hibernate after the HibernateDelaySec in tensoon.nix.
+            # Session panel: only these four buttons (replaces Noctalia's default set). Lock-and-suspend
+            # locks first, then runs power.suspend: suspend-then-hibernate - S3 now, hibernate after the
+            # HibernateDelaySec in tensoon.nix. Variants: the everyday action is primary, logout is
+            # secondary, and the two that kill the whole session are destructive.
             session = {
               actions = [
-                { action = "logout"; }
-                { action = "suspend"; }
-                { action = "reboot"; }
-                { action = "shutdown"; }
+                {
+                  action = "logout";
+                  variant = "secondary";
+                }
+                {
+                  action = "lock_and_suspend";
+                  variant = "primary";
+                }
+                {
+                  action = "reboot";
+                  variant = "destructive";
+                }
+                {
+                  action = "shutdown";
+                  variant = "destructive";
+                }
               ];
 
               power.suspend = "systemctl suspend-then-hibernate";
