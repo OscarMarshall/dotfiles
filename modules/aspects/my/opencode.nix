@@ -1,47 +1,60 @@
-{ inputs, my, ... }: {
-  my.opencode = { user, ... }: {
-    includes = [ my.mcp-servers ];
+{
+  lib,
+  inputs,
+  my,
+  ...
+}:
+{
+  my.opencode = { host, user, ... }: {
+    includes = [
+      my.mcp-servers
+      my.proton-pass
+    ];
 
-    homeManager = { config, pkgs, ... }: {
-      # Same primitive secret my.claude rekeys for its GitHub MCP server - declared again here so
-      # OpenCode doesn't silently depend on my.claude also being included. Identical `rekeyFile`
-      # definitions merge cleanly.
-      age.secrets.github-mcp-server-github-access-token.rekeyFile = ../../../secrets/github-mcp-server-github-access-token.age;
+    homeManager =
+      { config, pkgs, ... }:
+      let
+        # Same as my.claude: headless hosts have no Secret Service for pass-cli's DB key, so they get
+        # no GitHub MCP server.
+        useProtonPass = host.graphical or false;
+      in
+      {
+        programs.opencode = {
+          enable = true;
+          # Picks up `my.mcp-servers`' shared servers (context7) from `programs.mcp`.
+          enableMcpIntegration = true;
 
-      programs.opencode = {
-        enable = true;
-        # Picks up `my.mcp-servers`' shared servers (context7) from `programs.mcp`.
-        enableMcpIntegration = true;
+          settings = {
+            # Nix owns the package; a self-update would write into ~/.opencode and shadow it.
+            autoupdate = false;
 
-        settings = {
-          # Nix owns the package; a self-update would write into ~/.opencode and shadow it.
-          autoupdate = false;
+            mcp = {
+              nixos = {
+                command = [ "${pkgs.mcp-nixos}/bin/mcp-nixos" ];
+                type = "local";
+              };
+            }
+            // lib.optionalAttrs useProtonPass {
+              # Wrapped for the same reason as my.claude's github MCP server: OpenCode's env
+              # interpolation (`{env:...}`/`{file:...}`) can't run a command, so a wrapper script
+              # looks the token up. The keyring provider is repeated inline because OpenCode isn't
+              # always started from a shell.
+              github = {
+                command = [
+                  "${pkgs.writeShellScript "opencode-github-mcp-server-wrapper" ''
+                    export GITHUB_PERSONAL_ACCESS_TOKEN="$(PROTON_PASS_LINUX_KEYRING=${config.home.sessionVariables.PROTON_PASS_LINUX_KEYRING} ${lib.getExe' pkgs.proton-pass-cli "pass-cli"} item view 'pass://Personal/GitHub MCP Server/API Key')"
+                    exec ${pkgs.github-mcp-server}/bin/github-mcp-server stdio
+                  ''}"
+                ];
 
-          mcp = {
-            # Wrapped for the same reason as my.claude's github MCP server: agenix's Home Manager
-            # secret path is an unexpanded `${XDG_RUNTIME_DIR}/...`, which OpenCode's `{file:...}`
-            # env interpolation would take literally.
-            github = {
-              command = [
-                "${pkgs.writeShellScript "opencode-github-mcp-server-wrapper" ''
-                  export GITHUB_PERSONAL_ACCESS_TOKEN="$(cat ${config.age.secrets.github-mcp-server-github-access-token.path})"
-                  exec ${pkgs.github-mcp-server}/bin/github-mcp-server stdio
-                ''}"
-              ];
-
-              type = "local";
+                type = "local";
+              };
             };
 
-            nixos = {
-              command = [ "${pkgs.mcp-nixos}/bin/mcp-nixos" ];
-              type = "local";
-            };
+            plugin = [ inputs.ponytail ];
           };
-
-          plugin = [ inputs.ponytail ];
         };
       };
-    };
 
     # `preserve` (modules/aspects/my/preserve.nix) is inert without my.preservation.
     preserve.users.${user.userName}.directories = [
