@@ -76,7 +76,7 @@
       # A short power-button press opens Noctalia's session panel (bound as XF86PowerOff in
       # my.umbriel) instead of an instant poweroff; hold it to force off. Closing the lid
       # suspends, then hibernates after 30 min in S3 (resume device = the LUKS swap partition,
-      # boot.resumeDevice). The panel's Suspend button does the same via power.suspend.
+      # boot.resumeDevice). The panel's Lock & suspend button does the same via power.suspend.
       services.logind.settings.Login = {
         HandleLidSwitch = "suspend-then-hibernate";
         HandlePowerKey = "ignore";
