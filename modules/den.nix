@@ -1,13 +1,13 @@
 {
   den.hosts.x86_64-linux = {
     harmony = {
-      # Cloudflare zone ID for silverlight-nex.us (zone's Overview page in the dashboard) - not
+      # Cloudflare zone ID for silverlight.nexus (zone's Overview page in the dashboard) - not
       # a secret, just an account-specific resource identifier, so it lives here as ordinary
       # version-controlled Nix rather than a `TF_VAR_cloudflare_zone_id` to set by hand.
-      cloudflare-zone-id = "a4f841b1f4d00f1e36e129bae37f70d3";
+      cloudflare-zone-id = "fd6114da0198bfb78fa93059a879f5fb";
 
       # DNS-as-code (modules/aspects/my/dns.nix) reads this for every DNS record this host
-      # produces - its `*.harmony.silverlight-nex.us` wildcard and every canonicalized service's
+      # produces - its `*.harmony.silverlight.nexus` wildcard and every canonicalized service's
       # global alias alike. Points at the router's dynamic-DNS hostname rather than a static IP,
       # so there's no TF_VAR_harmony_ipv4 to keep up to date by hand.
       dns-record = {
@@ -19,6 +19,20 @@
       # port-forwarding rule this host requests (via the `port-forward` quirk) at harmony itself
       # on the Meraki MX's LAN. A static/DHCP-reserved address on the Meraki network.
       lan-ip = "10.10.10.16";
+
+      # The domain harmony lived at before silverlight.nexus. Its DNS records stay in its old
+      # Cloudflare zone (dns.nix, minecraft-servers.nix), and nginx.nix serves a redirect vhost for
+      # every old hostname, pointing at its new one. Drop this whole attribute to retire it.
+      #
+      # It's set NOT to auto-renew, so it has to be retired before it lapses - dns.nix starts
+      # emitting a build warning with the steps once the flake's last commit is on or after
+      # `warn-from` (a Unix timestamp, since pure evaluation has no clock to compare a date with).
+      legacy-domain = {
+        cloudflare-zone-id = "a4f841b1f4d00f1e36e129bae37f70d3";
+        name = "silverlight-nex.us";
+        warn-from = 1816300800; # 2027-07-23T00:00:00Z
+      };
+
       # Meraki network ID for harmony's network ("Scadrial" - Network-wide > Settings, or the
       # Dashboard API). Same reasoning as `cloudflare-zone-id` above - not a secret.
       meraki-network-id = "L_585467951558176291";

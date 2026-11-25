@@ -75,187 +75,214 @@
           # services without revisiting this.
           serverNamesHashBucketSize = 128;
 
-          virtualHosts = lib.listToAttrs (
-            map (
-              vh:
-              let
-                global-url = "${vh.name}.${domain}";
-                # Every service is namespaced under its host by default (immich.harmony.…), so
-                # multiple hosts can run the same service without colliding on one wildcard DNS
-                # entry. A service opts into also being reachable at the bare, host-agnostic name
-                # (immich.…) via `global = true;` on its `virtual-host` record — surfaced as an
-                # nginx `serverAlias`, which nixos's ACME integration automatically adds as a SAN
-                # on the same certificate.
-                url = vh.url or "${vh.name}.${host.name}.${domain}";
-              in
-              lib.nameValuePair url (
-                {
-                  enableACME = true;
+          virtualHosts =
+            lib.listToAttrs (
+              map (
+                vh:
+                let
+                  global-url = "${vh.name}.${domain}";
+                  # Every service is namespaced under its host by default (immich.harmony.…), so
+                  # multiple hosts can run the same service without colliding on one wildcard DNS
+                  # entry. A service opts into also being reachable at the bare, host-agnostic name
+                  # (immich.…) via `global = true;` on its `virtual-host` record — surfaced as an
+                  # nginx `serverAlias`, which nixos's ACME integration automatically adds as a SAN
+                  # on the same certificate.
+                  url = vh.url or "${vh.name}.${host.name}.${domain}";
+                in
+                lib.nameValuePair url (
+                  {
+                    enableACME = true;
 
-                  # appendHttpConfig's proxy_cookie_path rewrite appends its own secure/HttpOnly/
-                  # SameSite flags to every Set-Cookie header, even ones a backend already set its
-                  # own correct flags on. That produces a Set-Cookie with duplicated attributes,
-                  # which browsers can silently refuse to store — breaking login for any backend
-                  # that manages its own cookie security (e.g. Immich). Opt out per host via
-                  # `preserveCookieFlags = true;` on the `virtual-host` record.
-                  extraConfig =
-                    lib.optionalString (vh.preserveCookieFlags or false) ''
-                      proxy_cookie_path / /;
-                    ''
-                    # Server-level so it covers every location (incl. a `port`-less vhost's own).
-                    # Without it nginx's 10m default (services.nginx.clientMaxBodySize) 413s any
-                    # larger request before the backend ever sees it.
-                    + lib.optionalString (vh ? maxBodySize) ''
-                      client_max_body_size ${vh.maxBodySize};
-                    '';
+                    # appendHttpConfig's proxy_cookie_path rewrite appends its own secure/HttpOnly/
+                    # SameSite flags to every Set-Cookie header, even ones a backend already set its
+                    # own correct flags on. That produces a Set-Cookie with duplicated attributes,
+                    # which browsers can silently refuse to store — breaking login for any backend
+                    # that manages its own cookie security (e.g. Immich). Opt out per host via
+                    # `preserveCookieFlags = true;` on the `virtual-host` record.
+                    extraConfig =
+                      lib.optionalString (vh.preserveCookieFlags or false) ''
+                        proxy_cookie_path / /;
+                      ''
+                      # Server-level so it covers every location (incl. a `port`-less vhost's own).
+                      # Without it nginx's 10m default (services.nginx.clientMaxBodySize) 413s any
+                      # larger request before the backend ever sees it.
+                      + lib.optionalString (vh ? maxBodySize) ''
+                        client_max_body_size ${vh.maxBodySize};
+                      '';
 
-                  forceSSL = true;
-                  # Skips adding `global-url` when a service's own `url` override (e.g.
-                  # authentik.nix's, when `global`) already IS the canonical name - the usual case
-                  # is `url` staying host-scoped, with `global-url` merely an alias alongside it.
-                  serverAliases = lib.optionals (vh.global or false && url != global-url) [ global-url ];
-                }
-                // lib.optionalAttrs (vh ? port) {
-                  locations = {
-                    "/" = {
-                      extraConfig =
-                        # Overrides recommendedProxySettings' 60s proxy_{connect,send,read}_timeout
-                        # trio for a backend whose own request handling can legitimately outlast
-                        # that - e.g. Bookshelf's search, which calls out to an external metadata
-                        # provider synchronously (see bookshelf.nix's own `proxyTimeout`). Without
-                        # this, nginx cuts the connection and returns its OWN 504 before the backend
-                        # ever gets a chance to finish and reply.
-                        lib.optionalString (vh ? proxyTimeout) ''
-                          proxy_connect_timeout ${toString vh.proxyTimeout}s;
-                          proxy_send_timeout ${toString vh.proxyTimeout}s;
-                          proxy_read_timeout ${toString vh.proxyTimeout}s;
-                        ''
-                        + lib.optionalString (vh.protected or false) ''
-                          auth_request /outpost.goauthentik.io/auth/nginx;
-                          error_page 401 = @goauthentik_proxy_signin;
-
-                          auth_request_set $auth_cookie $upstream_http_set_cookie;
-                          add_header Set-Cookie $auth_cookie;
-                          ${securityHeaders}
-
-                          auth_request_set $authentik_username $upstream_http_x_authentik_username;
-                          auth_request_set $authentik_groups $upstream_http_x_authentik_groups;
-                          auth_request_set $authentik_email $upstream_http_x_authentik_email;
-                          auth_request_set $authentik_name $upstream_http_x_authentik_name;
-                          auth_request_set $authentik_uid $upstream_http_x_authentik_uid;
-
-                          proxy_set_header X-authentik-username $authentik_username;
-                          proxy_set_header X-authentik-groups $authentik_groups;
-                          proxy_set_header X-authentik-email $authentik_email;
-                          proxy_set_header X-authentik-name $authentik_name;
-                          proxy_set_header X-authentik-uid $authentik_uid;
-                        ''
-                        # A service names an age secret (an htpasswd-format file) via
-                        # `basicAuthSecret` to gate its vhost on a static credential instead of
-                        # Authentik - for backends with no browser session to carry a forward-auth
-                        # cookie (e.g. Netdata's REST API, called by scripts, not humans). Mutually
-                        # exclusive with `protected` in practice, like `oidc` (see virtual-host.nix).
-                        + lib.optionalString (vh ? basicAuthSecret) ''
-                          auth_basic "API access";
-                          auth_basic_user_file ${config.age.secrets.${vh.basicAuthSecret}.path};
-                        '';
-
-                      # No trailing URI here (deliberately, like the regex bypassAuthPaths
-                      # locations below): with one, nginx has to decode+re-merge the request URI to
-                      # splice it onto the backend path, and an encoded slash anywhere in it (e.g.
-                      # Collabora's WOPI websocket path, which embeds a full url-encoded WOPISrc
-                      # URL) trips that merge and nginx 400s the request before it ever reaches the
-                      # backend - confirmed by bisecting: `/foo%2Fbar` 400s, `/foo` doesn't, on this
-                      # exact location. Omitting the URI makes nginx forward $request_uri verbatim,
-                      # which every location here is "/" (matches the whole path) so this is a
-                      # no-op for every other backend already relying on the old behavior.
-                      proxyPass = "http://${vh.upstreamHost or "127.0.0.1"}:${toString vh.port}";
-                      # recommendedProxySettings clears the Connection header (`proxy_set_header
-                      # Connection "";`), which breaks WebSocket upgrades. Backends that use them
-                      # (e.g. Immich's real-time updates) opt in via `websockets = true;` on their
-                      # `virtual-host` record — nginx's standard websocket idiom (see
-                      # https://nginx.org/en/docs/http/websocket.html), which sends `Connection:
-                      # close` instead of keep-alive for non-Upgrade requests on that host. Fine
-                      # here: upstream is always loopback or another local namespace, so the lost
-                      # keep-alive just costs an extra local handshake, not a real round trip.
-                      proxyWebsockets = vh.websockets or false;
-                    };
+                    forceSSL = true;
+                    # Skips adding `global-url` when a service's own `url` override (e.g.
+                    # authentik.nix's, when `global`) already IS the canonical name - the usual case
+                    # is `url` staying host-scoped, with `global-url` merely an alias alongside it.
+                    serverAliases = lib.optionals (vh.global or false && url != global-url) [ global-url ];
                   }
-                  // lib.optionalAttrs (vh.protected or false) (
-                    lib.listToAttrs (
-                      map (
-                        path:
-                        lib.nameValuePair "~ ${path}" {
-                          # `proxyTimeout` needs repeating here (not just the `"/"` location above) -
-                          # a bypassAuthPath is a SEPARATE location block, matched instead of `"/"`
-                          # for any request under it (e.g. Bookshelf's own `/api/v1/search`, the
-                          # actual endpoint `proxyTimeout` exists to cover), and nginx locations
-                          # don't inherit each other's directives.
-                          #
-                          # The identity headers are blanked (an empty value makes nginx drop the
-                          # header) since nothing here overwrites them the way `"/"`'s
-                          # auth_request_set does - otherwise a client could send its own
-                          # `X-authentik-username` straight through to a backend that trusts it
-                          # (Paperless, Headplane), skipping Authentik entirely.
-                          extraConfig = ''
-                            proxy_set_header X-authentik-username "";
-                            proxy_set_header X-authentik-groups "";
-                            proxy_set_header X-authentik-email "";
-                            proxy_set_header X-authentik-name "";
-                            proxy_set_header X-authentik-uid "";
-                          ''
-                          + lib.optionalString (vh ? proxyTimeout) ''
+                  // lib.optionalAttrs (vh ? port) {
+                    locations = {
+                      "/" = {
+                        extraConfig =
+                          # Overrides recommendedProxySettings' 60s proxy_{connect,send,read}_timeout
+                          # trio for a backend whose own request handling can legitimately outlast
+                          # that - e.g. Bookshelf's search, which calls out to an external metadata
+                          # provider synchronously (see bookshelf.nix's own `proxyTimeout`). Without
+                          # this, nginx cuts the connection and returns its OWN 504 before the backend
+                          # ever gets a chance to finish and reply.
+                          lib.optionalString (vh ? proxyTimeout) ''
                             proxy_connect_timeout ${toString vh.proxyTimeout}s;
                             proxy_send_timeout ${toString vh.proxyTimeout}s;
                             proxy_read_timeout ${toString vh.proxyTimeout}s;
+                          ''
+                          + lib.optionalString (vh.protected or false) ''
+                            auth_request /outpost.goauthentik.io/auth/nginx;
+                            error_page 401 = @goauthentik_proxy_signin;
+
+                            auth_request_set $auth_cookie $upstream_http_set_cookie;
+                            add_header Set-Cookie $auth_cookie;
+                            ${securityHeaders}
+
+                            auth_request_set $authentik_username $upstream_http_x_authentik_username;
+                            auth_request_set $authentik_groups $upstream_http_x_authentik_groups;
+                            auth_request_set $authentik_email $upstream_http_x_authentik_email;
+                            auth_request_set $authentik_name $upstream_http_x_authentik_name;
+                            auth_request_set $authentik_uid $upstream_http_x_authentik_uid;
+
+                            proxy_set_header X-authentik-username $authentik_username;
+                            proxy_set_header X-authentik-groups $authentik_groups;
+                            proxy_set_header X-authentik-email $authentik_email;
+                            proxy_set_header X-authentik-name $authentik_name;
+                            proxy_set_header X-authentik-uid $authentik_uid;
+                          ''
+                          # A service names an age secret (an htpasswd-format file) via
+                          # `basicAuthSecret` to gate its vhost on a static credential instead of
+                          # Authentik - for backends with no browser session to carry a forward-auth
+                          # cookie (e.g. Netdata's REST API, called by scripts, not humans). Mutually
+                          # exclusive with `protected` in practice, like `oidc` (see virtual-host.nix).
+                          + lib.optionalString (vh ? basicAuthSecret) ''
+                            auth_basic "API access";
+                            auth_basic_user_file ${config.age.secrets.${vh.basicAuthSecret}.path};
                           '';
 
-                          # No URI on proxyPass: regex locations can't auto-rewrite the matched path, so this
-                          # forwards the original path+query untouched, without the auth_request config below.
-                          proxyPass = "http://${vh.upstreamHost or "127.0.0.1"}:${toString vh.port}";
-                        }
-                      ) (vh.bypassAuthPaths or [ ])
+                        # No trailing URI here (deliberately, like the regex bypassAuthPaths
+                        # locations below): with one, nginx has to decode+re-merge the request URI to
+                        # splice it onto the backend path, and an encoded slash anywhere in it (e.g.
+                        # Collabora's WOPI websocket path, which embeds a full url-encoded WOPISrc
+                        # URL) trips that merge and nginx 400s the request before it ever reaches the
+                        # backend - confirmed by bisecting: `/foo%2Fbar` 400s, `/foo` doesn't, on this
+                        # exact location. Omitting the URI makes nginx forward $request_uri verbatim,
+                        # which every location here is "/" (matches the whole path) so this is a
+                        # no-op for every other backend already relying on the old behavior.
+                        proxyPass = "http://${vh.upstreamHost or "127.0.0.1"}:${toString vh.port}";
+                        # recommendedProxySettings clears the Connection header (`proxy_set_header
+                        # Connection "";`), which breaks WebSocket upgrades. Backends that use them
+                        # (e.g. Immich's real-time updates) opt in via `websockets = true;` on their
+                        # `virtual-host` record — nginx's standard websocket idiom (see
+                        # https://nginx.org/en/docs/http/websocket.html), which sends `Connection:
+                        # close` instead of keep-alive for non-Upgrade requests on that host. Fine
+                        # here: upstream is always loopback or another local namespace, so the lost
+                        # keep-alive just costs an extra local handshake, not a real round trip.
+                        proxyWebsockets = vh.websockets or false;
+                      };
+                    }
+                    // lib.optionalAttrs (vh.protected or false) (
+                      lib.listToAttrs (
+                        map (
+                          path:
+                          lib.nameValuePair "~ ${path}" {
+                            # `proxyTimeout` needs repeating here (not just the `"/"` location above) -
+                            # a bypassAuthPath is a SEPARATE location block, matched instead of `"/"`
+                            # for any request under it (e.g. Bookshelf's own `/api/v1/search`, the
+                            # actual endpoint `proxyTimeout` exists to cover), and nginx locations
+                            # don't inherit each other's directives.
+                            #
+                            # The identity headers are blanked (an empty value makes nginx drop the
+                            # header) since nothing here overwrites them the way `"/"`'s
+                            # auth_request_set does - otherwise a client could send its own
+                            # `X-authentik-username` straight through to a backend that trusts it
+                            # (Paperless, Headplane), skipping Authentik entirely.
+                            extraConfig = ''
+                              proxy_set_header X-authentik-username "";
+                              proxy_set_header X-authentik-groups "";
+                              proxy_set_header X-authentik-email "";
+                              proxy_set_header X-authentik-name "";
+                              proxy_set_header X-authentik-uid "";
+                            ''
+                            + lib.optionalString (vh ? proxyTimeout) ''
+                              proxy_connect_timeout ${toString vh.proxyTimeout}s;
+                              proxy_send_timeout ${toString vh.proxyTimeout}s;
+                              proxy_read_timeout ${toString vh.proxyTimeout}s;
+                            '';
+
+                            # No URI on proxyPass: regex locations can't auto-rewrite the matched path, so this
+                            # forwards the original path+query untouched, without the auth_request config below.
+                            proxyPass = "http://${vh.upstreamHost or "127.0.0.1"}:${toString vh.port}";
+                          }
+                        ) (vh.bypassAuthPaths or [ ])
+                      )
                     )
-                  )
-                  // lib.optionalAttrs (vh.protected or false) {
-                    "/outpost.goauthentik.io" = {
-                      extraConfig = ''
-                        # No explicit `proxy_set_header Host` here: recommendedProxySettings
-                        # already adds one (any location with proxyPass gets it) and nginx doesn't
-                        # deduplicate repeated proxy_set_header lines for the same name — an
-                        # explicit second one here sent the upstream a request with two literal
-                        # `Host:` header lines. Go's net/http (Authentik's outpost server) rejects
-                        # that outright with a bare 400 before any application code runs, which is
-                        # why it never showed up in Authentik's own logs, even at trace level.
-                        proxy_set_header X-Original-URL $scheme://$http_host$request_uri;
+                    // lib.optionalAttrs (vh.protected or false) {
+                      "/outpost.goauthentik.io" = {
+                        extraConfig = ''
+                          # No explicit `proxy_set_header Host` here: recommendedProxySettings
+                          # already adds one (any location with proxyPass gets it) and nginx doesn't
+                          # deduplicate repeated proxy_set_header lines for the same name — an
+                          # explicit second one here sent the upstream a request with two literal
+                          # `Host:` header lines. Go's net/http (Authentik's outpost server) rejects
+                          # that outright with a bare 400 before any application code runs, which is
+                          # why it never showed up in Authentik's own logs, even at trace level.
+                          proxy_set_header X-Original-URL $scheme://$http_host$request_uri;
+                          add_header Set-Cookie $auth_cookie;
+                          ${securityHeaders}
+                          auth_request_set $auth_cookie $upstream_http_set_cookie;
+                          proxy_pass_request_body off;
+                          proxy_set_header Content-Length "";
+                        '';
+
+                        proxyPass = "${authentikOutpost}/outpost.goauthentik.io";
+                      };
+
+                      "@goauthentik_proxy_signin".extraConfig = ''
+                        internal;
                         add_header Set-Cookie $auth_cookie;
                         ${securityHeaders}
-                        auth_request_set $auth_cookie $upstream_http_set_cookie;
-                        proxy_pass_request_body off;
-                        proxy_set_header Content-Length "";
+                        # Authentik's own forward-auth (single application) docs redirect back to
+                        # the CURRENT app's own domain, not Authentik's - every protected vhost
+                        # already has its own "/outpost.goauthentik.io" location (below) proxying
+                        # to the same embedded outpost, so $http_host lands back on a domain the
+                        # outpost can actually match to this provider. Redirecting to Authentik's
+                        # own domain instead landed on "Not Found", since that domain has no
+                        # per-provider Host-header context for the outpost to key off of.
+                        return 302 "https://$http_host/outpost.goauthentik.io/start?rd=$scheme://$http_host$request_uri";
                       '';
-
-                      proxyPass = "${authentikOutpost}/outpost.goauthentik.io";
                     };
-
-                    "@goauthentik_proxy_signin".extraConfig = ''
-                      internal;
-                      add_header Set-Cookie $auth_cookie;
-                      ${securityHeaders}
-                      # Authentik's own forward-auth (single application) docs redirect back to
-                      # the CURRENT app's own domain, not Authentik's - every protected vhost
-                      # already has its own "/outpost.goauthentik.io" location (below) proxying
-                      # to the same embedded outpost, so $http_host lands back on a domain the
-                      # outpost can actually match to this provider. Redirecting to Authentik's
-                      # own domain instead landed on "Not Found", since that domain has no
-                      # per-provider Host-header context for the outpost to key off of.
-                      return 302 "https://$http_host/outpost.goauthentik.io/start?rd=$scheme://$http_host$request_uri";
-                    '';
-                  };
-                }
+                  }
+                )
+              ) virtual-host
+            )
+            # A domain this host used to live at (`host.legacy-domain`, see modules/den.nix): every
+            # hostname above (primary and global alias alike) gets a twin under the old domain that
+            # only redirects to it, path and query intact. 308 rather than 301 so non-GET requests
+            # (OIDC callbacks, *arr API clients, Tailscale's control protocol) keep their method and
+            # body. Each twin is named exactly what the vhost was called before the move, so it
+            # reuses the ACME cert already in /var/lib/acme rather than requesting a new one.
+            // lib.optionalAttrs (host ? legacy-domain) (
+              lib.listToAttrs (
+                lib.concatMap (
+                  vh:
+                  let
+                    global-url = "${vh.name}.${domain}";
+                    url = vh.url or "${vh.name}.${host.name}.${domain}";
+                  in
+                  map (
+                    hostname:
+                    lib.nameValuePair "${lib.removeSuffix domain hostname}${host.legacy-domain.name}" {
+                      enableACME = true;
+                      forceSSL = true;
+                      globalRedirect = hostname;
+                      redirectCode = 308;
+                    }
+                  ) (lib.unique ([ url ] ++ lib.optional (vh.global or false) global-url))
+                ) virtual-host
               )
-            ) virtual-host
-          );
+            );
         };
       };
 

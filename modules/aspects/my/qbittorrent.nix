@@ -124,7 +124,7 @@ in
                 # there rather than maintaining a separate Password_PBKDF2 - anything else still hits
                 # a real login prompt it has no valid credentials for.
                 AuthSubnetWhitelistEnabled = true;
-                # Post-login redirects back from Authentik's own domain (auth.silverlight-nex.us)
+                # Post-login redirects back from Authentik's own domain (auth.silverlight.nexus)
                 # legitimately carry a Referer header pointing there rather than here, which
                 # qBittorrent's own CSRF check otherwise rejects as a mismatch ("WebUI: Referer
                 # header & Target origin mismatch!"), independent of the whitelist above. Authentik's

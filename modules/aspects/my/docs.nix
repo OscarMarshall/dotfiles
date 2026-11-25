@@ -23,7 +23,7 @@
 #
 # Preview locally without rebuilding a host:
 #
-#   nix build .#nixosConfigurations.harmony.config.services.nginx.virtualHosts.\"docs.harmony.silverlight-nex.us\".root
+#   nix build .#nixosConfigurations.harmony.config.services.nginx.virtualHosts.\"docs.harmony.silverlight.nexus\".root
 #   python -m http.server -d result
 {
   my.docs =

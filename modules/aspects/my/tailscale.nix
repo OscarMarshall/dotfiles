@@ -3,7 +3,7 @@
 # on" step.
 #
 # Joining is a one-time, human step per install, through Authentik (headscale.nix's `oidc`):
-#   sudo tailscale up --login-server=https://headscale.harmony.silverlight-nex.us --accept-dns
+#   sudo tailscale up --login-server=https://headscale.harmony.silverlight.nexus --accept-dns
 # prints a URL; signing in there registers the node to that Authentik user. tailscaled then
 # persists its login in /var/lib/tailscale and reconnects on its own every boot.
 #

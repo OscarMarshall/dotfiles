@@ -15,9 +15,9 @@
         # alias - that alias is per-user home-manager config, invisible to the nix-daemon (root)
         # that actually opens this connection, and only resolved on LAN besides. This works from
         # anywhere the tailnet reaches, and root can resolve it too via systemd-resolved's
-        # tailscale-installed split-DNS for the ts.silverlight-nex.us suffix.
+        # tailscale-installed split-DNS for the ts.silverlight.nexus suffix.
         builder = "harmony";
-        hostName = "harmony.ts.silverlight-nex.us";
+        hostName = "harmony.ts.silverlight.nexus";
         maxJobs = 24;
         publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSU1rTTV1Tlkwck15MlFNRzZJcHRseGdWbDRzUVdvZVNTTm1VcDcvZjJ6MUIK";
         speedFactor = 4;

@@ -1,9 +1,5 @@
 { lib, ... }:
 let
-  # Matches virtual-host.nix's own derived hostname (`${name}.${host.name}.<domain>`) - no shared
-  # domain constant exists in this repo (authentik.nix/dns.nix/nginx.nix each carry this same
-  # literal), so this matches that convention rather than introducing one.
-  domain = "silverlight-nex.us";
   port = 7878;
 in
 {
@@ -146,7 +142,7 @@ in
         {
           provider.radarr = {
             api_key = "\${var.RADARR_API_KEY}";
-            url = "https://radarr.${host.name}.${domain}";
+            url = "https://radarr.${host.name}.${host.domain}";
           };
 
           resource = {

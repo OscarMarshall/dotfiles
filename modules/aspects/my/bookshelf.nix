@@ -1,9 +1,5 @@
 { lib, ... }:
 let
-  # Matches virtual-host.nix's own derived hostname (`${name}.${host.name}.<domain>`) - no shared
-  # domain constant exists in this repo (authentik.nix/dns.nix/nginx.nix each carry this same
-  # literal), so this matches that convention rather than introducing one.
-  domain = "silverlight-nex.us";
   # Den has the same singleton constraint here as when this was a native build: two `includes`
   # entries for the *same* named aspect are treated as one aspect identity and merged
   # last-write-wins, not as two separate instances (see `den.lib.aspects.fx.identity`, which keys
@@ -333,7 +329,7 @@ let
             {
               alias = instance;
               api_key = "\${var.${tf-var-name-of apiKeySecret}}";
-              url = "https://${name}.${host.name}.${domain}";
+              url = "https://${name}.${host.name}.${host.domain}";
             }
           ];
 
@@ -351,7 +347,7 @@ let
 
             readarr_import_list_readarr.${instance} = {
               api_key = "\${var.${tf-var-name-of otherApiKeySecret}}";
-              base_url = "https://bookshelf-${otherInstance}.${host.name}.${domain}";
+              base_url = "https://bookshelf-${otherInstance}.${host.name}.${host.domain}";
               enable_automatic_add = true;
               metadata_profile_id = 1;
               monitor_new_items = "all";

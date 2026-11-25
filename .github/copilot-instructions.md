@@ -527,7 +527,7 @@ nix-minecraft bump can't move a world onto a Minecraft version its mods don't su
 harmony (32 threads, 125GiB RAM) is a `nix.buildMachines` entry for melaan/tensoon (`my.remote-builder` on each,
 `protocol = "ssh-ng"`), reachable from anywhere via a self-hosted Headscale coordination server on harmony
 (`my.headscale`) instead of exposing sshd to the WAN - every host joins that tailnet with `my.tailscale`, and MagicDNS
-gives harmony a stable name (`harmony.ts.silverlight-nex.us`) any tailnet member, including root (the actual nix-daemon
+gives harmony a stable name (`harmony.ts.silverlight.nexus`) any tailnet member, including root (the actual nix-daemon
 connecting, not the interactive user), can resolve.
 
 - `remote-builder-harmony-ssh-key` - a generated agenix secret (`secrets/generated/`), root-readable (the nix-daemon
@@ -538,9 +538,9 @@ connecting, not the interactive user), can resolve.
   generator, whose per-host key comment would make melaan's and tensoon's definitions of the one shared file differ.
   **Joining the tailnet** goes through Authentik: `headscale.nix` configures Headscale's native OIDC against an
   admin-only Authentik app (`virtual-host.oidc`, client ID `headscale`, generated `headscale-oidc-client-secret`). On a
-  new install, `sudo tailscale up --login-server=https://headscale.harmony.silverlight-nex.us --accept-dns` prints a
-  URL; signing in there registers the node to that Authentik user. That's a one-time step: `/var/lib/tailscale` is
-  preserved (including on tensoon's ephemeral root), so tailscaled reconnects on its own after that.
+  new install, `sudo tailscale up --login-server=https://headscale.harmony.silverlight.nexus --accept-dns` prints a URL;
+  signing in there registers the node to that Authentik user. That's a one-time step: `/var/lib/tailscale` is preserved
+  (including on tensoon's ephemeral root), so tailscaled reconnects on its own after that.
   `only_start_if_oidc_is_available = false` keeps Headscale up while Authentik isn't, so only new browser logins depend
   on it. Headscale names OIDC users separately from CLI-made ones (its unique index on `name` only covers users without
   a `provider_identifier`), so an Authentik login creates its own user even when a CLI user of the same name exists.
@@ -549,7 +549,7 @@ harmony is the exception: it hosts Headscale, so `headscale-self-join` (`headsca
 missing, mints a single-use 5-minute preauth key, and runs `tailscale up` with it whenever tailscaled reports
 `NeedsLogin` - no human step.
 
-**Headplane** (`headplane.nix`, `headplane.harmony.silverlight-nex.us`) is the web UI: `protected` Authentik
+**Headplane** (`headplane.nix`, `headplane.harmony.silverlight.nexus`) is the web UI: `protected` Authentik
 forward-auth, with Headplane's `proxy_auth` trusting the `X-authentik-*` headers nginx sets (loopback only). Headscale's
 own config is read-only there (it's in the Nix store); nodes, users, keys and the policy are editable. Its Headscale API
 key is minted on harmony by `headplane-api-key` (a 10-year key in `/var/lib/headplane-api-key/api-key`, replaced and the

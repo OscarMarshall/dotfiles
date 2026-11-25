@@ -21,7 +21,7 @@
 # automatically on every `nixos-rebuild switch` that changes anything Terraform-relevant, so
 # applying by hand is normally unnecessary.
 #
-# One-time setup on Cloudflare's side: add silverlight-nex.us as a site (free plan), note its Zone
+# One-time setup on Cloudflare's side: add silverlight.nexus as a site (free plan), note its Zone
 # ID from the zone's Overview page (set as `host.cloudflare-zone-id` - see modules/den.nix; not a
 # secret, just an account-specific identifier, so it's ordinary version-controlled Nix rather than
 # a TF_VAR to set by hand), create an API token scoped to `Zone / DNS / Edit` for that zone, and
@@ -61,8 +61,24 @@
 # per-system-scoped `config` that closes a real cycle on `.flake.nixosConfigurations` ("infinite
 # recursion encountered") - this bit us once already; don't add `config` to the perSystem function
 # signature below.
-{ config, ... }: {
+{ config, self, ... }: {
   my.dns = { host, ... }: {
+    # A legacy domain (see modules/den.nix) that's been left to expire has to be retired while it
+    # still resolves - otherwise its redirect vhosts' ACME renewals fail every run, and Terraform
+    # can no longer delete its records out of a zone that's gone. `self.lastModified` (the flake's
+    # last commit time) stands in for "now", since pure evaluation has no clock; with Renovate
+    # committing near-daily it lags the real date by a day or two at most.
+    nixos = { lib, ... }: {
+      warnings = lib.optional (host ? legacy-domain && self.lastModified >= host.legacy-domain.warn-from) ''
+        ${host.legacy-domain.name} is not set to auto-renew and is due to lapse soon. Retire it first:
+          1. Delete `legacy-domain` from ${host.name} in modules/den.nix.
+          2. `nixos-rebuild switch` ${host.name}, and check that harmony-tf-apply.service succeeded
+             (it destroys the old domain's DNS records; nginx drops its redirect vhosts).
+          3. Remove ${host.name}'s old certs: `sudo rm -r /var/lib/acme/*.${host.legacy-domain.name}`.
+          4. Delete the ${host.legacy-domain.name} site in the Cloudflare dashboard.
+      '';
+    };
+
     secrets.cloudflare-api-token = {
       intermediary = true;
       rekeyFile = ../../../secrets/cloudflare-api-token.age;
@@ -72,21 +88,25 @@
     terranix =
       { lib, virtual-host, ... }:
       let
-        inherit (host) domain;
         globalHosts = lib.filter (vh: vh.global or false) virtual-host;
-      in
-      lib.optionalAttrs (host ? dns-record) {
-        # Credentials aren't set here - the provider reads api_token from CLOUDFLARE_API_TOKEN, so
-        # nothing sensitive lands in this config or in Terraform state.
-        provider.cloudflare = { };
-
-        # Unlike Namecheap's setHosts (which replaces the entire zone in one call), each record
-        # here is its own independent resource - Terraform only ever touches what's declared
-        # below, so there's no OVERWRITE-style footgun for the rest of the zone.
-        resource.cloudflare_dns_record =
+        legacyRecords = lib.optionalAttrs (host ? legacy-domain) (recordsFor {
+          domain = host.legacy-domain.name;
+          prefix = "legacy-";
+          zone = host.legacy-domain.cloudflare-zone-id;
+        });
+        # Every record below, for one domain in one Cloudflare zone, with each resource key
+        # prefixed by `prefix`. Called once for `host.domain`, and once more (prefix "legacy-") for
+        # `host.legacy-domain` if the host has one - a domain the host used to live at, still
+        # resolved (into its old zone) so nginx.nix's redirect vhosts for it stay reachable.
+        recordsFor =
+          {
+            domain,
+            prefix,
+            zone,
+          }:
           lib.listToAttrs (
             map (vh: {
-              inherit (vh) name;
+              name = "${prefix}${vh.name}";
 
               value = {
                 inherit (host.dns-record) content type;
@@ -102,7 +122,7 @@
                 # terminates with its own per-host ACME cert.
                 proxied = false;
                 ttl = 1800;
-                zone_id = host.cloudflare-zone-id;
+                zone_id = zone;
               };
             }) globalHosts
           )
@@ -111,23 +131,47 @@
             # only matches names with something before it, never its own apex), and homepage.nix's
             # `url = "${host.name}.${domain}"` deliberately doesn't go through the `global`/
             # `globalHosts` path above either (that would produce `homepage.${domain}`, not this).
-            "${host.name}-root" = {
+            "${prefix}${host.name}-root" = {
               inherit (host.dns-record) content type;
               name = "${host.name}.${domain}";
               proxied = false;
               ttl = 1800;
-              zone_id = host.cloudflare-zone-id;
+              zone_id = zone;
             };
 
-            "${host.name}-wildcard" = {
+            "${prefix}${host.name}-wildcard" = {
               inherit (host.dns-record) content type;
               name = "*.${host.name}.${domain}";
               proxied = false;
               ttl = 1800;
-              zone_id = host.cloudflare-zone-id;
+              zone_id = zone;
             };
-
           };
+      in
+      lib.optionalAttrs (host ? dns-record) {
+        # The legacy records already exist in state under their un-prefixed keys (from when the
+        # legacy domain was still `host.domain`). Renaming them in state, instead of letting
+        # Terraform destroy and recreate them, means the old domain never stops resolving. Safe to
+        # delete once applied.
+        moved = map (key: {
+          from = "cloudflare_dns_record.${lib.removePrefix "legacy-" key}";
+          to = "cloudflare_dns_record.${key}";
+        }) (lib.attrNames legacyRecords);
+
+        # Credentials aren't set here - the provider reads api_token from CLOUDFLARE_API_TOKEN, so
+        # nothing sensitive lands in this config or in Terraform state.
+        provider.cloudflare = { };
+
+        # Unlike Namecheap's setHosts (which replaces the entire zone in one call), each record
+        # here is its own independent resource - Terraform only ever touches what's declared
+        # below, so there's no OVERWRITE-style footgun for the rest of the zone.
+        resource.cloudflare_dns_record =
+          recordsFor {
+            inherit (host) domain;
+            prefix = "";
+            zone = host.cloudflare-zone-id;
+          }
+          // legacyRecords;
 
         terraform.required_providers.cloudflare.source = "cloudflare/cloudflare";
       };
