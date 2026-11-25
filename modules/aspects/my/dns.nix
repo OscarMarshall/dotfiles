@@ -61,8 +61,24 @@
 # per-system-scoped `config` that closes a real cycle on `.flake.nixosConfigurations` ("infinite
 # recursion encountered") - this bit us once already; don't add `config` to the perSystem function
 # signature below.
-{ config, ... }: {
+{ config, self, ... }: {
   my.dns = { host, ... }: {
+    # A legacy domain (see modules/den.nix) that's been left to expire has to be retired while it
+    # still resolves - otherwise its redirect vhosts' ACME renewals fail every run, and Terraform
+    # can no longer delete its records out of a zone that's gone. `self.lastModified` (the flake's
+    # last commit time) stands in for "now", since pure evaluation has no clock; with Renovate
+    # committing near-daily it lags the real date by a day or two at most.
+    nixos = { lib, ... }: {
+      warnings = lib.optional (host ? legacy-domain && self.lastModified >= host.legacy-domain.warn-from) ''
+        ${host.legacy-domain.name} is not set to auto-renew and is due to lapse soon. Retire it first:
+          1. Delete `legacy-domain` from ${host.name} in modules/den.nix.
+          2. `nixos-rebuild switch` ${host.name}, and check that harmony-tf-apply.service succeeded
+             (it destroys the old domain's DNS records; nginx drops its redirect vhosts).
+          3. Remove ${host.name}'s old certs: `sudo rm -r /var/lib/acme/*.${host.legacy-domain.name}`.
+          4. Delete the ${host.legacy-domain.name} site in the Cloudflare dashboard.
+      '';
+    };
+
     secrets.cloudflare-api-token = {
       intermediary = true;
       rekeyFile = ../../../secrets/cloudflare-api-token.age;

@@ -23,9 +23,14 @@
       # The domain harmony lived at before silverlight.nexus. Its DNS records stay in its old
       # Cloudflare zone (dns.nix, minecraft-servers.nix), and nginx.nix serves a redirect vhost for
       # every old hostname, pointing at its new one. Drop this whole attribute to retire it.
+      #
+      # It's set NOT to auto-renew, so it has to be retired before it lapses - dns.nix starts
+      # emitting a build warning with the steps once the flake's last commit is on or after
+      # `warn-from` (a Unix timestamp, since pure evaluation has no clock to compare a date with).
       legacy-domain = {
         cloudflare-zone-id = "a4f841b1f4d00f1e36e129bae37f70d3";
         name = "silverlight-nex.us";
+        warn-from = 1816300800; # 2027-07-23T00:00:00Z
       };
 
       # Meraki network ID for harmony's network ("Scadrial" - Network-wide > Settings, or the
