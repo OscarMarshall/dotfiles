@@ -201,12 +201,17 @@
       # modules/terranix.nix for why that matters.
       terranix =
         let
+          legacyRecords = lib.optionalAttrs (host ? legacy-domain) (recordsFor {
+            domain = host.legacy-domain.name;
+            prefix = "legacy-";
+            zone = host.legacy-domain.cloudflare-zone-id;
+          });
           # Same records once per domain/zone pair - see dns.nix's `recordsFor`, which this mirrors
           # (prefix "legacy-" for `host.legacy-domain`, so old world addresses keep resolving too).
           recordsFor =
             {
-              prefix,
               domain,
+              prefix,
               zone,
             }:
             lib.concatMapAttrs (name: world: {
@@ -235,27 +240,21 @@
                 zone_id = zone;
               };
             }) worlds;
-
-          legacyRecords = lib.optionalAttrs (host ? legacy-domain) (recordsFor {
-            prefix = "legacy-";
-            domain = host.legacy-domain.name;
-            zone = host.legacy-domain.cloudflare-zone-id;
-          });
         in
         lib.optionalAttrs (host ? dns-record) {
-          resource.cloudflare_dns_record =
-            recordsFor {
-              prefix = "";
-              inherit domain;
-              zone = host.cloudflare-zone-id;
-            }
-            // legacyRecords;
-
           # See dns.nix's own `moved` - keeps the old records in place instead of recreating them.
           moved = map (key: {
             from = "cloudflare_dns_record.${lib.removePrefix "legacy-" key}";
             to = "cloudflare_dns_record.${key}";
           }) (lib.attrNames legacyRecords);
+
+          resource.cloudflare_dns_record =
+            recordsFor {
+              inherit domain;
+              prefix = "";
+              zone = host.cloudflare-zone-id;
+            }
+            // legacyRecords;
         };
     };
 }

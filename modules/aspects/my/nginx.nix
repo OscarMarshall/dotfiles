@@ -268,8 +268,8 @@
                 lib.concatMap (
                   vh:
                   let
-                    url = vh.url or "${vh.name}.${host.name}.${domain}";
                     global-url = "${vh.name}.${domain}";
+                    url = vh.url or "${vh.name}.${host.name}.${domain}";
                   in
                   map (
                     hostname:

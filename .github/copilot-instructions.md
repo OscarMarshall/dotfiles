@@ -538,9 +538,9 @@ connecting, not the interactive user), can resolve.
   generator, whose per-host key comment would make melaan's and tensoon's definitions of the one shared file differ.
   **Joining the tailnet** goes through Authentik: `headscale.nix` configures Headscale's native OIDC against an
   admin-only Authentik app (`virtual-host.oidc`, client ID `headscale`, generated `headscale-oidc-client-secret`). On a
-  new install, `sudo tailscale up --login-server=https://headscale.harmony.silverlight.nexus --accept-dns` prints a
-  URL; signing in there registers the node to that Authentik user. That's a one-time step: `/var/lib/tailscale` is
-  preserved (including on tensoon's ephemeral root), so tailscaled reconnects on its own after that.
+  new install, `sudo tailscale up --login-server=https://headscale.harmony.silverlight.nexus --accept-dns` prints a URL;
+  signing in there registers the node to that Authentik user. That's a one-time step: `/var/lib/tailscale` is preserved
+  (including on tensoon's ephemeral root), so tailscaled reconnects on its own after that.
   `only_start_if_oidc_is_available = false` keeps Headscale up while Authentik isn't, so only new browser logins depend
   on it. Headscale names OIDC users separately from CLI-made ones (its unique index on `name` only covers users without
   a `provider_identifier`), so an Authentik login creates its own user even when a CLI user of the same name exists.

@@ -73,15 +73,19 @@
       { lib, virtual-host, ... }:
       let
         globalHosts = lib.filter (vh: vh.global or false) virtual-host;
-
+        legacyRecords = lib.optionalAttrs (host ? legacy-domain) (recordsFor {
+          domain = host.legacy-domain.name;
+          prefix = "legacy-";
+          zone = host.legacy-domain.cloudflare-zone-id;
+        });
         # Every record below, for one domain in one Cloudflare zone, with each resource key
         # prefixed by `prefix`. Called once for `host.domain`, and once more (prefix "legacy-") for
         # `host.legacy-domain` if the host has one - a domain the host used to live at, still
         # resolved (into its old zone) so nginx.nix's redirect vhosts for it stay reachable.
         recordsFor =
           {
-            prefix,
             domain,
+            prefix,
             zone,
           }:
           lib.listToAttrs (
@@ -127,14 +131,17 @@
               zone_id = zone;
             };
           };
-
-        legacyRecords = lib.optionalAttrs (host ? legacy-domain) (recordsFor {
-          prefix = "legacy-";
-          domain = host.legacy-domain.name;
-          zone = host.legacy-domain.cloudflare-zone-id;
-        });
       in
       lib.optionalAttrs (host ? dns-record) {
+        # The legacy records already exist in state under their un-prefixed keys (from when the
+        # legacy domain was still `host.domain`). Renaming them in state, instead of letting
+        # Terraform destroy and recreate them, means the old domain never stops resolving. Safe to
+        # delete once applied.
+        moved = map (key: {
+          from = "cloudflare_dns_record.${lib.removePrefix "legacy-" key}";
+          to = "cloudflare_dns_record.${key}";
+        }) (lib.attrNames legacyRecords);
+
         # Credentials aren't set here - the provider reads api_token from CLOUDFLARE_API_TOKEN, so
         # nothing sensitive lands in this config or in Terraform state.
         provider.cloudflare = { };
@@ -144,20 +151,11 @@
         # below, so there's no OVERWRITE-style footgun for the rest of the zone.
         resource.cloudflare_dns_record =
           recordsFor {
-            prefix = "";
             inherit (host) domain;
+            prefix = "";
             zone = host.cloudflare-zone-id;
           }
           // legacyRecords;
-
-        # The legacy records already exist in state under their un-prefixed keys (from when the
-        # legacy domain was still `host.domain`). Renaming them in state, instead of letting
-        # Terraform destroy and recreate them, means the old domain never stops resolving. Safe to
-        # delete once applied.
-        moved = map (key: {
-          from = "cloudflare_dns_record.${lib.removePrefix "legacy-" key}";
-          to = "cloudflare_dns_record.${key}";
-        }) (lib.attrNames legacyRecords);
 
         terraform.required_providers.cloudflare.source = "cloudflare/cloudflare";
       };
