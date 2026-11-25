@@ -4,8 +4,15 @@
       # Cloudflare zone ID for silverlight.nexus (zone's Overview page in the dashboard) - not
       # a secret, just an account-specific resource identifier, so it lives here as ordinary
       # version-controlled Nix rather than a `TF_VAR_cloudflare_zone_id` to set by hand.
-      # (The old silverlight-nex.us zone was a4f841b1f4d00f1e36e129bae37f70d3.)
       cloudflare-zone-id = throw "TODO: set harmony's cloudflare-zone-id to the silverlight.nexus zone ID";
+
+      # The domain harmony lived at before silverlight.nexus. Its DNS records stay in its old
+      # Cloudflare zone (dns.nix, minecraft-servers.nix), and nginx.nix serves a redirect vhost for
+      # every old hostname, pointing at its new one. Drop this whole attribute to retire it.
+      legacy-domain = {
+        name = "silverlight-nex.us";
+        cloudflare-zone-id = "a4f841b1f4d00f1e36e129bae37f70d3";
+      };
 
       # DNS-as-code (modules/aspects/my/dns.nix) reads this for every DNS record this host
       # produces - its `*.harmony.silverlight.nexus` wildcard and every canonicalized service's

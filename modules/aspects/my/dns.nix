@@ -72,21 +72,21 @@
     terranix =
       { lib, virtual-host, ... }:
       let
-        inherit (host) domain;
         globalHosts = lib.filter (vh: vh.global or false) virtual-host;
-      in
-      lib.optionalAttrs (host ? dns-record) {
-        # Credentials aren't set here - the provider reads api_token from CLOUDFLARE_API_TOKEN, so
-        # nothing sensitive lands in this config or in Terraform state.
-        provider.cloudflare = { };
 
-        # Unlike Namecheap's setHosts (which replaces the entire zone in one call), each record
-        # here is its own independent resource - Terraform only ever touches what's declared
-        # below, so there's no OVERWRITE-style footgun for the rest of the zone.
-        resource.cloudflare_dns_record =
+        # Every record below, for one domain in one Cloudflare zone, with each resource key
+        # prefixed by `prefix`. Called once for `host.domain`, and once more (prefix "legacy-") for
+        # `host.legacy-domain` if the host has one - a domain the host used to live at, still
+        # resolved (into its old zone) so nginx.nix's redirect vhosts for it stay reachable.
+        recordsFor =
+          {
+            prefix,
+            domain,
+            zone,
+          }:
           lib.listToAttrs (
             map (vh: {
-              inherit (vh) name;
+              name = "${prefix}${vh.name}";
 
               value = {
                 inherit (host.dns-record) content type;
@@ -102,7 +102,7 @@
                 # terminates with its own per-host ACME cert.
                 proxied = false;
                 ttl = 1800;
-                zone_id = host.cloudflare-zone-id;
+                zone_id = zone;
               };
             }) globalHosts
           )
@@ -111,23 +111,53 @@
             # only matches names with something before it, never its own apex), and homepage.nix's
             # `url = "${host.name}.${domain}"` deliberately doesn't go through the `global`/
             # `globalHosts` path above either (that would produce `homepage.${domain}`, not this).
-            "${host.name}-root" = {
+            "${prefix}${host.name}-root" = {
               inherit (host.dns-record) content type;
               name = "${host.name}.${domain}";
               proxied = false;
               ttl = 1800;
-              zone_id = host.cloudflare-zone-id;
+              zone_id = zone;
             };
 
-            "${host.name}-wildcard" = {
+            "${prefix}${host.name}-wildcard" = {
               inherit (host.dns-record) content type;
               name = "*.${host.name}.${domain}";
               proxied = false;
               ttl = 1800;
-              zone_id = host.cloudflare-zone-id;
+              zone_id = zone;
             };
-
           };
+
+        legacyRecords = lib.optionalAttrs (host ? legacy-domain) (recordsFor {
+          prefix = "legacy-";
+          domain = host.legacy-domain.name;
+          zone = host.legacy-domain.cloudflare-zone-id;
+        });
+      in
+      lib.optionalAttrs (host ? dns-record) {
+        # Credentials aren't set here - the provider reads api_token from CLOUDFLARE_API_TOKEN, so
+        # nothing sensitive lands in this config or in Terraform state.
+        provider.cloudflare = { };
+
+        # Unlike Namecheap's setHosts (which replaces the entire zone in one call), each record
+        # here is its own independent resource - Terraform only ever touches what's declared
+        # below, so there's no OVERWRITE-style footgun for the rest of the zone.
+        resource.cloudflare_dns_record =
+          recordsFor {
+            prefix = "";
+            inherit (host) domain;
+            zone = host.cloudflare-zone-id;
+          }
+          // legacyRecords;
+
+        # The legacy records already exist in state under their un-prefixed keys (from when the
+        # legacy domain was still `host.domain`). Renaming them in state, instead of letting
+        # Terraform destroy and recreate them, means the old domain never stops resolving. Safe to
+        # delete once applied.
+        moved = map (key: {
+          from = "cloudflare_dns_record.${lib.removePrefix "legacy-" key}";
+          to = "cloudflare_dns_record.${key}";
+        }) (lib.attrNames legacyRecords);
 
         terraform.required_providers.cloudflare.source = "cloudflare/cloudflare";
       };

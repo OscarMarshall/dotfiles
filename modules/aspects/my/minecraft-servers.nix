@@ -199,33 +199,63 @@
       # `terranix` class alongside dns.nix's own contribution (same host, same
       # `host.cloudflare-zone-id` - see modules/den.nix). A plain attrset, not a function - see
       # modules/terranix.nix for why that matters.
-      terranix = lib.optionalAttrs (host ? dns-record) {
-        resource.cloudflare_dns_record = lib.concatMapAttrs (name: world: {
-          "minecraft-${name}" = {
-            inherit (host.dns-record) content type;
-            name = "${name}.minecraft.${domain}";
-            proxied = false;
-            ttl = 1800;
-            zone_id = host.cloudflare-zone-id;
-          };
+      terranix =
+        let
+          # Same records once per domain/zone pair - see dns.nix's `recordsFor`, which this mirrors
+          # (prefix "legacy-" for `host.legacy-domain`, so old world addresses keep resolving too).
+          recordsFor =
+            {
+              prefix,
+              domain,
+              zone,
+            }:
+            lib.concatMapAttrs (name: world: {
+              "${prefix}minecraft-${name}" = {
+                inherit (host.dns-record) content type;
+                name = "${name}.minecraft.${domain}";
+                proxied = false;
+                ttl = 1800;
+                zone_id = zone;
+              };
 
-          "minecraft-${name}-srv" = {
-            data = {
-              inherit (world) port;
-              name = "${name}.minecraft.${domain}";
-              priority = 0;
-              proto = "_tcp";
-              target = "${name}.minecraft.${domain}";
-              weight = 0;
-            };
+              "${prefix}minecraft-${name}-srv" = {
+                data = {
+                  inherit (world) port;
+                  name = "${name}.minecraft.${domain}";
+                  priority = 0;
+                  proto = "_tcp";
+                  target = "${name}.minecraft.${domain}";
+                  weight = 0;
+                };
 
-            name = "_minecraft._tcp.${name}.minecraft.${domain}";
-            priority = 0;
-            ttl = 1800;
-            type = "SRV";
-            zone_id = host.cloudflare-zone-id;
-          };
-        }) worlds;
-      };
+                name = "_minecraft._tcp.${name}.minecraft.${domain}";
+                priority = 0;
+                ttl = 1800;
+                type = "SRV";
+                zone_id = zone;
+              };
+            }) worlds;
+
+          legacyRecords = lib.optionalAttrs (host ? legacy-domain) (recordsFor {
+            prefix = "legacy-";
+            domain = host.legacy-domain.name;
+            zone = host.legacy-domain.cloudflare-zone-id;
+          });
+        in
+        lib.optionalAttrs (host ? dns-record) {
+          resource.cloudflare_dns_record =
+            recordsFor {
+              prefix = "";
+              inherit domain;
+              zone = host.cloudflare-zone-id;
+            }
+            // legacyRecords;
+
+          # See dns.nix's own `moved` - keeps the old records in place instead of recreating them.
+          moved = map (key: {
+            from = "cloudflare_dns_record.${lib.removePrefix "legacy-" key}";
+            to = "cloudflare_dns_record.${key}";
+          }) (lib.attrNames legacyRecords);
+        };
     };
 }
