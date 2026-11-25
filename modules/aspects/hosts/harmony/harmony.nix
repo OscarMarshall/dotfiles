@@ -53,6 +53,7 @@
       (tautulli { })
       (zfs [ "metalminds" ])
       boot
+      dawarich
       den.aspects.harmony.provides.minecraft-servers
       dns
       fail2ban
