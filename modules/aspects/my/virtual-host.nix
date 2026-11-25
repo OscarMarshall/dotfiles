@@ -86,7 +86,10 @@
 #                         the canonical URL. `client-secret` names an age secret (declared on that
 #                         same aspect's `secrets` field, with `settings.terraform = "variable";` -
 #                         see modules/terranix.nix's header comment) holding the OIDC client secret
-#                         value the service itself was already configured to send.
+#                         value the service itself was already configured to send. Optional
+#                         `sub-mode` sets the provider's `sub_mode` (Authentik's own default is
+#                         `hashed_user_id`) - e.g. `"user_username"` for a service that has to name
+#                         its administrator by `sub` claim in its own config (prusa-connect.nix).
 {
   den.quirks.virtual-host.description = "Reverse-proxied virtual hosts served by nginx, optionally exposed globally and/or on the Homepage dashboard";
 }

@@ -1051,7 +1051,8 @@
                       invalidation_flow = "\${data.authentik_flow.default-invalidation-flow.id}";
                       property_mappings = "\${data.authentik_property_mapping_provider_scope.oidc-defaults.ids}";
                       signing_key = "\${data.authentik_certificate_key_pair.signing.id}";
-                    };
+                    }
+                    // lib.optionalAttrs (vh.oidc ? sub-mode) { sub_mode = vh.oidc.sub-mode; };
                   }) oidc-hosts
                 );
               };

@@ -35,6 +35,7 @@
       (postgresql { version = "19"; })
       (profilarr { })
       (prowlarr { })
+      (prusa-connect { administrator = "oscar"; })
       (qbittorrent { administrators = [ "oscar" ]; })
       (qui { })
       (radarr { administrators = [ "oscar" ]; })
