@@ -990,11 +990,20 @@
                 # (storyteller.nix) depend on this too, not just on a `groups` scope being requested.
                 # (Requesting a scope authentik doesn't know is harmless, incidentally: it logs and
                 # intersects with what's attached rather than erroring.)
-                authentik_property_mapping_provider_scope.oidc-defaults.managed_list = [
-                  "goauthentik.io/providers/oauth2/scope-openid"
-                  "goauthentik.io/providers/oauth2/scope-email"
-                  "goauthentik.io/providers/oauth2/scope-profile"
-                ];
+                authentik_property_mapping_provider_scope = {
+                  oidc-defaults.managed_list = [
+                    "goauthentik.io/providers/oauth2/scope-openid"
+                    "goauthentik.io/providers/oauth2/scope-email"
+                    "goauthentik.io/providers/oauth2/scope-profile"
+                  ];
+
+                  # `oidc-defaults` minus the email mapping, for `oidc.email-verified` hosts - see
+                  # `email-verified` below.
+                  oidc-defaults-without-email.managed_list = [
+                    "goauthentik.io/providers/oauth2/scope-openid"
+                    "goauthentik.io/providers/oauth2/scope-profile"
+                  ];
+                };
               };
 
               resource = {
@@ -1014,6 +1023,27 @@
                 );
 
                 authentik_policy_binding = lib.listToAttrs (lib.concatMap (vh: binding-entries-for "${vh.name}-oidc" vh) oidc-hosts);
+
+                # Authentik's stock `email` mapping hard-codes `"email_verified": False` (it never
+                # verifies addresses itself), and some clients refuse that outright - RomM fails
+                # every login with "Email is not verified". A host opts into this replacement via
+                # `oidc.email-verified = true;` on its `virtual-host` (virtual-host.nix). Reasonable
+                # here because accounts arrive through Discord, which only hands out verified
+                # addresses, and only `admin`/`user` members reach any application at all (see
+                # `binding-entries-for`).
+                authentik_property_mapping_provider_scope.email-verified = {
+                  description = "Email address (reported as verified)";
+
+                  expression = ''
+                    return {
+                        "email": request.user.email,
+                        "email_verified": True,
+                    }
+                  '';
+
+                  name = "Email (verified)";
+                  scope_name = "email";
+                };
 
                 authentik_provider_oauth2 = lib.listToAttrs (
                   map (vh: {
@@ -1049,7 +1079,13 @@
                       ];
 
                       invalidation_flow = "\${data.authentik_flow.default-invalidation-flow.id}";
-                      property_mappings = "\${data.authentik_property_mapping_provider_scope.oidc-defaults.ids}";
+
+                      property_mappings =
+                        if vh.oidc.email-verified or false then
+                          "\${concat(data.authentik_property_mapping_provider_scope.oidc-defaults-without-email.ids, [authentik_property_mapping_provider_scope.email-verified.id])}"
+                        else
+                          "\${data.authentik_property_mapping_provider_scope.oidc-defaults.ids}";
+
                       signing_key = "\${data.authentik_certificate_key_pair.signing.id}";
                     };
                   }) oidc-hosts

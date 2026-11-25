@@ -86,7 +86,10 @@
 #                         the canonical URL. `client-secret` names an age secret (declared on that
 #                         same aspect's `secrets` field, with `settings.terraform = "variable";` -
 #                         see modules/terranix.nix's header comment) holding the OIDC client secret
-#                         value the service itself was already configured to send.
+#                         value the service itself was already configured to send. Optional
+#                         `email-verified = true;` swaps Authentik's stock email mapping (which
+#                         always sends `email_verified: false`) for one reporting it as verified,
+#                         for clients that reject unverified emails (romm.nix) - see authentik.nix.
 {
   den.quirks.virtual-host.description = "Reverse-proxied virtual hosts served by nginx, optionally exposed globally and/or on the Homepage dashboard";
 }
