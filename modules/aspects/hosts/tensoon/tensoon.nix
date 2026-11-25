@@ -12,7 +12,7 @@
       (remote-builder {
         # MagicDNS name - see the same comment in melaan.nix.
         builder = "harmony";
-        hostName = "harmony.ts.silverlight-nex.us";
+        hostName = "harmony.ts.silverlight.nexus";
         maxJobs = 24;
         publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSU1rTTV1Tlkwck15MlFNRzZJcHRseGdWbDRzUVdvZVNTTm1VcDcvZjJ6MUIK";
         speedFactor = 4;

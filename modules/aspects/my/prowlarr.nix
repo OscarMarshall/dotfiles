@@ -5,10 +5,7 @@
     }:
     { host, ... }:
     let
-      # Matches virtual-host.nix's own derived hostname (`${name}.${host.name}.<domain>`) - no
-      # shared domain constant exists in this repo (authentik.nix/dns.nix/nginx.nix each carry this
-      # same literal), so this matches that convention rather than introducing one.
-      domain = "silverlight-nex.us";
+      inherit (host) domain;
       port = 9696;
     in
     {

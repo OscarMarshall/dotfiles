@@ -21,7 +21,7 @@
 # automatically on every `nixos-rebuild switch` that changes anything Terraform-relevant, so
 # applying by hand is normally unnecessary.
 #
-# One-time setup on Cloudflare's side: add silverlight-nex.us as a site (free plan), note its Zone
+# One-time setup on Cloudflare's side: add silverlight.nexus as a site (free plan), note its Zone
 # ID from the zone's Overview page (set as `host.cloudflare-zone-id` - see modules/den.nix; not a
 # secret, just an account-specific identifier, so it's ordinary version-controlled Nix rather than
 # a TF_VAR to set by hand), create an API token scoped to `Zone / DNS / Edit` for that zone, and

@@ -55,15 +55,15 @@ jobs:
         uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c # v4.4.0
         with:
           authkey: ${{ secrets.TAILSCALE_CI_AUTHKEY }}
-          args: --login-server=https://headscale.harmony.silverlight-nex.us --accept-dns
-          ping: harmony.ts.silverlight-nex.us
+          args: --login-server=https://headscale.harmony.silverlight.nexus --accept-dns
+          ping: harmony.ts.silverlight.nexus
 
       - name: Install Lix
         uses: samueldr/lix-gha-installer-action@a0fee77b2a98bb7c5c0ed7ae6d6ad4903dbdad0d # v2026-06-15
         with:
           extra_nix_config: |
             accept-flake-config = true
-            ${{ env.REMOTE_BUILDER == 'true' && format('builders = ssh-ng://oscar@harmony.ts.silverlight-nex.us x86_64-linux {0}/remote-builder-ci-key 24 1 big-parallel,kvm,nixos-test - c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSU1rTTV1Tlkwck15MlFNRzZJcHRseGdWbDRzUVdvZVNTTm1VcDcvZjJ6MUIK', runner.temp) || '' }}
+            ${{ env.REMOTE_BUILDER == 'true' && format('builders = ssh-ng://oscar@harmony.ts.silverlight.nexus x86_64-linux {0}/remote-builder-ci-key 24 1 big-parallel,kvm,nixos-test - c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSU1rTTV1Tlkwck15MlFNRzZJcHRseGdWbDRzUVdvZVNTTm1VcDcvZjJ6MUIK', runner.temp) || '' }}
             builders-use-substitutes = true
 
       - name: Setup Nix cache

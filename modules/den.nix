@@ -1,13 +1,14 @@
 {
   den.hosts.x86_64-linux = {
     harmony = {
-      # Cloudflare zone ID for silverlight-nex.us (zone's Overview page in the dashboard) - not
+      # Cloudflare zone ID for silverlight.nexus (zone's Overview page in the dashboard) - not
       # a secret, just an account-specific resource identifier, so it lives here as ordinary
       # version-controlled Nix rather than a `TF_VAR_cloudflare_zone_id` to set by hand.
-      cloudflare-zone-id = "a4f841b1f4d00f1e36e129bae37f70d3";
+      # (The old silverlight-nex.us zone was a4f841b1f4d00f1e36e129bae37f70d3.)
+      cloudflare-zone-id = throw "TODO: set harmony's cloudflare-zone-id to the silverlight.nexus zone ID";
 
       # DNS-as-code (modules/aspects/my/dns.nix) reads this for every DNS record this host
-      # produces - its `*.harmony.silverlight-nex.us` wildcard and every canonicalized service's
+      # produces - its `*.harmony.silverlight.nexus` wildcard and every canonicalized service's
       # global alias alike. Points at the router's dynamic-DNS hostname rather than a static IP,
       # so there's no TF_VAR_harmony_ipv4 to keep up to date by hand.
       dns-record = {
