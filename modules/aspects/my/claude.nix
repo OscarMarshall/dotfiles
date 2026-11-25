@@ -28,9 +28,6 @@
     homeManager =
       { config, pkgs, ... }:
       let
-        # Unquoted on purpose: agenix's Home Manager paths hold a literal `${XDG_RUNTIME_DIR}`.
-        agenixCat = name: "cat ${config.age.secrets.${name}.path}";
-        githubToken = "github-mcp-server-github-access-token";
         githubTokenUri = "pass://Personal/GitHub MCP Server/API Key";
         # The keyring provider is repeated inline, like halloy.nix does: Claude isn't always started
         # from a shell (e.g. from a desktop-launched Emacs), and without home.sessionVariables
@@ -40,28 +37,17 @@
         # `inject` is one Proton sync (~5s); a separate `item view` per secret took ~8s each. The
         # Beszel items are hand-made copies of beszel.nix's generated secrets - if agenix
         # regenerates those, update Proton Pass to match.
-        printSecrets =
-          if useProtonPass then
-            "${passCli} inject -i ${pkgs.writeText "claude-secrets.tmpl" ''
-              {{ pass://Personal/Beszel API/password }}
-              {{ pass://Personal/Beszel/password }}
-              {{ ${githubTokenUri} }}
-            ''}"
-          else
-            ''printf '%s\n' "$(${agenixCat "beszel-api-key"})" "$(${agenixCat "beszel-password"})" "$(${agenixCat githubToken})"'';
+        printSecrets = "${passCli} inject -i ${pkgs.writeText "claude-secrets.tmpl" ''
+          {{ pass://Personal/Beszel API/password }}
+          {{ pass://Personal/Beszel/password }}
+          {{ ${githubTokenUri} }}
+        ''}";
         # Headless hosts (harmony) have no Secret Service, so pass-cli has nowhere to keep its DB key
-        # (my.proton-pass's `dbus` provider) and every lookup comes back empty. They read agenix
-        # copies instead.
+        # (my.proton-pass's `dbus` provider) and every lookup would come back empty. Claude there
+        # gets no secrets and no GitHub MCP server.
         useProtonPass = host.graphical or false;
       in
       {
-        age.secrets = lib.mkIf (!useProtonPass) {
-          ${githubToken}.rekeyFile = ../../../secrets/${githubToken}.age;
-          # Same generated secrets beszel.nix's beszel-api vhost and hub admin account already produce.
-          beszel-api-key.rekeyFile = ../../../secrets/generated/beszel-api-key.age;
-          beszel-password.rekeyFile = ../../../secrets/generated/beszel-password.age;
-        };
-
         home.packages = with pkgs; [
           gh
           jq
@@ -110,16 +96,18 @@
 
               postBuild = ''
                 wrapProgram $out/bin/claude ${
-                  lib.escapeShellArgs [
-                    # makeWrapper runs under `bash -e`; `|| :` keeps a failed lookup (logged out,
-                    # locked) from aborting the launch - the variables are just left empty.
-                    "--run"
-                    "{ read -r BESZEL_API_KEY; read -r BESZEL_PASSWORD; read -r GITHUB_PERSONAL_ACCESS_TOKEN; } < <({ ${printSecrets}; } 2>/dev/null) || :"
-                    "--run"
-                    "export BESZEL_API_KEY BESZEL_PASSWORD GITHUB_PERSONAL_ACCESS_TOKEN"
-                    "--run"
-                    ''export GH_TOKEN="''${GH_TOKEN:-$GITHUB_PERSONAL_ACCESS_TOKEN}"''
-                  ]
+                  lib.escapeShellArgs (
+                    lib.optionals useProtonPass [
+                      # makeWrapper runs under `bash -e`; `|| :` keeps a failed lookup (logged out,
+                      # locked) from aborting the launch - the variables are just left empty.
+                      "--run"
+                      "{ read -r BESZEL_API_KEY; read -r BESZEL_PASSWORD; read -r GITHUB_PERSONAL_ACCESS_TOKEN; } < <({ ${printSecrets}; } 2>/dev/null) || :"
+                      "--run"
+                      "export BESZEL_API_KEY BESZEL_PASSWORD GITHUB_PERSONAL_ACCESS_TOKEN"
+                      "--run"
+                      ''export GH_TOKEN="''${GH_TOKEN:-$GITHUB_PERSONAL_ACCESS_TOKEN}"''
+                    ]
+                  )
                 }
               '';
             }
@@ -134,12 +122,12 @@
           mcpServers = {
             # Normally inherits the token the `claude` wrapper above already read. `programs.mcp` has
             # no way to source an env var from a command, so a wrapper looks it up itself if not.
-            github.command = "${pkgs.writeShellScript "github-mcp-server-wrapper" ''
-              export GITHUB_PERSONAL_ACCESS_TOKEN="''${GITHUB_PERSONAL_ACCESS_TOKEN:-$(${
-                if useProtonPass then "${passCli} item view ${lib.escapeShellArg githubTokenUri}" else agenixCat githubToken
-              })}"
-              exec ${pkgs.github-mcp-server}/bin/github-mcp-server stdio
-            ''}";
+            github = lib.mkIf useProtonPass {
+              command = "${pkgs.writeShellScript "github-mcp-server-wrapper" ''
+                export GITHUB_PERSONAL_ACCESS_TOKEN="''${GITHUB_PERSONAL_ACCESS_TOKEN:-$(${passCli} item view ${lib.escapeShellArg githubTokenUri})}"
+                exec ${pkgs.github-mcp-server}/bin/github-mcp-server stdio
+              ''}";
+            };
 
             nixos.command = "${pkgs.mcp-nixos}/bin/mcp-nixos";
           };
